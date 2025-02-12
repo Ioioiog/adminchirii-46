@@ -113,11 +113,12 @@ const Chat = () => {
           </div>
         </div>
       </div>
-      {isVideoCallActive && conversationId && currentUserId && (
+      {isVideoCallActive && conversationId && currentUserId && selectedTenantId && (
         <VideoCall
-          conversationId={conversationId}
-          currentUserId={currentUserId}
+          isOpen={isVideoCallActive}
           onClose={handleEndVideoCall}
+          recipientId={selectedTenantId}
+          isInitiator={true}
         />
       )}
     </div>
