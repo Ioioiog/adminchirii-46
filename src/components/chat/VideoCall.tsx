@@ -1,236 +1,187 @@
-
 import React, { useEffect, useRef, useState } from 'react';
-import SimplePeer from 'simple-peer';
 import { Button } from '@/components/ui/button';
-import { Video, Mic, MicOff, VideoOff, PhoneOff } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { useTranslation } from 'react-i18next';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Mic, MicOff, Video, VideoOff, PhoneOff } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface VideoCallProps {
-  conversationId: string;
-  currentUserId: string;
+  isOpen: boolean;
   onClose: () => void;
+  recipientId: string;
+  isInitiator: boolean;
 }
 
-export function VideoCall({ conversationId, currentUserId, onClose }: VideoCallProps) {
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const [peer, setPeer] = useState<SimplePeer.Instance | null>(null);
-  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
-  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
-  const [isCallInitiator, setIsCallInitiator] = useState(true);
+export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCallProps) {
+  const { t } = useTranslation('chat', { keyPrefix: 'videoCall' });
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+  
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
-  const { toast } = useToast();
+  const peerConnection = useRef<RTCPeerConnection | null>(null);
 
   useEffect(() => {
-    const initializeCallState = async () => {
-      try {
-        // Get user media stream
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true
-        });
-        setStream(mediaStream);
-
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = mediaStream;
-        }
-
-        // Check if there's an existing call signal for this conversation
-        const { data: existingSignal } = await supabase
-          .from('video_signals')
-          .select('*')
-          .eq('conversation_id', conversationId)
-          .neq('sender_id', currentUserId)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        // If there's an existing signal, we're joining an existing call
-        if (existingSignal) {
-          setIsCallInitiator(false);
-          initializePeer(mediaStream, false, existingSignal.signal_data);
-        } else {
-          // We're starting a new call
-          setIsCallInitiator(true);
-          initializePeer(mediaStream, true);
-        }
-
-      } catch (error) {
-        console.error('Error initializing call:', error);
-        toast({
-          title: "Error",
-          description: "Could not access camera or microphone",
-          variant: "destructive"
-        });
-        onClose();
-      }
-    };
-
-    initializeCallState();
-
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-      if (peer) {
-        peer.destroy();
-      }
-    };
-  }, [conversationId, currentUserId, onClose, toast]);
-
-  const initializePeer = (mediaStream: MediaStream, initiator: boolean, signalData?: any) => {
-    const newPeer = new SimplePeer({
-      initiator,
-      trickle: false,
-      stream: mediaStream
-    });
-
-    // Handle receiving signal data
-    newPeer.on('signal', async (data) => {
-      try {
-        const { error } = await supabase
-          .from('video_signals')
-          .insert([{
-            conversation_id: conversationId,
-            sender_id: currentUserId,
-            signal_data: data
-          }]);
-
-        if (error) {
-          throw error;
-        }
-      } catch (error) {
-        console.error('Error sending signal:', error);
-        toast({
-          title: "Error",
-          description: "Failed to establish video connection",
-          variant: "destructive"
-        });
-      }
-    });
-
-    // Handle receiving remote stream
-    newPeer.on('stream', (remoteStream) => {
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = remoteStream;
-      }
-    });
-
-    // If we're joining an existing call, signal the peer with the existing data
-    if (signalData) {
-      newPeer.signal(signalData);
+    if (isOpen) {
+      initializeCall();
     }
-
-    setPeer(newPeer);
-
-    // Subscribe to incoming signals
-    const channel = supabase
-      .channel('video-signals')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'video_signals',
-          filter: `conversation_id=eq.${conversationId}`
-        },
-        (payload) => {
-          if (payload.new.sender_id !== currentUserId) {
-            newPeer.signal(payload.new.signal_data);
-          }
-        }
-      )
-      .subscribe();
-
     return () => {
-      supabase.removeChannel(channel);
+      cleanupCall();
     };
+  }, [isOpen]);
+
+  const initializeCall = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: true, 
+        audio: true 
+      });
+      setLocalStream(stream);
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+
+      // Initialize WebRTC peer connection
+      const pc = new RTCPeerConnection({
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' }
+        ]
+      });
+      peerConnection.current = pc;
+
+      // Add local stream to peer connection
+      stream.getTracks().forEach(track => {
+        if (localStream) {
+          pc.addTrack(track, localStream);
+        }
+      });
+
+      // Handle incoming stream
+      pc.ontrack = (event) => {
+        setRemoteStream(event.streams[0]);
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = event.streams[0];
+        }
+      };
+
+      if (isInitiator) {
+        // Create and send offer
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        // TODO: Send offer to recipient through your signaling server
+      }
+    } catch (error) {
+      console.error('Error initializing call:', error);
+    }
+  };
+
+  const cleanupCall = () => {
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+    }
+    if (peerConnection.current) {
+      peerConnection.current.close();
+    }
+    setLocalStream(null);
+    setRemoteStream(null);
+  };
+
+  const toggleMute = () => {
+    if (localStream) {
+      const audioTracks = localStream.getAudioTracks();
+      audioTracks.forEach(track => {
+        track.enabled = !track.enabled;
+      });
+      setIsMuted(!isMuted);
+    }
   };
 
   const toggleVideo = () => {
-    if (stream) {
-      stream.getVideoTracks().forEach(track => {
-        track.enabled = !isVideoEnabled;
+    if (localStream) {
+      const videoTracks = localStream.getVideoTracks();
+      videoTracks.forEach(track => {
+        track.enabled = !track.enabled;
       });
-      setIsVideoEnabled(!isVideoEnabled);
+      setIsVideoOff(!isVideoOff);
     }
   };
 
-  const toggleAudio = () => {
-    if (stream) {
-      stream.getAudioTracks().forEach(track => {
-        track.enabled = !isAudioEnabled;
-      });
-      setIsAudioEnabled(!isAudioEnabled);
-    }
-  };
-
-  const endCall = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-    }
-    if (peer) {
-      peer.destroy();
-    }
+  const handleEndCall = () => {
+    cleanupCall();
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
-      <div className="bg-white dark:bg-slate-900 rounded-lg p-4 w-full max-w-4xl">
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="relative aspect-video bg-slate-900 rounded-lg overflow-hidden">
-            <video
-              ref={localVideoRef}
-              autoPlay
-              muted
-              playsInline
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute bottom-2 left-2 text-white text-sm bg-black/50 px-2 py-1 rounded">
-              You
-            </div>
-          </div>
-          <div className="relative aspect-video bg-slate-900 rounded-lg overflow-hidden">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[800px]">
+        <DialogHeader>
+          <DialogTitle>{t('videoCall.title')}</DialogTitle>
+          <DialogDescription>
+            {t('videoCall.connecting')}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          {/* Remote Video */}
+          <div className="relative col-span-2 aspect-video bg-slate-900 rounded-lg overflow-hidden">
             <video
               ref={remoteVideoRef}
               autoPlay
               playsInline
               className="w-full h-full object-cover"
             />
-            <div className="absolute bottom-2 left-2 text-white text-sm bg-black/50 px-2 py-1 rounded">
-              {isCallInitiator ? 'Tenant' : 'Landlord'}
+            
+            {/* Local Video (Picture-in-Picture) */}
+            <div className="absolute bottom-4 right-4 w-48 aspect-video bg-slate-800 rounded-lg overflow-hidden">
+              <video
+                ref={localVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
             </div>
           </div>
         </div>
-        <div className="flex justify-center gap-4">
+
+        {/* Controls */}
+        <div className="flex justify-center gap-4 mt-4">
           <Button
-            variant="secondary"
+            variant="outline"
             size="icon"
-            className="rounded-full"
-            onClick={toggleVideo}
+            className={cn(
+              "rounded-full",
+              isMuted && "bg-red-500 hover:bg-red-600 text-white"
+            )}
+            onClick={toggleMute}
           >
-            {isVideoEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
+            {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
           </Button>
-          <Button
-            variant="secondary"
-            size="icon"
-            className="rounded-full"
-            onClick={toggleAudio}
-          >
-            {isAudioEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
-          </Button>
+
           <Button
             variant="destructive"
             size="icon"
             className="rounded-full"
-            onClick={endCall}
+            onClick={handleEndCall}
           >
             <PhoneOff className="h-5 w-5" />
           </Button>
+
+          <Button
+            variant="outline"
+            size="icon"
+            className={cn(
+              "rounded-full",
+              isVideoOff && "bg-red-500 hover:bg-red-600 text-white"
+            )}
+            onClick={toggleVideo}
+          >
+            {isVideoOff ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
+          </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
