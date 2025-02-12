@@ -17,6 +17,9 @@ export default defineConfig(({ mode }) => ({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  define: {
+    global: 'globalThis', // Add this line to define global
+  },
   server: {
     port: 8080,
     host: "::",
