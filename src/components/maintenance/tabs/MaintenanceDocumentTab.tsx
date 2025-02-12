@@ -55,8 +55,12 @@ export function MaintenanceDocumentTab({
 
       console.log("File uploaded successfully:", filePath);
 
+      // Get current document paths
+      let currentPaths = Array.isArray(request.document_path) ? request.document_path : [];
+      
+      // Update the request with the new file name
       onUpdateRequest({ 
-        document_path: fileName // Store only the filename, not the full path
+        document_path: [...currentPaths, fileName]
       });
 
       toast({
@@ -118,13 +122,19 @@ export function MaintenanceDocumentTab({
 
       if (error) throw error;
 
+      // Get current document paths and remove the deleted file
+      let currentPaths = Array.isArray(request.document_path) ? request.document_path : [];
+      currentPaths = currentPaths.filter(path => path !== fileName);
+      
+      // Update the request with the updated paths
+      onUpdateRequest({ 
+        document_path: currentPaths
+      });
+
       toast({
         title: "Success",
         description: "Document deleted successfully",
       });
-
-      // Trigger a refresh of the documents list
-      onUpdateRequest({ ...request });
     } catch (error) {
       console.error("Error deleting document:", error);
       toast({
