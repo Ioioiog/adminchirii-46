@@ -31,16 +31,6 @@ export function ChatHeader({ onTenantSelect, selectedTenantId, onVideoCall }: Ch
             {userRole === "landlord" ? "Chat with Tenants" : "Chat with Landlord"}
           </h1>
         </div>
-        {userRole === "landlord" && (
-          <Button
-            variant="secondary"
-            size="icon"
-            className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
-            onClick={onVideoCall}
-          >
-            <Video className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-          </Button>
-        )}
       </div>
       {userRole === "landlord" && (
         <div className={cn(
@@ -52,6 +42,16 @@ export function ChatHeader({ onTenantSelect, selectedTenantId, onVideoCall }: Ch
             onTenantSelect={onTenantSelect}
             selectedTenantId={selectedTenantId || undefined}
           />
+          {selectedTenantId && (
+            <Button
+              variant="secondary"
+              size="icon"
+              className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+              onClick={onVideoCall}
+            >
+              <Video className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+            </Button>
+          )}
         </div>
       )}
     </div>
