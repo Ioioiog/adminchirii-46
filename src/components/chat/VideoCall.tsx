@@ -6,6 +6,7 @@ import { Video, Mic, MicOff, VideoOff, PhoneOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import type { Database } from '@/integrations/supabase/types/database';
 
 interface VideoCallProps {
   isOpen: boolean;
@@ -13,6 +14,8 @@ interface VideoCallProps {
   recipientId: string;
   isInitiator: boolean;
 }
+
+type VideoSignal = Database['public']['Tables']['video_signals']['Insert'];
 
 export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCallProps) {
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -24,20 +27,99 @@ export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCa
   const { toast } = useToast();
 
   useEffect(() => {
+    if (!isOpen) return;
+
+    let mounted = true;
+
     const initializeCallState = async () => {
       try {
         const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: true
         });
+
+        if (!mounted) {
+          mediaStream.getTracks().forEach(track => track.stop());
+          return;
+        }
+
         setStream(mediaStream);
 
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = mediaStream;
         }
 
-        initializePeer(mediaStream);
+        const newPeer = new SimplePeer({
+          initiator: isInitiator,
+          stream: mediaStream,
+          trickle: false
+        });
 
+        setPeer(newPeer);
+
+        newPeer.on('signal', async (data) => {
+          try {
+            const currentUser = (await supabase.auth.getUser()).data.user;
+            if (!currentUser?.id) return;
+
+            const signalData: VideoSignal = {
+              conversation_id: recipientId,
+              sender_id: currentUser.id,
+              signal_data: data
+            };
+
+            const { error } = await supabase
+              .from('video_signals')
+              .insert(signalData);
+
+            if (error) throw error;
+          } catch (error) {
+            console.error('Error sending signal:', error);
+            toast({
+              title: "Error",
+              description: "Failed to establish video connection",
+              variant: "destructive"
+            });
+          }
+        });
+
+        newPeer.on('stream', (remoteStream) => {
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = remoteStream;
+          }
+        });
+
+        newPeer.on('error', (err) => {
+          console.error('Peer error:', err);
+          toast({
+            title: "Connection Error",
+            description: "There was an error with the video call",
+            variant: "destructive"
+          });
+        });
+
+        // Subscribe to incoming signals
+        const channel = supabase
+          .channel('video-signals')
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'video_signals'
+            },
+            async (payload) => {
+              const currentUser = (await supabase.auth.getUser()).data.user;
+              if (payload.new && payload.new.sender_id !== currentUser?.id) {
+                newPeer.signal(payload.new.signal_data);
+              }
+            }
+          )
+          .subscribe();
+
+        return () => {
+          supabase.removeChannel(channel);
+        };
       } catch (error) {
         console.error('Error initializing call:', error);
         toast({
@@ -49,11 +131,10 @@ export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCa
       }
     };
 
-    if (isOpen) {
-      initializeCallState();
-    }
+    initializeCallState();
 
     return () => {
+      mounted = false;
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
@@ -61,94 +142,7 @@ export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCa
         peer.destroy();
       }
     };
-  }, [isOpen, onClose, toast]);
-
-  const initializePeer = async (mediaStream: MediaStream) => {
-    try {
-      const newPeer = new SimplePeer({
-        initiator: isInitiator,
-        trickle: false,
-        stream: mediaStream,
-        config: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:global.stun.twilio.com:3478' }
-          ]
-        }
-      });
-
-      newPeer.on('signal', async (data) => {
-        try {
-          const currentUser = (await supabase.auth.getUser()).data.user;
-          if (!currentUser?.id) return;
-
-          const { error } = await supabase
-            .from('video_signals')
-            .insert({
-              conversation_id: recipientId,
-              sender_id: currentUser.id,
-              signal_data: data
-            } as any); // Temporary type assertion while we update the types
-
-          if (error) throw error;
-        } catch (error) {
-          console.error('Error sending signal:', error);
-          toast({
-            title: "Error",
-            description: "Failed to establish video connection",
-            variant: "destructive"
-          });
-        }
-      });
-
-      newPeer.on('stream', (remoteStream) => {
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = remoteStream;
-        }
-      });
-
-      newPeer.on('error', (err) => {
-        console.error('Peer error:', err);
-        toast({
-          title: "Connection Error",
-          description: "There was an error with the video call",
-          variant: "destructive"
-        });
-      });
-
-      setPeer(newPeer);
-
-      // Subscribe to incoming signals
-      const channel = supabase
-        .channel('video-signals')
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'video_signals'
-          },
-          async (payload: any) => {
-            const currentUser = (await supabase.auth.getUser()).data.user;
-            if (payload.new && payload.new.sender_id !== currentUser?.id) {
-              newPeer.signal(payload.new.signal_data);
-            }
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    } catch (error) {
-      console.error('Error initializing peer:', error);
-      toast({
-        title: "Connection Error",
-        description: "Failed to initialize video call",
-        variant: "destructive"
-      });
-    }
-  };
+  }, [isOpen, onClose, toast, isInitiator, recipientId]);
 
   const toggleVideo = () => {
     if (stream) {
