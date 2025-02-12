@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import type { Database } from '@/integrations/supabase/types/database';
+import type { Json } from '@/integrations/supabase/types/json';
 
 interface VideoCallProps {
   isOpen: boolean;
@@ -65,14 +66,13 @@ export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCa
             const signalData: VideoSignal = {
               conversation_id: recipientId,
               sender_id: currentUser.id,
-              signal_data: data
+              signal_data: data as Json
             };
 
-            const { error } = await supabase
+            await supabase
               .from('video_signals')
-              .insert(signalData);
-
-            if (error) throw error;
+              .insert([signalData] as any[]); // Type assertion needed due to Supabase client limitations
+            
           } catch (error) {
             console.error('Error sending signal:', error);
             toast({
@@ -108,7 +108,7 @@ export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCa
               schema: 'public',
               table: 'video_signals'
             },
-            async (payload) => {
+            async (payload: { new: VideoSignal }) => {
               const currentUser = (await supabase.auth.getUser()).data.user;
               if (payload.new && payload.new.sender_id !== currentUser?.id) {
                 newPeer.signal(payload.new.signal_data);

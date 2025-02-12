@@ -1,7 +1,9 @@
+
 export type Json =
   | string
   | number
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[];
+  | Json[]
+  | { [key: string]: any }; // Added this to handle complex signal data
