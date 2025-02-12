@@ -565,6 +565,7 @@ export type Database = {
           cost_estimate_status: string | null
           created_at: string
           description: string
+          document_path: Json | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
           emergency_instructions: string | null
@@ -609,6 +610,7 @@ export type Database = {
           cost_estimate_status?: string | null
           created_at?: string
           description: string
+          document_path?: Json | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           emergency_instructions?: string | null
@@ -653,6 +655,7 @@ export type Database = {
           cost_estimate_status?: string | null
           created_at?: string
           description?: string
+          document_path?: Json | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           emergency_instructions?: string | null
@@ -730,6 +733,52 @@ export type Database = {
           },
         ]
       }
+      message_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_details"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
@@ -739,6 +788,7 @@ export type Database = {
           profile_id: string
           read: boolean | null
           receiver_id: string | null
+          reply_to_id: string | null
           room_id: string | null
           sender_id: string
           status: string | null
@@ -752,6 +802,7 @@ export type Database = {
           profile_id: string
           read?: boolean | null
           receiver_id?: string | null
+          reply_to_id?: string | null
           room_id?: string | null
           sender_id: string
           status?: string | null
@@ -765,6 +816,7 @@ export type Database = {
           profile_id?: string
           read?: boolean | null
           receiver_id?: string | null
+          reply_to_id?: string | null
           room_id?: string | null
           sender_id?: string
           status?: string | null
@@ -805,6 +857,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenant_details"
             referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "messages_room_id_fkey"
@@ -1027,6 +1086,95 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      proforma_invoices: {
+        Row: {
+          conversion_date: string | null
+          created_at: string
+          currency: string
+          document_path: string | null
+          final_invoice_id: string | null
+          id: string
+          materials_cost: number
+          notes: string | null
+          request_id: string
+          service_provider_fee: number
+          service_provider_id: string
+          status: string
+          subtotal: number
+          total_amount: number
+          updated_at: string
+          vat_amount: number
+          vat_rate: number
+        }
+        Insert: {
+          conversion_date?: string | null
+          created_at?: string
+          currency: string
+          document_path?: string | null
+          final_invoice_id?: string | null
+          id?: string
+          materials_cost: number
+          notes?: string | null
+          request_id: string
+          service_provider_fee: number
+          service_provider_id: string
+          status: string
+          subtotal: number
+          total_amount: number
+          updated_at?: string
+          vat_amount: number
+          vat_rate: number
+        }
+        Update: {
+          conversion_date?: string | null
+          created_at?: string
+          currency?: string
+          document_path?: string | null
+          final_invoice_id?: string | null
+          id?: string
+          materials_cost?: number
+          notes?: string | null
+          request_id?: string
+          service_provider_fee?: number
+          service_provider_id?: string
+          status?: string
+          subtotal?: number
+          total_amount?: number
+          updated_at?: string
+          vat_amount?: number
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proforma_invoices_final_invoice_id_fkey"
+            columns: ["final_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proforma_invoices_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "maintenance_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proforma_invoices_service_provider_id_fkey"
+            columns: ["service_provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proforma_invoices_service_provider_id_fkey"
+            columns: ["service_provider_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_details"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
       properties: {
         Row: {
@@ -1620,6 +1768,59 @@ export type Database = {
           },
         ]
       }
+      utility_bills: {
+        Row: {
+          amount: number
+          consumption_period: string | null
+          created_at: string | null
+          currency: string
+          due_date: string
+          id: string
+          invoice_number: string
+          location_name: string | null
+          pdf_path: string | null
+          provider_id: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          consumption_period?: string | null
+          created_at?: string | null
+          currency: string
+          due_date: string
+          id?: string
+          invoice_number: string
+          location_name?: string | null
+          pdf_path?: string | null
+          provider_id?: string | null
+          status: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          consumption_period?: string | null
+          created_at?: string | null
+          currency?: string
+          due_date?: string
+          id?: string
+          invoice_number?: string
+          location_name?: string | null
+          pdf_path?: string | null
+          provider_id?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "utility_bills_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "utility_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       utility_invoices: {
         Row: {
           amount: number
@@ -1730,6 +1931,42 @@ export type Database = {
           },
         ]
       }
+      utility_providers: {
+        Row: {
+          created_at: string | null
+          end_day: number
+          id: string
+          landlord_id: string | null
+          property_id: string | null
+          provider_name: string
+          start_day: number
+          updated_at: string | null
+          utility_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          end_day?: number
+          id?: string
+          landlord_id?: string | null
+          property_id?: string | null
+          provider_name: string
+          start_day?: number
+          updated_at?: string | null
+          utility_type: string
+        }
+        Update: {
+          created_at?: string | null
+          end_day?: number
+          id?: string
+          landlord_id?: string | null
+          property_id?: string | null
+          provider_name?: string
+          start_day?: number
+          updated_at?: string | null
+          utility_type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       tenant_details: {
@@ -1787,6 +2024,13 @@ export type Database = {
           params: Json
         }
         Returns: undefined
+      }
+      toggle_message_reaction: {
+        Args: {
+          p_message_id: string
+          p_emoji: string
+        }
+        Returns: boolean
       }
     }
     Enums: {
