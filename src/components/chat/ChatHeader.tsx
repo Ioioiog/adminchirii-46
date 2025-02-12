@@ -20,23 +20,25 @@ export function ChatHeader({ onTenantSelect, selectedTenantId, onVideoCall }: Ch
   return (
     <div className="p-4 border-b bg-white dark:bg-slate-900 rounded-t-xl backdrop-blur-sm">
       <div className={cn(
-        "flex items-center gap-3 mb-2",
+        "flex items-center justify-between gap-3 mb-2",
         "animate-fade-in"
       )}>
-        <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-          <MessageSquare className="h-5 w-5 text-blue-500 dark:text-blue-400" />
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+            <MessageSquare className="h-5 w-5 text-blue-500 dark:text-blue-400" />
+          </div>
+          <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100">
+            {userRole === "landlord" ? "Chat with Tenants" : "Chat with Landlord"}
+          </h1>
         </div>
-        <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100">
-          {userRole === "landlord" ? "Chat with Tenants" : "Chat with Landlord"}
-        </h1>
         {userRole === "landlord" && (
           <Button
-            variant="ghost"
+            variant="secondary"
             size="icon"
-            className="ml-auto rounded-full"
+            className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
             onClick={onVideoCall}
           >
-            <Video className="h-5 w-5" />
+            <Video className="h-5 w-5 text-slate-600 dark:text-slate-400" />
           </Button>
         )}
       </div>
