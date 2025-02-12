@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -164,30 +163,9 @@ export default function Maintenance() {
 
               <div className="grid grid-cols-1 gap-6 max-w-4xl mx-auto">
                 <MaintenanceSection
-                  title="New Requests"
-                  description="Requests needing review"
-                  requests={newRequests}
-                  onRequestClick={handleRequestClick}
-                />
-                
-                <MaintenanceSection
-                  title="Active Requests"
-                  description="Requests in progress"
-                  requests={activeRequests}
-                  onRequestClick={handleRequestClick}
-                />
-                
-                <MaintenanceSection
-                  title="Completed"
-                  description="Finished maintenance requests"
-                  requests={completedRequests}
-                  onRequestClick={handleRequestClick}
-                />
-
-                <MaintenanceSection
-                  title="Review & Complete"
-                  description="Work completed, awaiting final review"
-                  requests={reviewRequests}
+                  title="Maintenance Requests"
+                  description="All maintenance requests"
+                  requests={filteredRequests}
                   onRequestClick={handleRequestClick}
                 />
               </div>
