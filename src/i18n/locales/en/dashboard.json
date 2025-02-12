@@ -1,53 +1,41 @@
 
 {
   "title": "Dashboard",
-  "welcome": "Welcome back",
-  "overview": "Here's an overview of your rental home",
-  "propertyInfo": "Your Rental Property",
-  "ongoingLease": "Ongoing Lease",
+  "welcome": "Welcome",
+  "overview": "Here's an overview of your activities",
   "metrics": {
-    "title": "Your Activity Overview",
     "loading": "Loading...",
-    "totalProperties": "Property Details",
-    "totalPropertiesDesc": "Information about your rental",
-    "monthlyRevenue": "Monthly Rent",
-    "monthlyRevenueDesc": "Your current monthly rent",
-    "activeTenants": "Lease Status",
-    "activeTenantsDesc": "Your current lease status",
-    "pendingMaintenance": "Maintenance",
-    "pendingMaintenanceDesc": "Open maintenance requests",
+    "totalProperties": "Total Properties",
+    "totalPropertiesDesc": "Total managed properties",
+    "monthlyRevenue": "Monthly Revenue",
+    "monthlyRevenueDesc": "Current month's revenue",
+    "activeTenants": "Active Tenants",
+    "activeTenantsDesc": "Currently active tenants",
+    "pendingMaintenance": "Pending Maintenance",
+    "pendingMaintenanceDesc": "Pending maintenance requests",
     "paymentStatus": "Payment Status",
-    "paymentStatusDesc": "Your recent payments",
-    "rentedPropertiesDesc": "Your rental property details",
-    "openMaintenanceDesc": "Current maintenance requests",
-    "noPayments": "No recent payments"
-  },
-  "quickActions": {
-    "title": "Quick Actions",
-    "maintenance": "Report an Issue",
-    "maintenanceDesc": "Submit a maintenance request for your property",
-    "documents": "View Documents",
-    "documentsDesc": "Access your lease and other important documents",
-    "viewMore": "Take Action"
+    "paymentStatusDesc": "Click to view monthly payments",
+    "rentedPropertiesDesc": "Your rented properties",
+    "openMaintenanceDesc": "Open maintenance requests"
   },
   "revenue": {
     "title": "Track your money",
-    "prediction": {
-      "title": "Revenue Prediction",
-      "noData": "No revenue data available for predictions"
-    },
+    "history": "History",
+    "predictions": "Predictions",
+    "noData": "No revenue data available",
+    "noUpcomingPayments": "No upcoming payments",
+    "upcomingPayments": "Upcoming Payments",
+    "monthlyAverage": "Monthly Average",
+    "totalRevenue": "Total Revenue",
+    "performance": "Performance",
+    "vs": "vs last month",
     "details": {
       "title": "Revenue Details",
-      "total": "Total Revenue",
-      "average": "Average Revenue",
-      "change": "Monthly Change"
+      "property": "Property",
+      "amount": "Amount",
+      "dueDate": "Due Date",
+      "status": "Status",
+      "noDetails": "No revenue details available for this month"
     }
-  },
-  "upcomingIncome": {
-    "title": "Upcoming Income",
-    "noData": "No upcoming income data available",
-    "property": "Property",
-    "amount": "Amount",
-    "dueDate": "Due Date"
   }
 }

@@ -16,19 +16,12 @@
     "paymentStatus": "Estado de Pagos",
     "paymentStatusDesc": "Haz clic para ver los pagos mensuales",
     "rentedPropertiesDesc": "Tus propiedades alquiladas",
-    "openMaintenanceDesc": "Solicitudes de mantenimiento abiertas",
-    "activeJobs": "Trabajos Activos",
-    "activeJobsDesc": "Trabajos de mantenimiento en curso",
-    "completedJobs": "Trabajos Completados",
-    "completedJobsDesc": "Trabajos completados este mes",
-    "monthlyEarnings": "Ganancias Mensuales",
-    "monthlyEarningsDesc": "Ganancias de trabajos completados este mes",
-    "noPayments": "Sin pagos"
+    "openMaintenanceDesc": "Solicitudes de mantenimiento abiertas"
   },
   "revenue": {
     "title": "Resumen de Ingresos",
-    "history": "Historial de Ingresos",
-    "predictions": "Predicciones de Ingresos",
+    "history": "History",
+    "predictions": "Predictions",
     "noData": "No hay datos de ingresos disponibles",
     "noUpcomingPayments": "No hay pagos próximos",
     "upcomingPayments": "Próximos Pagos",
@@ -44,11 +37,5 @@
       "status": "Estado",
       "noDetails": "No hay detalles de ingresos disponibles para este mes"
     }
-  },
-  "sections": {
-    "trackMoney": "Controla tu dinero",
-    "maintenance": "Resumen de Mantenimiento",
-    "properties": "Resumen de Propiedades",
-    "tenants": "Resumen de Inquilinos"
   }
 }

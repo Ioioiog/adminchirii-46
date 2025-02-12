@@ -27,8 +27,8 @@
   },
   "revenue": {
     "title": "Aperçu des Revenus",
-    "history": "Historique des Revenus",
-    "predictions": "Prévisions des Revenus",
+    "history": "History",
+    "predictions": "Predictions",
     "noData": "Aucune donnée de revenu disponible",
     "noUpcomingPayments": "Aucun paiement à venir",
     "upcomingPayments": "Paiements à Venir",

@@ -27,8 +27,8 @@
   },
   "revenue": {
     "title": "Prezentare Venituri",
-    "history": "Istoric Venituri",
-    "predictions": "Previziuni Venituri",
+    "history": "History",
+    "predictions": "Predictions",
     "noData": "Nu există date despre venituri",
     "noUpcomingPayments": "Nu există plăți viitoare",
     "upcomingPayments": "Plăți Viitoare",
