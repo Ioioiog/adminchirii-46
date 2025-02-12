@@ -1982,6 +1982,38 @@ export type Database = {
         }
         Relationships: []
       }
+      video_signals: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          id: string
+          sender_id: string
+          signal_data: Json
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          id?: string
+          sender_id: string
+          signal_data: Json
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+          signal_data?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_signals_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       tenant_details: {

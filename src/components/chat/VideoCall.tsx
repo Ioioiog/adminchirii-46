@@ -7,7 +7,6 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import type { Database } from '@/integrations/supabase/types/database';
-import type { Json } from '@/integrations/supabase/types/json';
 
 interface VideoCallProps {
   isOpen: boolean;
@@ -17,6 +16,7 @@ interface VideoCallProps {
 }
 
 type VideoSignal = Database['public']['Tables']['video_signals']['Insert'];
+type SignalData = SimplePeer.SignalData;
 
 export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCallProps) {
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -58,7 +58,7 @@ export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCa
 
         setPeer(newPeer);
 
-        newPeer.on('signal', async (data) => {
+        newPeer.on('signal', async (data: SignalData) => {
           try {
             const currentUser = (await supabase.auth.getUser()).data.user;
             if (!currentUser?.id) return;
@@ -66,12 +66,12 @@ export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCa
             const signalData: VideoSignal = {
               conversation_id: recipientId,
               sender_id: currentUser.id,
-              signal_data: data as Json
+              signal_data: data as unknown as Database['public']['Tables']['video_signals']['Insert']['signal_data']
             };
 
             await supabase
               .from('video_signals')
-              .insert([signalData] as any[]); // Type assertion needed due to Supabase client limitations
+              .insert([signalData]);
             
           } catch (error) {
             console.error('Error sending signal:', error);
@@ -108,10 +108,10 @@ export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCa
               schema: 'public',
               table: 'video_signals'
             },
-            async (payload: { new: VideoSignal }) => {
+            async (payload: { new: Database['public']['Tables']['video_signals']['Row'] }) => {
               const currentUser = (await supabase.auth.getUser()).data.user;
               if (payload.new && payload.new.sender_id !== currentUser?.id) {
-                newPeer.signal(payload.new.signal_data);
+                newPeer.signal(payload.new.signal_data as SignalData);
               }
             }
           )
