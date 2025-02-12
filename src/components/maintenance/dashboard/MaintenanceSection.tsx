@@ -52,10 +52,10 @@ export function MaintenanceSection({
 
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'in_progress':
-        return <Badge className="bg-blue-100 text-blue-800">🔧 In Progress</Badge>;
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800">⏳ Waiting Review</Badge>;
+        return <Badge className="bg-violet-100 text-violet-800">🆕 New</Badge>;
+      case 'in_progress':
+        return <Badge className="bg-blue-100 text-blue-800">⚡ Active</Badge>;
       case 'completed':
         return <Badge className="bg-green-100 text-green-800">✅ Completed</Badge>;
       default:
