@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -43,7 +44,8 @@ export function MaintenanceDocumentTab({
       setIsUploading(true);
       console.log("Starting document upload for request:", request.id);
       const fileExt = file.name.split('.').pop();
-      const filePath = `${request.id}/${crypto.randomUUID()}.${fileExt}`;
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `${request.id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('maintenance-documents')
@@ -54,7 +56,7 @@ export function MaintenanceDocumentTab({
       console.log("File uploaded successfully:", filePath);
 
       onUpdateRequest({ 
-        document_path: filePath
+        document_path: fileName // Store only the filename, not the full path
       });
 
       toast({
@@ -73,12 +75,11 @@ export function MaintenanceDocumentTab({
     }
   };
 
-  const handleViewDocument = async (filePath: string) => {
+  const handleViewDocument = async (fileName: string) => {
     try {
-      console.log("Getting signed URL for document:", filePath);
+      console.log("Getting signed URL for document:", fileName);
       
-      // Construct the full path including the request ID
-      const fullPath = `${request.id}/${filePath}`;
+      const fullPath = `${request.id}/${fileName}`;
       console.log("Using full path:", fullPath);
       
       const { data, error } = await supabase.storage
@@ -95,7 +96,6 @@ export function MaintenanceDocumentTab({
       }
 
       console.log("Generated signed URL:", data.signedUrl);
-      // Open the document in a new tab
       window.open(data.signedUrl, '_blank');
     } catch (error) {
       console.error("Error getting document URL:", error);
@@ -107,12 +107,14 @@ export function MaintenanceDocumentTab({
     }
   };
 
-  const handleDeleteDocument = async (filePath: string) => {
+  const handleDeleteDocument = async (fileName: string) => {
     try {
-      setIsDeletingFile(filePath);
+      setIsDeletingFile(fileName);
+      const fullPath = `${request.id}/${fileName}`;
+      
       const { error } = await supabase.storage
         .from('maintenance-documents')
-        .remove([filePath]);
+        .remove([fullPath]);
 
       if (error) throw error;
 
