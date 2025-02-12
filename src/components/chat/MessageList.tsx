@@ -137,37 +137,39 @@ export function MessageList({
   };
 
   return (
-    <ScrollArea className="flex-1 p-4">
-      <div className="space-y-4">
-        {messages.map((message) => {
-          const senderName = message.sender
-            ? `${message.sender.first_name || ''} ${message.sender.last_name || ''}`.trim() || 'Unknown User'
-            : 'Unknown User';
-          const isCurrentUser = message.sender_id === currentUserId;
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <ScrollArea className="flex-1 h-full">
+        <div className="space-y-4 p-4">
+          {messages.map((message) => {
+            const senderName = message.sender
+              ? `${message.sender.first_name || ''} ${message.sender.last_name || ''}`.trim() || 'Unknown User'
+              : 'Unknown User';
+            const isCurrentUser = message.sender_id === currentUserId;
 
-          return (
-            <Message
-              key={message.id}
-              id={message.id}
-              content={message.content}
-              senderName={senderName}
-              createdAt={message.created_at}
-              isCurrentUser={isCurrentUser}
-              status={message.status}
-              isEditing={editingMessageId === message.id}
-              editedContent={editedContent}
-              onEditStart={handleEditMessage}
-              onEditSave={handleSaveEdit}
-              onEditCancel={() => setEditingMessageId(null)}
-              onEditChange={setEditedContent}
-              onDelete={handleDeleteMessage}
-            />
-          );
-        })}
-        
-        <TypingIndicator typingUsers={typingUsers} />
-        <div ref={messagesEndRef} />
-      </div>
-    </ScrollArea>
+            return (
+              <Message
+                key={message.id}
+                id={message.id}
+                content={message.content}
+                senderName={senderName}
+                createdAt={message.created_at}
+                isCurrentUser={isCurrentUser}
+                status={message.status}
+                isEditing={editingMessageId === message.id}
+                editedContent={editedContent}
+                onEditStart={handleEditMessage}
+                onEditSave={handleSaveEdit}
+                onEditCancel={() => setEditingMessageId(null)}
+                onEditChange={setEditedContent}
+                onDelete={handleDeleteMessage}
+              />
+            );
+          })}
+          
+          <TypingIndicator typingUsers={typingUsers} />
+          <div ref={messagesEndRef} />
+        </div>
+      </ScrollArea>
+    </div>
   );
 }
