@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -161,7 +162,7 @@ export default function Maintenance() {
                 onNewRequest={handleNewRequest}
               />
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 gap-6 max-w-4xl mx-auto">
                 <MaintenanceSection
                   title="New Requests"
                   description="Requests needing review"
