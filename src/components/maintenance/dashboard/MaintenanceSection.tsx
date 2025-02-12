@@ -76,44 +76,48 @@ export function MaintenanceSection({
       <p className="text-gray-500 text-sm mb-4">{description}</p>
       
       {requests.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4">
+        <div className="space-y-4 max-w-3xl mx-auto">
           {requests.map((request) => (
             <Card
               key={request.id}
               className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
               onClick={() => onRequestClick(request.id)}
             >
-              <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">🏡</span>
-                  <span className="font-medium">{request.property.name}</span>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">🏡</span>
+                    <span className="font-medium">{request.property.name}</span>
+                  </div>
+                  {getStatusBadge(request.status)}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 text-gray-600">
                   <span>{getIssueEmoji(request.title)}</span>
                   <span>{request.title}</span>
                 </div>
 
-                <div className="flex items-center">
-                  {getPriorityBadge(request.priority)}
+                <div className="flex flex-wrap gap-3 items-center text-sm text-gray-600">
+                  <div>{getPriorityBadge(request.priority)}</div>
+                  
+                  <div className="flex items-center gap-1">
+                    <span>👤</span>
+                    <span>{request.assigned_to || '-'}</span>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <span>📅</span>
+                    <span>
+                      {request.scheduled_date 
+                        ? format(new Date(request.scheduled_date), 'MMM d')
+                        : '-'}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="flex items-center">
-                  {getStatusBadge(request.status)}
-                </div>
-
-                <div className="flex items-center gap-2">
+                <div className="text-sm text-gray-500 flex items-center gap-1">
                   <span>👤</span>
-                  <span>{request.assigned_to || '-'}</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span>📅</span>
-                  <span>
-                    {request.scheduled_date 
-                      ? format(new Date(request.scheduled_date), 'MMM d')
-                      : '-'}
-                  </span>
+                  <span>{request.tenant.first_name} {request.tenant.last_name}</span>
                 </div>
               </div>
             </Card>
