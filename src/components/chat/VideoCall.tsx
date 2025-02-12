@@ -180,4 +180,76 @@ export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCa
       stream.getAudioTracks().forEach(track => {
         track.enabled = !isAudioEnabled;
       });
-      setIsA
+      setIsAudioEnabled(!isAudioEnabled);
+    }
+  };
+
+  const handleClose = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+    }
+    if (peer) {
+      peer.destroy();
+    }
+    onClose();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[900px]">
+        <DialogTitle className="sr-only">Video Call</DialogTitle>
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="relative aspect-video bg-slate-900 rounded-lg overflow-hidden">
+            <video
+              ref={localVideoRef}
+              autoPlay
+              muted
+              playsInline
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute bottom-2 left-2 text-white text-sm bg-black/50 px-2 py-1 rounded">
+              You
+            </div>
+          </div>
+          <div className="relative aspect-video bg-slate-900 rounded-lg overflow-hidden">
+            <video
+              ref={remoteVideoRef}
+              autoPlay
+              playsInline
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute bottom-2 left-2 text-white text-sm bg-black/50 px-2 py-1 rounded">
+              {isInitiator ? 'Tenant' : 'Landlord'}
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-center gap-4">
+          <Button
+            variant="secondary"
+            size="icon"
+            className="rounded-full"
+            onClick={toggleVideo}
+          >
+            {isVideoEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
+          </Button>
+          <Button
+            variant="secondary"
+            size="icon"
+            className="rounded-full"
+            onClick={toggleAudio}
+          >
+            {isAudioEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+          </Button>
+          <Button
+            variant="destructive"
+            size="icon"
+            className="rounded-full"
+            onClick={handleClose}
+          >
+            <PhoneOff className="h-5 w-5" />
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
