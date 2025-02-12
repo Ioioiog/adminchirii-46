@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClipboardList, Users, DollarSign, MessageSquare, FileText, Info } from "lucide-react";
@@ -37,7 +38,7 @@ export const MaintenanceRequestModal = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[800px]">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-xl font-semibold">
             {isNew ? "Create Maintenance Request" : "Maintenance Request Management"}
           </DialogTitle>
         </DialogHeader>
@@ -74,53 +75,55 @@ export const MaintenanceRequestModal = ({
             )}
           </TabsList>
 
-          <TabsContent value="details">
-            <MaintenanceDetailsTab 
-              request={request}
-              onUpdateRequest={onUpdateRequest}
-              isNew={isNew}
-              properties={properties}
-              userRole={userRole}
-            />
-          </TabsContent>
+          <div className="mt-6 space-y-6">
+            <TabsContent value="details">
+              <MaintenanceDetailsTab 
+                request={request}
+                onUpdateRequest={onUpdateRequest}
+                isNew={isNew}
+                properties={properties}
+                userRole={userRole}
+              />
+            </TabsContent>
 
-          {!isNew && request && (
-            <>
-              <TabsContent value="progress">
-                <MaintenanceProgressTab 
-                  request={request}
-                  onUpdateRequest={onUpdateRequest}
-                />
-              </TabsContent>
+            {!isNew && request && (
+              <>
+                <TabsContent value="progress">
+                  <MaintenanceProgressTab 
+                    request={request}
+                    onUpdateRequest={onUpdateRequest}
+                  />
+                </TabsContent>
 
-              <TabsContent value="provider">
-                <MaintenanceProviderTab
-                  request={request}
-                  onUpdateRequest={onUpdateRequest}
-                />
-              </TabsContent>
+                <TabsContent value="provider">
+                  <MaintenanceProviderTab
+                    request={request}
+                    onUpdateRequest={onUpdateRequest}
+                  />
+                </TabsContent>
 
-              <TabsContent value="costs">
-                <MaintenanceCostsTab
-                  request={request}
-                  onUpdateRequest={onUpdateRequest}
-                />
-              </TabsContent>
+                <TabsContent value="costs">
+                  <MaintenanceCostsTab
+                    request={request}
+                    onUpdateRequest={onUpdateRequest}
+                  />
+                </TabsContent>
 
-              <TabsContent value="documents">
-                <MaintenanceDocumentTab
-                  request={request}
-                  onUpdateRequest={onUpdateRequest}
-                  documents={documents}
-                  isLoading={isLoadingDocuments}
-                />
-              </TabsContent>
+                <TabsContent value="documents" className="bg-background p-6 rounded-lg border">
+                  <MaintenanceDocumentTab
+                    request={request}
+                    onUpdateRequest={onUpdateRequest}
+                    documents={documents}
+                    isLoading={isLoadingDocuments}
+                  />
+                </TabsContent>
 
-              <TabsContent value="communication">
-                <MaintenanceChatTab requestId={request.id || ''} />
-              </TabsContent>
-            </>
-          )}
+                <TabsContent value="communication" className="bg-background p-6 rounded-lg border">
+                  <MaintenanceChatTab requestId={request.id || ''} />
+                </TabsContent>
+              </>
+            )}
+          </div>
         </Tabs>
       </DialogContent>
     </Dialog>
