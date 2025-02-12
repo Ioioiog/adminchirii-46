@@ -15,7 +15,8 @@
   "currency": {
     "usd": "$",
     "eur": "€",
-    "gbp": "£"
+    "gbp": "£",
+    "ron": "RON"
   },
   "status": {
     "active": "Active",

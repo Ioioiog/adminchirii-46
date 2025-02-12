@@ -1,3 +1,4 @@
+
 {
   "title": "Proprietăți",
   "add": "Adaugă Proprietate",
@@ -41,5 +42,24 @@
     "error": "A apărut o eroare la procesarea cererii"
   },
   "noProperties": "Nu s-au găsit proprietăți",
-  "loading": "Se încarcă proprietățile..."
+  "loading": "Se încarcă proprietățile...",
+  "description": {
+    "landlord": "Gestionează și monitorizează portofoliul tău de proprietăți eficient. Adaugă proprietăți noi, urmărește închirierile și gestionează cererile de mentenanță într-un singur loc.",
+    "tenant": "Vizualizează proprietățile închiriate și informațiile conexe"
+  },
+  "rent": {
+    "period": "lună"
+  },
+  "available": {
+    "now": "Disponibil Acum"
+  },
+  "empty": {
+    "tenant": "Nu ai încă proprietăți atribuite.",
+    "landlord": "Nu ai adăugat încă nicio proprietate."
+  },
+  "lease": {
+    "startDate": "Data de Început",
+    "endDate": "Data de Sfârșit",
+    "ongoing": "În Desfășurare"
+  }
 }

@@ -1,3 +1,4 @@
+
 {
   "title": "Properties",
   "add": "Add Property",
@@ -41,5 +42,24 @@
     "error": "An error occurred while processing your request"
   },
   "noProperties": "No properties found",
-  "loading": "Loading properties..."
+  "loading": "Loading properties...",
+  "description": {
+    "landlord": "Manage and monitor your property portfolio efficiently. Add new properties, track tenancies, and handle maintenance requests all in one place.",
+    "tenant": "View your rented properties and related information"
+  },
+  "rent": {
+    "period": "month"
+  },
+  "available": {
+    "now": "Available Now"
+  },
+  "empty": {
+    "tenant": "You don't have any properties assigned to you yet.",
+    "landlord": "You haven't added any properties yet."
+  },
+  "lease": {
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "ongoing": "Ongoing"
+  }
 }

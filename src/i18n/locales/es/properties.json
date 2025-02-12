@@ -1,3 +1,4 @@
+
 {
   "title": "Propiedades",
   "add": "Añadir Propiedad",
@@ -41,5 +42,24 @@
     "error": "Ocurrió un error al procesar su solicitud"
   },
   "noProperties": "No se encontraron propiedades",
-  "loading": "Cargando propiedades..."
+  "loading": "Cargando propiedades...",
+  "description": {
+    "landlord": "Gestiona y monitorea tu portafolio de propiedades eficientemente. Añade nuevas propiedades, rastrea alquileres y maneja solicitudes de mantenimiento en un solo lugar.",
+    "tenant": "Ver tus propiedades alquiladas e información relacionada"
+  },
+  "rent": {
+    "period": "mes"
+  },
+  "available": {
+    "now": "Disponible Ahora"
+  },
+  "empty": {
+    "tenant": "No tienes propiedades asignadas aún.",
+    "landlord": "No has añadido ninguna propiedad aún."
+  },
+  "lease": {
+    "startDate": "Fecha de Inicio",
+    "endDate": "Fecha de Fin",
+    "ongoing": "En Curso"
+  }
 }

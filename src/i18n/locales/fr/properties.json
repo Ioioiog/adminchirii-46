@@ -1,3 +1,4 @@
+
 {
   "title": "Propriétés",
   "add": "Ajouter une Propriété",
@@ -41,5 +42,24 @@
     "error": "Une erreur s'est produite lors du traitement de votre demande"
   },
   "noProperties": "Aucune propriété trouvée",
-  "loading": "Chargement des propriétés..."
+  "loading": "Chargement des propriétés...",
+  "description": {
+    "landlord": "Gérez et surveillez votre portefeuille immobilier efficacement. Ajoutez de nouvelles propriétés, suivez les locations et gérez les demandes de maintenance en un seul endroit.",
+    "tenant": "Consultez vos propriétés louées et les informations associées"
+  },
+  "rent": {
+    "period": "mois"
+  },
+  "available": {
+    "now": "Disponible Maintenant"
+  },
+  "empty": {
+    "tenant": "Vous n'avez pas encore de propriétés assignées.",
+    "landlord": "Vous n'avez pas encore ajouté de propriétés."
+  },
+  "lease": {
+    "startDate": "Date de Début",
+    "endDate": "Date de Fin",
+    "ongoing": "En Cours"
+  }
 }
