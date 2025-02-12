@@ -781,6 +781,11 @@ export type Database = {
       }
       messages: {
         Row: {
+          call_duration: number | null
+          call_ended_at: string | null
+          call_started_at: string | null
+          call_status: string | null
+          call_type: string | null
           content: string
           conversation_id: string | null
           created_at: string
@@ -795,6 +800,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          call_duration?: number | null
+          call_ended_at?: string | null
+          call_started_at?: string | null
+          call_status?: string | null
+          call_type?: string | null
           content: string
           conversation_id?: string | null
           created_at?: string
@@ -809,6 +819,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          call_duration?: number | null
+          call_ended_at?: string | null
+          call_started_at?: string | null
+          call_status?: string | null
+          call_type?: string | null
           content?: string
           conversation_id?: string | null
           created_at?: string

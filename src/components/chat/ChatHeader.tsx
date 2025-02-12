@@ -1,15 +1,18 @@
+
 import React from "react";
 import { TenantSelect } from "./TenantSelect";
 import { useUserRole } from "@/hooks/use-user-role";
-import { MessageSquare, Users } from "lucide-react";
+import { MessageSquare, Users, Video } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 interface ChatHeaderProps {
   onTenantSelect: (tenantId: string) => void;
   selectedTenantId: string | null;
+  onVideoCall?: () => void;
 }
 
-export function ChatHeader({ onTenantSelect, selectedTenantId }: ChatHeaderProps) {
+export function ChatHeader({ onTenantSelect, selectedTenantId, onVideoCall }: ChatHeaderProps) {
   const { userRole } = useUserRole();
 
   return (
@@ -24,6 +27,16 @@ export function ChatHeader({ onTenantSelect, selectedTenantId }: ChatHeaderProps
         <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100">
           {userRole === "landlord" ? "Chat with Tenants" : "Chat with Landlord"}
         </h1>
+        {selectedTenantId && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-auto rounded-full"
+            onClick={onVideoCall}
+          >
+            <Video className="h-5 w-5" />
+          </Button>
+        )}
       </div>
       {userRole === "landlord" && (
         <div className={cn(
