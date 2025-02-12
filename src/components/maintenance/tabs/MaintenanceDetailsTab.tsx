@@ -20,6 +20,22 @@ interface MaintenanceDetailsTabProps {
   userRole: string;
 }
 
+type MaintenanceFormData = Pick<MaintenanceRequest, 
+  | 'title' 
+  | 'description' 
+  | 'property_id' 
+  | 'priority' 
+  | 'status' 
+  | 'images' 
+  | 'tenant_id' 
+  | 'contact_phone' 
+  | 'preferred_times'
+  | 'is_emergency'
+  | 'emergency_contact_name'
+  | 'emergency_contact_phone'
+  | 'emergency_instructions'
+>;
+
 export function MaintenanceDetailsTab({
   request,
   onUpdateRequest,
@@ -29,7 +45,7 @@ export function MaintenanceDetailsTab({
 }: MaintenanceDetailsTabProps) {
   console.log("MaintenanceDetailsTab - Initializing with request:", request);
 
-  const form = useForm<MaintenanceRequest>({
+  const form = useForm<MaintenanceFormData>({
     defaultValues: {
       title: request?.title || "",
       description: request?.description || "",
@@ -59,7 +75,7 @@ export function MaintenanceDetailsTab({
 
   const isEmergency = form.watch("is_emergency");
 
-  const handleSubmit = (data: MaintenanceRequest) => {
+  const handleSubmit = (data: MaintenanceFormData) => {
     console.log("Form submitted with data:", data);
     if (!data.description?.trim()) {
       form.setError("description", {
