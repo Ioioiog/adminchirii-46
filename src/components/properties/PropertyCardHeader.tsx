@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Calendar, Wallet, Home } from "lucide-react";
 import { Property } from "@/utils/propertyUtils";
@@ -10,13 +11,13 @@ interface PropertyCardHeaderProps {
 }
 
 export function PropertyCardHeader({ property }: PropertyCardHeaderProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['properties', 'common']);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <Badge variant="secondary" className="mb-2">
-          {t(`properties.types.${property.type.toLowerCase()}`)}
+          {t(`properties:types.${property.type.toLowerCase()}`)}
         </Badge>
       </div>
       
@@ -33,8 +34,8 @@ export function PropertyCardHeader({ property }: PropertyCardHeaderProps) {
         <div className="flex items-center justify-between">
           <p className="text-lg font-medium flex items-center gap-2 text-blue-600">
             <Wallet className="h-5 w-5" />
-            {t('common.currency.usd')}{property.monthly_rent}
-            <span className="text-sm text-gray-500">/ {t('properties.rent.period')}</span>
+            {t('common:currency.usd')}{property.monthly_rent}
+            <span className="text-sm text-gray-500">/ {t('properties:rent.period')}</span>
           </p>
           
           <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -42,7 +43,7 @@ export function PropertyCardHeader({ property }: PropertyCardHeaderProps) {
             {property.available_from ? (
               format(new Date(property.available_from), 'PPP')
             ) : (
-              t('properties.available.now')
+              t('properties:available.now')
             )}
           </div>
         </div>
