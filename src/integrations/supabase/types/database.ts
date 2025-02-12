@@ -82,6 +82,22 @@ export interface Database {
           signal_data?: Json;
           created_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "video_signals_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_signals_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       };
     };
     Views: {

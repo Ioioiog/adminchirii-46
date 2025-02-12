@@ -63,7 +63,7 @@ export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCa
     };
   }, [isOpen, onClose, toast]);
 
-  const initializePeer = (mediaStream: MediaStream) => {
+  const initializePeer = async (mediaStream: MediaStream) => {
     try {
       const newPeer = new SimplePeer({
         initiator: isInitiator,
@@ -79,13 +79,16 @@ export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCa
 
       newPeer.on('signal', async (data) => {
         try {
+          const currentUser = (await supabase.auth.getUser()).data.user;
+          if (!currentUser?.id) return;
+
           const { error } = await supabase
             .from('video_signals')
             .insert({
-              conversation_id: recipientId, // This will be updated with actual conversation_id
-              sender_id: (await supabase.auth.getUser()).data.user?.id,
+              conversation_id: recipientId,
+              sender_id: currentUser.id,
               signal_data: data
-            });
+            } as any); // Temporary type assertion while we update the types
 
           if (error) throw error;
         } catch (error) {
@@ -125,7 +128,7 @@ export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCa
             schema: 'public',
             table: 'video_signals'
           },
-          async (payload) => {
+          async (payload: any) => {
             const currentUser = (await supabase.auth.getUser()).data.user;
             if (payload.new && payload.new.sender_id !== currentUser?.id) {
               newPeer.signal(payload.new.signal_data);
