@@ -40,9 +40,11 @@ export function PropertyCardHeader({ property }: PropertyCardHeaderProps) {
           
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <Calendar className="h-4 w-4" />
-            {property.available_from ? (
+            {property.tenancy ? (
+              format(new Date(property.tenancy.start_date), 'PPP')
+            ) : property.available_from ? (
               format(new Date(property.available_from), 'PPP')
-            ) : (
+            ) : !property.tenancy && (
               t('properties:available.now')
             )}
           </div>
