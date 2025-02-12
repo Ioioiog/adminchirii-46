@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
@@ -34,11 +33,18 @@ export function MessageList({
 }: MessageListProps) {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editedContent, setEditedContent] = useState("");
+  const [visibleMessages, setVisibleMessages] = useState<Message[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
+    // Always show the last 12 messages initially
+    const lastMessages = messages.slice(-12);
+    setVisibleMessages(lastMessages);
+  }, [messages]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, messagesEndRef]);
+  }, [visibleMessages, messagesEndRef]);
 
   useEffect(() => {
     if (!currentUserId) return;
@@ -136,11 +142,29 @@ export function MessageList({
     }
   };
 
+  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const element = event.currentTarget;
+    if (element.scrollTop === 0) {
+      // When we reach the top, load more messages
+      const currentFirstMessageIndex = messages.findIndex(
+        msg => msg.id === visibleMessages[0]?.id
+      );
+      
+      if (currentFirstMessageIndex > 0) {
+        const nextMessages = messages.slice(
+          Math.max(0, currentFirstMessageIndex - 12),
+          currentFirstMessageIndex + visibleMessages.length
+        );
+        setVisibleMessages(nextMessages);
+      }
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <ScrollArea className="flex-1 h-full">
-        <div className="space-y-4 p-4">
-          {messages.map((message) => {
+        <div className="space-y-4 p-4" onScroll={handleScroll}>
+          {visibleMessages.map((message) => {
             const senderName = message.sender
               ? `${message.sender.first_name || ''} ${message.sender.last_name || ''}`.trim() || 'Unknown User'
               : 'Unknown User';
