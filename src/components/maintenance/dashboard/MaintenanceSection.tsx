@@ -37,30 +37,37 @@ export function MaintenanceSection({
   requests,
   onRequestClick,
 }: MaintenanceSectionProps) {
-  const getPriorityIcon = (priority: string) => {
+  const getPriorityBadge = (priority: string) => {
     switch (priority.toLowerCase()) {
       case 'high':
-        return <AlertCircle className="w-5 h-5 text-red-500" />;
+        return <Badge className="bg-red-100 text-red-800 hover:bg-red-200">🔴 High</Badge>;
       case 'medium':
-        return <AlertOctagon className="w-5 h-5 text-yellow-500" />;
+        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200">🟡 Medium</Badge>;
       case 'low':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-200">🟢 Low</Badge>;
       default:
         return null;
     }
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
       case 'in_progress':
-        return <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />;
+        return <Badge className="bg-blue-100 text-blue-800">🔧 In Progress</Badge>;
       case 'pending':
-        return <Clock className="w-5 h-5 text-yellow-500" />;
+        return <Badge className="bg-yellow-100 text-yellow-800">⏳ Waiting Review</Badge>;
       case 'completed':
-        return <CheckSquare className="w-5 h-5 text-green-500" />;
+        return <Badge className="bg-green-100 text-green-800">✅ Completed</Badge>;
       default:
         return null;
     }
+  };
+
+  const getIssueEmoji = (title: string) => {
+    if (title.toLowerCase().includes('leak')) return '🚰';
+    if (title.toLowerCase().includes('ac')) return '❄️';
+    if (title.toLowerCase().includes('window')) return '🪟';
+    return '🔧';
   };
 
   return (
@@ -76,55 +83,37 @@ export function MaintenanceSection({
               className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
               onClick={() => onRequestClick(request.id)}
             >
-              <div className="flex flex-col space-y-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-3">
-                    <Home className="w-5 h-5 text-gray-500 mt-1" />
-                    <div>
-                      <h3 className="font-medium">{request.property.name}</h3>
-                      <p className="text-sm text-gray-500">
-                        {request.tenant.first_name} {request.tenant.last_name}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge 
-                    variant="outline"
-                    className="flex items-center gap-1"
-                  >
-                    {getStatusIcon(request.status)}
-                    {request.status}
-                  </Badge>
+              <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🏡</span>
+                  <span className="font-medium">{request.property.name}</span>
                 </div>
 
-                <div className="flex items-center space-x-3">
-                  <Wrench className="w-5 h-5 text-gray-500" />
-                  <p className="text-sm">{request.title}</p>
+                <div className="flex items-center gap-2">
+                  <span>{getIssueEmoji(request.title)}</span>
+                  <span>{request.title}</span>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-4 text-sm">
-                  <div className="flex items-center gap-1">
-                    {getPriorityIcon(request.priority)}
-                    <span className="text-sm">{request.priority}</span>
-                  </div>
+                <div className="flex items-center">
+                  {getPriorityBadge(request.priority)}
+                </div>
 
-                  {request.assigned_to && (
-                    <div className="flex items-center gap-1">
-                      <User className="w-4 h-4 text-gray-500" />
-                      <span>{request.assigned_to}</span>
-                    </div>
-                  )}
+                <div className="flex items-center">
+                  {getStatusBadge(request.status)}
+                </div>
 
-                  {request.scheduled_date && (
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4 text-gray-500" />
-                      <span>{format(new Date(request.scheduled_date), 'MMM d')}</span>
-                    </div>
-                  )}
+                <div className="flex items-center gap-2">
+                  <span>👤</span>
+                  <span>{request.assigned_to || '-'}</span>
+                </div>
 
-                  <div className="flex items-center gap-1 ml-auto">
-                    <Clock className="w-4 h-4 text-gray-500" />
-                    <span>{format(new Date(request.created_at), 'MMM d, yyyy')}</span>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <span>📅</span>
+                  <span>
+                    {request.scheduled_date 
+                      ? format(new Date(request.scheduled_date), 'MMM d')
+                      : '-'}
+                  </span>
                 </div>
               </div>
             </Card>
