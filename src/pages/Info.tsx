@@ -1,8 +1,26 @@
 
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { HelpCircle } from "lucide-react";
+import { useAuthState } from "@/hooks/useAuthState";
+import { Navigate } from "react-router-dom";
 
 export default function Info() {
+  const { isLoading, isAuthenticated } = useAuthState();
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-lg">Loading...</div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/auth" replace />;
+  }
+
   return (
     <DashboardLayout>
       <div className="container py-6 space-y-8">
