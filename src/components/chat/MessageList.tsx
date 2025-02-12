@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
@@ -44,37 +45,29 @@ export function MessageList({
 
     const updateMessageStatus = async () => {
       try {
-        console.log("Checking for unread messages...");
         const unreadMessages = messages.filter(
           msg => msg.sender_id !== currentUserId && !msg.read
         );
 
-        console.log(`Found ${unreadMessages.length} unread messages`);
-
         if (unreadMessages.length === 0) return;
 
-        // Update messages in smaller batches to avoid URL length issues
         const batchSize = 10;
         for (let i = 0; i < unreadMessages.length; i += batchSize) {
           const batch = unreadMessages.slice(i, i + batchSize);
-          console.log(`Processing batch of ${batch.length} messages`);
           
           const { error } = await supabase
             .from('messages')
             .update({ 
               status: 'read', 
               read: true,
-              updated_at: new Date().toISOString() // Force update to trigger realtime
+              updated_at: new Date().toISOString()
             })
             .in('id', batch.map(msg => msg.id));
 
           if (error) {
-            console.error('Error updating message batch:', error);
             throw error;
           }
         }
-
-        console.log("Successfully marked messages as read");
       } catch (error) {
         console.error('Error updating message status:', error);
         toast({
@@ -85,7 +78,6 @@ export function MessageList({
       }
     };
 
-    // Run immediately when messages change
     updateMessageStatus();
   }, [messages, currentUserId, toast]);
 
@@ -100,7 +92,7 @@ export function MessageList({
         .from('messages')
         .update({ 
           content: editedContent,
-          updated_at: new Date().toISOString() // Force update to trigger realtime
+          updated_at: new Date().toISOString()
         })
         .eq('id', messageId);
 

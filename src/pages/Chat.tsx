@@ -1,3 +1,4 @@
+
 import React, { useRef, useState } from "react";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { ChatHeader } from "@/components/chat/ChatHeader";
@@ -44,7 +45,7 @@ const Chat = () => {
 
     if (userRole === "landlord" && !selectedTenantId) {
       return (
-        <div className="flex-1 flex items-center justify-center p-8 text-center">
+        <div className="flex-1 flex items-center justify-center p-8 text-center bg-gradient-to-br from-slate-50/50 to-slate-100/50 dark:from-slate-900/50 dark:to-slate-800/50 backdrop-blur-sm">
           <div className="max-w-md">
             <h3 className="text-lg font-semibold mb-2">Select a Tenant</h3>
             <p className="text-muted-foreground">
@@ -57,7 +58,7 @@ const Chat = () => {
 
     if (!conversationId) {
       return (
-        <div className="flex-1 flex items-center justify-center p-8 text-center">
+        <div className="flex-1 flex items-center justify-center p-8 text-center bg-gradient-to-br from-slate-50/50 to-slate-100/50 dark:from-slate-900/50 dark:to-slate-800/50 backdrop-blur-sm">
           <div className="max-w-md">
             <h3 className="text-lg font-semibold mb-2">No Conversation Found</h3>
             <p className="text-muted-foreground">
@@ -87,15 +88,21 @@ const Chat = () => {
   };
 
   return (
-    <div className="flex bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 min-h-screen">
+    <div className="flex h-screen bg-[#F1F0FB] dark:bg-slate-900">
       <DashboardSidebar />
-      <ConversationContainer>
-        <ChatHeader 
-          onTenantSelect={handleTenantSelect}
-          selectedTenantId={selectedTenantId}
-        />
-        {renderContent()}
-      </ConversationContainer>
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="container mx-auto px-4 py-6 flex-1 flex">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg flex-1 flex flex-col overflow-hidden border border-slate-200 dark:border-slate-700">
+            <ChatHeader 
+              onTenantSelect={handleTenantSelect}
+              selectedTenantId={selectedTenantId}
+            />
+            <div className="flex-1 flex flex-col min-h-0 bg-[url('/chat-background.png')] bg-repeat">
+              {renderContent()}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

@@ -1,3 +1,4 @@
+
 import React from "react";
 import { format } from "date-fns";
 import { Check, X } from "lucide-react";
@@ -41,23 +42,32 @@ export function Message({
 
   return (
     <div className={cn(
-      "flex mb-2 px-4",
+      "flex mb-4 px-4 animate-fade-in",
       isCurrentUser ? "justify-end" : "justify-start"
     )}>
       <div className={cn(
-        "max-w-[70%] group",
+        "max-w-[70%] group relative",
         isCurrentUser ? "items-end" : "items-start"
       )}>
         <div className={cn(
-          "rounded-2xl px-4 py-2",
-          "shadow-sm",
-          isCurrentUser
-            ? "bg-blue-500 text-white rounded-br-sm"
-            : "bg-slate-100 dark:bg-slate-800 rounded-bl-sm"
+          "rounded-2xl px-4 py-2 shadow-sm transition-all",
+          isCurrentUser 
+            ? "bg-[#DCF8C6] dark:bg-emerald-800 rounded-br-sm" 
+            : "bg-white dark:bg-slate-700 rounded-bl-sm",
+          "hover:shadow-md transition-shadow duration-200"
         )}>
           <div className="flex justify-between items-center mb-1">
-            <p className="text-xs font-medium opacity-75">{senderName}</p>
-            <span className="text-[10px] opacity-50 ml-2">{messageTime}</span>
+            <p className={cn(
+              "text-xs font-medium",
+              isCurrentUser 
+                ? "text-emerald-800 dark:text-emerald-200" 
+                : "text-blue-600 dark:text-blue-200"
+            )}>
+              {senderName}
+            </p>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 ml-2">
+              {messageTime}
+            </span>
           </div>
           {isEditing ? (
             <div className="flex gap-2">
@@ -84,7 +94,9 @@ export function Message({
               </Button>
             </div>
           ) : (
-            <p className="break-words whitespace-pre-wrap text-sm">{content}</p>
+            <p className="break-words whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-200">
+              {content}
+            </p>
           )}
         </div>
         {isCurrentUser && !isEditing && (
