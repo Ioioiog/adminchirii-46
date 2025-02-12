@@ -9,11 +9,12 @@ import { useMessages } from "@/hooks/chat/useMessages";
 import { useAuthState } from "@/hooks/useAuthState";
 import { Loader2 } from "lucide-react";
 import { useUserRole } from "@/hooks/use-user-role";
-import { ConversationContainer } from "@/components/chat/ConversationContainer";
+import { VideoCall } from "@/components/chat/VideoCall";
 
 const Chat = () => {
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
+  const [isVideoCallActive, setIsVideoCallActive] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const { currentUserId } = useAuthState();
@@ -32,6 +33,14 @@ const Chat = () => {
   const handleTenantSelect = (tenantId: string) => {
     console.log("Selected tenant:", tenantId);
     setSelectedTenantId(tenantId);
+  };
+
+  const handleStartVideoCall = () => {
+    setIsVideoCallActive(true);
+  };
+
+  const handleEndVideoCall = () => {
+    setIsVideoCallActive(false);
   };
 
   const renderContent = () => {
@@ -96,6 +105,7 @@ const Chat = () => {
             <ChatHeader 
               onTenantSelect={handleTenantSelect}
               selectedTenantId={selectedTenantId}
+              onVideoCall={handleStartVideoCall}
             />
             <div className="flex-1 flex flex-col min-h-0 bg-[url('/chat-background.png')] bg-repeat">
               {renderContent()}
@@ -103,6 +113,13 @@ const Chat = () => {
           </div>
         </div>
       </div>
+      {isVideoCallActive && conversationId && currentUserId && (
+        <VideoCall
+          conversationId={conversationId}
+          currentUserId={currentUserId}
+          onClose={handleEndVideoCall}
+        />
+      )}
     </div>
   );
 };
