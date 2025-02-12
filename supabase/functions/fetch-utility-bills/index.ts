@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -19,6 +20,12 @@ serve(async (req) => {
     )
 
     const { propertyId } = await req.json()
+
+    // Validate propertyId
+    if (!propertyId || typeof propertyId !== 'string' || propertyId.trim() === '') {
+      throw new Error('Invalid property ID')
+    }
+
     console.log('Fetching bills for property:', propertyId)
 
     // Get property details and utility provider credentials

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   Dialog,
@@ -110,6 +111,15 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
 
   const handleFetchBills = async () => {
     try {
+      if (!propertyId) {
+        toast({
+          title: "Error",
+          description: "Please select a property first",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setIsFetching(true);
       const { error } = await supabase.functions.invoke('fetch-utility-bills', {
         body: { propertyId }
@@ -254,7 +264,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       <Button 
         variant="outline"
         onClick={handleFetchBills}
-        disabled={isFetching}
+        disabled={isFetching || !propertyId}
         className="flex items-center gap-2"
       >
         <Download className="h-4 w-4" />
