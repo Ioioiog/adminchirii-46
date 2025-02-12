@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Json } from "@/integrations/supabase/types/json";
 
 interface Property {
   name: string;
@@ -42,7 +43,7 @@ export interface MaintenanceRequest {
   contact_phone?: string | null;
   preferred_times?: string[];
   invoice_document_path?: string | null;
-  document_path?: string | null;
+  document_path?: Json | null;
   property?: Property;
   tenant?: Tenant;
   materials_cost?: number | null;
