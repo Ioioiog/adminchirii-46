@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
@@ -24,7 +25,7 @@ export function MetricCard({
   route,
   onClick,
 }: MetricCardProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('dashboard'); // Specify 'dashboard' namespace
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
 
@@ -41,11 +42,11 @@ export function MetricCard({
     }
   };
 
-  const shouldAnimate = title === 'dashboard.metrics.totalProperties' || 
-                       title === 'dashboard.metrics.activeTenants' || 
-                       title === 'dashboard.metrics.pendingMaintenance' ||
-                       title === 'dashboard.metrics.monthlyRevenue' ||
-                       title === 'dashboard.metrics.paymentStatus';
+  const shouldAnimate = title === 'metrics.totalProperties' || 
+                       title === 'metrics.activeTenants' || 
+                       title === 'metrics.pendingMaintenance' ||
+                       title === 'metrics.monthlyRevenue' ||
+                       title === 'metrics.paymentStatus';
 
   return (
     <Card 
