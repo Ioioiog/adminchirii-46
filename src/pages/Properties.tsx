@@ -1,3 +1,4 @@
+
 import { Building2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { DashboardProperties } from "@/components/dashboard/DashboardProperties";
@@ -9,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
 export default function Properties() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('properties');
   const { userRole } = useUserRole();
 
   console.log("Properties page - User Role:", userRole);
@@ -61,10 +62,10 @@ export default function Properties() {
           <div className="container mx-auto px-4 py-8">
             <div className="text-center">
               <h1 className="text-2xl font-bold text-gray-900">
-                {t("properties.serviceProvider.notAvailable")}
+                {t("serviceProvider.notAvailable")}
               </h1>
               <p className="mt-2 text-gray-600">
-                {t("properties.serviceProvider.description")}
+                {t("serviceProvider.description")}
               </p>
             </div>
           </div>
@@ -87,11 +88,11 @@ export default function Properties() {
                     <Building2 className="h-6 w-6 text-white" />
                   </div>
                   <h1 className="text-3xl font-bold tracking-tight">
-                    {t("properties.title.landlord")}
+                    {t("title")}
                   </h1>
                 </div>
                 <p className="mt-4 text-gray-600">
-                  {t("properties.description.landlord")}
+                  {t("description.landlord")}
                 </p>
               </header>
               <div className="bg-white rounded-xl shadow-lg p-6">
@@ -117,11 +118,11 @@ export default function Properties() {
                   <Building2 className="h-6 w-6 text-white" />
                 </div>
                 <h1 className="text-3xl font-bold tracking-tight">
-                  {t("properties.title.tenant")}
+                  {t("title")}
                 </h1>
               </div>
               <p className="mt-4 text-gray-600">
-                {t("properties.description.tenant")}
+                {t("description.tenant")}
               </p>
             </header>
 
@@ -146,7 +147,7 @@ export default function Properties() {
                 <CardContent className="p-6">
                   <div className="text-center">
                     <p className="text-lg text-gray-600">
-                      {t("properties.empty.tenant")}
+                      {t("empty.tenant")}
                     </p>
                   </div>
                 </CardContent>
@@ -161,30 +162,30 @@ export default function Properties() {
                     <CardContent>
                       <div className="space-y-4">
                         <div>
-                          <p className="text-sm text-gray-500">{t("properties.details.address")}</p>
+                          <p className="text-sm text-gray-500">{t("details.address")}</p>
                           <p className="font-medium">{tenancy.property.address}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-500">{t("properties.details.type")}</p>
-                          <p className="font-medium">{t(`properties.types.${tenancy.property.type.toLowerCase()}`)}</p>
+                          <p className="text-sm text-gray-500">{t("details.type")}</p>
+                          <p className="font-medium">{t(`types.${tenancy.property.type.toLowerCase()}`)}</p>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <p className="text-sm text-gray-500">{t("properties.lease.startDate")}</p>
+                            <p className="text-sm text-gray-500">{t("lease.startDate")}</p>
                             <p className="font-medium">{format(new Date(tenancy.start_date), 'PPP')}</p>
                           </div>
                           <div>
-                            <p className="text-sm text-gray-500">{t("properties.lease.endDate")}</p>
+                            <p className="text-sm text-gray-500">{t("lease.endDate")}</p>
                             <p className="font-medium">
                               {tenancy.end_date 
                                 ? format(new Date(tenancy.end_date), 'PPP')
-                                : t("properties.lease.ongoing")}
+                                : t("lease.ongoing")}
                             </p>
                           </div>
                         </div>
                         {tenancy.property.description && (
                           <div>
-                            <p className="text-sm text-gray-500">{t("properties.details.description")}</p>
+                            <p className="text-sm text-gray-500">{t("details.description")}</p>
                             <p className="text-gray-600">{tenancy.property.description}</p>
                           </div>
                         )}
