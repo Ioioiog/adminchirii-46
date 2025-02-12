@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Video, Mic, MicOff, VideoOff, PhoneOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import type { Database } from '@/integrations/supabase/types/database';
 
 interface VideoCallProps {
@@ -98,7 +98,6 @@ export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCa
           });
         });
 
-        // Subscribe to incoming signals
         const channel = supabase
           .channel('video-signals')
           .on(
@@ -175,6 +174,7 @@ export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCa
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[900px]">
+        <DialogTitle className="sr-only">Video Call</DialogTitle>
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="relative aspect-video bg-slate-900 rounded-lg overflow-hidden">
             <video
