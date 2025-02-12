@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { RevenuePrediction } from "../RevenuePrediction";
 import { Button } from "@/components/ui/button";
@@ -13,12 +14,12 @@ interface RevenueSectionProps {
 export function RevenueSection({ userId }: RevenueSectionProps) {
   const [showRevenueModal, setShowRevenueModal] = useState(false);
   const [showPredictionsModal, setShowPredictionsModal] = useState(false);
-  const { t } = useTranslation();
+  const { t } = useTranslation('dashboard');
 
   return (
     <>
       <h2 className="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 mb-4">
-        {t('dashboard.revenue.title')}
+        {t('revenue.title')}
       </h2>
       <div className="flex flex-wrap gap-3">
         <Button
@@ -28,7 +29,7 @@ export function RevenueSection({ userId }: RevenueSectionProps) {
           size="sm"
         >
           <BarChart2 className="w-4 h-4" />
-          {t('dashboard.revenue.history')}
+          {t('revenue.history')}
         </Button>
         <Button
           variant="outline"
@@ -37,7 +38,7 @@ export function RevenueSection({ userId }: RevenueSectionProps) {
           size="sm"
         >
           <TrendingUp className="w-4 h-4" />
-          {t('dashboard.revenue.predictions')}
+          {t('revenue.predictions')}
         </Button>
       </div>
 
@@ -45,7 +46,7 @@ export function RevenueSection({ userId }: RevenueSectionProps) {
         <DialogContent className="sm:max-w-[900px]">
           <div className="py-6">
             <h3 className="text-xl font-semibold text-gray-800 mb-4">
-              {t('dashboard.revenue.history')}
+              {t('revenue.history')}
             </h3>
             <div className="bg-white rounded-lg">
               <RevenueChart userId={userId} />
@@ -58,7 +59,7 @@ export function RevenueSection({ userId }: RevenueSectionProps) {
         <DialogContent className="sm:max-w-[900px]">
           <div className="py-6">
             <h3 className="text-xl font-semibold text-gray-800 mb-4">
-              {t('dashboard.revenue.predictions')}
+              {t('revenue.predictions')}
             </h3>
             <div className="bg-white rounded-lg">
               <RevenuePrediction userId={userId} />
