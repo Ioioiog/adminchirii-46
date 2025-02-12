@@ -1,3 +1,4 @@
+
 import { Json } from './json';
 import { Property } from './property';
 import { Profile } from './profile';
@@ -59,6 +60,29 @@ export interface Database {
         };
       };
       utilities: Utility;
+      video_signals: {
+        Row: {
+          id: string;
+          conversation_id: string;
+          sender_id: string;
+          signal_data: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          conversation_id: string;
+          sender_id: string;
+          signal_data: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          conversation_id?: string;
+          sender_id?: string;
+          signal_data?: Json;
+          created_at?: string;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
