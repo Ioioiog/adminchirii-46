@@ -15,6 +15,8 @@ interface ChatHeaderProps {
 export function ChatHeader({ onTenantSelect, selectedTenantId, onVideoCall }: ChatHeaderProps) {
   const { userRole } = useUserRole();
 
+  console.log("ChatHeader - selectedTenantId:", selectedTenantId); // Debug log
+
   return (
     <div className="p-4 border-b bg-white dark:bg-slate-900 rounded-t-xl backdrop-blur-sm">
       <div className={cn(
@@ -27,7 +29,7 @@ export function ChatHeader({ onTenantSelect, selectedTenantId, onVideoCall }: Ch
         <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100">
           {userRole === "landlord" ? "Chat with Tenants" : "Chat with Landlord"}
         </h1>
-        {selectedTenantId && (
+        {userRole === "landlord" && (
           <Button
             variant="ghost"
             size="icon"
