@@ -1,3 +1,4 @@
+
 {
   "title": "Dashboard",
   "welcome": "Welcome back",
@@ -28,5 +29,25 @@
     "documents": "View Documents",
     "documentsDesc": "Access your lease and other important documents",
     "viewMore": "Take Action"
+  },
+  "revenue": {
+    "title": "Track your money",
+    "prediction": {
+      "title": "Revenue Prediction",
+      "noData": "No revenue data available for predictions"
+    },
+    "details": {
+      "title": "Revenue Details",
+      "total": "Total Revenue",
+      "average": "Average Revenue",
+      "change": "Monthly Change"
+    }
+  },
+  "upcomingIncome": {
+    "title": "Upcoming Income",
+    "noData": "No upcoming income data available",
+    "property": "Property",
+    "amount": "Amount",
+    "dueDate": "Due Date"
   }
 }
