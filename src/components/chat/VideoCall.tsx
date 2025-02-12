@@ -23,6 +23,7 @@ export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCa
   const [peer, setPeer] = useState<SimplePeer.Instance | null>(null);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(true);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
@@ -32,8 +33,21 @@ export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCa
 
     let mounted = true;
 
-    const initializeCallState = async () => {
+    const requestMediaPermissions = async () => {
       try {
+        // First check if permissions are already granted
+        const permissions = await navigator.mediaDevices.enumerateDevices();
+        const hasVideoPermission = permissions.some(device => device.kind === 'videoinput' && device.label);
+        const hasAudioPermission = permissions.some(device => device.kind === 'audioinput' && device.label);
+
+        if (!hasVideoPermission || !hasAudioPermission) {
+          toast({
+            title: "Permission Required",
+            description: "Please allow access to your camera and microphone to start the video call.",
+            duration: 5000,
+          });
+        }
+
         const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: true
@@ -45,6 +59,7 @@ export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCa
         }
 
         setStream(mediaStream);
+        setIsInitializing(false);
 
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = mediaStream;
@@ -121,16 +136,24 @@ export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCa
         };
       } catch (error) {
         console.error('Error initializing call:', error);
-        toast({
-          title: "Error",
-          description: "Could not access camera or microphone",
-          variant: "destructive"
-        });
+        if (error instanceof Error) {
+          const errorMessage = error.name === 'NotAllowedError' 
+            ? "Camera or microphone access was denied. Please check your browser permissions and try again."
+            : "Could not access camera or microphone. Please make sure they are properly connected.";
+          
+          toast({
+            title: "Permission Error",
+            description: errorMessage,
+            variant: "destructive",
+            duration: 5000,
+          });
+        }
+        setIsInitializing(false);
         onClose();
       }
     };
 
-    initializeCallState();
+    requestMediaPermissions();
 
     return () => {
       mounted = false;
@@ -157,76 +180,4 @@ export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCa
       stream.getAudioTracks().forEach(track => {
         track.enabled = !isAudioEnabled;
       });
-      setIsAudioEnabled(!isAudioEnabled);
-    }
-  };
-
-  const handleClose = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-    }
-    if (peer) {
-      peer.destroy();
-    }
-    onClose();
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[900px]">
-        <DialogTitle className="sr-only">Video Call</DialogTitle>
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="relative aspect-video bg-slate-900 rounded-lg overflow-hidden">
-            <video
-              ref={localVideoRef}
-              autoPlay
-              muted
-              playsInline
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute bottom-2 left-2 text-white text-sm bg-black/50 px-2 py-1 rounded">
-              You
-            </div>
-          </div>
-          <div className="relative aspect-video bg-slate-900 rounded-lg overflow-hidden">
-            <video
-              ref={remoteVideoRef}
-              autoPlay
-              playsInline
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute bottom-2 left-2 text-white text-sm bg-black/50 px-2 py-1 rounded">
-              {isInitiator ? 'Tenant' : 'Landlord'}
-            </div>
-          </div>
-        </div>
-        <div className="flex justify-center gap-4">
-          <Button
-            variant="secondary"
-            size="icon"
-            className="rounded-full"
-            onClick={toggleVideo}
-          >
-            {isVideoEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
-          </Button>
-          <Button
-            variant="secondary"
-            size="icon"
-            className="rounded-full"
-            onClick={toggleAudio}
-          >
-            {isAudioEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
-          </Button>
-          <Button
-            variant="destructive"
-            size="icon"
-            className="rounded-full"
-            onClick={handleClose}
-          >
-            <PhoneOff className="h-5 w-5" />
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
+      setIsA
