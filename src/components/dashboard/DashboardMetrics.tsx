@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Home, Wrench, Users, Wallet } from "lucide-react";
 import { MetricCard } from "./MetricCard";
@@ -7,7 +8,7 @@ import { RevenueDetailsModal } from "./RevenueDetailsModal";
 import { useCurrency } from "@/hooks/useCurrency";
 
 export function DashboardMetrics({ userId, userRole }: { userId: string; userRole: "landlord" | "tenant" | "service_provider" }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('dashboard');
   const [showRevenueDetails, setShowRevenueDetails] = useState(false);
   const { formatAmount } = useCurrency();
   
@@ -22,7 +23,7 @@ export function DashboardMetrics({ userId, userRole }: { userId: string; userRol
         {[...Array(userRole === 'service_provider' ? 3 : 4)].map((_, i) => (
           <MetricCard
             key={i}
-            title={t('dashboard.metrics.loading')}
+            title="metrics.loading"
             value="..."
             icon={Home}
             className="bg-white shadow-md hover:shadow-lg transition-all duration-300"
@@ -40,28 +41,28 @@ export function DashboardMetrics({ userId, userRole }: { userId: string; userRol
     return (
       <div className="grid gap-6 md:grid-cols-3 animate-fade-in">
         <MetricCard
-          title={t('dashboard.metrics.activeJobs')}
+          title="metrics.activeJobs"
           value={metrics.activeJobs || 0}
           icon={Wrench}
           route="/maintenance"
           className="bg-white shadow-md hover:shadow-lg transition-all duration-300"
-          description={t('dashboard.metrics.activeJobsDesc')}
+          description="metrics.activeJobsDesc"
         />
         <MetricCard
-          title={t('dashboard.metrics.completedJobs')}
+          title="metrics.completedJobs"
           value={metrics.completedJobs || 0}
           icon={Home}
           route="/maintenance"
           className="bg-white shadow-md hover:shadow-lg transition-all duration-300"
-          description={t('dashboard.metrics.completedJobsDesc')}
+          description="metrics.completedJobsDesc"
         />
         <MetricCard
-          title={t('dashboard.metrics.monthlyEarnings')}
+          title="metrics.monthlyEarnings"
           value={formatAmount(metrics.monthlyEarnings || 0)}
           icon={Wallet}
           onClick={handleRevenueClick}
           className="bg-white shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer"
-          description={t('dashboard.metrics.monthlyEarningsDesc')}
+          description="metrics.monthlyEarningsDesc"
         />
       </div>
     );
@@ -72,36 +73,36 @@ export function DashboardMetrics({ userId, userRole }: { userId: string; userRol
       <>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 animate-fade-in">
           <MetricCard
-            title={t('dashboard.metrics.totalProperties')}
+            title="metrics.totalProperties"
             value={metrics.totalProperties || 0}
             icon={Home}
             route="/properties"
             className="bg-white shadow-md hover:shadow-lg transition-all duration-300"
-            description={t('dashboard.metrics.totalPropertiesDesc')}
+            description="metrics.totalPropertiesDesc"
           />
           <MetricCard
-            title={t('dashboard.metrics.monthlyRevenue')}
+            title="metrics.monthlyRevenue"
             value={formatAmount(metrics.monthlyRevenue || 0)}
             icon={Wallet}
             onClick={handleRevenueClick}
-            description={t('dashboard.metrics.monthlyRevenueDesc')}
+            description="metrics.monthlyRevenueDesc"
             className="bg-white shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer"
           />
           <MetricCard
-            title={t('dashboard.metrics.activeTenants')}
+            title="metrics.activeTenants"
             value={metrics.activeTenants || 0}
             icon={Users}
             route="/tenants"
             className="bg-white shadow-md hover:shadow-lg transition-all duration-300"
-            description={t('dashboard.metrics.activeTenantsDesc')}
+            description="metrics.activeTenantsDesc"
           />
           <MetricCard
-            title={t('dashboard.metrics.pendingMaintenance')}
+            title="metrics.pendingMaintenance"
             value={metrics.pendingMaintenance || 0}
             icon={Wrench}
             route="/maintenance"
             className="bg-white shadow-md hover:shadow-lg transition-all duration-300"
-            description={t('dashboard.metrics.pendingMaintenanceDesc')}
+            description="metrics.pendingMaintenanceDesc"
           />
         </div>
 
@@ -118,28 +119,28 @@ export function DashboardMetrics({ userId, userRole }: { userId: string; userRol
     <>
       <div className="grid gap-6 md:grid-cols-3 animate-fade-in">
         <MetricCard
-          title={t('dashboard.metrics.totalProperties')}
+          title="metrics.totalProperties"
           value={metrics.totalProperties || 0}
           icon={Home}
           route="/properties"
           className="bg-white shadow-md hover:shadow-lg transition-all duration-300"
-          description={t('dashboard.metrics.rentedPropertiesDesc')}
+          description="metrics.rentedPropertiesDesc"
         />
         <MetricCard
-          title={t('dashboard.metrics.pendingMaintenance')}
+          title="metrics.pendingMaintenance"
           value={metrics.pendingMaintenance || 0}
           icon={Wrench}
           route="/maintenance"
           className="bg-white shadow-md hover:shadow-lg transition-all duration-300"
-          description={t('dashboard.metrics.openMaintenanceDesc')}
+          description="metrics.openMaintenanceDesc"
         />
         <MetricCard
-          title={t('dashboard.metrics.paymentStatus')}
-          value={metrics.paymentStatus || t('dashboard.metrics.noPayments')}
+          title="metrics.paymentStatus"
+          value={metrics.paymentStatus || t('metrics.noPayments')}
           icon={Wallet}
           onClick={handleRevenueClick}
           className="bg-white shadow-md hover:shadow-lg transition-all duration-300"
-          description={t('dashboard.metrics.paymentStatusDesc')}
+          description="metrics.paymentStatusDesc"
         />
       </div>
 
