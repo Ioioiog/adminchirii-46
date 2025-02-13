@@ -1,3 +1,4 @@
+
 import { BookOpen, HelpCircle } from "lucide-react";
 import { useAuthState } from "@/hooks/useAuthState";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -20,7 +21,37 @@ export default function InfoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 relative overflow-hidden">
+      {/* Animated 3D Buildings Background */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 opacity-30">
+          {/* Building 1 */}
+          <div className="absolute h-64 w-32 bg-gradient-to-b from-blue-500/20 to-indigo-500/20 rounded-t-lg transform -skew-x-12 animate-float-1 left-[10%] top-[20%]">
+            <div className="absolute inset-x-2 top-2 bottom-0 bg-gradient-to-b from-white/10 to-transparent grid grid-cols-3 gap-2 p-2">
+              {Array.from({ length: 15 }).map((_, i) => (
+                <div key={i} className="bg-white/20 rounded-sm" />
+              ))}
+            </div>
+          </div>
+          {/* Building 2 */}
+          <div className="absolute h-80 w-40 bg-gradient-to-b from-purple-500/20 to-pink-500/20 rounded-t-lg transform -skew-x-12 animate-float-2 left-[30%] top-[10%]">
+            <div className="absolute inset-x-2 top-2 bottom-0 bg-gradient-to-b from-white/10 to-transparent grid grid-cols-4 gap-2 p-2">
+              {Array.from({ length: 24 }).map((_, i) => (
+                <div key={i} className="bg-white/20 rounded-sm" />
+              ))}
+            </div>
+          </div>
+          {/* Building 3 */}
+          <div className="absolute h-72 w-36 bg-gradient-to-b from-green-500/20 to-emerald-500/20 rounded-t-lg transform -skew-x-12 animate-float-3 left-[60%] top-[15%]">
+            <div className="absolute inset-x-2 top-2 bottom-0 bg-gradient-to-b from-white/10 to-transparent grid grid-cols-3 gap-2 p-2">
+              {Array.from({ length: 18 }).map((_, i) => (
+                <div key={i} className="bg-white/20 rounded-sm" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Hero Section with 3D effect */}
       <div className="relative overflow-hidden bg-gradient-to-br from-blue-500/10 to-indigo-500/10 backdrop-blur-xl border border-white/10 dark:border-white/5">
         <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(0deg,transparent,black)]" />
@@ -45,7 +76,7 @@ export default function InfoPage() {
       </div>
 
       {/* Main Content */}
-      <div className="container py-16 space-y-16">
+      <div className="container py-16 space-y-16 relative z-10">
         {/* Feature Cards with 3D effect */}
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
           <div className="group rounded-2xl bg-white/70 dark:bg-gray-800/50 backdrop-blur-xl border border-white/20 dark:border-white/10 p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
