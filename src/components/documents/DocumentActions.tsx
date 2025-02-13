@@ -31,6 +31,13 @@ export function DocumentActions({ document: doc, userRole, onDocumentUpdated }: 
     
     setIsDownloading(true);
     try {
+      // Verify session before download
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        console.error("Session error before download:", sessionError);
+        throw new Error("Please sign in again to download documents");
+      }
+
       console.log("Starting download process for document:", {
         id: doc.id,
         file_path: doc.file_path,
@@ -44,7 +51,22 @@ export function DocumentActions({ document: doc, userRole, onDocumentUpdated }: 
 
       if (error) {
         console.error("Storage download error:", error);
-        throw new Error(error.message);
+        console.error("Error message:", error.message);
+        
+        // Try to parse the error message if it's JSON
+        try {
+          const errorBody = JSON.parse(error.message);
+          if (errorBody.statusCode === "404" || errorBody.error === "not_found") {
+            throw new Error("The document file could not be found. Please contact support.");
+          }
+        } catch (parseError) {
+          // If parsing fails, check the raw message
+          if (error.message?.includes("not_found") || error.message?.includes("404")) {
+            throw new Error("The document file could not be found. Please contact support.");
+          }
+        }
+        
+        throw new Error("Could not download the document. Please try again later.");
       }
 
       if (!data) {
@@ -52,17 +74,20 @@ export function DocumentActions({ document: doc, userRole, onDocumentUpdated }: 
         throw new Error("No data received from storage");
       }
 
-      // Create a download link
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
+      // Create a blob URL and trigger download
+      const blob = new Blob([data], { type: 'application/octet-stream' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
       a.href = url;
       a.download = doc.file_path.split('/').pop() || 'document';
       document.body.appendChild(a);
       a.click();
       
       // Clean up
-      URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      
+      console.log("File download completed successfully");
 
       toast({
         title: "Success",
@@ -70,9 +95,16 @@ export function DocumentActions({ document: doc, userRole, onDocumentUpdated }: 
       });
     } catch (error: any) {
       console.error("Error downloading document:", error);
+      
+      if (error.message?.includes("sign in")) {
+        await supabase.auth.signOut();
+        window.location.href = "/auth";
+        return;
+      }
+
       toast({
         title: "Error",
-        description: "Could not download the document. Please try again later.",
+        description: error.message || "Could not download the document. Please try again later.",
         variant: "destructive",
       });
     } finally {
