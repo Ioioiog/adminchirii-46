@@ -18,6 +18,13 @@ interface VideoCallProps {
 type VideoSignal = Database['public']['Tables']['video_signals']['Insert'];
 type SignalData = SimplePeer.SignalData;
 
+// Ensure we only use SimplePeer in browser environment
+const createPeer = (options: SimplePeer.Options): SimplePeer.Instance => {
+  if (typeof window === 'undefined') return null as any;
+  // @ts-ignore - SimplePeer types are not perfect
+  return new SimplePeer(options);
+};
+
 export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCallProps) {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [peer, setPeer] = useState<SimplePeer.Instance | null>(null);
@@ -65,7 +72,7 @@ export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCa
           localVideoRef.current.srcObject = mediaStream;
         }
 
-        const newPeer = new SimplePeer({
+        const newPeer = createPeer({
           initiator: isInitiator,
           stream: mediaStream,
           trickle: false
