@@ -1,5 +1,4 @@
 
-import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { HelpCircle } from "lucide-react";
 import { useAuthState } from "@/hooks/useAuthState";
 import { Navigate } from "react-router-dom";
@@ -9,11 +8,9 @@ export default function Info() {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-lg">Loading...</div>
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-lg">Loading...</div>
+      </div>
     );
   }
 
@@ -22,7 +19,7 @@ export default function Info() {
   }
 
   return (
-    <DashboardLayout>
+    <div className="min-h-screen bg-background">
       <div className="container py-6 space-y-8">
         <div className="flex items-center gap-2">
           <HelpCircle className="h-6 w-6 text-blue-500" />
@@ -68,6 +65,6 @@ export default function Info() {
           </div>
         </div>
       </div>
-    </DashboardLayout>
+    </div>
   );
 }
