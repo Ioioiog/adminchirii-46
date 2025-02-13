@@ -1,12 +1,25 @@
-
 import { BookOpen, HelpCircle, Building2, Users, Key, MessageSquare } from "lucide-react";
 import { useAuthState } from "@/hooks/useAuthState";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
 
 export default function InfoPage() {
   const { isLoading, isAuthenticated } = useAuthState();
   const navigate = useNavigate();
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePosition({
+        x: (e.clientX / window.innerWidth) * 20,
+        y: (e.clientY / window.innerHeight) * 20
+      });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
 
   if (isLoading) {
     return (
@@ -16,55 +29,82 @@ export default function InfoPage() {
     );
   }
 
+  const buildingConfigs = [
+    { height: 400, width: 80, color: 'from-blue-500/30 to-purple-500/30', windows: 20 },
+    { height: 300, width: 70, color: 'from-purple-500/30 to-pink-500/30', windows: 15 },
+    { height: 500, width: 90, color: 'from-indigo-500/30 to-blue-500/30', windows: 25 },
+    { height: 350, width: 75, color: 'from-cyan-500/30 to-blue-500/30', windows: 18 },
+    { height: 450, width: 85, color: 'from-blue-500/30 to-indigo-500/30', windows: 22 },
+    { height: 280, width: 65, color: 'from-violet-500/30 to-purple-500/30', windows: 14 },
+    { height: 420, width: 78, color: 'from-purple-500/30 to-indigo-500/30', windows: 21 },
+    { height: 380, width: 72, color: 'from-blue-500/30 to-cyan-500/30', windows: 19 }
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 relative overflow-hidden perspective-1000">
-      {/* Animated Particles Background */}
-      <div className="absolute inset-0 opacity-20">
-        {Array.from({ length: 50 }).map((_, i) => (
-          <div 
-            key={i}
-            className="absolute w-1 h-1 bg-blue-400 rounded-full animate-float-1"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${5 + Math.random() * 5}s`
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Dynamic 3D Buildings */}
+      {/* Animated 3D Buildings */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute inset-0">
-          {Array.from({ length: 8 }).map((_, i) => {
-            const height = 200 + Math.random() * 300;
-            const width = 60 + Math.random() * 40;
-            return (
-              <div 
-                key={i}
-                className={`absolute bottom-0 bg-gradient-to-t from-blue-500/20 to-purple-500/20 rounded-t-lg transform -skew-x-12 ${`animate-float-${(i % 6) + 1}`}`}
-                style={{
-                  height: `${height}px`,
-                  width: `${width}px`,
-                  left: `${(i * 15) + Math.random() * 5}%`,
-                }}
-              >
-                <div className="absolute inset-x-2 top-2 bottom-0 bg-gradient-to-b from-white/10 to-transparent grid grid-cols-3 gap-1 p-2">
-                  {Array.from({ length: Math.floor(height / 20) }).map((_, j) => (
-                    <div 
-                      key={j} 
-                      className="bg-white/20 rounded-sm"
-                      style={{
-                        opacity: Math.random() > 0.5 ? 0.8 : 0.2
-                      }}
-                    />
-                  ))}
-                </div>
+        <div 
+          className="absolute inset-0 transition-transform duration-300 ease-out"
+          style={{
+            transform: `translate3d(${mousePosition.x}px, ${mousePosition.y}px, 0) rotateX(${mousePosition.y / 50}deg) rotateY(${mousePosition.x / 50}deg)`
+          }}
+        >
+          {buildingConfigs.map((building, i) => (
+            <div 
+              key={i}
+              className={`absolute bottom-0 bg-gradient-to-t ${building.color} rounded-t-lg transform transition-all duration-500 ease-out`}
+              style={{
+                height: `${building.height}px`,
+                width: `${building.width}px`,
+                left: `${(i * 12) + 2}%`,
+                transform: `translateZ(${i * 10}px) skewX(-12deg) scale(${1 + mousePosition.y / 1000})`,
+                boxShadow: `
+                  0 0 40px ${i % 2 ? 'rgba(59, 130, 246, 0.2)' : 'rgba(139, 92, 246, 0.2)'},
+                  inset 0 0 20px ${i % 2 ? 'rgba(59, 130, 246, 0.1)' : 'rgba(139, 92, 246, 0.1)'}
+                `
+              }}
+            >
+              {/* Windows */}
+              <div className="absolute inset-x-2 top-2 bottom-0 grid grid-cols-4 gap-2 p-2">
+                {Array.from({ length: building.windows }).map((_, j) => (
+                  <div 
+                    key={j} 
+                    className={`bg-white/20 rounded-sm transition-all duration-1000 ${
+                      Math.random() > 0.5 ? 'animate-pulse' : ''
+                    }`}
+                    style={{
+                      opacity: Math.random() > 0.3 ? 0.8 : 0.2,
+                      boxShadow: `0 0 10px ${Math.random() > 0.7 ? 'rgba(255, 255, 255, 0.5)' : 'transparent'}`
+                    }}
+                  />
+                ))}
               </div>
-            );
-          })}
-          <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 to-transparent" />
+              
+              {/* Light Beam Effect */}
+              <div 
+                className="absolute top-0 left-1/2 w-20 h-60 bg-gradient-to-b from-blue-500/20 to-transparent -translate-x-1/2 transform-gpu"
+                style={{
+                  filter: 'blur(20px)',
+                  animation: `pulse ${3 + i}s infinite`
+                }}
+              />
+              
+              {/* Holographic Scan Line */}
+              <div 
+                className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-blue-400/30 to-transparent"
+                style={{
+                  animation: `scanline ${2 + i}s infinite linear`,
+                  top: `${(mousePosition.y / 20)}%`
+                }}
+              />
+            </div>
+          ))}
+          
+          {/* Atmospheric Fog */}
+          <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/50 to-transparent backdrop-blur-sm">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(59,130,246,0.1),transparent)]" />
+          </div>
         </div>
       </div>
 
