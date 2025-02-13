@@ -1,7 +1,6 @@
-
 import { BookOpen, HelpCircle } from "lucide-react";
 import { useAuthState } from "@/hooks/useAuthState";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 export default function InfoPage() {
@@ -16,16 +15,10 @@ export default function InfoPage() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/auth" replace />;
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 relative overflow-hidden">
-      {/* Animated 3D Buildings Background */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute inset-0 opacity-30">
-          {/* Building 1 */}
           <div className="absolute h-64 w-32 bg-gradient-to-b from-blue-500/20 to-indigo-500/20 rounded-t-lg transform -skew-x-12 animate-float-1 left-[10%] top-[20%]">
             <div className="absolute inset-x-2 top-2 bottom-0 bg-gradient-to-b from-white/10 to-transparent grid grid-cols-3 gap-2 p-2">
               {Array.from({ length: 15 }).map((_, i) => (
@@ -33,7 +26,6 @@ export default function InfoPage() {
               ))}
             </div>
           </div>
-          {/* Building 2 */}
           <div className="absolute h-80 w-40 bg-gradient-to-b from-purple-500/20 to-pink-500/20 rounded-t-lg transform -skew-x-12 animate-float-2 left-[30%] top-[10%]">
             <div className="absolute inset-x-2 top-2 bottom-0 bg-gradient-to-b from-white/10 to-transparent grid grid-cols-4 gap-2 p-2">
               {Array.from({ length: 24 }).map((_, i) => (
@@ -41,7 +33,6 @@ export default function InfoPage() {
               ))}
             </div>
           </div>
-          {/* Building 3 */}
           <div className="absolute h-72 w-36 bg-gradient-to-b from-green-500/20 to-emerald-500/20 rounded-t-lg transform -skew-x-12 animate-float-3 left-[60%] top-[15%]">
             <div className="absolute inset-x-2 top-2 bottom-0 bg-gradient-to-b from-white/10 to-transparent grid grid-cols-3 gap-2 p-2">
               {Array.from({ length: 18 }).map((_, i) => (
@@ -49,7 +40,6 @@ export default function InfoPage() {
               ))}
             </div>
           </div>
-          {/* Building 4 */}
           <div className="absolute h-96 w-44 bg-gradient-to-b from-cyan-500/20 to-blue-500/20 rounded-t-lg transform -skew-x-12 animate-float-4 left-[80%] top-[5%]">
             <div className="absolute inset-x-2 top-2 bottom-0 bg-gradient-to-b from-white/10 to-transparent grid grid-cols-4 gap-2 p-2">
               {Array.from({ length: 32 }).map((_, i) => (
@@ -57,7 +47,6 @@ export default function InfoPage() {
               ))}
             </div>
           </div>
-          {/* Building 5 */}
           <div className="absolute h-56 w-28 bg-gradient-to-b from-amber-500/20 to-orange-500/20 rounded-t-lg transform -skew-x-12 animate-float-5 left-[45%] top-[25%]">
             <div className="absolute inset-x-2 top-2 bottom-0 bg-gradient-to-b from-white/10 to-transparent grid grid-cols-3 gap-2 p-2">
               {Array.from({ length: 12 }).map((_, i) => (
@@ -65,7 +54,6 @@ export default function InfoPage() {
               ))}
             </div>
           </div>
-          {/* Foreground Buildings */}
           <div className="absolute h-48 w-24 bg-gradient-to-b from-indigo-500/10 to-violet-500/10 rounded-t-lg transform -skew-x-12 animate-float-6 left-[20%] top-[35%]">
             <div className="absolute inset-x-2 top-2 bottom-0 bg-gradient-to-b from-white/10 to-transparent grid grid-cols-2 gap-2 p-2">
               {Array.from({ length: 10 }).map((_, i) => (
@@ -73,12 +61,10 @@ export default function InfoPage() {
               ))}
             </div>
           </div>
-          {/* Background Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-gray-50/50 to-transparent dark:from-gray-900/50 pointer-events-none" />
         </div>
       </div>
 
-      {/* Hero Section with 3D effect */}
       <div className="relative overflow-hidden bg-gradient-to-br from-blue-500/10 to-indigo-500/10 backdrop-blur-xl border border-white/10 dark:border-white/5">
         <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(0deg,transparent,black)]" />
         <div className="container py-16 relative">
@@ -101,9 +87,7 @@ export default function InfoPage() {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="container py-16 space-y-16 relative z-10">
-        {/* Feature Cards with 3D effect */}
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
           <div className="group rounded-2xl bg-white/70 dark:bg-gray-800/50 backdrop-blur-xl border border-white/20 dark:border-white/10 p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="p-3 rounded-2xl bg-blue-500/10 backdrop-blur-xl border border-blue-500/20 shadow-lg w-fit mb-6 group-hover:scale-110 transition-transform">
@@ -133,13 +117,15 @@ export default function InfoPage() {
                 </li>
               ))}
             </ul>
-            <Button 
-              variant="outline" 
-              className="w-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-xl border-green-500/20 hover:border-green-500/40 hover:bg-green-500/10 transition-all duration-300"
-              onClick={() => navigate('/auth')}
-            >
-              Go to Authentication
-            </Button>
+            {!isAuthenticated && (
+              <Button 
+                variant="outline" 
+                className="w-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-xl border-green-500/20 hover:border-green-500/40 hover:bg-green-500/10 transition-all duration-300"
+                onClick={() => navigate('/auth')}
+              >
+                Get Started
+              </Button>
+            )}
           </div>
           
           <div className="group rounded-2xl bg-white/70 dark:bg-gray-800/50 backdrop-blur-xl border border-white/20 dark:border-white/10 p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
@@ -159,7 +145,6 @@ export default function InfoPage() {
           </div>
         </div>
 
-        {/* Updates Section with glass effect */}
         <div className="rounded-2xl bg-gradient-to-br from-blue-500/5 to-indigo-500/5 backdrop-blur-xl border border-white/10 p-8 shadow-xl">
           <h2 className="text-2xl font-semibold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
             Latest Updates
