@@ -19,10 +19,23 @@ type VideoSignal = Database['public']['Tables']['video_signals']['Insert'];
 type SignalData = SimplePeer.SignalData;
 
 // Ensure we only use SimplePeer in browser environment
-const createPeer = (options: SimplePeer.Options): SimplePeer.Instance => {
-  if (typeof window === 'undefined') return null as any;
-  // @ts-ignore - SimplePeer types are not perfect
-  return new SimplePeer(options);
+const createPeer = (options: SimplePeer.Options): SimplePeer.Instance | null => {
+  try {
+    if (typeof window === 'undefined') return null;
+    if (!window.RTCPeerConnection) return null;
+    
+    return new (SimplePeer as any)({
+      ...options,
+      wrtc: {
+        RTCPeerConnection: window.RTCPeerConnection,
+        RTCSessionDescription: window.RTCSessionDescription,
+        RTCIceCandidate: window.RTCIceCandidate
+      }
+    });
+  } catch (error) {
+    console.error('Error creating peer:', error);
+    return null;
+  }
 };
 
 export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCallProps) {
@@ -75,8 +88,12 @@ export function VideoCall({ isOpen, onClose, recipientId, isInitiator }: VideoCa
         const newPeer = createPeer({
           initiator: isInitiator,
           stream: mediaStream,
-          trickle: false
+          trickle: false,
         });
+
+        if (!newPeer) {
+          throw new Error('Failed to create peer connection');
+        }
 
         setPeer(newPeer);
 
