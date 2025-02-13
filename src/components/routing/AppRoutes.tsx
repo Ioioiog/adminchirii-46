@@ -1,3 +1,4 @@
+
 import { Route, Routes, Navigate } from "react-router-dom";
 import AuthPage from "@/pages/Auth";
 import Properties from "@/pages/Properties";
@@ -19,6 +20,7 @@ import { ResetPassword } from "@/components/auth/ResetPassword";
 import { UpdatePassword } from "@/components/auth/UpdatePassword";
 import Index from "@/pages/Index";
 import Info from "@/pages/Info";
+import Contracts from "@/pages/Contracts";
 import { useUserRole } from "@/hooks/use-user-role";
 
 interface AppRoutesProps {
@@ -94,6 +96,14 @@ export function AppRoutes({ isAuthenticated }: AppRoutesProps) {
         element={
           <ProtectedRoute isAuthenticated={isAuthenticated}>
             <Tenants />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/contracts"
+        element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <Contracts />
           </ProtectedRoute>
         }
       />
