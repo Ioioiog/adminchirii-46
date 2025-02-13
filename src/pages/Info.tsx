@@ -49,6 +49,32 @@ export default function InfoPage() {
               ))}
             </div>
           </div>
+          {/* Building 4 */}
+          <div className="absolute h-96 w-44 bg-gradient-to-b from-cyan-500/20 to-blue-500/20 rounded-t-lg transform -skew-x-12 animate-float-4 left-[80%] top-[5%]">
+            <div className="absolute inset-x-2 top-2 bottom-0 bg-gradient-to-b from-white/10 to-transparent grid grid-cols-4 gap-2 p-2">
+              {Array.from({ length: 32 }).map((_, i) => (
+                <div key={i} className="bg-white/20 rounded-sm" />
+              ))}
+            </div>
+          </div>
+          {/* Building 5 */}
+          <div className="absolute h-56 w-28 bg-gradient-to-b from-amber-500/20 to-orange-500/20 rounded-t-lg transform -skew-x-12 animate-float-5 left-[45%] top-[25%]">
+            <div className="absolute inset-x-2 top-2 bottom-0 bg-gradient-to-b from-white/10 to-transparent grid grid-cols-3 gap-2 p-2">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="bg-white/20 rounded-sm" />
+              ))}
+            </div>
+          </div>
+          {/* Foreground Buildings */}
+          <div className="absolute h-48 w-24 bg-gradient-to-b from-indigo-500/10 to-violet-500/10 rounded-t-lg transform -skew-x-12 animate-float-6 left-[20%] top-[35%]">
+            <div className="absolute inset-x-2 top-2 bottom-0 bg-gradient-to-b from-white/10 to-transparent grid grid-cols-2 gap-2 p-2">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <div key={i} className="bg-white/20 rounded-sm" />
+              ))}
+            </div>
+          </div>
+          {/* Background Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-gray-50/50 to-transparent dark:from-gray-900/50 pointer-events-none" />
         </div>
       </div>
 
