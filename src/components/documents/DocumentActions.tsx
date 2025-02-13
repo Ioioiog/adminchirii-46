@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Download, Trash2, UserPlus, UserX } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,38 +43,27 @@ export function DocumentActions({ document: doc, userRole, onDocumentUpdated }: 
         bucket: 'documents'
       });
 
-      // Get the file data from Supabase Storage
-      const { data, error } = await supabase.storage
+      // First get a signed URL for the file
+      const { data: signedURL, error: signError } = await supabase.storage
         .from('documents')
-        .download(doc.file_path);
+        .createSignedUrl(doc.file_path, 60); // 60 seconds expiry
 
-      if (error) {
-        console.error("Storage download error:", error);
-        console.error("Error message:", error.message);
-        
-        // Try to parse the error message if it's JSON
-        try {
-          const errorBody = JSON.parse(error.message);
-          if (errorBody.statusCode === "404" || errorBody.error === "not_found") {
-            throw new Error("The document file could not be found. Please contact support.");
-          }
-        } catch (parseError) {
-          // If parsing fails, check the raw message
-          if (error.message?.includes("not_found") || error.message?.includes("404")) {
-            throw new Error("The document file could not be found. Please contact support.");
-          }
-        }
-        
-        throw new Error("Could not download the document. Please try again later.");
+      if (signError) {
+        console.error("Error getting signed URL:", signError);
+        throw new Error("Could not generate download link");
       }
 
-      if (!data) {
-        console.error("No data received from storage");
-        throw new Error("No data received from storage");
+      if (!signedURL?.signedUrl) {
+        throw new Error("Could not generate download link");
       }
 
-      // Create a blob URL and trigger download
-      const blob = new Blob([data], { type: 'application/octet-stream' });
+      // Use fetch to download the file using the signed URL
+      const response = await fetch(signedURL.signedUrl);
+      if (!response.ok) {
+        throw new Error("Failed to download file");
+      }
+
+      const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
