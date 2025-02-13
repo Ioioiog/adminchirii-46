@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Download, Trash2, UserPlus, UserX } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,23 +31,40 @@ export function DocumentActions({ document: doc, userRole, onDocumentUpdated }: 
     
     setIsDownloading(true);
     try {
-      // Verify session before download
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session) {
-        console.error("Session error before download:", sessionError);
-        throw new Error("Please sign in again to download documents");
-      }
-
-      console.log("Starting download process for document:", {
+      // Remove any leading slashes from the file path
+      const cleanFilePath = doc.file_path.replace(/^\/+/, '');
+      
+      console.log("Attempting to download document with details:", {
         id: doc.id,
-        file_path: doc.file_path,
+        original_file_path: doc.file_path,
+        cleaned_file_path: cleanFilePath,
         bucket: 'documents'
       });
 
-      // First get a signed URL for the file
+      // First verify the file exists
+      const { data: fileList, error: listError } = await supabase.storage
+        .from('documents')
+        .list(cleanFilePath.split('/').slice(0, -1).join('/'));
+
+      console.log("File list result:", { fileList, listError });
+
+      if (listError) {
+        console.error("Error listing files:", listError);
+        throw new Error("Could not verify file existence");
+      }
+
+      const fileName = cleanFilePath.split('/').pop();
+      const fileExists = fileList?.some(file => file.name === fileName);
+
+      if (!fileExists) {
+        console.error("File not found in storage:", cleanFilePath);
+        throw new Error("The requested file could not be found");
+      }
+
+      // Get a signed URL for the verified file
       const { data: signedURL, error: signError } = await supabase.storage
         .from('documents')
-        .createSignedUrl(doc.file_path, 60); // 60 seconds expiry
+        .createSignedUrl(cleanFilePath, 60); // 60 seconds expiry
 
       if (signError) {
         console.error("Error getting signed URL:", signError);
@@ -54,12 +72,16 @@ export function DocumentActions({ document: doc, userRole, onDocumentUpdated }: 
       }
 
       if (!signedURL?.signedUrl) {
+        console.error("No signed URL received");
         throw new Error("Could not generate download link");
       }
 
-      // Use fetch to download the file using the signed URL
+      console.log("Successfully generated signed URL");
+
+      // Download the file using the signed URL
       const response = await fetch(signedURL.signedUrl);
       if (!response.ok) {
+        console.error("Fetch error:", response.status, response.statusText);
         throw new Error("Failed to download file");
       }
 
@@ -67,7 +89,7 @@ export function DocumentActions({ document: doc, userRole, onDocumentUpdated }: 
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = doc.file_path.split('/').pop() || 'document';
+      a.download = cleanFilePath.split('/').pop() || 'document';
       document.body.appendChild(a);
       a.click();
       
@@ -84,12 +106,6 @@ export function DocumentActions({ document: doc, userRole, onDocumentUpdated }: 
     } catch (error: any) {
       console.error("Error downloading document:", error);
       
-      if (error.message?.includes("sign in")) {
-        await supabase.auth.signOut();
-        window.location.href = "/auth";
-        return;
-      }
-
       toast({
         title: "Error",
         description: error.message || "Could not download the document. Please try again later.",
