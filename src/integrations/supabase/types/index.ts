@@ -1,9 +1,11 @@
+
 import { AuthSchema } from './auth-types';
 import { MaintenanceSchema } from './maintenance-types';
 import { PropertySchema } from './property-types';
 import { TenantSchema } from './tenant-types';
 import { PaymentSchema } from './payment-types';
 import { UtilitySchema } from './utility-types';
+import { ContractSchema } from '../database-types/contract';
 
 export * from './auth-types';
 export * from './maintenance-types';
@@ -18,5 +20,6 @@ export type Database = {
     PropertySchema['Tables'] &
     TenantSchema['Tables'] &
     PaymentSchema['Tables'] &
-    UtilitySchema['Tables'];
+    UtilitySchema['Tables'] &
+    ContractSchema['Tables'];
 };

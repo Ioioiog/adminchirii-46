@@ -9,6 +9,113 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      contract_signatures: {
+        Row: {
+          contract_id: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          signature_data: string | null
+          signed_at: string | null
+          signer_id: string
+          signer_role: string
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          signature_data?: string | null
+          signed_at?: string | null
+          signer_id: string
+          signer_role: string
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          signature_data?: string | null
+          signed_at?: string | null
+          signer_id?: string
+          signer_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_signatures_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contracts: {
+        Row: {
+          content: Json
+          contract_type: string
+          created_at: string
+          id: string
+          landlord_id: string
+          metadata: Json | null
+          property_id: string
+          signature_request_id: string | null
+          signed_document_url: string | null
+          status: Database["public"]["Enums"]["contract_status"] | null
+          tenant_id: string | null
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          content: Json
+          contract_type: string
+          created_at?: string
+          id?: string
+          landlord_id: string
+          metadata?: Json | null
+          property_id: string
+          signature_request_id?: string | null
+          signed_document_url?: string | null
+          status?: Database["public"]["Enums"]["contract_status"] | null
+          tenant_id?: string | null
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          content?: Json
+          contract_type?: string
+          created_at?: string
+          id?: string
+          landlord_id?: string
+          metadata?: Json | null
+          property_id?: string
+          signature_request_id?: string | null
+          signed_document_url?: string | null
+          status?: Database["public"]["Enums"]["contract_status"] | null
+          tenant_id?: string | null
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_details"
+            referencedColumns: ["property_id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           created_at: string
@@ -2081,6 +2188,7 @@ export type Database = {
       }
     }
     Enums: {
+      contract_status: "draft" | "pending" | "signed" | "expired" | "cancelled"
       document_type: "lease_agreement" | "invoice" | "receipt" | "other"
       invoice_status: "pending" | "paid" | "overdue"
       maintenance_request_priority: "low" | "medium" | "high"
