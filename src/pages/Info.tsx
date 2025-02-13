@@ -1,4 +1,3 @@
-
 import { BookOpen, HelpCircle } from "lucide-react";
 import { useAuthState } from "@/hooks/useAuthState";
 import { Navigate } from "react-router-dom";
@@ -27,7 +26,11 @@ export default function InfoPage() {
         <div className="container py-16 relative">
           <div className="flex items-center gap-4 mb-8 animate-fade-in">
             <div className="p-3 rounded-2xl bg-blue-500/10 backdrop-blur-xl border border-blue-500/20 shadow-lg transform hover:scale-105 transition-all">
-              <HelpCircle size={32} className="text-blue-500" />
+              <img 
+                src="/lovable-uploads/9c23bc1b-4e8c-433e-a961-df606dc6a2c6.png" 
+                alt="AdminChirii.ro Logo" 
+                className="h-8 w-8 rounded-lg"
+              />
             </div>
             <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
               Welcome to Our Platform
