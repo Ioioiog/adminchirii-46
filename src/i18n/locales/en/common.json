@@ -1,3 +1,4 @@
+
 {
   "error": "Error",
   "success": "Success",
@@ -24,6 +25,18 @@
     "pending": "Pending",
     "completed": "Completed",
     "cancelled": "Cancelled"
+  },
+  "tenants": {
+    "title": "Manage Tenants",
+    "description": "View and manage your tenants, send invitations, and track tenancy status.",
+    "addTenant": "Assign Existing Tenant",
+    "inviteTenant": "Invite New Tenant",
+    "noTenancy": {
+      "message": "You don't have any active tenancies at the moment."
+    },
+    "error": {
+      "loading": "Failed to load tenants. Please try again."
+    }
   },
   "maintenance": {
     "title": "Maintenance Requests",

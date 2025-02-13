@@ -1,3 +1,4 @@
+
 {
   "error": "Erreur",
   "success": "Succès",
@@ -23,6 +24,18 @@
     "pending": "En attente",
     "completed": "Terminé",
     "cancelled": "Annulé"
+  },
+  "tenants": {
+    "title": "Gérer les Locataires",
+    "description": "Consultez et gérez vos locataires, envoyez des invitations et suivez l'état des locations.",
+    "addTenant": "Assigner un Locataire Existant",
+    "inviteTenant": "Inviter un Nouveau Locataire",
+    "noTenancy": {
+      "message": "Vous n'avez aucune location active pour le moment."
+    },
+    "error": {
+      "loading": "Échec du chargement des locataires. Veuillez réessayer."
+    }
   },
   "maintenance": {
     "title": "Demandes de Maintenance",

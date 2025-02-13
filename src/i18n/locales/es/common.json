@@ -1,3 +1,4 @@
+
 {
   "error": "Error",
   "success": "Éxito",
@@ -23,6 +24,18 @@
     "pending": "Pendiente",
     "completed": "Completado",
     "cancelled": "Cancelado"
+  },
+  "tenants": {
+    "title": "Gestionar Inquilinos",
+    "description": "Ver y gestionar inquilinos, enviar invitaciones y realizar seguimiento del estado del alquiler.",
+    "addTenant": "Asignar Inquilino Existente",
+    "inviteTenant": "Invitar Nuevo Inquilino",
+    "noTenancy": {
+      "message": "No tienes ningún alquiler activo en este momento."
+    },
+    "error": {
+      "loading": "Error al cargar los inquilinos. Por favor, inténtalo de nuevo."
+    }
   },
   "maintenance": {
     "title": "Solicitudes de Mantenimiento",
