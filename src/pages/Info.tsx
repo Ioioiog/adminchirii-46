@@ -55,17 +55,10 @@ export default function InfoPage() {
             <h2 className="text-xl font-semibold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
               About the Platform
             </h2>
-            <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-6">
+            <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
               Our property management platform streamlines the entire rental process. 
               From maintenance requests to financial tracking, we've got you covered.
             </p>
-            <Button 
-              variant="outline" 
-              className="w-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-xl border-blue-500/20 hover:border-blue-500/40 hover:bg-blue-500/10 transition-all duration-300"
-              onClick={() => navigate('/auth')}
-            >
-              Go to Authentication
-            </Button>
           </div>
           
           <div className="group rounded-2xl bg-white/70 dark:bg-gray-800/50 backdrop-blur-xl border border-white/20 dark:border-white/10 p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
@@ -75,7 +68,7 @@ export default function InfoPage() {
             <h2 className="text-xl font-semibold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400">
               Getting Started
             </h2>
-            <ul className="space-y-3 text-gray-600 dark:text-gray-300">
+            <ul className="space-y-3 text-gray-600 dark:text-gray-300 mb-6">
               {["Property management & tracking", "Maintenance request system", "Secure document storage", "Financial tracking & reporting"].map((feature, index) => (
                 <li key={index} className="flex items-center gap-3 group/item">
                   <div className="h-2 w-2 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 group-hover/item:scale-150 transition-transform" />
@@ -83,6 +76,13 @@ export default function InfoPage() {
                 </li>
               ))}
             </ul>
+            <Button 
+              variant="outline" 
+              className="w-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-xl border-green-500/20 hover:border-green-500/40 hover:bg-green-500/10 transition-all duration-300"
+              onClick={() => navigate('/auth')}
+            >
+              Go to Authentication
+            </Button>
           </div>
           
           <div className="group rounded-2xl bg-white/70 dark:bg-gray-800/50 backdrop-blur-xl border border-white/20 dark:border-white/10 p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
