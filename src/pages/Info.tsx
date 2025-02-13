@@ -1,10 +1,10 @@
 
-import { BookOpen, HelpCircle, Info, QuestionMarkCircle } from "lucide-react";
+import { BookOpen, HelpCircle, CircleQuestion } from "lucide-react";
 import { useAuthState } from "@/hooks/useAuthState";
 import { Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
-export default function Info() {
+export default function InfoPage() {
   const { isLoading, isAuthenticated } = useAuthState();
 
   if (isLoading) {
@@ -25,7 +25,7 @@ export default function Info() {
       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
         <div className="container py-12">
           <div className="flex items-center gap-3 mb-6">
-            <Info className="h-8 w-8 text-blue-500" />
+            <HelpCircle size={32} className="text-blue-500" />
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome to Our Platform</h1>
           </div>
           <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl">
@@ -40,7 +40,7 @@ export default function Info() {
         {/* Feature Cards */}
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-xl border bg-card p-8 shadow-sm hover:shadow-md transition-all duration-200">
-            <BookOpen className="h-10 w-10 text-blue-500 mb-4" />
+            <BookOpen size={40} className="text-blue-500 mb-4" />
             <h2 className="text-xl font-semibold mb-4">About the Platform</h2>
             <p className="text-muted-foreground leading-relaxed">
               Our property management platform streamlines the entire rental process. 
@@ -50,7 +50,7 @@ export default function Info() {
           </div>
           
           <div className="rounded-xl border bg-card p-8 shadow-sm hover:shadow-md transition-all duration-200">
-            <QuestionMarkCircle className="h-10 w-10 text-green-500 mb-4" />
+            <CircleQuestion size={40} className="text-green-500 mb-4" />
             <h2 className="text-xl font-semibold mb-4">Getting Started</h2>
             <p className="text-muted-foreground mb-4">
               Access a comprehensive suite of features tailored to your role:
@@ -76,7 +76,7 @@ export default function Info() {
           </div>
           
           <div className="rounded-xl border bg-card p-8 shadow-sm hover:shadow-md transition-all duration-200">
-            <HelpCircle className="h-10 w-10 text-purple-500 mb-4" />
+            <HelpCircle size={40} className="text-purple-500 mb-4" />
             <h2 className="text-xl font-semibold mb-4">Need Help?</h2>
             <p className="text-muted-foreground mb-6 leading-relaxed">
               Our support team is here to help you get the most out of your experience. 
