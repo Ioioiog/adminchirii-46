@@ -20,15 +20,20 @@ export default function InfoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
-        <div className="container py-12">
-          <div className="flex items-center gap-3 mb-6">
-            <HelpCircle size={32} className="text-blue-500" />
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome to Our Platform</h1>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      {/* Hero Section with 3D effect */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-500/10 to-indigo-500/10 backdrop-blur-xl border border-white/10 dark:border-white/5">
+        <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(0deg,transparent,black)]" />
+        <div className="container py-16 relative">
+          <div className="flex items-center gap-4 mb-8 animate-fade-in">
+            <div className="p-3 rounded-2xl bg-blue-500/10 backdrop-blur-xl border border-blue-500/20 shadow-lg transform hover:scale-105 transition-all">
+              <HelpCircle size={32} className="text-blue-500" />
+            </div>
+            <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
+              Welcome to Our Platform
+            </h1>
           </div>
-          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl">
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl leading-relaxed animate-fade-in">
             Your comprehensive solution for property management. We bring together landlords, 
             tenants, and service providers in one seamless platform.
           </p>
@@ -36,77 +41,82 @@ export default function InfoPage() {
       </div>
 
       {/* Main Content */}
-      <div className="container py-12 space-y-12">
-        {/* Feature Cards */}
+      <div className="container py-16 space-y-16">
+        {/* Feature Cards with 3D effect */}
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="rounded-xl border bg-card p-8 shadow-sm hover:shadow-md transition-all duration-200">
-            <BookOpen size={40} className="text-blue-500 mb-4" />
-            <h2 className="text-xl font-semibold mb-4">About the Platform</h2>
-            <p className="text-muted-foreground leading-relaxed">
+          <div className="group rounded-2xl bg-white/70 dark:bg-gray-800/50 backdrop-blur-xl border border-white/20 dark:border-white/10 p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="p-3 rounded-2xl bg-blue-500/10 backdrop-blur-xl border border-blue-500/20 shadow-lg w-fit mb-6 group-hover:scale-110 transition-transform">
+              <BookOpen size={40} className="text-blue-500" />
+            </div>
+            <h2 className="text-xl font-semibold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
+              About the Platform
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
               Our property management platform streamlines the entire rental process. 
-              From maintenance requests to financial tracking, we've got you covered 
-              with powerful tools and intuitive interfaces.
+              From maintenance requests to financial tracking, we've got you covered.
             </p>
           </div>
           
-          <div className="rounded-xl border bg-card p-8 shadow-sm hover:shadow-md transition-all duration-200">
-            <HelpCircle size={40} className="text-green-500 mb-4" />
-            <h2 className="text-xl font-semibold mb-4">Getting Started</h2>
-            <p className="text-muted-foreground mb-4">
-              Access a comprehensive suite of features tailored to your role:
-            </p>
-            <ul className="space-y-2 text-muted-foreground">
-              <li className="flex items-center gap-2">
-                <div className="h-1.5 w-1.5 rounded-full bg-blue-500"></div>
-                Property management & tracking
-              </li>
-              <li className="flex items-center gap-2">
-                <div className="h-1.5 w-1.5 rounded-full bg-blue-500"></div>
-                Maintenance request system
-              </li>
-              <li className="flex items-center gap-2">
-                <div className="h-1.5 w-1.5 rounded-full bg-blue-500"></div>
-                Secure document storage
-              </li>
-              <li className="flex items-center gap-2">
-                <div className="h-1.5 w-1.5 rounded-full bg-blue-500"></div>
-                Financial tracking & reporting
-              </li>
+          <div className="group rounded-2xl bg-white/70 dark:bg-gray-800/50 backdrop-blur-xl border border-white/20 dark:border-white/10 p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="p-3 rounded-2xl bg-green-500/10 backdrop-blur-xl border border-green-500/20 shadow-lg w-fit mb-6 group-hover:scale-110 transition-transform">
+              <HelpCircle size={40} className="text-green-500" />
+            </div>
+            <h2 className="text-xl font-semibold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400">
+              Getting Started
+            </h2>
+            <ul className="space-y-3 text-gray-600 dark:text-gray-300">
+              {["Property management & tracking", "Maintenance request system", "Secure document storage", "Financial tracking & reporting"].map((feature, index) => (
+                <li key={index} className="flex items-center gap-3 group/item">
+                  <div className="h-2 w-2 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 group-hover/item:scale-150 transition-transform" />
+                  {feature}
+                </li>
+              ))}
             </ul>
           </div>
           
-          <div className="rounded-xl border bg-card p-8 shadow-sm hover:shadow-md transition-all duration-200">
-            <HelpCircle size={40} className="text-purple-500 mb-4" />
-            <h2 className="text-xl font-semibold mb-4">Need Help?</h2>
-            <p className="text-muted-foreground mb-6 leading-relaxed">
+          <div className="group rounded-2xl bg-white/70 dark:bg-gray-800/50 backdrop-blur-xl border border-white/20 dark:border-white/10 p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="p-3 rounded-2xl bg-purple-500/10 backdrop-blur-xl border border-purple-500/20 shadow-lg w-fit mb-6 group-hover:scale-110 transition-transform">
+              <HelpCircle size={40} className="text-purple-500" />
+            </div>
+            <h2 className="text-xl font-semibold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400">
+              Need Help?
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
               Our support team is here to help you get the most out of your experience. 
-              Whether you have questions about features or need technical assistance, 
-              we're just a click away.
+              We're just a click away.
             </p>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-xl border-purple-500/20 hover:border-purple-500/40 hover:bg-purple-500/10 transition-all duration-300">
               Contact Support
             </Button>
           </div>
         </div>
 
-        {/* Updates Section */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 rounded-xl p-8">
-          <h2 className="text-2xl font-semibold mb-4">Latest Updates</h2>
+        {/* Updates Section with glass effect */}
+        <div className="rounded-2xl bg-gradient-to-br from-blue-500/5 to-indigo-500/5 backdrop-blur-xl border border-white/10 p-8 shadow-xl">
+          <h2 className="text-2xl font-semibold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
+            Latest Updates
+          </h2>
           <div className="space-y-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
-              <div className="text-sm text-blue-500 mb-1">New Feature</div>
-              <h3 className="font-medium mb-2">Enhanced Document Management</h3>
-              <p className="text-muted-foreground text-sm">
-                We've improved our document storage system with better organization and faster search capabilities.
-              </p>
-            </div>
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
-              <div className="text-sm text-green-500 mb-1">Improvement</div>
-              <h3 className="font-medium mb-2">Maintenance Request Updates</h3>
-              <p className="text-muted-foreground text-sm">
-                Real-time tracking and notifications for maintenance requests are now available.
-              </p>
-            </div>
+            {[
+              {
+                type: "New Feature",
+                title: "Enhanced Document Management",
+                description: "We've improved our document storage system with better organization and faster search capabilities.",
+                color: "blue"
+              },
+              {
+                type: "Improvement",
+                title: "Maintenance Request Updates",
+                description: "Real-time tracking and notifications for maintenance requests are now available.",
+                color: "green"
+              }
+            ].map((update, index) => (
+              <div key={index} className="group rounded-xl bg-white/50 dark:bg-gray-800/30 backdrop-blur-xl border border-white/20 p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                <div className={`text-sm text-${update.color}-500 font-medium mb-1`}>{update.type}</div>
+                <h3 className="font-medium mb-2 text-gray-900 dark:text-white">{update.title}</h3>
+                <p className="text-gray-600 dark:text-gray-300 text-sm">{update.description}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
