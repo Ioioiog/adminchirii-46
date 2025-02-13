@@ -1,5 +1,5 @@
 
-import { BookOpen, HelpCircle, CircleQuestion } from "lucide-react";
+import { BookOpen, HelpCircle } from "lucide-react";
 import { useAuthState } from "@/hooks/useAuthState";
 import { Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -50,7 +50,7 @@ export default function InfoPage() {
           </div>
           
           <div className="rounded-xl border bg-card p-8 shadow-sm hover:shadow-md transition-all duration-200">
-            <CircleQuestion size={40} className="text-green-500 mb-4" />
+            <HelpCircle size={40} className="text-green-500 mb-4" />
             <h2 className="text-xl font-semibold mb-4">Getting Started</h2>
             <p className="text-muted-foreground mb-4">
               Access a comprehensive suite of features tailored to your role:
