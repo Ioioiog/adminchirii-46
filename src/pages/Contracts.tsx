@@ -1,4 +1,6 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -39,6 +41,7 @@ import {
 } from "@/components/ui/select";
 
 export default function ContractsPage() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { userRole } = useUserRole();
   const [searchQuery, setSearchQuery] = useState("");
@@ -46,29 +49,70 @@ export default function ContractsPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [selectedProperty, setSelectedProperty] = useState<string>("");
 
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error || !session) {
+          console.error("Auth error:", error);
+          navigate("/auth");
+          return;
+        }
+      } catch (error) {
+        console.error("Session check error:", error);
+        navigate("/auth");
+      }
+    };
+
+    checkAuth();
+
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        navigate("/auth");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
+
   const { data: contracts, isLoading: isLoadingContracts } = useQuery({
     queryKey: ["contracts"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const query = supabase
-        .from("contracts")
-        .select(`
-          *,
-          property:property_id (
-            id,
-            name,
-            address
-          ),
-          template:template_id (
-            id,
-            name
-          )
-        `)
-        .eq('landlord_id', user?.id);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error("No active session");
+        }
 
-      const { data, error } = await query;
+        const query = supabase
+          .from("contracts")
+          .select(`
+            *,
+            property:property_id (
+              id,
+              name,
+              address
+            ),
+            template:template_id (
+              id,
+              name
+            )
+          `)
+          .eq('landlord_id', session.user.id);
 
-      if (error) {
+        const { data, error } = await query;
+
+        if (error) {
+          throw error;
+        }
+
+        return data;
+      } catch (error) {
+        console.error("Error fetching contracts:", error);
         toast({
           title: "Error",
           description: "Failed to load contracts",
@@ -76,21 +120,28 @@ export default function ContractsPage() {
         });
         throw error;
       }
-
-      return data;
     },
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 
   const { data: templates, isLoading: isLoadingTemplates } = useQuery({
     queryKey: ["contract_templates"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("contract_templates")
-        .select("*")
-        .eq("is_active", true)
-        .order("name");
+      try {
+        const { data, error } = await supabase
+          .from("contract_templates")
+          .select("*")
+          .eq("is_active", true)
+          .order("name");
 
-      if (error) {
+        if (error) {
+          throw error;
+        }
+
+        return data;
+      } catch (error) {
+        console.error("Error fetching templates:", error);
         toast({
           title: "Error",
           description: "Failed to load contract templates",
@@ -98,20 +149,27 @@ export default function ContractsPage() {
         });
         throw error;
       }
-
-      return data;
     },
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 
   const { data: properties } = useQuery({
     queryKey: ["properties"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("properties")
-        .select("*")
-        .order("name");
+      try {
+        const { data, error } = await supabase
+          .from("properties")
+          .select("*")
+          .order("name");
 
-      if (error) {
+        if (error) {
+          throw error;
+        }
+
+        return data;
+      } catch (error) {
+        console.error("Error fetching properties:", error);
         toast({
           title: "Error",
           description: "Failed to load properties",
@@ -119,9 +177,9 @@ export default function ContractsPage() {
         });
         throw error;
       }
-
-      return data;
     },
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 
   const handleGenerateContract = async () => {
@@ -136,11 +194,13 @@ export default function ContractsPage() {
 
     setIsGenerating(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("No active session");
+      }
+
       const template = templates?.find(t => t.id === selectedTemplate);
       if (!template) throw new Error("Template not found");
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not found");
 
       const { error } = await supabase.from("contracts").insert({
         contract_type: template.category,
@@ -148,7 +208,7 @@ export default function ContractsPage() {
         template_id: template.id,
         status: "draft",
         property_id: selectedProperty,
-        landlord_id: user.id,
+        landlord_id: session.user.id,
       });
 
       if (error) throw error;
