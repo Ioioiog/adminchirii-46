@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/use-user-role";
+import { useAuthState } from "@/hooks/useAuthState";
 import { FileText, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,48 +44,25 @@ export default function ContractsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { userRole } = useUserRole();
+  const { currentUserId, isLoading: isLoadingAuth } = useAuthState();
   const [searchQuery, setSearchQuery] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [selectedProperty, setSelectedProperty] = useState<string>("");
 
-  // Check authentication status
+  // Use effect to handle authentication
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error || !session) {
-          console.error("Auth error:", error);
-          navigate("/auth");
-          return;
-        }
-      } catch (error) {
-        console.error("Session check error:", error);
-        navigate("/auth");
-      }
-    };
-
-    checkAuth();
-
-    // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT' || !session) {
-        navigate("/auth");
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
+    if (!isLoadingAuth && !currentUserId) {
+      navigate("/auth");
+    }
+  }, [currentUserId, isLoadingAuth, navigate]);
 
   const { data: contracts, isLoading: isLoadingContracts } = useQuery({
     queryKey: ["contracts"],
     queryFn: async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          throw new Error("No active session");
+        if (!currentUserId) {
+          throw new Error("No authenticated user");
         }
 
         const query = supabase
@@ -102,7 +79,7 @@ export default function ContractsPage() {
               name
             )
           `)
-          .eq('landlord_id', session.user.id);
+          .eq('landlord_id', currentUserId);
 
         const { data, error } = await query;
 
@@ -121,8 +98,7 @@ export default function ContractsPage() {
         throw error;
       }
     },
-    retry: 1,
-    refetchOnWindowFocus: false,
+    enabled: !!currentUserId,
   });
 
   const { data: templates, isLoading: isLoadingTemplates } = useQuery({
@@ -192,13 +168,17 @@ export default function ContractsPage() {
       return;
     }
 
+    if (!currentUserId) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to generate contracts",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsGenerating(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("No active session");
-      }
-
       const template = templates?.find(t => t.id === selectedTemplate);
       if (!template) throw new Error("Template not found");
 
@@ -208,7 +188,7 @@ export default function ContractsPage() {
         template_id: template.id,
         status: "draft",
         property_id: selectedProperty,
-        landlord_id: session.user.id,
+        landlord_id: currentUserId,
       });
 
       if (error) throw error;
@@ -255,10 +235,10 @@ export default function ContractsPage() {
     );
   });
 
-  if (isLoadingContracts) {
+  if (isLoadingAuth || isLoadingContracts) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-lg">Loading contracts...</div>
+        <div className="text-lg">Loading...</div>
       </div>
     );
   }
