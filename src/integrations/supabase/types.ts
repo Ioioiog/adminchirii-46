@@ -101,6 +101,7 @@ export type Database = {
           signature_request_id: string | null
           signed_document_url: string | null
           status: Database["public"]["Enums"]["contract_status"] | null
+          template_id: string | null
           tenant_id: string | null
           updated_at: string
           valid_from: string | null
@@ -117,6 +118,7 @@ export type Database = {
           signature_request_id?: string | null
           signed_document_url?: string | null
           status?: Database["public"]["Enums"]["contract_status"] | null
+          template_id?: string | null
           tenant_id?: string | null
           updated_at?: string
           valid_from?: string | null
@@ -133,6 +135,7 @@ export type Database = {
           signature_request_id?: string | null
           signed_document_url?: string | null
           status?: Database["public"]["Enums"]["contract_status"] | null
+          template_id?: string | null
           tenant_id?: string | null
           updated_at?: string
           valid_from?: string | null
@@ -152,6 +155,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenant_details"
             referencedColumns: ["property_id"]
+          },
+          {
+            foreignKeyName: "contracts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "contract_templates"
+            referencedColumns: ["id"]
           },
         ]
       }

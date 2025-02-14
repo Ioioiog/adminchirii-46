@@ -23,20 +23,38 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function ContractsPage() {
   const { toast } = useToast();
   const { userRole } = useUserRole();
   const [searchQuery, setSearchQuery] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
 
-  const { data: contracts, isLoading } = useQuery({
+  const { data: contracts, isLoading: isLoadingContracts } = useQuery({
     queryKey: ["contracts"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contracts")
         .select(`
           *,
-          properties:property_id (name, address)
+          properties:property_id (name, address),
+          template:template_id (name)
         `);
 
       if (error) {
@@ -51,6 +69,69 @@ export default function ContractsPage() {
       return data;
     },
   });
+
+  const { data: templates, isLoading: isLoadingTemplates } = useQuery({
+    queryKey: ["contract_templates"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contract_templates")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load contract templates",
+          variant: "destructive",
+        });
+        throw error;
+      }
+
+      return data;
+    },
+  });
+
+  const handleGenerateContract = async () => {
+    if (!selectedTemplate) {
+      toast({
+        title: "Error",
+        description: "Please select a template",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const template = templates?.find(t => t.id === selectedTemplate);
+      if (!template) throw new Error("Template not found");
+
+      const { error } = await supabase.from("contracts").insert({
+        contract_type: template.category,
+        content: template.content,
+        template_id: template.id,
+        status: "draft",
+        landlord_id: (await supabase.auth.getUser()).data.user?.id,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Contract generated successfully",
+      });
+    } catch (error) {
+      console.error("Error generating contract:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate contract",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -78,7 +159,7 @@ export default function ContractsPage() {
     );
   });
 
-  if (isLoading) {
+  if (isLoadingContracts) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-lg">Loading contracts...</div>
@@ -95,10 +176,51 @@ export default function ContractsPage() {
             Manage and track all your property contracts
           </p>
         </div>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          New Contract
-        </Button>
+        {userRole === "landlord" && (
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                New Contract
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Generate New Contract</DialogTitle>
+                <DialogDescription>
+                  Select a template to generate a new contract
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Contract Template</label>
+                  <Select
+                    value={selectedTemplate}
+                    onValueChange={setSelectedTemplate}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {templates?.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  onClick={handleGenerateContract}
+                  disabled={isGenerating || !selectedTemplate}
+                  className="w-full"
+                >
+                  {isGenerating ? "Generating..." : "Generate Contract"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <Card>
@@ -125,6 +247,7 @@ export default function ContractsPage() {
                 <TableRow>
                   <TableHead>Contract Type</TableHead>
                   <TableHead>Property</TableHead>
+                  <TableHead>Template</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Valid From</TableHead>
                   <TableHead>Valid Until</TableHead>
@@ -149,6 +272,9 @@ export default function ContractsPage() {
                           {contract.properties?.address}
                         </div>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {contract.template?.name || "Custom Contract"}
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -177,7 +303,7 @@ export default function ContractsPage() {
                 ))}
                 {filteredContracts?.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       <div className="text-muted-foreground">
                         No contracts found
                       </div>
