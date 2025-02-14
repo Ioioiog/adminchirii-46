@@ -45,6 +45,7 @@ export default function ContractsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const [selectedProperty, setSelectedProperty] = useState<string>("");
 
   const { data: contracts, isLoading: isLoadingContracts } = useQuery({
     queryKey: ["contracts"],
@@ -92,11 +93,32 @@ export default function ContractsPage() {
     },
   });
 
+  const { data: properties } = useQuery({
+    queryKey: ["properties"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("properties")
+        .select("*")
+        .order("name");
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load properties",
+          variant: "destructive",
+        });
+        throw error;
+      }
+
+      return data;
+    },
+  });
+
   const handleGenerateContract = async () => {
-    if (!selectedTemplate) {
+    if (!selectedTemplate || !selectedProperty) {
       toast({
         title: "Error",
-        description: "Please select a template",
+        description: "Please select both a template and a property",
         variant: "destructive",
       });
       return;
@@ -112,6 +134,7 @@ export default function ContractsPage() {
         content: template.content,
         template_id: template.id,
         status: "draft",
+        property_id: selectedProperty,
         landlord_id: (await supabase.auth.getUser()).data.user?.id,
       });
 
@@ -188,10 +211,28 @@ export default function ContractsPage() {
               <DialogHeader>
                 <DialogTitle>Generate New Contract</DialogTitle>
                 <DialogDescription>
-                  Select a template to generate a new contract
+                  Select a template and property to generate a new contract
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Property</label>
+                  <Select
+                    value={selectedProperty}
+                    onValueChange={setSelectedProperty}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a property" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {properties?.map((property) => (
+                        <SelectItem key={property.id} value={property.id}>
+                          {property.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Contract Template</label>
                   <Select
@@ -212,7 +253,7 @@ export default function ContractsPage() {
                 </div>
                 <Button
                   onClick={handleGenerateContract}
-                  disabled={isGenerating || !selectedTemplate}
+                  disabled={isGenerating || !selectedTemplate || !selectedProperty}
                   className="w-full"
                 >
                   {isGenerating ? "Generating..." : "Generate Contract"}
