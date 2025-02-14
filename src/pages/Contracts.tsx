@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,13 +49,24 @@ export default function ContractsPage() {
   const { data: contracts, isLoading: isLoadingContracts } = useQuery({
     queryKey: ["contracts"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      const query = supabase
         .from("contracts")
         .select(`
           *,
-          properties:property_id (name, address),
-          template:template_id (name)
-        `);
+          property:property_id (
+            id,
+            name,
+            address
+          ),
+          template:template_id (
+            id,
+            name
+          )
+        `)
+        .eq('landlord_id', user?.id);
+
+      const { data, error } = await query;
 
       if (error) {
         toast({
@@ -129,13 +139,16 @@ export default function ContractsPage() {
       const template = templates?.find(t => t.id === selectedTemplate);
       if (!template) throw new Error("Template not found");
 
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not found");
+
       const { error } = await supabase.from("contracts").insert({
         contract_type: template.category,
         content: template.content,
         template_id: template.id,
         status: "draft",
         property_id: selectedProperty,
-        landlord_id: (await supabase.auth.getUser()).data.user?.id,
+        landlord_id: user.id,
       });
 
       if (error) throw error;
@@ -177,8 +190,8 @@ export default function ContractsPage() {
     const searchLower = searchQuery.toLowerCase();
     return (
       contract.contract_type.toLowerCase().includes(searchLower) ||
-      contract.properties?.name.toLowerCase().includes(searchLower) ||
-      contract.properties?.address.toLowerCase().includes(searchLower)
+      contract.property?.name.toLowerCase().includes(searchLower) ||
+      contract.property?.address.toLowerCase().includes(searchLower)
     );
   });
 
@@ -307,10 +320,10 @@ export default function ContractsPage() {
                     <TableCell>
                       <div>
                         <div className="font-medium">
-                          {contract.properties?.name}
+                          {contract.property?.name}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {contract.properties?.address}
+                          {contract.property?.address}
                         </div>
                       </div>
                     </TableCell>
