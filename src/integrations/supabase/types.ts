@@ -50,6 +50,45 @@ export type Database = {
           },
         ]
       }
+      contract_templates: {
+        Row: {
+          category: string
+          content: Json
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string
+          variables: Json | null
+        }
+        Insert: {
+          category: string
+          content: Json
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string
+          variables?: Json | null
+        }
+        Update: {
+          category?: string
+          content?: Json
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string
+          variables?: Json | null
+        }
+        Relationships: []
+      }
       contracts: {
         Row: {
           content: Json
