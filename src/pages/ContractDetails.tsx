@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +15,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+
+interface ContractSection {
+  title: string;
+  content: string;
+}
+
+interface ContractContent {
+  sections: ContractSection[];
+}
 
 export default function ContractDetails() {
   const { id } = useParams();
@@ -112,6 +121,8 @@ export default function ContractDetails() {
     );
   }
 
+  const contractContent = contract.content as ContractContent;
+
   return (
     <div className="container mx-auto py-8 space-y-6">
       <div className="flex items-center justify-between">
@@ -166,7 +177,7 @@ export default function ContractDetails() {
 
           <div>
             <h3 className="text-lg font-semibold mb-2">Contract Content</h3>
-            {contract.content.sections?.map((section: any, index: number) => (
+            {contractContent.sections?.map((section, index) => (
               <div key={index} className="mb-4">
                 <h4 className="font-medium mb-2">{section.title}</h4>
                 <p className="text-sm text-muted-foreground">
