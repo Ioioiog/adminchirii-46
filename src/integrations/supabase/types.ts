@@ -2192,6 +2192,10 @@ export type Database = {
       }
     }
     Functions: {
+      create_default_contract_templates: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       delete_tenant_invitation: {
         Args: {
           invitation_id: string
