@@ -77,7 +77,9 @@ export default function ContractsPage() {
             ),
             template:template_id (
               id,
-              name
+              name,
+              category,
+              content
             )
           `)
           .eq('landlord_id', currentUserId);
@@ -138,6 +140,7 @@ export default function ContractsPage() {
         const { data, error } = await supabase
           .from("properties")
           .select("*")
+          .eq("landlord_id", currentUserId)
           .order("name");
 
         if (error) {
@@ -155,6 +158,7 @@ export default function ContractsPage() {
         throw error;
       }
     },
+    enabled: !!currentUserId,
     retry: 1,
     refetchOnWindowFocus: false,
   });
@@ -232,7 +236,8 @@ export default function ContractsPage() {
     return (
       contract.contract_type.toLowerCase().includes(searchLower) ||
       contract.property?.name.toLowerCase().includes(searchLower) ||
-      contract.property?.address.toLowerCase().includes(searchLower)
+      contract.property?.address.toLowerCase().includes(searchLower) ||
+      contract.template?.name.toLowerCase().includes(searchLower)
     );
   });
 
@@ -390,7 +395,11 @@ export default function ContractsPage() {
                         : "-"}
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate(`/contracts/${contract.id}`)}
+                      >
                         View
                       </Button>
                     </TableCell>

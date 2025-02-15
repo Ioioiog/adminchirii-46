@@ -17,6 +17,7 @@ export interface ContractSchema {
         signature_request_id: string | null;
         signed_document_url: string | null;
         metadata: Record<string, any>;
+        template_id: string | null;
       };
       Insert: {
         id?: string;
@@ -33,6 +34,7 @@ export interface ContractSchema {
         signature_request_id?: string | null;
         signed_document_url?: string | null;
         metadata?: Record<string, any>;
+        template_id?: string | null;
       };
       Update: {
         id?: string;
@@ -49,6 +51,45 @@ export interface ContractSchema {
         signature_request_id?: string | null;
         signed_document_url?: string | null;
         metadata?: Record<string, any>;
+        template_id?: string | null;
+      };
+    };
+    contract_templates: {
+      Row: {
+        id: string;
+        name: string;
+        category: string;
+        content: Record<string, any>;
+        variables: string[];
+        is_active: boolean;
+        created_at: string;
+        updated_at: string;
+        created_by: string;
+        description: string | null;
+      };
+      Insert: {
+        id?: string;
+        name: string;
+        category: string;
+        content: Record<string, any>;
+        variables?: string[];
+        is_active?: boolean;
+        created_at?: string;
+        updated_at?: string;
+        created_by: string;
+        description?: string | null;
+      };
+      Update: {
+        id?: string;
+        name?: string;
+        category?: string;
+        content?: Record<string, any>;
+        variables?: string[];
+        is_active?: boolean;
+        created_at?: string;
+        updated_at?: string;
+        created_by?: string;
+        description?: string | null;
       };
     };
     contract_signatures: {
@@ -82,6 +123,12 @@ export interface ContractSchema {
         ip_address?: string | null;
         created_at?: string;
       };
+    };
+  };
+  Functions: {
+    create_default_contract_templates: {
+      Args: Record<PropertyKey, never>;
+      Returns: void;
     };
   };
 }
