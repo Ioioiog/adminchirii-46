@@ -121,7 +121,10 @@ export default function ContractDetails() {
     );
   }
 
-  const contractContent = contract.content as ContractContent;
+  // First cast to unknown, then to our expected type
+  const contractContent = (typeof contract.content === 'object' && contract.content !== null
+    ? contract.content
+    : { sections: [] }) as unknown as ContractContent;
 
   return (
     <div className="container mx-auto py-8 space-y-6">
