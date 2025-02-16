@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthState } from "@/hooks/useAuthState";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FileDown } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import jsPDF from 'jspdf';
 
 interface ContractSection {
   title: string;
@@ -95,6 +96,73 @@ export default function ContractDetails() {
     }
   };
 
+  const generatePDF = () => {
+    if (!contract) return;
+
+    const pdf = new jsPDF();
+    let yOffset = 20;
+
+    // Add title
+    pdf.setFontSize(20);
+    pdf.text(contract.template?.name || "Custom Contract", 20, yOffset);
+    yOffset += 20;
+
+    // Add property details
+    pdf.setFontSize(16);
+    pdf.text("Property Details", 20, yOffset);
+    yOffset += 10;
+    pdf.setFontSize(12);
+    pdf.text(contract.property?.address || "", 20, yOffset);
+    yOffset += 20;
+
+    // Add contract details
+    pdf.setFontSize(16);
+    pdf.text("Contract Details", 20, yOffset);
+    yOffset += 10;
+    pdf.setFontSize(12);
+    pdf.text(`Type: ${contract.contract_type}`, 20, yOffset);
+    yOffset += 10;
+    pdf.text(`Valid From: ${contract.valid_from ? new Date(contract.valid_from).toLocaleDateString() : "Not set"}`, 20, yOffset);
+    yOffset += 10;
+    pdf.text(`Valid Until: ${contract.valid_until ? new Date(contract.valid_until).toLocaleDateString() : "Not set"}`, 20, yOffset);
+    yOffset += 20;
+
+    // Add contract content
+    const contractContent = (typeof contract.content === 'object' && contract.content !== null
+      ? contract.content
+      : { sections: [] }) as ContractContent;
+
+    pdf.setFontSize(16);
+    pdf.text("Contract Content", 20, yOffset);
+    yOffset += 10;
+
+    contractContent.sections?.forEach((section) => {
+      // Add new page if content might overflow
+      if (yOffset > 250) {
+        pdf.addPage();
+        yOffset = 20;
+      }
+
+      pdf.setFontSize(14);
+      pdf.text(section.title, 20, yOffset);
+      yOffset += 10;
+      pdf.setFontSize(12);
+      
+      // Split long content into multiple lines
+      const contentLines = pdf.splitTextToSize(section.content, 170);
+      pdf.text(contentLines, 20, yOffset);
+      yOffset += 10 + (contentLines.length * 7);
+    });
+
+    // Save the PDF
+    pdf.save(`contract-${contract.id}.pdf`);
+    
+    toast({
+      title: "Success",
+      description: "Contract PDF has been generated",
+    });
+  };
+
   if (isLoadingAuth || isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -129,10 +197,16 @@ export default function ContractDetails() {
   return (
     <div className="container mx-auto py-8 space-y-6">
       <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={() => navigate("/contracts")}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Contracts
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={() => navigate("/contracts")}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Contracts
+          </Button>
+          <Button onClick={generatePDF} variant="outline">
+            <FileDown className="w-4 h-4 mr-2" />
+            Generate PDF
+          </Button>
+        </div>
         <Badge
           variant="secondary"
           className={`${getStatusColor(contract.status)} text-white`}
