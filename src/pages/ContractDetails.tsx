@@ -127,16 +127,22 @@ export default function ContractDetails() {
     pdf.text(`Valid Until: ${contract.valid_until ? new Date(contract.valid_until).toLocaleDateString() : "Not set"}`, 20, yOffset);
     yOffset += 20;
 
-    // Add contract content
-    const contractContent = (typeof contract.content === 'object' && contract.content !== null
-      ? contract.content
-      : { sections: [] }) as ContractContent;
+    // Add contract content with proper type casting
+    const rawContent = contract.content;
+    const contractContent: ContractContent = {
+      sections: Array.isArray(rawContent?.sections) 
+        ? rawContent.sections.map(section => ({
+            title: String(section.title || ''),
+            content: String(section.content || '')
+          }))
+        : []
+    };
 
     pdf.setFontSize(16);
     pdf.text("Contract Content", 20, yOffset);
     yOffset += 10;
 
-    contractContent.sections?.forEach((section) => {
+    contractContent.sections.forEach((section) => {
       // Add new page if content might overflow
       if (yOffset > 250) {
         pdf.addPage();
@@ -189,10 +195,16 @@ export default function ContractDetails() {
     );
   }
 
-  // First cast to unknown, then to our expected type
-  const contractContent = (typeof contract.content === 'object' && contract.content !== null
-    ? contract.content
-    : { sections: [] }) as unknown as ContractContent;
+  // Safely transform contract content
+  const rawContent = contract.content;
+  const contractContent: ContractContent = {
+    sections: Array.isArray(rawContent?.sections) 
+      ? rawContent.sections.map(section => ({
+          title: String(section.title || ''),
+          content: String(section.content || '')
+        }))
+      : []
+  };
 
   return (
     <div className="container mx-auto py-8 space-y-6">
