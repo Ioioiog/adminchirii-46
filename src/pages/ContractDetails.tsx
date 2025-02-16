@@ -26,6 +26,25 @@ interface ContractContent {
   sections: ContractSection[];
 }
 
+// Helper function to safely parse contract content
+const parseContractContent = (content: Record<string, any> | null): ContractContent => {
+  if (!content || typeof content !== 'object') {
+    return { sections: [] };
+  }
+
+  const rawSections = content.sections;
+  if (!Array.isArray(rawSections)) {
+    return { sections: [] };
+  }
+
+  return {
+    sections: rawSections.map(section => ({
+      title: String(section?.title || ''),
+      content: String(section?.content || '')
+    }))
+  };
+};
+
 export default function ContractDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -127,16 +146,8 @@ export default function ContractDetails() {
     pdf.text(`Valid Until: ${contract.valid_until ? new Date(contract.valid_until).toLocaleDateString() : "Not set"}`, 20, yOffset);
     yOffset += 20;
 
-    // Add contract content with proper type casting
-    const rawContent = contract.content;
-    const contractContent: ContractContent = {
-      sections: Array.isArray(rawContent?.sections) 
-        ? rawContent.sections.map(section => ({
-            title: String(section.title || ''),
-            content: String(section.content || '')
-          }))
-        : []
-    };
+    // Parse contract content safely
+    const contractContent = parseContractContent(contract.content as Record<string, any>);
 
     pdf.setFontSize(16);
     pdf.text("Contract Content", 20, yOffset);
@@ -195,16 +206,8 @@ export default function ContractDetails() {
     );
   }
 
-  // Safely transform contract content
-  const rawContent = contract.content;
-  const contractContent: ContractContent = {
-    sections: Array.isArray(rawContent?.sections) 
-      ? rawContent.sections.map(section => ({
-          title: String(section.title || ''),
-          content: String(section.content || '')
-        }))
-      : []
-  };
+  // Parse contract content safely
+  const contractContent = parseContractContent(contract.content as Record<string, any>);
 
   return (
     <div className="container mx-auto py-8 space-y-6">
