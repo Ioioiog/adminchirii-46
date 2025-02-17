@@ -26,35 +26,84 @@ async function handler(req: Request) {
   }
 
   try {
+    // Verify request method
     if (req.method !== 'POST') {
       console.log(`Invalid method ${req.method} received`);
-      throw new Error(`Method ${req.method} not allowed`);
+      return new Response(
+        JSON.stringify({ error: `Method ${req.method} not allowed` }),
+        {
+          status: 405,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
     }
 
-    // Log headers for debugging
+    // Check Content-Type header
+    const contentType = req.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      console.log("Invalid Content-Type:", contentType);
+      return new Response(
+        JSON.stringify({ error: 'Content-Type must be application/json' }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+    }
+
+    // Log request details
     console.log("Request headers:", {
-      contentType: req.headers.get('content-type'),
+      contentType,
       authorization: req.headers.has('authorization') ? 'present' : 'missing',
       origin: req.headers.get('origin')
     });
 
-    // Parse and validate request body
-    const body = await req.json() as RequestBody;
-    console.log("Received request body:", {
+    // Get the raw body text first
+    const bodyText = await req.text();
+    console.log("Raw request body:", bodyText);
+
+    // Try to parse the JSON
+    let body: RequestBody;
+    try {
+      body = JSON.parse(bodyText);
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid JSON in request body',
+          details: parseError.message
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+    }
+
+    // Log parsed body (safely)
+    console.log("Parsed request body:", {
       username: body.username ? '[PRESENT]' : '[MISSING]',
       password: body.password ? '[PRESENT]' : '[MISSING]',
       utilityId: body.utilityId ? '[PRESENT]' : '[MISSING]'
     });
 
     // Validate required fields
-    if (!body.username || !body.password || !body.utilityId) {
-      const missingFields = [];
-      if (!body.username) missingFields.push('username');
-      if (!body.password) missingFields.push('password');
-      if (!body.utilityId) missingFields.push('utilityId');
+    const missingFields = [];
+    if (!body.username) missingFields.push('username');
+    if (!body.password) missingFields.push('password');
+    if (!body.utilityId) missingFields.push('utilityId');
 
+    if (missingFields.length > 0) {
       console.log("Validation failed. Missing fields:", missingFields);
-
       return new Response(
         JSON.stringify({
           error: 'Missing required fields',
@@ -101,15 +150,18 @@ async function handler(req: Request) {
     );
 
   } catch (error) {
+    // Log the full error details
     console.error("Error in edge function:", {
       message: error.message,
       stack: error.stack,
-      name: error.name
+      name: error.name,
+      cause: error.cause
     });
     
     return new Response(
       JSON.stringify({
-        error: error.message || 'Internal server error',
+        error: 'Internal server error',
+        message: error.message,
         details: error.stack
       }),
       {
