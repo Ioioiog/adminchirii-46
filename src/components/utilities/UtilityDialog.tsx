@@ -129,7 +129,9 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       console.log("Fetching provider credentials for property:", propertyId);
       
       const { data: credentials, error: credentialsError } = await supabase
-        .rpc<ProviderCredentials>('get_decrypted_credentials', { property_id_input: propertyId });
+        .rpc<ProviderCredentials, { property_id_input: string }>('get_decrypted_credentials', { 
+          property_id_input: propertyId 
+        });
 
       if (credentialsError || !credentials) {
         console.error("Provider credentials error:", credentialsError);
