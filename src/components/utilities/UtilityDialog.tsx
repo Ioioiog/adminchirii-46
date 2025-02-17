@@ -122,6 +122,8 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
 
       setIsFetching(true);
       
+      console.log("Fetching provider credentials for property:", propertyId);
+      
       // Get the utility provider credentials for the selected property
       const { data: providerData, error: providerError } = await supabase
         .from('utility_provider_credentials')
@@ -129,23 +131,38 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
         .eq('property_id', propertyId)
         .single();
 
-      if (providerError) {
+      if (providerError || !providerData) {
+        console.error("Provider error:", providerError);
         throw new Error('No utility provider found for this property');
       }
+
+      console.log("Provider data:", providerData);
 
       if (!providerData.username || !providerData.encrypted_password) {
         throw new Error('Missing provider credentials');
       }
 
-      const { error } = await supabase.functions.invoke('scrape-utility-invoices', {
-        body: { 
-          username: providerData.username,
-          password: providerData.encrypted_password,
-          utilityId: providerData.id
-        }
+      const requestBody = {
+        username: providerData.username,
+        password: providerData.encrypted_password,
+        utilityId: providerData.id
+      };
+
+      console.log("Calling edge function with:", {
+        ...requestBody,
+        password: '[REDACTED]'
       });
 
-      if (error) throw error;
+      const { data, error } = await supabase.functions.invoke('scrape-utility-invoices', {
+        body: requestBody
+      });
+
+      if (error) {
+        console.error("Edge function error:", error);
+        throw error;
+      }
+
+      console.log("Edge function response:", data);
 
       toast({
         title: "Success",

@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -82,11 +81,30 @@ async function handler(req: Request) {
 
   try {
     console.log("Starting scraping process...");
-    const { username, password, utilityId } = await req.json();
+    const body = await req.json();
+    console.log("Received request body:", {
+      ...body,
+      password: body.password ? '[REDACTED]' : undefined
+    });
+    
+    const { username, password, utilityId } = body;
     
     if (!username || !password || !utilityId) {
+      console.error("Missing required parameters:", {
+        hasUsername: !!username,
+        hasPassword: !!password,
+        hasUtilityId: !!utilityId
+      });
+      
       return new Response(
-        JSON.stringify({ error: "Missing username, password or utility ID" }), 
+        JSON.stringify({ 
+          error: "Missing required parameters",
+          details: {
+            username: !username ? "missing" : "present",
+            password: !password ? "missing" : "present",
+            utilityId: !utilityId ? "missing" : "present"
+          }
+        }), 
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
