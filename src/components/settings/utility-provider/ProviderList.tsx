@@ -56,9 +56,13 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
         { property_id_input: provider.property_id }
       );
 
-      if (credentialsError || !credentials) {
+      if (credentialsError) {
         console.error("Provider credentials error:", credentialsError);
-        throw new Error('No utility provider found for this property');
+        throw new Error(credentialsError.message || 'Failed to retrieve provider credentials');
+      }
+
+      if (!credentials) {
+        throw new Error('No utility provider credentials found');
       }
 
       console.log("Credentials structure:", {
