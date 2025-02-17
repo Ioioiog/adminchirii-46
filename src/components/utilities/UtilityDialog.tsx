@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   Dialog,
@@ -49,7 +48,6 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
     try {
       setIsSubmitting(true);
       
-      // First create the utility record
       const { data: utility, error: utilityError } = await supabase
         .from("utilities")
         .insert([
@@ -67,7 +65,6 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
 
       if (utilityError) throw utilityError;
 
-      // If there's a file, upload it and create an invoice record
       if (file) {
         const fileExt = file.name.split('.').pop();
         const fileName = `${crypto.randomUUID()}.${fileExt}`;
@@ -124,37 +121,30 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       
       console.log("Fetching provider credentials for property:", propertyId);
       
-      // Get the utility provider credentials for the selected property
       const { data: credentials, error: credentialsError } = await supabase
-        .from('utility_provider_credentials')
-        .select('id, username, encrypted_password')
-        .eq('property_id', propertyId)
-        .single();
+        .rpc('get_decrypted_credentials', { property_id_input: propertyId });
 
       if (credentialsError || !credentials) {
         console.error("Provider credentials error:", credentialsError);
         throw new Error('No utility provider found for this property');
       }
 
-      // Debug log to check credentials structure
       console.log("Credentials structure:", {
         id: credentials.id,
         username: credentials.username,
-        hasPassword: !!credentials.encrypted_password
+        hasPassword: !!credentials.password
       });
 
-      if (!credentials.username || !credentials.encrypted_password) {
+      if (!credentials.username || !credentials.password) {
         throw new Error('Missing provider credentials');
       }
 
-      // Ensure we're sending all required fields
       const requestBody = {
         username: credentials.username,
-        password: credentials.encrypted_password,
+        password: credentials.password,
         utilityId: credentials.id
       };
 
-      // Debug log to verify request body (without exposing the actual password)
       console.log("Request body check:", {
         hasUsername: !!requestBody.username,
         hasPassword: !!requestBody.password,

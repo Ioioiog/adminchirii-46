@@ -2044,6 +2044,7 @@ export type Database = {
           id: string
           landlord_id: string
           location_name: string | null
+          password: string | null
           property_id: string | null
           provider_name: string
           start_day: number | null
@@ -2060,6 +2061,7 @@ export type Database = {
           id?: string
           landlord_id: string
           location_name?: string | null
+          password?: string | null
           property_id?: string | null
           provider_name: string
           start_day?: number | null
@@ -2076,6 +2078,7 @@ export type Database = {
           id?: string
           landlord_id?: string
           location_name?: string | null
+          password?: string | null
           property_id?: string | null
           provider_name?: string
           start_day?: number | null
