@@ -1,6 +1,12 @@
 
 project_id = "wecmvyohaxizmnhuvjly"
 
+[functions.scrape-utility-invoices]
+verify_jwt = true
+
+[functions.create-payment-checkout]
+verify_jwt = true
+
 [functions.create-subscription-checkout]
 verify_jwt = true
 
@@ -10,5 +16,17 @@ verify_jwt = false
 [functions.send-tenant-welcome]
 verify_jwt = true
 
-[functions.scrape-utility-invoices]
+[functions.send-service-provider-welcome]
+verify_jwt = true
+
+[functions.send-tenant-invitation]
+verify_jwt = true
+
+[functions.send-maintenance-notification]
+verify_jwt = true
+
+[functions.send-invoice-email]
+verify_jwt = true
+
+[functions.get-exchange-rates]
 verify_jwt = true

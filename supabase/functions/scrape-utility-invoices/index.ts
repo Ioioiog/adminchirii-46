@@ -1,4 +1,4 @@
-
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
@@ -70,7 +70,7 @@ async function solveCaptcha(siteKey: string, pageUrl: string): Promise<string> {
   }
 }
 
-export default async (req: Request) => {
+serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { 
@@ -260,4 +260,4 @@ export default async (req: Request) => {
       }
     );
   }
-};
+});
