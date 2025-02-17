@@ -39,67 +39,57 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
   const [scrapingJobs, setScrapingJobs] = useState<Record<string, ScrapingJob>>({});
   const { toast } = useToast();
 
-  console.log('Providers with property details:', providers);
-
   const handleScrape = async (providerId: string) => {
     try {
       console.log('Starting scrape for provider:', providerId);
       setScrapingStates(prev => ({ ...prev, [providerId]: true }));
 
-      // Get the provider details
-      const provider = providers.find(p => p.id === providerId);
-      if (!provider?.username) {
-        throw new Error('Provider credentials not found');
+      // Get the provider details and decrypted credentials
+      const { data: credentials, error: credentialsError } = await supabase.rpc(
+        'get_decrypted_credentials',
+        { property_id_input: providers.find(p => p.id === providerId)?.property_id }
+      );
+
+      if (credentialsError || !credentials) {
+        console.error("Provider credentials error:", credentialsError);
+        throw new Error('No utility provider found for this property');
       }
 
-      // Create or update scraping job
-      const { error: jobError } = await supabase
-        .from('scraping_jobs')
-        .upsert({
-          utility_provider_id: providerId,
-          status: 'in_progress',
-          last_run_at: new Date().toISOString()
-        });
+      console.log("Credentials structure:", {
+        id: credentials.id,
+        username: credentials.username,
+        hasPassword: !!credentials.password
+      });
 
-      if (jobError) {
-        console.error('Error creating scraping job:', jobError);
-        throw jobError;
+      if (!credentials.username || !credentials.password) {
+        throw new Error('Missing provider credentials');
       }
 
-      // Call the edge function to start scraping
-      const { data, error } = await supabase.functions.invoke('scrape-utility-invoices', {
-        body: { 
-          username: provider.username,
-          password: provider.password,
-          utilityId: providerId
-        }
+      const requestBody = {
+        username: credentials.username,
+        password: credentials.password,
+        utilityId: credentials.id
+      };
+
+      console.log("Request body check:", {
+        hasUsername: !!requestBody.username,
+        hasPassword: !!requestBody.password,
+        hasUtilityId: !!requestBody.utilityId
+      });
+
+      // Call the edge function with the decrypted credentials
+      const { data: scrapeData, error } = await supabase.functions.invoke('scrape-utility-invoices', {
+        body: requestBody
       });
 
       if (error) {
-        console.error('Error invoking edge function:', error);
+        console.error("Edge function error:", error);
         throw error;
       }
 
-      console.log('Scraping result:', data);
-
       // Update scraping job status
-      const { error: updateError } = await supabase
-        .from('scraping_jobs')
-        .update({
-          status: 'completed',
-          last_run_at: new Date().toISOString(),
-          error_message: null
-        })
-        .eq('utility_provider_id', providerId);
-
-      if (updateError) {
-        console.error('Error updating scraping job:', updateError);
-        throw updateError;
-      }
-
-      setScrapingStates(prev => ({ ...prev, [providerId]: false }));
-      setScrapingJobs(prev => ({ 
-        ...prev, 
+      setScrapingJobs(prev => ({
+        ...prev,
         [providerId]: {
           status: 'completed',
           last_run_at: new Date().toISOString(),
@@ -108,26 +98,15 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
       }));
 
       toast({
-        title: 'Success',
-        description: 'Utility bills scraped successfully',
+        title: "Success",
+        description: "Started fetching utility bills. This may take a few minutes.",
       });
-
     } catch (error: any) {
       console.error('Scraping error:', error);
       
-      // Update scraping job with error
-      await supabase
-        .from('scraping_jobs')
-        .update({
-          status: 'failed',
-          error_message: error.message || 'Failed to scrape bills',
-          last_run_at: new Date().toISOString()
-        })
-        .eq('utility_provider_id', providerId);
-
-      setScrapingStates(prev => ({ ...prev, [providerId]: false }));
-      setScrapingJobs(prev => ({ 
-        ...prev, 
+      // Update scraping job with error status
+      setScrapingJobs(prev => ({
+        ...prev,
         [providerId]: {
           status: 'failed',
           last_run_at: new Date().toISOString(),
@@ -136,10 +115,12 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
       }));
 
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to scrape bills',
-        variant: 'destructive',
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to fetch utility bills.",
       });
+    } finally {
+      setScrapingStates(prev => ({ ...prev, [providerId]: false }));
     }
   };
 
