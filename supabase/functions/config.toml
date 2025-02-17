@@ -1,3 +1,4 @@
+
 project_id = "wecmvyohaxizmnhuvjly"
 
 [functions.create-subscription-checkout]
@@ -7,4 +8,7 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.send-tenant-welcome]
+verify_jwt = true
+
+[functions.scrape-utility-invoices]
 verify_jwt = true
