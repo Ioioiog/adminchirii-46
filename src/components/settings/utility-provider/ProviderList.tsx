@@ -94,7 +94,11 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
 
       if (error) {
         console.error("Edge function error:", error);
-        throw error;
+        let errorMessage = error.message;
+        if (error.message?.includes('pgp_sym_decrypt')) {
+          errorMessage = 'Error decrypting credentials. Please try updating the provider credentials.';
+        }
+        throw new Error(errorMessage);
       }
 
       // Update scraping job status
