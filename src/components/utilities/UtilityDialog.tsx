@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   Dialog,
@@ -19,6 +20,12 @@ import { useCurrency } from "@/hooks/useCurrency";
 interface UtilityDialogProps {
   properties: Property[];
   onUtilityCreated: () => void;
+}
+
+interface ProviderCredentials {
+  id: string;
+  username: string;
+  password: string;
 }
 
 export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogProps) {
@@ -122,7 +129,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       console.log("Fetching provider credentials for property:", propertyId);
       
       const { data: credentials, error: credentialsError } = await supabase
-        .rpc('get_decrypted_credentials', { property_id_input: propertyId });
+        .rpc<ProviderCredentials>('get_decrypted_credentials', { property_id_input: propertyId });
 
       if (credentialsError || !credentials) {
         console.error("Provider credentials error:", credentialsError);

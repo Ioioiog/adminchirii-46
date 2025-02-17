@@ -2209,6 +2209,12 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      get_decrypted_credentials: {
+        Args: {
+          property_id_input: string
+        }
+        Returns: Database["public"]["CompositeTypes"]["provider_credentials"]
+      }
       get_latest_tenancy: {
         Args: {
           p_tenant_id: string
@@ -2277,7 +2283,11 @@ export type Database = {
       utility_reading_type: "electricity" | "water" | "gas"
     }
     CompositeTypes: {
-      [_ in never]: never
+      provider_credentials: {
+        id: string | null
+        username: string | null
+        password: string | null
+      }
     }
   }
 }
