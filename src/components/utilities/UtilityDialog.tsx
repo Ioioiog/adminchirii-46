@@ -127,14 +127,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       // Get the utility provider credentials for the selected property
       const { data: credentials, error: credentialsError } = await supabase
         .from('utility_provider_credentials')
-        .select(`
-          id,
-          username,
-          encrypted_password,
-          provider_name,
-          utility_type,
-          property_id
-        `)
+        .select('id, username, encrypted_password')
         .eq('property_id', propertyId)
         .single();
 
@@ -143,20 +136,30 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
         throw new Error('No utility provider found for this property');
       }
 
-      console.log("Found provider credentials for:", credentials.provider_name);
+      // Debug log to check credentials structure
+      console.log("Credentials structure:", {
+        id: credentials.id,
+        username: credentials.username,
+        hasPassword: !!credentials.encrypted_password
+      });
 
       if (!credentials.username || !credentials.encrypted_password) {
         throw new Error('Missing provider credentials');
       }
 
+      // Ensure we're sending all required fields
       const requestBody = {
         username: credentials.username,
         password: credentials.encrypted_password,
         utilityId: credentials.id
       };
 
-      console.log("Sending request for provider:", credentials.provider_name, 
-        "type:", credentials.utility_type);
+      // Debug log to verify request body (without exposing the actual password)
+      console.log("Request body check:", {
+        hasUsername: !!requestBody.username,
+        hasPassword: !!requestBody.password,
+        hasUtilityId: !!requestBody.utilityId
+      });
 
       const { data, error } = await supabase.functions.invoke('scrape-utility-invoices', {
         body: requestBody
@@ -166,8 +169,6 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
         console.error("Edge function error:", error);
         throw error;
       }
-
-      console.log("Edge function response:", data);
 
       toast({
         title: "Success",
