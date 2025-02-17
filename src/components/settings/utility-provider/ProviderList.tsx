@@ -68,7 +68,14 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
         throw new Error('No valid utility provider credentials found. Please update the credentials.');
       }
 
-      console.log('Credentials retrieved successfully. Preparing request...');
+      console.log('Credentials retrieved successfully. Preparing request...', {
+        username: credentials.username,
+        hasPassword: !!credentials.password,
+        providerId,
+        providerName: provider.provider_name,
+        utilityType: provider.utility_type,
+        locationName: provider.location_name
+      });
 
       // Format the request body
       const requestBody = {
@@ -76,7 +83,8 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
         password: credentials.password,
         utilityId: providerId,
         provider: provider.provider_name,
-        type: provider.utility_type
+        type: provider.utility_type,
+        location: provider.location_name
       };
 
       // Validate request body before sending
@@ -86,7 +94,8 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
           hasPassword: !!requestBody.password,
           hasUtilityId: !!requestBody.utilityId,
           hasProvider: !!requestBody.provider,
-          hasType: !!requestBody.type
+          hasType: !!requestBody.type,
+          hasLocation: !!requestBody.location
         });
         throw new Error('Missing required credentials');
       }
