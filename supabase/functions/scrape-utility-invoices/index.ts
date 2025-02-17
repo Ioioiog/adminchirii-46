@@ -12,7 +12,7 @@ export default async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { 
-      status: 204, // Use 204 for OPTIONS requests
+      status: 204,
       headers: corsHeaders 
     });
   }
@@ -74,46 +74,53 @@ export default async (req: Request) => {
 
       // Extract Invoice Data
       console.log("Extracting invoice data...");
-      const invoices = await page.evaluate(() => {
+      const bills = await page.evaluate(() => {
         return Array.from(document.querySelectorAll(".invoice-item")).map(row => ({
           invoice_number: row.querySelector(".invoice-number")?.innerText.trim() || null,
           due_date: row.querySelector(".invoice-date")?.innerText.trim() || null,
           amount: parseFloat(row.querySelector(".invoice-total")?.innerText.trim().replace(/[^0-9.]/g, '') || '0'),
           pdf_path: row.querySelector(".invoice-download")?.getAttribute("href") || null,
+          status: 'pending',
+          currency: 'RON',
+          consumption_period: row.querySelector(".invoice-period")?.innerText.trim() || null
         }));
       });
 
-      if (!invoices.length) {
-        throw new Error("No invoices found");
+      if (!bills.length) {
+        throw new Error("No bills found");
       }
 
-      // Validate and format invoice data
-      const validInvoices = invoices
-        .filter(invoice => 
-          invoice.invoice_number && 
-          invoice.due_date && 
-          invoice.amount && 
-          !isNaN(invoice.amount)
+      // Validate and format bill data
+      const validBills = bills
+        .filter(bill => 
+          bill.invoice_number && 
+          bill.due_date && 
+          bill.amount && 
+          !isNaN(bill.amount)
         )
-        .map(invoice => ({
-          utility_id: utilityId,
-          invoice_number: invoice.invoice_number,
-          due_date: new Date(invoice.due_date).toISOString(),
-          amount: invoice.amount,
-          pdf_path: invoice.pdf_path,
-          status: 'pending'
+        .map(bill => ({
+          provider_id: utilityId,
+          invoice_number: bill.invoice_number,
+          due_date: new Date(bill.due_date).toISOString(),
+          amount: bill.amount,
+          pdf_path: bill.pdf_path,
+          status: bill.status,
+          currency: bill.currency,
+          consumption_period: bill.consumption_period
         }));
 
-      // Save Invoices to Supabase
-      console.log("Saving invoices to database...");
+      // Save Bills to Supabase
+      console.log("Saving bills to database...");
       const { error: dbError } = await supabase
-        .from("utility_invoices")
-        .insert(validInvoices);
+        .from("utility_bills")
+        .upsert(validBills, {
+          onConflict: 'invoice_number,provider_id'
+        });
       
       if (dbError) throw dbError;
 
       return new Response(
-        JSON.stringify({ success: true, invoices: validInvoices }), 
+        JSON.stringify({ success: true, bills: validBills }), 
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
@@ -138,3 +145,4 @@ export default async (req: Request) => {
     );
   }
 };
+

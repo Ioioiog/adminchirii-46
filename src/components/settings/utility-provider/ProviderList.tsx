@@ -109,7 +109,7 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
 
       toast({
         title: 'Success',
-        description: 'Utility invoices scraped successfully',
+        description: 'Utility bills scraped successfully',
       });
 
     } catch (error: any) {
@@ -120,7 +120,7 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
         .from('scraping_jobs')
         .update({
           status: 'failed',
-          error_message: error.message || 'Failed to scrape invoices',
+          error_message: error.message || 'Failed to scrape bills',
           last_run_at: new Date().toISOString()
         })
         .eq('utility_provider_id', providerId);
@@ -131,13 +131,13 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
         [providerId]: {
           status: 'failed',
           last_run_at: new Date().toISOString(),
-          error_message: error.message || 'Failed to scrape invoices'
+          error_message: error.message || 'Failed to scrape bills'
         }
       }));
 
       toast({
         title: 'Error',
-        description: error.message || 'Failed to scrape invoices',
+        description: error.message || 'Failed to scrape bills',
         variant: 'destructive',
       });
     }
