@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -61,44 +60,36 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
         throw new Error(credentialsError.message || 'Failed to retrieve provider credentials');
       }
 
-      if (!credentials) {
-        throw new Error('No utility provider credentials found');
+      if (!credentials || !credentials.password) {
+        console.error("Missing credentials:", credentials);
+        throw new Error('No valid utility provider credentials found. Please update the credentials.');
       }
 
-      console.log("Credentials structure:", {
-        id: credentials.id,
-        username: credentials.username,
-        hasPassword: !!credentials.password
-      });
-
-      if (!credentials.username || !credentials.password) {
-        throw new Error('Missing provider credentials');
-      }
-
+      // Format the request body
       const requestBody = {
         username: credentials.username,
         password: credentials.password,
-        utilityId: credentials.id
+        utilityId: providerId // Use the provider ID directly
       };
 
-      console.log("Request body check:", {
-        hasUsername: !!requestBody.username,
-        hasPassword: !!requestBody.password,
-        hasUtilityId: !!requestBody.utilityId
-      });
+      // Validate request body before sending
+      if (!requestBody.username || !requestBody.password || !requestBody.utilityId) {
+        console.error("Invalid request body:", {
+          hasUsername: !!requestBody.username,
+          hasPassword: !!requestBody.password,
+          hasUtilityId: !!requestBody.utilityId
+        });
+        throw new Error('Missing required credentials');
+      }
 
       // Call the edge function with the decrypted credentials
       const { data: scrapeData, error } = await supabase.functions.invoke('scrape-utility-invoices', {
-        body: requestBody
+        body: JSON.stringify(requestBody) // Explicitly stringify the request body
       });
 
       if (error) {
         console.error("Edge function error:", error);
-        let errorMessage = error.message;
-        if (error.message?.includes('pgp_sym_decrypt')) {
-          errorMessage = 'Error decrypting credentials. Please try updating the provider credentials.';
-        }
-        throw new Error(errorMessage);
+        throw new Error(error.message || 'Failed to fetch utility bills');
       }
 
       // Update scraping job status
@@ -118,7 +109,7 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
     } catch (error: any) {
       console.error('Scraping error:', error);
       
-      // Update scraping job with error status and more detailed error message
+      // Update scraping job with error status
       setScrapingJobs(prev => ({
         ...prev,
         [providerId]: {
