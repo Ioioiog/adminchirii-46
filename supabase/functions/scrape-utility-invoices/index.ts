@@ -1,111 +1,71 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+// Supabase Config
+const supabaseUrl = "https://your-supabase-project.supabase.co";
+const supabaseKey = "your-service-role-key";
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
-
+export default async (req: Request) => {
   try {
-    const { providerId } = await req.json()
-    console.log('Starting scraping process for provider:', providerId)
-
-    if (!providerId) {
-      throw new Error('Provider ID is required')
+    const { username, password } = await req.json();
+    if (!username || !password) {
+      return new Response(JSON.stringify({ error: "Missing username or password" }), { status: 400 });
     }
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-    
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing environment variables')
-    }
+    // 1️⃣ Launch Puppeteer Browser
+    const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
+    const page = await browser.newPage();
 
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    // 2️⃣ Navigate to Engie Login Page
+    await page.goto("http://my.engie.ro/autentificare", { waitUntil: "networkidle2" });
 
-    // Update job status to in_progress
-    const { error: updateError } = await supabase
-      .from('scraping_jobs')
-      .upsert({
-        utility_provider_id: providerId,
-        status: 'in_progress',
-        last_run_at: new Date().toISOString(),
-      })
+    // 3️⃣ Extract CSRF Token from Meta Tag
+    const csrfToken = await page.evaluate(() => {
+      return document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
+    });
 
-    if (updateError) {
-      throw updateError
-    }
+    if (!csrfToken) throw new Error("CSRF Token Not Found");
 
-    // Simulate scraping process
-    await new Promise(resolve => setTimeout(resolve, 3000))
+    // 4️⃣ Fill in Login Credentials
+    await page.type('input[name="username"]', username);
+    await page.type('input[name="password"]', password);
 
-    // Randomly succeed or fail for demonstration
-    const success = Math.random() > 0.3
+    // 5️⃣ Solve reCAPTCHA (Manual Step OR Use External Service)
+    console.log("Solve the CAPTCHA manually...");
 
-    if (!success) {
-      throw new Error('Failed to scrape utility invoices')
-    }
+    // Wait for user to solve CAPTCHA manually
+    await page.waitForSelector(".g-recaptcha-response", { timeout: 120000 });
 
-    // Update job status to completed
-    const { error: completionError } = await supabase
-      .from('scraping_jobs')
-      .upsert({
-        utility_provider_id: providerId,
-        status: 'completed',
-        last_run_at: new Date().toISOString(),
-        error_message: null,
-      })
+    // 6️⃣ Click 'Intra in Cont' and Wait for Redirect
+    await Promise.all([
+      page.click('button[type="submit"]'),
+      page.waitForNavigation({ waitUntil: "networkidle2" }),
+    ]);
 
-    if (completionError) {
-      throw completionError
-    }
+    // 7️⃣ Navigate to Invoice History Page
+    await page.goto("http://my.engie.ro/facturi/istoric", { waitUntil: "networkidle2" });
 
-    return new Response(
-      JSON.stringify({ message: 'Scraping completed successfully' }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    )
+    // 8️⃣ Extract Invoice Data
+    const invoices = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll(".invoice-item")).map(row => ({
+        number: row.querySelector(".invoice-number")?.innerText.trim(),
+        date: row.querySelector(".invoice-date")?.innerText.trim(),
+        total: row.querySelector(".invoice-total")?.innerText.trim(),
+      }));
+    });
+
+    await browser.close();
+
+    // 9️⃣ Save Invoices to Supabase
+    const { error } = await supabase.from("invoices").insert(invoices);
+    if (error) throw error;
+
+    return new Response(JSON.stringify({ success: true, invoices }), {
+      headers: { "Content-Type": "application/json" },
+    });
 
   } catch (error) {
-    console.error('Error in scraping process:', error)
-
-    // If we have access to supabase client, update the job status
-    try {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')
-      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-      
-      if (supabaseUrl && supabaseKey) {
-        const supabase = createClient(supabaseUrl, supabaseKey)
-        await supabase
-          .from('scraping_jobs')
-          .upsert({
-            utility_provider_id: (await req.json()).providerId,
-            status: 'failed',
-            last_run_at: new Date().toISOString(),
-            error_message: error.message,
-          })
-      }
-    } catch (updateError) {
-      console.error('Error updating job status:', updateError)
-    }
-
-    return new Response(
-      JSON.stringify({ 
-        error: error.message || 'An error occurred during the scraping process' 
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      }
-    )
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
-})
+};
