@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   Dialog,
@@ -122,32 +123,32 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       
       console.log("Fetching provider credentials for property:", propertyId);
       
-      const { data: credentials, error: credentialsError } = await supabase.rpc(
+      const { data, error: credentialsError } = await supabase.rpc(
         'get_decrypted_credentials',
         { property_id_input: propertyId }
       );
 
-      if (credentialsError || !credentials) {
+      if (credentialsError || !data) {
         console.error("Provider credentials error:", credentialsError);
         throw new Error('No utility provider found for this property');
       }
 
-      const typedCredentials = credentials as ProviderCredentialsResponse;
+      const credentials = data as ProviderCredentialsResponse;
 
       console.log("Credentials structure:", {
-        id: typedCredentials.id,
-        username: typedCredentials.username,
-        hasPassword: !!typedCredentials.password
+        id: credentials.id,
+        username: credentials.username,
+        hasPassword: !!credentials.password
       });
 
-      if (!typedCredentials.username || !typedCredentials.password) {
+      if (!credentials.username || !credentials.password) {
         throw new Error('Missing provider credentials');
       }
 
       const requestBody = {
-        username: typedCredentials.username,
-        password: typedCredentials.password,
-        utilityId: typedCredentials.id
+        username: credentials.username,
+        password: credentials.password,
+        utilityId: credentials.id
       };
 
       console.log("Request body check:", {
@@ -156,7 +157,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
         hasUtilityId: !!requestBody.utilityId
       });
 
-      const { data, error } = await supabase.functions.invoke('scrape-utility-invoices', {
+      const { data: scrapeData, error } = await supabase.functions.invoke('scrape-utility-invoices', {
         body: requestBody
       });
 
