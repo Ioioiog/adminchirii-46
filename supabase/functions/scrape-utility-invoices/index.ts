@@ -13,34 +13,61 @@ const CAPTCHA_API_KEY = Deno.env.get("CAPTCHA_API_KEY")!;
 async function solveCaptcha(siteKey: string, pageUrl: string): Promise<string> {
   console.log("Solving CAPTCHA using 2captcha...");
   
-  // Submit CAPTCHA to 2captcha
-  const submitResponse = await fetch(`http://2captcha.com/in.php?key=${CAPTCHA_API_KEY}&method=userrecaptcha&googlekey=${siteKey}&pageurl=${pageUrl}&json=1`);
-  const submitData = await submitResponse.json();
-  
-  if (!submitData.status) {
-    throw new Error(`Failed to submit CAPTCHA: ${submitData.error_text}`);
-  }
-  
-  const captchaId = submitData.request;
-  
-  // Wait for CAPTCHA to be solved (check every 5 seconds, timeout after 3 minutes)
-  for (let i = 0; i < 36; i++) {
-    await new Promise(resolve => setTimeout(resolve, 5000));
+  try {
+    // Submit CAPTCHA to 2captcha with a 30-second timeout
+    const submitController = new AbortController();
+    const submitTimeout = setTimeout(() => submitController.abort(), 30000);
     
-    const resultResponse = await fetch(`http://2captcha.com/res.php?key=${CAPTCHA_API_KEY}&action=get&id=${captchaId}&json=1`);
-    const resultData = await resultResponse.json();
+    const submitResponse = await fetch(
+      `http://2captcha.com/in.php?key=${CAPTCHA_API_KEY}&method=userrecaptcha&googlekey=${siteKey}&pageurl=${pageUrl}&json=1`,
+      { signal: submitController.signal }
+    );
+    clearTimeout(submitTimeout);
     
-    if (resultData.status === 1) {
-      console.log("CAPTCHA solved successfully!");
-      return resultData.request;
+    const submitData = await submitResponse.json();
+    if (!submitData.status) {
+      throw new Error(`Failed to submit CAPTCHA: ${submitData.error_text}`);
     }
     
-    if (resultData.request !== "CAPCHA_NOT_READY") {
-      throw new Error(`Failed to solve CAPTCHA: ${resultData.request}`);
+    const captchaId = submitData.request;
+    console.log("CAPTCHA submitted, ID:", captchaId);
+    
+    // Wait for CAPTCHA solution (check every 5 seconds, max 6 attempts = 30 seconds total)
+    for (let i = 0; i < 6; i++) {
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      
+      const resultController = new AbortController();
+      const resultTimeout = setTimeout(() => resultController.abort(), 10000);
+      
+      try {
+        const resultResponse = await fetch(
+          `http://2captcha.com/res.php?key=${CAPTCHA_API_KEY}&action=get&id=${captchaId}&json=1`,
+          { signal: resultController.signal }
+        );
+        const resultData = await resultResponse.json();
+        
+        if (resultData.status === 1) {
+          console.log("CAPTCHA solved successfully!");
+          return resultData.request;
+        }
+        
+        if (resultData.request !== "CAPCHA_NOT_READY") {
+          throw new Error(`Failed to solve CAPTCHA: ${resultData.request}`);
+        }
+        
+        console.log(`CAPTCHA not ready, attempt ${i + 1}/6`);
+      } finally {
+        clearTimeout(resultTimeout);
+      }
     }
+    
+    throw new Error("CAPTCHA solving timeout");
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error("CAPTCHA request timeout");
+    }
+    throw error;
   }
-  
-  throw new Error("CAPTCHA solving timeout");
 }
 
 export default async (req: Request) => {
@@ -66,7 +93,7 @@ export default async (req: Request) => {
       );
     }
 
-    // Launch Puppeteer Browser with increased timeout
+    // Launch Puppeteer Browser with reduced timeout
     console.log("Launching browser...");
     const browser = await puppeteer.launch({ 
       headless: true,
@@ -78,22 +105,36 @@ export default async (req: Request) => {
         "--disable-gpu",
         "--window-size=1920x1080"
       ],
-      timeout: 60000 // 60 second timeout
+      timeout: 30000 // Reduced timeout to 30 seconds
     });
 
     try {
       console.log("Creating new page...");
       const page = await browser.newPage();
-      await page.setViewport({ width: 1920, height: 1080 });
       
-      // Set default navigation timeout
-      page.setDefaultNavigationTimeout(30000);
+      // Optimize page performance
+      await page.setRequestInterception(true);
+      page.on('request', (request) => {
+        if (
+          request.resourceType() === 'image' ||
+          request.resourceType() === 'font' ||
+          request.resourceType() === 'media'
+        ) {
+          request.abort();
+        } else {
+          request.continue();
+        }
+      });
+      
+      // Set smaller viewport and reduced timeout
+      await page.setViewport({ width: 1280, height: 720 });
+      page.setDefaultNavigationTimeout(20000);
 
       // Navigate to Engie Login Page
       console.log("Navigating to login page...");
       await page.goto("http://my.engie.ro/autentificare", { 
         waitUntil: "networkidle2",
-        timeout: 30000
+        timeout: 20000
       });
 
       // Extract CSRF Token and reCAPTCHA site key
@@ -107,20 +148,18 @@ export default async (req: Request) => {
         };
       });
 
-      if (!csrfToken) {
-        throw new Error("CSRF Token Not Found");
-      }
-
-      if (!siteKey) {
-        throw new Error("reCAPTCHA site key not found");
+      if (!csrfToken || !siteKey) {
+        throw new Error("Required page elements not found");
       }
 
       // Fill in Login Credentials
       console.log("Filling login credentials...");
-      await page.type('input[name="username"]', username);
-      await page.type('input[name="password"]', password);
+      await Promise.all([
+        page.type('input[name="username"]', username),
+        page.type('input[name="password"]', password)
+      ]);
 
-      // Solve CAPTCHA
+      // Solve CAPTCHA with timeout
       console.log("Solving CAPTCHA...");
       const captchaSolution = await solveCaptcha(siteKey, page.url());
 
@@ -133,26 +172,34 @@ export default async (req: Request) => {
       console.log("Submitting login form...");
       await Promise.all([
         page.click('button[type="submit"]'),
-        page.waitForNavigation({ waitUntil: "networkidle2" })
+        page.waitForNavigation({ waitUntil: "networkidle2", timeout: 20000 })
       ]);
 
       // Navigate to Invoice History Page
       console.log("Navigating to invoice history...");
-      await page.goto("http://my.engie.ro/facturi/istoric", { waitUntil: "networkidle2" });
-
-      // Extract Invoice Data
-      console.log("Extracting invoice data...");
-      const bills = await page.evaluate(() => {
-        return Array.from(document.querySelectorAll(".invoice-item")).map(row => ({
-          invoice_number: row.querySelector(".invoice-number")?.innerText.trim() || null,
-          due_date: row.querySelector(".invoice-date")?.innerText.trim() || null,
-          amount: parseFloat(row.querySelector(".invoice-total")?.innerText.trim().replace(/[^0-9.]/g, '') || '0'),
-          pdf_path: row.querySelector(".invoice-download")?.getAttribute("href") || null,
-          status: 'pending',
-          currency: 'RON',
-          consumption_period: row.querySelector(".invoice-period")?.innerText.trim() || null
-        }));
+      await page.goto("http://my.engie.ro/facturi/istoric", { 
+        waitUntil: "networkidle2", 
+        timeout: 20000 
       });
+
+      // Extract Invoice Data with timeout
+      console.log("Extracting invoice data...");
+      const bills = await Promise.race([
+        page.evaluate(() => {
+          return Array.from(document.querySelectorAll(".invoice-item")).map(row => ({
+            invoice_number: row.querySelector(".invoice-number")?.innerText.trim() || null,
+            due_date: row.querySelector(".invoice-date")?.innerText.trim() || null,
+            amount: parseFloat(row.querySelector(".invoice-total")?.innerText.trim().replace(/[^0-9.]/g, '') || '0'),
+            pdf_path: row.querySelector(".invoice-download")?.getAttribute("href") || null,
+            status: 'pending',
+            currency: 'RON',
+            consumption_period: row.querySelector(".invoice-period")?.innerText.trim() || null
+          }));
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Invoice extraction timeout")), 15000)
+        )
+      ]);
 
       if (!bills.length) {
         throw new Error("No bills found");
