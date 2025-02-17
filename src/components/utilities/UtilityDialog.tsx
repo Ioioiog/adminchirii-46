@@ -121,8 +121,28 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       }
 
       setIsFetching(true);
-      const { error } = await supabase.functions.invoke('fetch-utility-bills', {
-        body: { propertyId }
+      
+      // Get the utility provider credentials for the selected property
+      const { data: providerData, error: providerError } = await supabase
+        .from('utility_provider_credentials')
+        .select('*')
+        .eq('property_id', propertyId)
+        .single();
+
+      if (providerError) {
+        throw new Error('No utility provider found for this property');
+      }
+
+      if (!providerData.username || !providerData.encrypted_password) {
+        throw new Error('Missing provider credentials');
+      }
+
+      const { error } = await supabase.functions.invoke('scrape-utility-invoices', {
+        body: { 
+          username: providerData.username,
+          password: providerData.encrypted_password,
+          utilityId: providerData.id
+        }
       });
 
       if (error) throw error;
