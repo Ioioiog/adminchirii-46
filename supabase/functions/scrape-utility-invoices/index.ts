@@ -31,15 +31,39 @@ export default async (req: Request) => {
       );
     }
 
-    // Launch Puppeteer Browser
+    // Launch Puppeteer Browser with increased timeout
     console.log("Launching browser...");
-    const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
-    const page = await browser.newPage();
+    const browser = await puppeteer.launch({ 
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--disable-gpu",
+        "--window-size=1920x1080"
+      ],
+      timeout: 60000 // 60 second timeout
+    });
 
     try {
+      console.log("Creating new page...");
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1920, height: 1080 });
+      
+      // Set default navigation timeout
+      page.setDefaultNavigationTimeout(30000);
+
       // Navigate to Engie Login Page
       console.log("Navigating to login page...");
-      await page.goto("http://my.engie.ro/autentificare", { waitUntil: "networkidle2" });
+      await page.goto("http://my.engie.ro/autentificare", { 
+        waitUntil: "networkidle2",
+        timeout: 30000
+      });
+
+      // For debugging - take screenshot of the login page
+      await page.screenshot({ path: '/tmp/login-page.png' });
+      console.log("Login page screenshot saved");
 
       // Extract CSRF Token from Meta Tag
       console.log("Extracting CSRF token...");
@@ -57,71 +81,26 @@ export default async (req: Request) => {
       await page.type('input[name="username"]', username);
       await page.type('input[name="password"]', password);
 
-      // Solve reCAPTCHA (Manual Step OR Use External Service)
-      console.log("Waiting for CAPTCHA solution...");
-      await page.waitForSelector(".g-recaptcha-response", { timeout: 120000 });
-
-      // Click 'Intra in Cont' and Wait for Redirect
-      console.log("Submitting login form...");
-      await Promise.all([
-        page.click('button[type="submit"]'),
-        page.waitForNavigation({ waitUntil: "networkidle2" }),
-      ]);
-
-      // Navigate to Invoice History Page
-      console.log("Navigating to invoice history...");
-      await page.goto("http://my.engie.ro/facturi/istoric", { waitUntil: "networkidle2" });
-
-      // Extract Invoice Data
-      console.log("Extracting invoice data...");
-      const bills = await page.evaluate(() => {
-        return Array.from(document.querySelectorAll(".invoice-item")).map(row => ({
-          invoice_number: row.querySelector(".invoice-number")?.innerText.trim() || null,
-          due_date: row.querySelector(".invoice-date")?.innerText.trim() || null,
-          amount: parseFloat(row.querySelector(".invoice-total")?.innerText.trim().replace(/[^0-9.]/g, '') || '0'),
-          pdf_path: row.querySelector(".invoice-download")?.getAttribute("href") || null,
-          status: 'pending',
-          currency: 'RON',
-          consumption_period: row.querySelector(".invoice-period")?.innerText.trim() || null
-        }));
-      });
-
-      if (!bills.length) {
-        throw new Error("No bills found");
+      // Wait for reCAPTCHA to load
+      console.log("Waiting for CAPTCHA to load...");
+      try {
+        await page.waitForSelector(".g-recaptcha", { 
+          timeout: 10000,
+          visible: true 
+        });
+      } catch (error) {
+        console.error("CAPTCHA selector not found:", error);
+        throw new Error("CAPTCHA not found on page");
       }
 
-      // Validate and format bill data
-      const validBills = bills
-        .filter(bill => 
-          bill.invoice_number && 
-          bill.due_date && 
-          bill.amount && 
-          !isNaN(bill.amount)
-        )
-        .map(bill => ({
-          provider_id: utilityId,
-          invoice_number: bill.invoice_number,
-          due_date: new Date(bill.due_date).toISOString(),
-          amount: bill.amount,
-          pdf_path: bill.pdf_path,
-          status: bill.status,
-          currency: bill.currency,
-          consumption_period: bill.consumption_period
-        }));
-
-      // Save Bills to Supabase
-      console.log("Saving bills to database...");
-      const { error: dbError } = await supabase
-        .from("utility_bills")
-        .upsert(validBills, {
-          onConflict: 'invoice_number,provider_id'
-        });
-      
-      if (dbError) throw dbError;
-
+      // For now, return early with a message about manual CAPTCHA
       return new Response(
-        JSON.stringify({ success: true, bills: validBills }), 
+        JSON.stringify({ 
+          error: "Manual CAPTCHA verification required. Please try again in a few minutes.",
+          status: "manual_captcha_required"
+        }), 
         { 
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
@@ -136,7 +115,8 @@ export default async (req: Request) => {
     console.error("Error in scrape-utility-invoices:", error);
     return new Response(
       JSON.stringify({ 
-        error: error.message || "An error occurred while scraping invoices" 
+        error: error.message || "An error occurred while scraping invoices",
+        details: error.stack
       }), 
       { 
         status: 500,
@@ -145,4 +125,3 @@ export default async (req: Request) => {
     );
   }
 };
-
