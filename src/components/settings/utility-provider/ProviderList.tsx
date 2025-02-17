@@ -41,13 +41,19 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
 
   const handleScrape = async (providerId: string) => {
     try {
-      console.log('Starting scrape for provider:', providerId);
+      const provider = providers.find(p => p.id === providerId);
+      
+      if (!provider || !provider.property_id) {
+        throw new Error('No property associated with this provider');
+      }
+
+      console.log('Starting scrape for provider:', providerId, 'property:', provider.property_id);
       setScrapingStates(prev => ({ ...prev, [providerId]: true }));
 
       // Get the provider details and decrypted credentials
       const { data: credentials, error: credentialsError } = await supabase.rpc(
         'get_decrypted_credentials',
-        { property_id_input: providers.find(p => p.id === providerId)?.property_id }
+        { property_id_input: provider.property_id }
       );
 
       if (credentialsError || !credentials) {
