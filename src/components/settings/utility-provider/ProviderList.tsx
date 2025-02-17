@@ -44,6 +44,7 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
       const provider = providers.find(p => p.id === providerId);
       
       if (!provider || !provider.property_id) {
+        console.error("Missing provider or property_id:", { provider, providerId });
         throw new Error('No property associated with this provider');
       }
 
@@ -51,6 +52,7 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
       setScrapingStates(prev => ({ ...prev, [providerId]: true }));
 
       // Get the provider details and decrypted credentials
+      console.log('Fetching decrypted credentials...');
       const { data: credentials, error: credentialsError } = await supabase.rpc(
         'get_decrypted_credentials',
         { property_id_input: provider.property_id }
@@ -66,11 +68,15 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
         throw new Error('No valid utility provider credentials found. Please update the credentials.');
       }
 
+      console.log('Credentials retrieved successfully. Preparing request...');
+
       // Format the request body
       const requestBody = {
         username: credentials.username,
         password: credentials.password,
-        utilityId: providerId // Use the provider ID directly
+        utilityId: providerId,
+        provider: provider.provider_name,
+        type: provider.utility_type
       };
 
       // Validate request body before sending
@@ -78,20 +84,26 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
         console.error("Invalid request body:", {
           hasUsername: !!requestBody.username,
           hasPassword: !!requestBody.password,
-          hasUtilityId: !!requestBody.utilityId
+          hasUtilityId: !!requestBody.utilityId,
+          hasProvider: !!requestBody.provider,
+          hasType: !!requestBody.type
         });
         throw new Error('Missing required credentials');
       }
 
+      console.log('Calling scrape-utility-invoices function...');
+      
       // Call the edge function with the decrypted credentials
       const { data: scrapeData, error } = await supabase.functions.invoke('scrape-utility-invoices', {
-        body: JSON.stringify(requestBody) // Explicitly stringify the request body
+        body: JSON.stringify(requestBody)
       });
 
       if (error) {
         console.error("Edge function error:", error);
         throw new Error(error.message || 'Failed to fetch utility bills');
       }
+
+      console.log('Scraping completed successfully:', scrapeData);
 
       // Update scraping job status
       setScrapingJobs(prev => ({
