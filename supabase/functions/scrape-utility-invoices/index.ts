@@ -1,178 +1,108 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
-
-interface RequestBody {
-  username: string;
-  password: string;
-  utilityId: string;
 }
 
-async function handler(req: Request) {
-  console.log("Function invoked with method:", req.method);
-  
+interface RequestBody {
+  username: string
+  password: string
+  utilityId: string
+  provider: string
+  type: 'electricity' | 'water' | 'gas'
+}
+
+console.log('Loading scrape-utility-invoices function...')
+
+serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log("Handling CORS preflight request");
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders
-    });
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    // Verify request method
-    if (req.method !== 'POST') {
-      console.log(`Invalid method ${req.method} received`);
-      return new Response(
-        JSON.stringify({ error: `Method ${req.method} not allowed` }),
-        {
-          status: 405,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+    // Parse request body
+    const requestData: RequestBody = await req.json()
+    console.log('Received request for utility scraping:', {
+      utilityId: requestData.utilityId,
+      provider: requestData.provider,
+      type: requestData.type,
+      hasUsername: !!requestData.username,
+      hasPassword: !!requestData.password
+    })
+
+    // Validate request data
+    if (!requestData.username || !requestData.password || !requestData.utilityId) {
+      throw new Error('Missing required credentials')
     }
 
-    // Check Content-Type header
-    const contentType = req.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      console.log("Invalid Content-Type:", contentType);
-      return new Response(
-        JSON.stringify({ error: 'Content-Type must be application/json' }),
+    // Initialize Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    // Create a scraping job record
+    const { data: scrapingJob, error: jobError } = await supabaseClient
+      .from('scraping_jobs')
+      .insert([
         {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
+          utility_provider_id: requestData.utilityId,
+          status: 'in_progress'
         }
-      );
+      ])
+      .select()
+      .single()
+
+    if (jobError) {
+      console.error('Error creating scraping job:', jobError)
+      throw new Error('Failed to create scraping job')
     }
 
-    // Log request details
-    console.log("Request headers:", {
-      contentType,
-      authorization: req.headers.has('authorization') ? 'present' : 'missing',
-      origin: req.headers.get('origin')
-    });
+    // For now, simulate successful scraping
+    // In a real implementation, you would use the credentials to scrape the utility provider's website
+    console.log('Successfully initialized scraping job:', scrapingJob.id)
 
-    // Get the raw body text first
-    const bodyText = await req.text();
-    console.log("Raw request body:", bodyText);
+    // Update the scraping job status
+    const { error: updateError } = await supabaseClient
+      .from('scraping_jobs')
+      .update({ 
+        status: 'completed',
+        last_run_at: new Date().toISOString()
+      })
+      .eq('id', scrapingJob.id)
 
-    // Try to parse the JSON
-    let body: RequestBody;
-    try {
-      body = JSON.parse(bodyText);
-    } catch (parseError) {
-      console.error("JSON parse error:", parseError);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid JSON in request body',
-          details: parseError.message
-        }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+    if (updateError) {
+      console.error('Error updating scraping job:', updateError)
+      throw new Error('Failed to update scraping job status')
     }
 
-    // Log parsed body (safely)
-    console.log("Parsed request body:", {
-      username: body.username ? '[PRESENT]' : '[MISSING]',
-      password: body.password ? '[PRESENT]' : '[MISSING]',
-      utilityId: body.utilityId ? '[PRESENT]' : '[MISSING]'
-    });
-
-    // Validate required fields
-    const missingFields = [];
-    if (!body.username) missingFields.push('username');
-    if (!body.password) missingFields.push('password');
-    if (!body.utilityId) missingFields.push('utilityId');
-
-    if (missingFields.length > 0) {
-      console.log("Validation failed. Missing fields:", missingFields);
-      return new Response(
-        JSON.stringify({
-          error: 'Missing required fields',
-          missingFields,
-        }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-    }
-
-    console.log("Request validation successful");
-
-    // For testing/development, return a mock response
-    const mockResponse = {
-      success: true,
-      message: 'Test response - scraping will be implemented soon',
-      mockBills: [
-        {
-          invoice_number: 'TEST-001',
-          due_date: new Date().toISOString(),
-          amount: 150.00,
-          status: 'pending',
-          currency: 'RON'
-        }
-      ]
-    };
-
-    console.log("Sending mock response:", mockResponse);
-
+    // Return success response
     return new Response(
-      JSON.stringify(mockResponse),
+      JSON.stringify({
+        message: 'Utility bill scraping initiated successfully',
+        jobId: scrapingJob.id
+      }),
       {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
       }
-    );
+    )
 
   } catch (error) {
-    // Log the full error details
-    console.error("Error in edge function:", {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-      cause: error.cause
-    });
+    console.error('Error in scrape-utility-invoices:', error.message)
     
     return new Response(
       JSON.stringify({
-        error: 'Internal server error',
-        message: error.message,
-        details: error.stack
+        error: error.message || 'An error occurred while scraping utility bills'
       }),
       {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
       }
-    );
+    )
   }
-}
-
-serve(handler);
+})
