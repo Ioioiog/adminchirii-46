@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +10,7 @@ interface UtilityProvider {
   id: string;
   provider_name: string;
   username: string;
+  password?: string;
   property_id?: string;
   property?: {
     name: string;
@@ -37,19 +39,25 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
   const [scrapingJobs, setScrapingJobs] = useState<Record<string, ScrapingJob>>({});
   const { toast } = useToast();
 
-  console.log('Providers with property details:', providers); // Debug log
+  console.log('Providers with property details:', providers);
 
   const handleScrape = async (providerId: string) => {
     try {
       console.log('Starting scrape for provider:', providerId);
       setScrapingStates(prev => ({ ...prev, [providerId]: true }));
 
+      // Get the provider details
+      const provider = providers.find(p => p.id === providerId);
+      if (!provider?.username) {
+        throw new Error('Provider credentials not found');
+      }
+
       // Create or update scraping job
       const { error: jobError } = await supabase
         .from('scraping_jobs')
         .upsert({
           utility_provider_id: providerId,
-          status: 'pending',
+          status: 'in_progress',
           last_run_at: new Date().toISOString()
         });
 
@@ -59,8 +67,12 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
       }
 
       // Call the edge function to start scraping
-      const { error } = await supabase.functions.invoke('scrape-utility-invoices', {
-        body: { providerId }
+      const { data, error } = await supabase.functions.invoke('scrape-utility-invoices', {
+        body: { 
+          username: provider.username,
+          password: provider.password,
+          utilityId: providerId
+        }
       });
 
       if (error) {
@@ -68,59 +80,64 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
         throw error;
       }
 
-      // Start polling for status updates
-      const interval = setInterval(async () => {
-        const { data: jobs, error: pollError } = await supabase
-          .from('scraping_jobs')
-          .select('status, last_run_at, error_message')
-          .eq('utility_provider_id', providerId)
-          .order('created_at', { ascending: false })
-          .limit(1);
+      console.log('Scraping result:', data);
 
-        if (pollError) {
-          console.error('Polling error:', pollError);
-          return;
-        }
+      // Update scraping job status
+      const { error: updateError } = await supabase
+        .from('scraping_jobs')
+        .update({
+          status: 'completed',
+          last_run_at: new Date().toISOString(),
+          error_message: null
+        })
+        .eq('utility_provider_id', providerId);
 
-        if (jobs && jobs.length > 0) {
-          const latestJob = jobs[0];
-          console.log('Latest job status:', latestJob);
-          setScrapingJobs(prev => ({ ...prev, [providerId]: latestJob }));
-          
-          if (latestJob.status === 'completed' || latestJob.status === 'failed') {
-            clearInterval(interval);
-            setScrapingStates(prev => ({ ...prev, [providerId]: false }));
-            
-            toast({
-              title: latestJob.status === 'completed' ? 'Success' : 'Error',
-              description: latestJob.status === 'completed' 
-                ? 'Utility invoices scraped successfully'
-                : `Failed to scrape invoices: ${latestJob.error_message}`,
-              variant: latestJob.status === 'completed' ? 'default' : 'destructive',
-            });
-          }
-        }
-      }, 2000);
+      if (updateError) {
+        console.error('Error updating scraping job:', updateError);
+        throw updateError;
+      }
 
-      // Cleanup interval after 5 minutes
-      setTimeout(() => {
-        clearInterval(interval);
-        if (scrapingStates[providerId]) {
-          setScrapingStates(prev => ({ ...prev, [providerId]: false }));
-          toast({
-            title: 'Warning',
-            description: 'Scraping job timed out. Please check the status later.',
-            variant: 'destructive',
-          });
+      setScrapingStates(prev => ({ ...prev, [providerId]: false }));
+      setScrapingJobs(prev => ({ 
+        ...prev, 
+        [providerId]: {
+          status: 'completed',
+          last_run_at: new Date().toISOString(),
+          error_message: null
         }
-      }, 300000);
+      }));
+
+      toast({
+        title: 'Success',
+        description: 'Utility invoices scraped successfully',
+      });
 
     } catch (error: any) {
       console.error('Scraping error:', error);
+      
+      // Update scraping job with error
+      await supabase
+        .from('scraping_jobs')
+        .update({
+          status: 'failed',
+          error_message: error.message || 'Failed to scrape invoices',
+          last_run_at: new Date().toISOString()
+        })
+        .eq('utility_provider_id', providerId);
+
       setScrapingStates(prev => ({ ...prev, [providerId]: false }));
+      setScrapingJobs(prev => ({ 
+        ...prev, 
+        [providerId]: {
+          status: 'failed',
+          last_run_at: new Date().toISOString(),
+          error_message: error.message || 'Failed to scrape invoices'
+        }
+      }));
+
       toast({
         title: 'Error',
-        description: 'Failed to start scraping process',
+        description: error.message || 'Failed to scrape invoices',
         variant: 'destructive',
       });
     }
