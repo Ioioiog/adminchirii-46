@@ -114,7 +114,7 @@ export function ProviderList({ providers, onDelete, onEdit, isLoading }: Provide
     } catch (error: any) {
       console.error('Scraping error:', error);
       
-      // Update scraping job with error status
+      // Update scraping job with error status and more detailed error message
       setScrapingJobs(prev => ({
         ...prev,
         [providerId]: {
