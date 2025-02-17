@@ -16,3 +16,24 @@ export interface SetClaimRequest {
     value: string;
   };
 }
+
+export interface ProviderCredentialsResponse {
+  id: string;
+  username: string;
+  password: string;
+}
+
+export type Database = {
+  public: {
+    Tables: {
+      // ... other table definitions
+    };
+    Functions: {
+      get_decrypted_credentials: {
+        Args: { property_id_input: string };
+        Returns: ProviderCredentialsResponse;
+      };
+      // ... other function definitions
+    };
+  };
+};

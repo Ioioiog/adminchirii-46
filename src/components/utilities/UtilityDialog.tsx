@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   Dialog,
@@ -16,16 +15,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Property } from "@/utils/propertyUtils";
 import { Plus, Upload, Download } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
+import { ProviderCredentialsResponse } from "@/integrations/supabase/types/rpc";
 
 interface UtilityDialogProps {
   properties: Property[];
   onUtilityCreated: () => void;
-}
-
-interface ProviderCredentials {
-  id: string;
-  username: string;
-  password: string;
 }
 
 export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogProps) {
@@ -128,30 +122,32 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       
       console.log("Fetching provider credentials for property:", propertyId);
       
-      const { data: credentials, error: credentialsError } = await supabase
-        .rpc<ProviderCredentials, { property_id_input: string }>('get_decrypted_credentials', { 
-          property_id_input: propertyId 
-        });
+      const { data: credentials, error: credentialsError } = await supabase.rpc(
+        'get_decrypted_credentials',
+        { property_id_input: propertyId }
+      );
 
       if (credentialsError || !credentials) {
         console.error("Provider credentials error:", credentialsError);
         throw new Error('No utility provider found for this property');
       }
 
+      const typedCredentials = credentials as ProviderCredentialsResponse;
+
       console.log("Credentials structure:", {
-        id: credentials.id,
-        username: credentials.username,
-        hasPassword: !!credentials.password
+        id: typedCredentials.id,
+        username: typedCredentials.username,
+        hasPassword: !!typedCredentials.password
       });
 
-      if (!credentials.username || !credentials.password) {
+      if (!typedCredentials.username || !typedCredentials.password) {
         throw new Error('Missing provider credentials');
       }
 
       const requestBody = {
-        username: credentials.username,
-        password: credentials.password,
-        utilityId: credentials.id
+        username: typedCredentials.username,
+        password: typedCredentials.password,
+        utilityId: typedCredentials.id
       };
 
       console.log("Request body check:", {
