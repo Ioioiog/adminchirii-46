@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Loader2, RefreshCw } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -49,7 +50,7 @@ export function ScrapingStatus({
         variant="outline"
         size="sm"
         onClick={onScrape}
-        disabled={isLoading}
+        disabled={isLoading || status === 'in_progress'}
         className="ml-2"
       >
         {isLoading ? (
