@@ -21,11 +21,11 @@ export default async (req: Request) => {
 
   try {
     console.log("Starting scraping process...");
-    const { username, password } = await req.json();
+    const { username, password, utilityId } = await req.json();
     
-    if (!username || !password) {
+    if (!username || !password || !utilityId) {
       return new Response(
-        JSON.stringify({ error: "Missing username or password" }), 
+        JSON.stringify({ error: "Missing username, password or utility ID" }), 
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -78,9 +78,10 @@ export default async (req: Request) => {
       console.log("Extracting invoice data...");
       const invoices = await page.evaluate(() => {
         return Array.from(document.querySelectorAll(".invoice-item")).map(row => ({
-          number: row.querySelector(".invoice-number")?.innerText.trim() || null,
-          date: row.querySelector(".invoice-date")?.innerText.trim() || null,
-          total: row.querySelector(".invoice-total")?.innerText.trim() || null,
+          invoice_number: row.querySelector(".invoice-number")?.innerText.trim() || null,
+          due_date: row.querySelector(".invoice-date")?.innerText.trim() || null,
+          amount: parseFloat(row.querySelector(".invoice-total")?.innerText.trim().replace(/[^0-9.]/g, '') || '0'),
+          pdf_path: row.querySelector(".invoice-download")?.getAttribute("href") || null,
         }));
       });
 
@@ -88,14 +89,28 @@ export default async (req: Request) => {
         throw new Error("No invoices found");
       }
 
-      // Validate invoice data
-      const validInvoices = invoices.filter(invoice => 
-        invoice.number && invoice.date && invoice.total
-      );
+      // Validate and format invoice data
+      const validInvoices = invoices
+        .filter(invoice => 
+          invoice.invoice_number && 
+          invoice.due_date && 
+          invoice.amount && 
+          !isNaN(invoice.amount)
+        )
+        .map(invoice => ({
+          utility_id: utilityId,
+          invoice_number: invoice.invoice_number,
+          due_date: new Date(invoice.due_date).toISOString(),
+          amount: invoice.amount,
+          pdf_path: invoice.pdf_path,
+          status: 'pending'
+        }));
 
       // Save Invoices to Supabase
       console.log("Saving invoices to database...");
-      const { error: dbError } = await supabase.from("invoices").insert(validInvoices);
+      const { error: dbError } = await supabase
+        .from("utility_invoices")
+        .insert(validInvoices);
       
       if (dbError) throw dbError;
 
@@ -125,3 +140,4 @@ export default async (req: Request) => {
     );
   }
 };
+
