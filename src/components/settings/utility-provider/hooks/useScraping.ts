@@ -81,7 +81,7 @@ export function useScraping(providers: UtilityProvider[]) {
         throw credentialsError;
       }
 
-      if (!credentials || typeof credentials.username !== 'string') {
+      if (!credentials || !credentials.username || !credentials.password) {
         console.error('Invalid credentials:', { credentials });
         throw new Error('No valid utility provider credentials found. Please update the credentials.');
       }
