@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Property } from "@/utils/propertyUtils";
-import { Loader2, Plus, Upload } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -58,7 +58,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
 
       // Call the edge function to process the PDF
       const { data, error } = await supabase.functions.invoke('process-utility-pdf', {
-        body: { pdfPath: fileName, jobId: job.id }
+        body: { filePath: fileName, jobId: job.id }
       });
 
       if (error) throw error;
