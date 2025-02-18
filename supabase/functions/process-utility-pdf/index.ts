@@ -12,6 +12,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const cleanJSONString = (str: string): string => {
+  // Remove markdown code blocks
+  str = str.replace(/```json\s*|\s*```/g, '');
+  // Remove any leading/trailing whitespace
+  str = str.trim();
+  // Handle any potential line breaks within the JSON
+  str = str.replace(/\n/g, '');
+  return str;
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -33,10 +43,6 @@ serve(async (req) => {
       throw new Error('OpenAI API key is not configured');
     }
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Supabase configuration is missing');
-    }
-
     console.log('Initializing Supabase client...');
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -50,7 +56,7 @@ serve(async (req) => {
       throw new Error('Failed to get signed URL for file');
     }
 
-    console.log('Calling OpenAI API with signed image URL:', signedUrlData.signedUrl);
+    console.log('Calling OpenAI API with signed image URL');
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -62,24 +68,14 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a utility bill OCR assistant. Extract data from the utility bill image and return ONLY a plain JSON object (no markdown, no code blocks) with these exact fields:
-
-invoice_number: string
-issue_date: YYYY-MM-DD string
-due_date: YYYY-MM-DD string
-amount: number
-utility_type: one of ["electricity", "water", "gas", "internet", "other"]
-currency: 3-letter code (e.g. "RON", "USD", "EUR")
-
-Example response (return ONLY this format, no other text):
-{"invoice_number":"INV-123","issue_date":"2024-02-18","due_date":"2024-03-18","amount":150.50,"utility_type":"electricity","currency":"RON"}`
+            content: 'You are a utility bill OCR assistant. Your response must be a single valid JSON object with no additional text or formatting. The JSON object must have these exact fields: invoice_number (string), issue_date (YYYY-MM-DD), due_date (YYYY-MM-DD), amount (number), utility_type (string, one of: electricity, water, gas, internet, other), currency (3-letter code). Example: {"invoice_number":"INV-123","issue_date":"2024-02-18","due_date":"2024-03-18","amount":150.50,"utility_type":"electricity","currency":"RON"}'
           },
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: 'Extract the required information from this utility bill and return it as a plain JSON object.'
+                text: 'Extract the required information from this utility bill as a JSON object.'
               },
               {
                 type: 'image_url',
@@ -109,66 +105,60 @@ Example response (return ONLY this format, no other text):
       throw new Error('OpenAI response missing required content');
     }
 
-    // Clean up the response content by removing any markdown formatting
-    let rawContent = openAIData.choices[0].message.content.trim();
+    const rawContent = openAIData.choices[0].message.content;
     console.log('Original content:', rawContent);
 
-    // Remove markdown code block indicators if present
-    rawContent = rawContent.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-    console.log('Cleaned content:', rawContent);
+    const cleanedContent = cleanJSONString(rawContent);
+    console.log('Cleaned content:', cleanedContent);
 
     let extractedData;
     try {
-      extractedData = JSON.parse(rawContent);
+      extractedData = JSON.parse(cleanedContent);
       
       // Validate required fields
       const requiredFields = ['invoice_number', 'issue_date', 'due_date', 'amount', 'utility_type', 'currency'];
       const missingFields = requiredFields.filter(field => !(field in extractedData));
       
       if (missingFields.length > 0) {
-        console.error('Missing required fields:', missingFields);
         throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
       }
 
-      // Validate field types
+      // Convert amount to number if it's a string
       if (typeof extractedData.amount !== 'number') {
-        extractedData.amount = parseFloat(extractedData.amount);
-        if (isNaN(extractedData.amount)) {
+        const parsedAmount = parseFloat(extractedData.amount);
+        if (isNaN(parsedAmount)) {
           throw new Error('Amount must be a valid number');
         }
+        extractedData.amount = parsedAmount;
       }
 
-      // Convert utility type to lowercase for consistency
+      // Normalize utility type
       extractedData.utility_type = extractedData.utility_type.toLowerCase();
       const validUtilityTypes = ['electricity', 'water', 'gas', 'internet', 'other'];
       if (!validUtilityTypes.includes(extractedData.utility_type)) {
-        console.error('Invalid utility type:', extractedData.utility_type);
-        throw new Error(`Utility type must be one of: ${validUtilityTypes.join(', ')}`);
+        throw new Error(`Invalid utility type. Must be one of: ${validUtilityTypes.join(', ')}`);
       }
 
-      // Validate and format dates
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      const formatDate = (dateStr: string) => {
+      // Validate dates
+      const validateDate = (dateStr: string, fieldName: string) => {
         const date = new Date(dateStr);
-        if (isNaN(date.getTime())) throw new Error(`Invalid date: ${dateStr}`);
+        if (isNaN(date.getTime())) {
+          throw new Error(`Invalid ${fieldName} format. Must be YYYY-MM-DD`);
+        }
         return date.toISOString().split('T')[0];
       };
 
-      try {
-        extractedData.issue_date = formatDate(extractedData.issue_date);
-        extractedData.due_date = formatDate(extractedData.due_date);
-      } catch (error) {
-        throw new Error('Dates must be in YYYY-MM-DD format');
-      }
+      extractedData.issue_date = validateDate(extractedData.issue_date, 'issue_date');
+      extractedData.due_date = validateDate(extractedData.due_date, 'due_date');
 
-      // Validate currency format
-      if (typeof extractedData.currency !== 'string' || extractedData.currency.length !== 3) {
+      // Normalize currency
+      extractedData.currency = extractedData.currency.toUpperCase();
+      if (extractedData.currency.length !== 3) {
         throw new Error('Currency must be a 3-letter code');
       }
-      extractedData.currency = extractedData.currency.toUpperCase();
 
     } catch (error) {
-      console.error('Error parsing or validating OpenAI response:', error);
+      console.error('Error parsing or validating data:', error);
       throw new Error(`Failed to parse OpenAI response: ${error.message}`);
     }
 
