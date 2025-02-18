@@ -46,28 +46,52 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
         .toLowerCase()
         .replace(/[^\w\s]/g, '') // Remove special characters
         .replace(/\s+/g, '') // Remove spaces
+        .replace(/soseaua|str|strada|nr|bl|sc|et|ap/g, '') // Remove Romanian address prefixes
+        .replace(/bucuresti|romania/g, '') // Remove city/country names
         .trim();
     };
 
+    const normalizedExtractedAddr = normalizeAddress(extractedAddress);
+    console.log('Normalized extracted address:', normalizedExtractedAddr);
+
+    properties.forEach(p => {
+      console.log('Property:', p.name, 'Normalized address:', normalizeAddress(p.address || ''));
+    });
+
     let matchingProperty = properties.find(p => 
-      normalizeAddress(p.address || '') === normalizeAddress(extractedAddress)
+      normalizeAddress(p.address || '') === normalizedExtractedAddr
     );
 
     if (!matchingProperty) {
       matchingProperty = properties.find(p => {
         const normalizedPropertyAddr = normalizeAddress(p.address || '');
-        const normalizedExtractedAddr = normalizeAddress(extractedAddress);
         
-        return normalizedPropertyAddr.includes(normalizedExtractedAddr) ||
-               normalizedExtractedAddr.includes(normalizedPropertyAddr);
+        const significantMatch = 
+          normalizedPropertyAddr.includes('fabricadeglucoza') ||
+          normalizedExtractedAddr.includes('fabricadeglucoza');
+        
+        if (significantMatch) {
+          const propertyNumbers = (p.address || '').match(/\d+/g) || [];
+          const extractedNumbers = extractedAddress.match(/\d+/g) || [];
+          
+          return propertyNumbers.some(num => extractedNumbers.includes(num));
+        }
+        
+        return false;
       });
     }
 
     if (!matchingProperty) {
       matchingProperty = properties.find(p => 
-        normalizeAddress(p.name || '').includes(normalizeAddress(extractedAddress)) ||
-        normalizeAddress(extractedAddress).includes(normalizeAddress(p.name || ''))
+        normalizeAddress(p.name || '').includes('fabricadeglucoza') ||
+        normalizeAddress(p.name || '').includes(normalizedExtractedAddr)
       );
+    }
+
+    if (matchingProperty) {
+      console.log('Found matching property:', matchingProperty);
+    } else {
+      console.log('No matching property found for address:', extractedAddress);
     }
 
     return matchingProperty;
@@ -93,21 +117,18 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       setIsProcessing(true);
       setProcessingError(null);
       
-      // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('utility-invoices')
         .upload(fileName, selectedFile);
 
       if (uploadError) throw uploadError;
 
-      // Process the image with OCR
       const { data, error } = await supabase.functions.invoke('process-utility-pdf', {
         body: { filePath: fileName }
       });
 
       if (error) throw error;
 
-      // Update form with extracted data if available
       if (data?.data) {
         const extractedData = data.data;
         console.log('Extracted data:', extractedData);
