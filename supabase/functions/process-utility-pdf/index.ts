@@ -152,8 +152,20 @@ serve(async (req) => {
     try {
       // Try to parse the content as JSON
       const content = aiResult.choices[0].message.content.trim();
-      console.log('Attempting to parse content:', content);
-      extractedData = JSON.parse(content);
+      console.log('Raw content:', content);
+      
+      // Extract JSON from possible markdown code blocks
+      let jsonContent = content;
+      if (content.includes('```')) {
+        // Extract content between code blocks
+        const match = content.match(/```(?:json)?\s*(\{.*?\})\s*```/s);
+        if (match) {
+          jsonContent = match[1];
+        }
+      }
+      
+      console.log('Cleaned JSON content:', jsonContent);
+      extractedData = JSON.parse(jsonContent);
     } catch (parseError) {
       console.error('Error parsing content as JSON:', parseError);
       throw new Error(`Failed to parse content as JSON: ${aiResult.choices[0].message.content}`);
