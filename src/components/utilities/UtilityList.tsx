@@ -204,7 +204,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
                 <div>
                   <div className="text-sm font-medium text-gray-500 mb-1">Invoice Details</div>
                   {utility.invoice_number ? (
-                    <div className="font-medium">{utility.invoice_number}</div>
+                    <div className="font-medium">Invoice #{utility.invoice_number}</div>
                   ) : (
                     <div className="text-sm text-gray-500">No invoice number</div>
                   )}
