@@ -44,7 +44,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
     const normalizeAddress = (addr: string) => {
       return addr
         .toLowerCase()
-        .replace(/[^\w\s]/g, '') // Remove special characters
+        .replace(/[^\w\s\d]/g, '') // Keep digits while removing special characters
         .replace(/\s+/g, '') // Remove spaces
         .replace(/soseaua|str|strada|nr|bl|sc|et|ap/g, '') // Remove Romanian address prefixes
         .replace(/bucuresti|romania/g, '') // Remove city/country names
@@ -58,6 +58,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       console.log('Property:', p.name, 'Normalized address:', normalizeAddress(p.address || ''));
     });
 
+    // First try exact match
     let matchingProperty = properties.find(p => 
       normalizeAddress(p.address || '') === normalizedExtractedAddr
     );
@@ -66,29 +67,45 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       matchingProperty = properties.find(p => {
         const normalizedPropertyAddr = normalizeAddress(p.address || '');
         
-        const significantMatch = 
+        // Check if the address contains Fabrica de Glucoza
+        const hasGlucoza = 
           normalizedPropertyAddr.includes('fabricadeglucoza') ||
           normalizedExtractedAddr.includes('fabricadeglucoza');
         
-        if (significantMatch) {
-          const propertyNumbers: string[] = (p.address || '').match(/\d+/g) || [];
-          const extractedNumbers: string[] = extractedAddress.match(/\d+/g) || [];
+        if (hasGlucoza) {
+          // Extract apartment number - look for patterns like "ap 53" or just "53"
+          const extractAptNumber = (addr: string) => {
+            const aptMatch = addr.match(/(?:ap\s*)?(\d+)$/); // Match number at the end
+            return aptMatch ? parseInt(aptMatch[1], 10) : null;
+          };
           
-          const propertyNums = propertyNumbers.map(Number);
-          const extractedNums = extractedNumbers.map(Number);
+          const propertyAptNum = extractAptNumber(p.address || '');
+          const extractedAptNum = extractAptNumber(extractedAddress);
           
-          return extractedNums.some(num => propertyNums.includes(num));
+          console.log('Comparing apartment numbers:', {
+            propertyAptNum,
+            extractedAptNum,
+            propertyAddress: p.address,
+            extractedAddress
+          });
+          
+          // Only match if both apartment numbers exist and are equal
+          return propertyAptNum !== null && 
+                 extractedAptNum !== null && 
+                 propertyAptNum === extractedAptNum;
         }
         
         return false;
       });
     }
 
+    // If still no match, try matching by property name
     if (!matchingProperty) {
-      matchingProperty = properties.find(p => 
-        normalizeAddress(p.name || '').includes('fabricadeglucoza') ||
-        normalizeAddress(p.name || '').includes(normalizedExtractedAddr)
-      );
+      matchingProperty = properties.find(p => {
+        const normalizedName = normalizeAddress(p.name || '');
+        return normalizedName.includes('fabricadeglucoza') && 
+               normalizedName.includes(normalizedExtractedAddr);
+      });
     }
 
     if (matchingProperty) {
