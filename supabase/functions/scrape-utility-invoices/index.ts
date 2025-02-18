@@ -13,6 +13,7 @@ interface RequestBody {
   utilityId: string
   provider: string
   type: 'electricity' | 'water' | 'gas'
+  location?: string
 }
 
 console.log('Loading scrape-utility-invoices function...')
@@ -31,13 +32,27 @@ serve(async (req) => {
       provider: requestData.provider,
       type: requestData.type,
       hasUsername: !!requestData.username,
-      hasPassword: !!requestData.password
+      hasPassword: !!requestData.password,
+      location: requestData.location
     })
 
     // Validate request data
     if (!requestData.username || !requestData.password || !requestData.utilityId) {
       throw new Error('Missing required credentials')
     }
+
+    // Initialize cookie jar for maintaining session
+    const cookieJar: string[] = [];
+
+    // Initialize fetch options with cookie handling
+    const fetchOptions = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': cookieJar.join('; ')
+      },
+      credentials: 'include' as RequestCredentials
+    };
 
     // Initialize Supabase client
     const supabaseClient = createClient(
@@ -62,8 +77,26 @@ serve(async (req) => {
       throw new Error('Failed to create scraping job')
     }
 
+    // Store any cookies received from the response
+    const updateCookies = (response: Response) => {
+      const newCookies = response.headers.get('set-cookie');
+      if (newCookies) {
+        cookieJar.push(...newCookies.split(',').map(cookie => cookie.split(';')[0]));
+      }
+    };
+
+    // Log session management
+    console.log('Session management:', {
+      cookieCount: cookieJar.length,
+      hasAuthCookie: cookieJar.some(cookie => cookie.toLowerCase().includes('auth'))
+    });
+
     // For now, simulate successful scraping
-    // In a real implementation, you would use the credentials to scrape the utility provider's website
+    // In a real implementation, you would:
+    // 1. Login to the utility provider's website
+    // 2. Navigate to the bills section
+    // 3. Download/scrape the bills
+    // 4. Store them in Supabase storage
     console.log('Successfully initialized scraping job:', scrapingJob.id)
 
     // Update the scraping job status
