@@ -1,19 +1,20 @@
 
-export interface ScrapingResult {
-  success: boolean;
-  bills: UtilityBill[];
-  error?: string;
-}
-
 export interface UtilityBill {
   amount: number;
   due_date: string;
   type: string;
   bill_date?: string;
-  meter_reading?: number;
+  meter_reading?: string;
   consumption?: number;
   period_start?: string;
   period_end?: string;
+  status?: string;
+}
+
+export interface ScrapingResult {
+  success: boolean;
+  bills: UtilityBill[];
+  error?: string;
 }
 
 export interface ScraperCredentials {
@@ -28,17 +29,9 @@ export abstract class BaseScraper {
     this.credentials = credentials;
   }
 
-  abstract scrape(): Promise<ScrapingResult>;
-  
-  protected async login(): Promise<boolean> {
-    throw new Error('Login method must be implemented by provider scraper');
-  }
-
-  protected async fetchBills(): Promise<UtilityBill[]> {
-    throw new Error('FetchBills method must be implemented by provider scraper');
-  }
-
   protected validateCredentials(): boolean {
-    return Boolean(this.credentials.username && this.credentials.password);
+    return !!(this.credentials.username && this.credentials.password);
   }
+
+  abstract scrape(): Promise<ScrapingResult>;
 }

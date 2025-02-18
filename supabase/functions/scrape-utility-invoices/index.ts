@@ -27,7 +27,19 @@ serve(async (req) => {
 
     // Validate request body
     if (!requestBody.username || !requestBody.password || !requestBody.utilityId || !requestBody.provider) {
-      throw new Error('Missing required fields: username, password, utilityId, and provider are required')
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Missing required fields: username, password, utilityId, and provider are required'
+        }),
+        { 
+          status: 400,
+          headers: { 
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
     }
 
     // Initialize Supabase client

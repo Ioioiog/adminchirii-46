@@ -1,18 +1,17 @@
 
-import { BaseScraper, ScraperCredentials } from './base.ts';
-import { ExampleProviderScraper } from './example-provider.ts';
+import { BaseScraper } from './base.ts';
 import { EngieRomaniaScraper } from './engie-romania.ts';
 
-export function createScraper(
-  providerName: string, 
-  credentials: ScraperCredentials
-): BaseScraper {
-  switch (providerName.toLowerCase()) {
-    case 'example_provider':
-      return new ExampleProviderScraper(credentials);
+interface ScraperCredentials {
+  username: string;
+  password: string;
+}
+
+export function createScraper(provider: string, credentials: ScraperCredentials): BaseScraper {
+  switch (provider) {
     case 'engie_romania':
       return new EngieRomaniaScraper(credentials);
     default:
-      throw new Error(`Unsupported provider: ${providerName}`);
+      throw new Error(`Unsupported provider: ${provider}`);
   }
 }
