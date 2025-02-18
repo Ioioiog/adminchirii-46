@@ -7,7 +7,7 @@ import { UtilityProvider, ScrapingJob } from "../types";
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000; // 2 seconds
 
-export function useScraping() {
+export function useScraping(providers: UtilityProvider[]) {
   const [scrapingStates, setScrapingStates] = useState<Record<string, boolean>>({});
   const [scrapingJobs, setScrapingJobs] = useState<Record<string, ScrapingJob>>({});
   const [scrapingQueue, setScrapingQueue] = useState<string[]>([]);

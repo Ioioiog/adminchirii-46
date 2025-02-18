@@ -11,7 +11,7 @@ interface ProviderListProps {
 }
 
 export function ProviderList({ providers, onDelete, onEdit, isLoading }: ProviderListProps) {
-  const { scrapingStates, scrapingJobs, addToQueue, isProcessingQueue } = useScraping();
+  const { scrapingStates, scrapingJobs, addToQueue, isProcessingQueue } = useScraping(providers);
 
   return (
     <div className="space-y-4">
