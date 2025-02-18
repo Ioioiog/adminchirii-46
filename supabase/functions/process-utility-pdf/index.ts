@@ -43,14 +43,14 @@ serve(async (req) => {
     console.log('Getting signed URL for file:', filePath);
     const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from('utility-invoices')
-      .createSignedUrl(filePath, 60); // URL valid for 60 seconds
+      .createSignedUrl(filePath, 300); // Extended to 5 minutes for better reliability
 
     if (signedUrlError || !signedUrlData?.signedUrl) {
       console.error('Error getting signed URL:', signedUrlError);
       throw new Error('Failed to get signed URL for file');
     }
 
-    console.log('Calling OpenAI API with signed image URL');
+    console.log('Calling OpenAI API with signed image URL:', signedUrlData.signedUrl);
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -58,7 +58,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
@@ -96,8 +96,8 @@ serve(async (req) => {
             ]
           }
         ],
-        max_tokens: 500,
-        temperature: 0.1
+        max_tokens: 1000,
+        temperature: 0
       }),
     });
 
@@ -133,22 +133,40 @@ serve(async (req) => {
 
       // Validate field types
       if (typeof extractedData.amount !== 'number') {
-        console.error('Invalid amount type:', typeof extractedData.amount);
-        throw new Error('Amount must be a number');
+        extractedData.amount = parseFloat(extractedData.amount);
+        if (isNaN(extractedData.amount)) {
+          throw new Error('Amount must be a valid number');
+        }
       }
 
+      // Convert utility type to lowercase for consistency
+      extractedData.utility_type = extractedData.utility_type.toLowerCase();
       const validUtilityTypes = ['electricity', 'water', 'gas', 'internet', 'other'];
       if (!validUtilityTypes.includes(extractedData.utility_type)) {
         console.error('Invalid utility type:', extractedData.utility_type);
         throw new Error(`Utility type must be one of: ${validUtilityTypes.join(', ')}`);
       }
 
-      // Validate date formats
+      // Validate and format dates
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(extractedData.issue_date) || !dateRegex.test(extractedData.due_date)) {
-        console.error('Invalid date format:', { issue_date: extractedData.issue_date, due_date: extractedData.due_date });
+      const formatDate = (dateStr: string) => {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) throw new Error(`Invalid date: ${dateStr}`);
+        return date.toISOString().split('T')[0];
+      };
+
+      try {
+        extractedData.issue_date = formatDate(extractedData.issue_date);
+        extractedData.due_date = formatDate(extractedData.due_date);
+      } catch (error) {
         throw new Error('Dates must be in YYYY-MM-DD format');
       }
+
+      // Validate currency format
+      if (typeof extractedData.currency !== 'string' || extractedData.currency.length !== 3) {
+        throw new Error('Currency must be a 3-letter code');
+      }
+      extractedData.currency = extractedData.currency.toUpperCase();
 
     } catch (error) {
       console.error('Error parsing or validating OpenAI response:', error);
