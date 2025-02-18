@@ -1,7 +1,6 @@
 
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { createClient } from '@supabase/supabase-js';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,26 +8,15 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  let reqBody;
-  try {
-    reqBody = await req.json();
-  } catch (error) {
-    console.error('Error parsing request body:', error);
-    return new Response(
-      JSON.stringify({ error: 'Invalid request body' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
+  const { pdfPath, jobId } = await req.json();
 
-  const { pdfPath, jobId } = reqBody;
   if (!pdfPath || !jobId) {
     return new Response(
-      JSON.stringify({ error: 'Missing required fields: pdfPath or jobId' }),
+      JSON.stringify({ error: 'Missing required parameters: pdfPath or jobId' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -64,9 +52,13 @@ serve(async (req) => {
       throw new Error('No PDF data received from storage');
     }
 
-    // Convert PDF to base64
-    const pdfBase64 = await pdfData.arrayBuffer();
-    const base64String = btoa(String.fromCharCode(...new Uint8Array(pdfBase64)));
+    // Convert PDF to base64 safely
+    const bytes = new Uint8Array(await pdfData.arrayBuffer());
+    const base64String = btoa(
+      Array.from(bytes)
+        .map(byte => String.fromCharCode(byte))
+        .join('')
+    );
     console.log('PDF converted to base64, length:', base64String.length);
 
     // Process with OpenAI's Vision model
@@ -78,18 +70,18 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
-            content: "Extract only the following information from the utility bill and return it as a JSON object: amount (number), due_date (YYYY-MM-DD), utility_type (one of: Electricity/Water/Gas/Internet/Other). Return ONLY the JSON object, nothing else."
+            content: "You are an expert at extracting information from utility bills. Extract exactly these fields: amount (number), due_date (YYYY-MM-DD), utility_type (one of: Electricity/Water/Gas/Internet/Other). Format your response as a valid JSON object containing only these fields, nothing else."
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "Extract the billing information from this utility bill."
+                text: "Extract the amount, due date, and utility type from this bill."
               },
               {
                 type: "image",
@@ -100,7 +92,7 @@ serve(async (req) => {
             ]
           }
         ],
-        temperature: 0,
+        temperature: 0
       })
     });
 
@@ -111,20 +103,25 @@ serve(async (req) => {
       throw new Error(`OpenAI API error: ${responseText}`);
     }
 
-    const aiResult = JSON.parse(responseText);
-    console.log('OpenAI parsed response:', aiResult);
+    let extractedData;
+    try {
+      const aiResult = JSON.parse(responseText);
+      console.log('OpenAI parsed response:', aiResult);
 
-    if (!aiResult.choices?.[0]?.message?.content) {
-      throw new Error('Invalid response format from OpenAI API');
-    }
+      if (!aiResult.choices?.[0]?.message?.content) {
+        throw new Error('Invalid response format from OpenAI API');
+      }
 
-    // Parse the AI response
-    const extractedData = JSON.parse(aiResult.choices[0].message.content);
-    console.log('Extracted data:', extractedData);
+      // Parse the content as JSON
+      extractedData = JSON.parse(aiResult.choices[0].message.content);
+      console.log('Extracted data:', extractedData);
 
-    // Validate extracted data
-    if (!extractedData.amount || !extractedData.due_date || !extractedData.utility_type) {
-      throw new Error('Missing required fields in extracted data');
+      if (!extractedData.amount || !extractedData.due_date || !extractedData.utility_type) {
+        throw new Error('Missing required fields in extracted data');
+      }
+    } catch (parseError) {
+      console.error('Error parsing OpenAI response:', parseError);
+      throw new Error('Failed to parse utility bill data');
     }
 
     // Update job status
@@ -168,13 +165,10 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        details: 'Check function logs for more information'
-      }),
+      JSON.stringify({ error: error.message }),
       { 
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
