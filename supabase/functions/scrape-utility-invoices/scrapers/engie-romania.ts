@@ -43,14 +43,37 @@ export class EngieRomaniaScraper extends BaseScraper {
     }
   }
 
+  private extractCsrfToken(html: string): string | null {
+    // Try different possible CSRF token patterns
+    const patterns = [
+      /<input[^>]*name="_csrf"[^>]*value="([^"]+)"/i,
+      /<meta[^>]*name="_csrf"[^>]*content="([^"]+)"/i,
+      /var\s+csrf\s*=\s*['"]([^'"]+)['"]/i,
+      /name="csrf-token"\s+content="([^"]+)"/i,
+      /_csrf:\s*['"]([^'"]+)['"]/i
+    ];
+
+    for (const pattern of patterns) {
+      const match = html.match(pattern);
+      if (match && match[1]) {
+        console.log('Found CSRF token using pattern:', pattern.toString());
+        return match[1];
+      }
+    }
+
+    // Log the first 1000 characters of HTML for debugging
+    console.error('Could not find CSRF token in HTML. First 1000 chars:', html.substring(0, 1000));
+    return null;
+  }
+
   protected async login(): Promise<boolean> {
     try {
       console.log('Attempting to login to ENGIE Romania...');
       
-      // First get the login page to capture CSRF token and session cookies
-      const loginPageResponse = await fetch(`${this.BASE_URL}/autentificare`, {
+      // First try to get the login page directly
+      let loginPageResponse = await fetch(`${this.BASE_URL}/login`, {
         headers: {
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
           'Accept-Language': 'en-US,en;q=0.5',
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Connection': 'keep-alive',
@@ -59,22 +82,40 @@ export class EngieRomaniaScraper extends BaseScraper {
           'Sec-Fetch-Mode': 'navigate',
           'Sec-Fetch-Site': 'none',
           'Sec-Fetch-User': '?1',
-          'Cache-Control': 'max-age=0'
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
         }
       });
 
+      // If direct login page fails, try the authentication page
       if (!loginPageResponse.ok) {
-        const errorText = await loginPageResponse.text();
+        console.log('Direct login page failed, trying authentication page...');
+        loginPageResponse = await fetch(`${this.BASE_URL}/autentificare`, {
+          headers: {
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
+      }
+
+      if (!loginPageResponse.ok) {
         console.error('Failed to load login page:', {
           status: loginPageResponse.status,
-          statusText: loginPageResponse.statusText,
-          headers: Object.fromEntries(loginPageResponse.headers.entries()),
-          body: errorText
+          statusText: loginPageResponse.statusText
         });
         throw new Error('Failed to load login page');
       }
 
-      // Get cookies and store them
+      // Get and store cookies
       const cookies = loginPageResponse.headers.get('set-cookie');
       if (!cookies) {
         console.error('No cookies received from login page');
@@ -83,20 +124,17 @@ export class EngieRomaniaScraper extends BaseScraper {
       this.sessionCookies = cookies;
       console.log('Received initial cookies');
 
-      // Extract CSRF token from the response
+      // Get page content and extract CSRF token
       const pageContent = await loginPageResponse.text();
       console.log('Got login page content, searching for CSRF token...');
       
-      // Look for both possible CSRF token formats
-      const csrfMatch = pageContent.match(/<meta name="_csrf" content="([^"]+)"/) || 
-                       pageContent.match(/name="_csrf" value="([^"]+)"/);
-                       
-      if (!csrfMatch) {
-        console.error('Could not find CSRF token in page content');
+      // Extract CSRF token using multiple patterns
+      const csrfToken = this.extractCsrfToken(pageContent);
+      if (!csrfToken) {
         throw new Error('Could not find CSRF token');
       }
-      this.csrfToken = csrfMatch[1];
-      console.log('Found CSRF token');
+      this.csrfToken = csrfToken;
+      console.log('Successfully extracted CSRF token');
 
       // Prepare login request body
       const formData = new URLSearchParams();
@@ -105,13 +143,7 @@ export class EngieRomaniaScraper extends BaseScraper {
       formData.append('_csrf', this.csrfToken);
       formData.append('remember-me', 'true');
       
-      // Log request preparation (without sensitive data)
-      console.log('Preparing login request:', {
-        url: `${this.BASE_URL}/login`,
-        hasCsrf: !!this.csrfToken,
-        hasCookies: !!this.sessionCookies,
-        username: this.credentials.username
-      });
+      console.log('Preparing login request with credentials and CSRF token');
 
       // Perform login
       const loginResponse = await fetch(`${this.BASE_URL}/login`, {
@@ -120,49 +152,53 @@ export class EngieRomaniaScraper extends BaseScraper {
           'Content-Type': 'application/x-www-form-urlencoded',
           'Cookie': this.sessionCookies,
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Referer': `${this.BASE_URL}/autentificare`,
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
           'Origin': this.BASE_URL,
+          'Referer': `${this.BASE_URL}/login`,
           'X-CSRF-TOKEN': this.csrfToken,
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.9',
+          'X-Requested-With': 'XMLHttpRequest',
           'Sec-Fetch-Dest': 'document',
           'Sec-Fetch-Mode': 'navigate',
           'Sec-Fetch-Site': 'same-origin',
-          'Sec-Fetch-User': '?1'
+          'Sec-Fetch-User': '?1',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
         },
         body: formData.toString(),
         redirect: 'manual'
       });
 
-      // Log the login response details (without sensitive data)
+      // Log login response details (without sensitive data)
       console.log('Login response:', {
         status: loginResponse.status,
         statusText: loginResponse.statusText,
-        headers: Object.fromEntries(loginResponse.headers.entries())
+        hasLocationHeader: !!loginResponse.headers.get('location')
       });
 
-      // Check for successful login (usually indicated by a 302 redirect)
-      if (loginResponse.status === 302) {
+      // Check for successful login (302 redirect or 200 OK)
+      if (loginResponse.status === 302 || loginResponse.status === 200) {
         const newCookies = loginResponse.headers.get('set-cookie');
         if (newCookies) {
           this.sessionCookies = newCookies;
           console.log('Received new session cookies after login');
         }
-        console.log('Login successful (302 redirect received)');
+        console.log('Login successful');
         return true;
       }
 
-      // If we get here, login failed
+      // If login failed, log the response for debugging
       const responseText = await loginResponse.text();
       console.error('Login failed:', {
         status: loginResponse.status,
-        headers: Object.fromEntries(loginResponse.headers.entries()),
-        body: responseText
+        hasLocationHeader: !!loginResponse.headers.get('location'),
+        responseLength: responseText.length
       });
       return false;
+
     } catch (error) {
       console.error('Login error:', {
-        error: error.message,
+        message: error.message,
         stack: error.stack
       });
       return false;
@@ -177,16 +213,18 @@ export class EngieRomaniaScraper extends BaseScraper {
     try {
       console.log('Fetching bills from ENGIE Romania...');
       
-      // First fetch the bills page to get any necessary tokens
+      // First fetch the bills page
       const billsPageResponse = await fetch(`${this.BASE_URL}/facturi`, {
         headers: {
           'Cookie': this.sessionCookies,
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
           'Referer': this.BASE_URL,
           'Sec-Fetch-Dest': 'document',
           'Sec-Fetch-Mode': 'navigate',
-          'Sec-Fetch-Site': 'same-origin'
+          'Sec-Fetch-Site': 'same-origin',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
         }
       });
 
@@ -199,7 +237,7 @@ export class EngieRomaniaScraper extends BaseScraper {
       }
 
       // Fetch bills data
-      const billsResponse = await fetch(`${this.BASE_URL}/api/facturi/toate`, {
+      const billsResponse = await fetch(`${this.BASE_URL}/api/facturi`, {
         headers: {
           'Cookie': this.sessionCookies,
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -218,18 +256,16 @@ export class EngieRomaniaScraper extends BaseScraper {
         console.error('Failed to fetch bills:', {
           status: billsResponse.status,
           statusText: billsResponse.statusText,
-          body: errorText
+          error: errorText
         });
         throw new Error('Failed to fetch bills data');
       }
 
       const billsData = await billsResponse.json();
-      console.log('Successfully fetched bills data:', {
-        count: billsData.facturi?.length || 0
-      });
+      console.log('Successfully fetched bills data');
       
-      // Transform the ENGIE-specific bill format to our standard format
-      return billsData.facturi.map((bill: any) => ({
+      // Transform bills data to our format
+      return (billsData.facturi || []).map((bill: any) => ({
         amount: Number(bill.valoare_factura || 0),
         due_date: bill.data_scadenta,
         type: 'gas',
@@ -242,7 +278,7 @@ export class EngieRomaniaScraper extends BaseScraper {
       }));
     } catch (error) {
       console.error('Failed to fetch bills:', {
-        error: error.message,
+        message: error.message,
         stack: error.stack
       });
       throw error;
