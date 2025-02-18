@@ -11,14 +11,17 @@ import { Separator } from "@/components/ui/separator";
 
 interface Utility {
   id: string;
+  property_id: string;
   type: string;
   amount: number;
   currency: string;
   due_date: string;
-  issued_date: string | null;
-  invoice_number: string | null;
   status: string;
-  property: {
+  issued_date?: string | null;
+  invoice_number?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  property?: {
     name: string;
     address: string;
   } | null;

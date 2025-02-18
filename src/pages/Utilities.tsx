@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
@@ -30,7 +31,17 @@ const Utilities = () => {
       const { data, error } = await supabase
         .from('utilities')
         .select(`
-          *,
+          id,
+          property_id,
+          type,
+          amount,
+          currency,
+          due_date,
+          status,
+          issued_date,
+          invoice_number,
+          created_at,
+          updated_at,
           property:properties (
             name,
             address
