@@ -68,14 +68,20 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are a utility bill OCR assistant. Extract the invoice number and issue date from the image. Return ONLY a JSON object with "invoice_number" and "issued_date" fields.'
+            content: `You are a utility bill OCR assistant. Your task is to extract specific information from utility bills:
+1. Look for an invoice number or bill number - it's usually prominently displayed and labeled as "Invoice No", "Bill Number", "Document Number", or similar.
+2. Find the issue date or bill date - typically near the top of the bill and labeled as "Issue Date", "Bill Date", "Date", etc.
+Return ONLY a JSON object with these two fields:
+- "invoice_number": The invoice/bill number as a string, exactly as it appears
+- "issued_date": The date in YYYY-MM-DD format
+If you can't find either field, return null for that field. Be precise and only return the JSON object.`
           },
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: 'Extract the invoice number and issue date from this utility bill. Return ONLY a JSON object.'
+                text: 'Extract the invoice number and issue date from this utility bill.'
               },
               {
                 type: 'image_url',
@@ -107,6 +113,21 @@ serve(async (req) => {
     try {
       extractedData = JSON.parse(openAIData.choices[0].message.content);
       console.log('Successfully parsed extracted data:', extractedData);
+
+      // Validate the date format if present
+      if (extractedData.issued_date) {
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!dateRegex.test(extractedData.issued_date)) {
+          console.log('Invalid date format, attempting to standardize:', extractedData.issued_date);
+          // Try to parse and format the date
+          const parsedDate = new Date(extractedData.issued_date);
+          if (!isNaN(parsedDate.getTime())) {
+            extractedData.issued_date = parsedDate.toISOString().split('T')[0];
+          } else {
+            extractedData.issued_date = null;
+          }
+        }
+      }
     } catch (e) {
       console.error('Error parsing OpenAI response:', e);
       extractedData = {
