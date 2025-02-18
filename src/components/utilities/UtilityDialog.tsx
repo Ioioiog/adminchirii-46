@@ -17,6 +17,7 @@ import { Property } from "@/utils/propertyUtils";
 import { Loader2, Plus } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { format } from "date-fns";
 
 interface UtilityDialogProps {
   properties: Property[];
@@ -35,11 +36,11 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
   const [currency, setCurrency] = useState("");
   const [propertyId, setPropertyId] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [issuedDate, setIssuedDate] = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [processingError, setProcessingError] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
-  const [invoiceNumber, setInvoiceNumber] = useState("");
-  const [issuedDate, setIssuedDate] = useState("");
+  const [showForm, setShowForm] = useState(true);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -101,7 +102,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
   };
 
   const handleSubmit = async () => {
-    if (!utilityType || !amount || !propertyId || !dueDate || !currency) {
+    if (!propertyId || !utilityType || !amount || !currency || !dueDate || !issuedDate) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -122,9 +123,9 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
             currency: currency,
             property_id: propertyId,
             due_date: dueDate,
+            issued_date: issuedDate,
             status: "pending",
             invoice_number: invoiceNumber || null,
-            issued_date: issuedDate || null,
           },
         ])
         .select()
@@ -150,6 +151,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
             due_date: dueDate,
             status: "pending",
             pdf_path: fileName,
+            invoice_number: invoiceNumber || null,
           });
 
         if (invoiceError) throw invoiceError;
@@ -214,7 +216,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
           {showForm && (
             <>
               <div className="grid gap-2">
-                <Label htmlFor="property">Property</Label>
+                <Label htmlFor="property">Property *</Label>
                 <Select value={propertyId} onValueChange={setPropertyId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select property" />
@@ -230,7 +232,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="type">Utility Type</Label>
+                <Label htmlFor="type">Utility Type *</Label>
                 <Select value={utilityType} onValueChange={setUtilityType}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select type" />
@@ -247,7 +249,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="amount">Amount</Label>
+                  <Label htmlFor="amount">Amount *</Label>
                   <Input
                     id="amount"
                     type="number"
@@ -258,7 +260,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="currency">Currency</Label>
+                  <Label htmlFor="currency">Currency *</Label>
                   <Select value={currency} onValueChange={setCurrency}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select currency" />
@@ -275,7 +277,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="dueDate">Due Date</Label>
+                <Label htmlFor="dueDate">Due Date *</Label>
                 <Input
                   id="dueDate"
                   type="date"
@@ -285,7 +287,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="issuedDate">Issued Date</Label>
+                <Label htmlFor="issuedDate">Issued Date *</Label>
                 <Input
                   id="issuedDate"
                   type="date"
