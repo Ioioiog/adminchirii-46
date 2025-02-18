@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   Dialog,
@@ -41,6 +40,39 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(true);
 
+  const findMatchingProperty = (extractedAddress: string) => {
+    const normalizeAddress = (addr: string) => {
+      return addr
+        .toLowerCase()
+        .replace(/[^\w\s]/g, '') // Remove special characters
+        .replace(/\s+/g, '') // Remove spaces
+        .trim();
+    };
+
+    let matchingProperty = properties.find(p => 
+      normalizeAddress(p.address || '') === normalizeAddress(extractedAddress)
+    );
+
+    if (!matchingProperty) {
+      matchingProperty = properties.find(p => {
+        const normalizedPropertyAddr = normalizeAddress(p.address || '');
+        const normalizedExtractedAddr = normalizeAddress(extractedAddress);
+        
+        return normalizedPropertyAddr.includes(normalizedExtractedAddr) ||
+               normalizedExtractedAddr.includes(normalizedPropertyAddr);
+      });
+    }
+
+    if (!matchingProperty) {
+      matchingProperty = properties.find(p => 
+        normalizeAddress(p.name || '').includes(normalizeAddress(extractedAddress)) ||
+        normalizeAddress(extractedAddress).includes(normalizeAddress(p.name || ''))
+      );
+    }
+
+    return matchingProperty;
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
@@ -80,25 +112,33 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
         const extractedData = data.data;
         console.log('Extracted data:', extractedData);
 
-        // Find property by address
         if (extractedData.property_details) {
-          const matchingProperty = properties.find(p => 
-            p.address?.toLowerCase().includes(extractedData.property_details.toLowerCase()) ||
-            extractedData.property_details.toLowerCase().includes(p.address?.toLowerCase())
-          );
+          console.log('Attempting to match property:', extractedData.property_details);
+          const matchingProperty = findMatchingProperty(extractedData.property_details);
+          
           if (matchingProperty) {
+            console.log('Found matching property:', matchingProperty);
             setPropertyId(matchingProperty.id);
+            toast({
+              title: "Property Matched",
+              description: `Matched to property: ${matchingProperty.name}`,
+            });
+          } else {
+            console.log('No matching property found for:', extractedData.property_details);
+            toast({
+              variant: "warning",
+              title: "Property Not Matched",
+              description: "Please select the property manually.",
+            });
           }
         }
 
-        // Set utility type
         if (extractedData.utility_type) {
           const type = extractedData.utility_type.charAt(0).toUpperCase() + 
                       extractedData.utility_type.slice(1).toLowerCase();
           setUtilityType(type);
         }
 
-        // Set amount and currency
         if (extractedData.amount) {
           setAmount(extractedData.amount.toString());
         }
@@ -106,7 +146,6 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
           setCurrency(extractedData.currency.toUpperCase());
         }
 
-        // Set dates
         if (extractedData.due_date) {
           setDueDate(extractedData.due_date);
         }
@@ -114,7 +153,6 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
           setIssuedDate(extractedData.issued_date);
         }
 
-        // Set invoice number
         if (extractedData.invoice_number) {
           setInvoiceNumber(extractedData.invoice_number);
         }
