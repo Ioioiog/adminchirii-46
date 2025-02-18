@@ -5,7 +5,7 @@ export class EngieRomaniaScraper extends BaseScraper {
   private sessionCookies?: string;
   private csrfToken?: string;
   private readonly BASE_URL = 'https://my.engie.ro';
-  private readonly TIMEOUT = 30000; // 30 seconds timeout
+  private readonly TIMEOUT = 30000;
 
   private async makeRequest(url: string, options: RequestInit = {}): Promise<Response> {
     const controller = new AbortController();
@@ -17,10 +17,16 @@ export class EngieRomaniaScraper extends BaseScraper {
         signal: controller.signal,
         headers: {
           ...options.headers,
-          'Accept-Language': 'en-US,en;q=0.9,ro;q=0.8',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+          'Accept-Language': 'ro,en-US;q=0.7,en;q=0.3',
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Upgrade-Insecure-Requests': '1'
         },
       });
       return response;
@@ -29,10 +35,35 @@ export class EngieRomaniaScraper extends BaseScraper {
     }
   }
 
+  private extractCsrfToken(html: string): string | null {
+    // Look for Laravel CSRF token in meta tag
+    const metaMatch = html.match(/<meta name="csrf-token" content="([^"]+)"/);
+    if (metaMatch && metaMatch[1]) {
+      console.log('Found CSRF token in meta tag');
+      return metaMatch[1];
+    }
+
+    // Look for Laravel CSRF token in window.Laravel object
+    const scriptMatch = html.match(/window\.Laravel\s*=\s*{\s*csrfToken:\s*"([^"]+)"/);
+    if (scriptMatch && scriptMatch[1]) {
+      console.log('Found CSRF token in window.Laravel object');
+      return scriptMatch[1];
+    }
+
+    // Look for hidden input field
+    const inputMatch = html.match(/<input[^>]*name="_token"[^>]*value="([^"]+)"/);
+    if (inputMatch && inputMatch[1]) {
+      console.log('Found CSRF token in hidden input');
+      return inputMatch[1];
+    }
+
+    console.error('Could not find CSRF token in HTML');
+    return null;
+  }
+
   async scrape(): Promise<ScrapingResult> {
     try {
       if (!this.validateCredentials()) {
-        console.error('Invalid credentials provided');
         return {
           success: false,
           bills: [],
@@ -83,7 +114,7 @@ export class EngieRomaniaScraper extends BaseScraper {
       console.log('Starting login process...');
       
       // Initial request to get CSRF token and cookies
-      const initialResponse = await this.makeRequest(`${this.BASE_URL}/autentificare`);
+      const initialResponse = await this.makeRequest(`${this.BASE_URL}/login`);
       
       if (!initialResponse.ok) {
         console.error('Failed to access login page:', {
@@ -93,57 +124,76 @@ export class EngieRomaniaScraper extends BaseScraper {
         return false;
       }
 
-      // Get cookies
+      // Get cookies including Laravel session
       const cookies = initialResponse.headers.get('set-cookie');
       if (!cookies) {
         console.error('No cookies received');
         return false;
       }
       this.sessionCookies = cookies;
+      console.log('Received cookies:', cookies);
 
-      // Get CSRF token
+      // Get page content and extract CSRF token
       const pageContent = await initialResponse.text();
-      const csrfMatch = pageContent.match(/name="_csrf" value="([^"]+)"/);
+      console.log('Got login page, searching for CSRF token...');
       
-      if (!csrfMatch) {
-        console.error('No CSRF token found');
+      this.csrfToken = this.extractCsrfToken(pageContent);
+      if (!this.csrfToken) {
+        console.error('Failed to extract CSRF token');
         return false;
       }
-      this.csrfToken = csrfMatch[1];
+      console.log('Found CSRF token:', this.csrfToken);
 
       // Prepare login data
       const formData = new URLSearchParams();
-      formData.append('username', this.credentials.username);
+      formData.append('email', this.credentials.username);
       formData.append('password', this.credentials.password);
-      formData.append('_csrf', this.csrfToken);
-      formData.append('remember-me', 'true');
+      formData.append('_token', this.csrfToken);
+      formData.append('remember', '1');
 
       // Perform login
-      const loginResponse = await this.makeRequest(`${this.BASE_URL}/autentificare`, {
+      const loginResponse = await this.makeRequest(`${this.BASE_URL}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           'Cookie': this.sessionCookies,
           'Origin': this.BASE_URL,
-          'Referer': `${this.BASE_URL}/autentificare`
+          'Referer': `${this.BASE_URL}/login`,
+          'X-CSRF-TOKEN': this.csrfToken,
+          'X-Requested-With': 'XMLHttpRequest'
         },
         body: formData.toString(),
         redirect: 'manual'
       });
 
-      // Check login success
-      if (loginResponse.status === 302) {
+      // Check login response
+      const responseStatus = loginResponse.status;
+      console.log('Login response status:', responseStatus);
+
+      if (responseStatus === 302 || responseStatus === 200) {
         const newCookies = loginResponse.headers.get('set-cookie');
         if (newCookies) {
           this.sessionCookies = newCookies;
+          console.log('Received new session cookies');
         }
-        console.log('Login successful');
-        return true;
+
+        // Verify login success by checking redirect or response
+        const location = loginResponse.headers.get('location');
+        if (location && (location.includes('/dashboard') || location.includes('/home'))) {
+          console.log('Login successful - redirected to dashboard');
+          return true;
+        }
+
+        const responseBody = await loginResponse.text();
+        if (responseBody.includes('dashboard') || responseBody.includes('Deconectare')) {
+          console.log('Login successful - found dashboard content');
+          return true;
+        }
       }
 
       console.error('Login failed:', {
-        status: loginResponse.status,
-        statusText: loginResponse.statusText
+        status: responseStatus,
+        location: loginResponse.headers.get('location')
       });
       return false;
 
@@ -160,10 +210,12 @@ export class EngieRomaniaScraper extends BaseScraper {
 
     try {
       // Get bills page
-      const billsResponse = await this.makeRequest(`${this.BASE_URL}/facturi-plati`, {
+      const billsResponse = await this.makeRequest(`${this.BASE_URL}/facturi`, {
         headers: {
           'Cookie': this.sessionCookies,
-          'Referer': this.BASE_URL
+          'X-CSRF-TOKEN': this.csrfToken || '',
+          'X-Requested-With': 'XMLHttpRequest',
+          'Referer': `${this.BASE_URL}/dashboard`
         }
       });
 
@@ -171,32 +223,21 @@ export class EngieRomaniaScraper extends BaseScraper {
         throw new Error('Failed to access bills page');
       }
 
-      const pageContent = await billsResponse.text();
-      
-      // Extract bills data from the page content
-      // This is a simplified example - adjust based on actual page structure
-      const bills: UtilityBill[] = [];
-      
-      // Example bill extraction (modify based on actual page structure)
-      const billElements = pageContent.match(/<div class="factura">(.*?)<\/div>/g) || [];
-      
-      for (const element of billElements) {
-        // Extract bill details (modify based on actual HTML structure)
-        const amount = element.match(/suma: (\d+)/)?.[1];
-        const dueDate = element.match(/scadenta: (\d{4}-\d{2}-\d{2})/)?.[1];
-        
-        if (amount && dueDate) {
-          bills.push({
-            amount: Number(amount),
-            due_date: dueDate,
-            type: 'gas',
-            status: 'pending'
-          });
-        }
-      }
+      const responseData = await billsResponse.json();
+      console.log('Bills response:', responseData);
 
-      console.log(`Found ${bills.length} bills`);
-      return bills;
+      // Transform the response data into our bill format
+      return (responseData.facturi || []).map((bill: any) => ({
+        amount: Number(bill.suma || 0),
+        due_date: bill.data_scadenta,
+        type: 'gas',
+        bill_date: bill.data_emitere,
+        meter_reading: bill.index_contor,
+        consumption: Number(bill.consum || 0),
+        period_start: bill.perioada_start,
+        period_end: bill.perioada_sfarsit,
+        status: 'pending'
+      }));
     } catch (error) {
       console.error('Error fetching bills:', error);
       throw error;
