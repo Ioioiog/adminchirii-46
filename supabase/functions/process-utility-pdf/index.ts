@@ -12,6 +12,27 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const contentType = req.headers.get("content-type");
+  if (!contentType) {
+    return new Response(
+      JSON.stringify({ error: "Content-Type header is missing" }),
+      { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+  }
+
+  if (contentType !== "application/json") {
+    return new Response(
+      JSON.stringify({ error: "Invalid content type. Expected application/json" }),
+      { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+  }
+
   const { pdfPath, jobId } = await req.json();
 
   if (!pdfPath || !jobId) {
@@ -50,6 +71,12 @@ serve(async (req) => {
 
     if (!pdfData) {
       throw new Error('No PDF data received from storage');
+    }
+
+    // Verify it's actually a PDF
+    const fileType = pdfData.type;
+    if (fileType !== 'application/pdf') {
+      throw new Error(`Invalid file type: ${fileType}. Only PDF files are supported.`);
     }
 
     // Convert PDF to base64 safely
