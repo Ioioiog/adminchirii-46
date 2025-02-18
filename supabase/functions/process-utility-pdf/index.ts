@@ -15,8 +15,7 @@ serve(async (req) => {
 
   try {
     const { pdfPath, jobId } = await req.json();
-
-    console.log('Processing PDF:', pdfPath);
+    console.log('Starting PDF processing for:', pdfPath);
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -30,15 +29,18 @@ serve(async (req) => {
       .download(pdfPath);
 
     if (downloadError) {
+      console.error('PDF download error:', downloadError);
       throw new Error(`Failed to download PDF: ${downloadError.message}`);
     }
 
     // Convert PDF to base64
     const pdfBase64 = await pdfData.arrayBuffer();
     const base64String = btoa(String.fromCharCode(...new Uint8Array(pdfBase64)));
+    console.log('PDF converted to base64');
 
     // Process with OpenAI's Vision model
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    console.log('Calling OpenAI API...');
+    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
@@ -49,14 +51,14 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You are an expert at extracting information from utility bills. Extract the following information in JSON format: amount, due_date, utility_type (Electricity/Water/Gas/Internet/Other), billing_period, and any additional fees."
+            content: "You are an expert at extracting information from utility bills. Please extract and return ONLY a JSON object with these fields: amount (number), due_date (YYYY-MM-DD), utility_type (one of: Electricity/Water/Gas/Internet/Other)."
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "Please extract the billing information from this utility bill PDF."
+                text: "Extract the billing information from this utility bill and return it as JSON."
               },
               {
                 type: "image",
@@ -70,11 +72,33 @@ serve(async (req) => {
       })
     });
 
-    const aiResult = await response.json();
-    console.log('AI Processing Result:', aiResult);
+    if (!openAIResponse.ok) {
+      const errorData = await openAIResponse.text();
+      console.error('OpenAI API error:', errorData);
+      throw new Error(`OpenAI API error: ${errorData}`);
+    }
+
+    const aiResult = await openAIResponse.json();
+    console.log('OpenAI API response:', aiResult);
+
+    if (!aiResult.choices || !aiResult.choices[0] || !aiResult.choices[0].message) {
+      throw new Error('Invalid response format from OpenAI API');
+    }
 
     // Parse the AI response
-    const extractedData = JSON.parse(aiResult.choices[0].message.content);
+    let extractedData;
+    try {
+      extractedData = JSON.parse(aiResult.choices[0].message.content);
+      console.log('Extracted data:', extractedData);
+    } catch (parseError) {
+      console.error('Error parsing OpenAI response:', parseError);
+      throw new Error('Failed to parse extracted data from PDF');
+    }
+
+    // Validate extracted data
+    if (!extractedData.amount || !extractedData.due_date || !extractedData.utility_type) {
+      throw new Error('Missing required fields in extracted data');
+    }
 
     // Update the processing job with results
     const { error: updateError } = await supabase
@@ -87,6 +111,7 @@ serve(async (req) => {
       .eq('id', jobId);
 
     if (updateError) {
+      console.error('Error updating processing job:', updateError);
       throw new Error(`Failed to update processing job: ${updateError.message}`);
     }
 
@@ -94,26 +119,34 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error processing PDF:', error);
+    console.error('Error in process-utility-pdf function:', error);
 
     // Update job with error if we have a jobId
-    if (error.jobId) {
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-      );
+    try {
+      const { jobId } = await req.json();
+      if (jobId) {
+        const supabase = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        );
 
-      await supabase
-        .from('pdf_processing_jobs')
-        .update({
-          status: 'error',
-          error: error.message,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', error.jobId);
+        await supabase
+          .from('pdf_processing_jobs')
+          .update({
+            status: 'error',
+            error: error.message,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', jobId);
+      }
+    } catch (updateError) {
+      console.error('Error updating job status:', updateError);
     }
 
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      details: 'Check function logs for more information'
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
