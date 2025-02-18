@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -93,14 +92,14 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You are an expert at extracting information from utility bills. Extract exactly these fields: amount (number), due_date (YYYY-MM-DD), issued_date (YYYY-MM-DD), invoice_number (string), utility_type (one of: Electricity/Water/Gas/Internet/Other), property_id (optional string), currency (USD/EUR/RON). Format your response as a valid JSON object containing only these fields, nothing else. For example: {\"amount\": 123.45, \"due_date\": \"2024-02-15\", \"issued_date\": \"2024-02-01\", \"invoice_number\": \"INV-2024-001\", \"utility_type\": \"Electricity\", \"property_id\": \"123\", \"currency\": \"USD\"}"
+            content: "You are an expert at extracting information from utility bills. Extract exactly these fields: amount (number), due_date (YYYY-MM-DD), issued_date (YYYY-MM-DD), invoice_number (string), utility_type (one of: Electricity/Water/Gas/Internet/Other), property_id (string), currency (USD/EUR/RON). Format your response as a valid JSON object containing only these fields, nothing else. For example: {\"amount\": 123.45, \"due_date\": \"2024-02-15\", \"issued_date\": \"2024-02-01\", \"invoice_number\": \"INV-2024-001\", \"utility_type\": \"Electricity\", \"property_id\": \"123\", \"currency\": \"USD\"}"
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "Extract the amount, due date, issued date, invoice number, utility type, property identifier, and currency from this utility bill image. Return ONLY a JSON object with amount, due_date, issued_date, invoice_number, utility_type, property_id, and currency fields."
+                text: "Extract the amount, due date, issued date, invoice number, utility type, property identifier, and currency from this utility bill image. Make sure to identify and extract the currency and property information. Return ONLY a JSON object with amount, due_date, issued_date, invoice_number, utility_type, property_id, and currency fields."
               },
               {
                 type: "image_url",
@@ -185,9 +184,20 @@ serve(async (req) => {
       throw new Error('Invalid utility type');
     }
 
+    // Additional validation for currency and property_id
+    if (!extractedData.currency) {
+      console.log('No currency detected, defaulting to USD');
+      extractedData.currency = 'USD';
+    }
+
+    if (!extractedData.property_id) {
+      console.log('No property_id detected in the bill');
+    }
+
     const validCurrencies = ['USD', 'EUR', 'RON'];
     if (!validCurrencies.includes(extractedData.currency)) {
-      extractedData.currency = 'USD'; // Default to USD if not found or invalid
+      console.log(`Invalid currency ${extractedData.currency}, defaulting to USD`);
+      extractedData.currency = 'USD';
     }
 
     console.log('Successfully extracted and validated data:', extractedData);
