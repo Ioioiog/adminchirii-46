@@ -13,13 +13,11 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Validate request body
     if (!req.body) {
       throw new Error('Request body is empty');
     }
@@ -35,7 +33,6 @@ serve(async (req) => {
       throw new Error('OpenAI API key is not configured');
     }
 
-    // Initialize Supabase client
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Supabase configuration is missing');
     }
@@ -43,7 +40,6 @@ serve(async (req) => {
     console.log('Initializing Supabase client...');
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get public URL for the file
     console.log('Getting public URL for file:', filePath);
     const { data: { publicUrl }, error: urlError } = supabase.storage
       .from('utility-invoices')
@@ -60,7 +56,6 @@ serve(async (req) => {
 
     console.log('Got public URL:', publicUrl);
 
-    // Call OpenAI API
     console.log('Calling OpenAI API...');
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -69,7 +64,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4-vision-preview',
         messages: [
           {
             role: 'system',
@@ -79,15 +74,17 @@ serve(async (req) => {
             role: 'user',
             content: [
               {
-                type: 'image',
-                image_url: {
-                  url: publicUrl
-                }
+                type: 'text',
+                text: 'Extract the invoice number and issue date from this utility bill. Return ONLY a JSON object.'
               },
-              'Extract the invoice number and issue date. Return ONLY a JSON object.'
+              {
+                type: 'image_url',
+                image_url: publicUrl
+              }
             ]
           }
-        ]
+        ],
+        max_tokens: 300
       }),
     });
 
