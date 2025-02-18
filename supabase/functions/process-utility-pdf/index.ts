@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -70,7 +70,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4-vision-preview",
         messages: [
           {
             role: "system",
@@ -92,7 +92,7 @@ serve(async (req) => {
             ]
           }
         ],
-        temperature: 0
+        max_tokens: 300
       })
     });
 
