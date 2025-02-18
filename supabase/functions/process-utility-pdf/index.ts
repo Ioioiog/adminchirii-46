@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -11,51 +12,45 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const contentType = req.headers.get("content-type");
-  if (!contentType) {
+  const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+  
+  if (!openAIApiKey) {
+    console.error('OpenAI API key is not set');
     return new Response(
-      JSON.stringify({ error: "Content-Type header is missing" }),
+      JSON.stringify({ error: 'OpenAI API key is not configured' }),
       { 
-        status: 400, 
+        status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
   }
-
-  if (contentType !== "application/json") {
-    return new Response(
-      JSON.stringify({ error: "Invalid content type. Expected application/json" }),
-      { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
-  }
-
-  const { filePath, jobId } = await req.json();
-
-  if (!filePath || !jobId) {
-    return new Response(
-      JSON.stringify({ error: 'Missing required parameters: filePath or jobId' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const openAIKey = Deno.env.get('OPENAI_API_KEY');
-
-  if (!supabaseUrl || !supabaseKey || !openAIKey) {
-    return new Response(
-      JSON.stringify({ error: 'Missing required environment variables' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
+    const contentType = req.headers.get("content-type");
+    if (!contentType) {
+      throw new Error("Content-Type header is missing");
+    }
+
+    if (contentType !== "application/json") {
+      throw new Error("Invalid content type. Expected application/json");
+    }
+
+    const { filePath, jobId } = await req.json();
+
+    if (!filePath || !jobId) {
+      throw new Error('Missing required parameters: filePath or jobId');
+    }
+
     console.log('Starting file processing for:', filePath);
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing required environment variables');
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { data: fileData, error: downloadError } = await supabase
       .storage
@@ -90,7 +85,7 @@ serve(async (req) => {
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIKey}`,
+        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -208,6 +203,7 @@ serve(async (req) => {
 
     if (updateError) {
       console.error('Error updating job status:', updateError);
+      throw new Error(`Failed to update job status: ${updateError.message}`);
     }
 
     return new Response(
@@ -219,20 +215,22 @@ serve(async (req) => {
     console.error('Error in process-utility-pdf function:', error);
 
     try {
-      const { error: updateError } = await supabase
-        .from('pdf_processing_jobs')
-        .update({
-          status: 'error',
-          error: error.message,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', jobId);
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-      if (updateError) {
-        console.error('Error updating job error status:', updateError);
+      if (supabaseUrl && supabaseKey) {
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        await supabase
+          .from('pdf_processing_jobs')
+          .update({
+            status: 'error',
+            error: error.message,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', jobId);
       }
     } catch (updateError) {
-      console.error('Error updating job status:', updateError);
+      console.error('Error updating job error status:', updateError);
     }
 
     return new Response(
