@@ -94,18 +94,18 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4-vision-preview",
         messages: [
           {
             role: "system",
-            content: "You are an expert at extracting information from utility bills. Extract exactly these fields: amount (number), due_date (YYYY-MM-DD), utility_type (one of: Electricity/Water/Gas/Internet/Other), property_id (optional string), currency (USD/EUR/RON). Format your response as a valid JSON object containing only these fields, nothing else. For example: {\"amount\": 123.45, \"due_date\": \"2024-02-15\", \"utility_type\": \"Electricity\", \"property_id\": \"123\", \"currency\": \"USD\"}"
+            content: "You are an expert at extracting information from utility bills. Extract exactly these fields: amount (number), due_date (YYYY-MM-DD), issued_date (YYYY-MM-DD), invoice_number (string), utility_type (one of: Electricity/Water/Gas/Internet/Other), property_id (optional string), currency (USD/EUR/RON). Format your response as a valid JSON object containing only these fields, nothing else. For example: {\"amount\": 123.45, \"due_date\": \"2024-02-15\", \"issued_date\": \"2024-02-01\", \"invoice_number\": \"INV-2024-001\", \"utility_type\": \"Electricity\", \"property_id\": \"123\", \"currency\": \"USD\"}"
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "Extract the amount, due date, utility type, property identifier, and currency from this utility bill image. Return ONLY a JSON object with amount, due_date, utility_type, property_id, and currency fields."
+                text: "Extract the amount, due date, issued date, invoice number, utility type, property identifier, and currency from this utility bill image. Return ONLY a JSON object with amount, due_date, issued_date, invoice_number, utility_type, property_id, and currency fields."
               },
               {
                 type: "image_url",
@@ -163,11 +163,13 @@ serve(async (req) => {
       throw new Error(`Failed to parse content as JSON: ${aiResult.choices[0].message.content}`);
     }
 
+    // Validate the extracted data
     if (!extractedData.amount || !extractedData.due_date || !extractedData.utility_type) {
       console.error('Missing required fields in extracted data:', extractedData);
       throw new Error('Missing required fields in extracted data');
     }
 
+    // Validate data types
     if (typeof extractedData.amount !== 'number') {
       extractedData.amount = parseFloat(extractedData.amount);
       if (isNaN(extractedData.amount)) {
@@ -176,7 +178,11 @@ serve(async (req) => {
     }
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(extractedData.due_date)) {
-      throw new Error('Invalid date format');
+      throw new Error('Invalid due date format');
+    }
+
+    if (extractedData.issued_date && !/^\d{4}-\d{2}-\d{2}$/.test(extractedData.issued_date)) {
+      throw new Error('Invalid issued date format');
     }
 
     const validTypes = ['Electricity', 'Water', 'Gas', 'Internet', 'Other'];

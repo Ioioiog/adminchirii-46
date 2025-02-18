@@ -1,10 +1,14 @@
+
 export interface Utility {
   Row: {
     id: string;
     property_id: string;
     type: string;
     amount: number;
+    currency: string;
     due_date: string;
+    issued_date: string | null;
+    invoice_number: string | null;
     status: string;
     created_at: string;
     updated_at: string;
@@ -14,13 +18,19 @@ export interface Utility {
     property_id: string;
     type: string;
     amount: number;
+    currency: string;
     due_date: string;
+    issued_date?: string | null;
+    invoice_number?: string | null;
     status?: string;
   };
   Update: {
     type?: string;
     amount?: number;
+    currency?: string;
     due_date?: string;
+    issued_date?: string | null;
+    invoice_number?: string | null;
     status?: string;
   };
 }
