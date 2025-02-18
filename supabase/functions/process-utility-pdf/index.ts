@@ -23,7 +23,6 @@ serve(async (req) => {
     );
   }
 
-  // When receiving the initial file data, we expect JSON
   if (contentType !== "application/json") {
     return new Response(
       JSON.stringify({ error: "Invalid content type. Expected application/json" }),
@@ -76,8 +75,8 @@ serve(async (req) => {
 
     // Check file type and validate
     const fileType = fileData.type;
-    if (!fileType.startsWith('image/') && fileType !== 'application/pdf') {
-      throw new Error(`Invalid file type: ${fileType}. Only PDF and image files are supported.`);
+    if (!fileType.startsWith('image/')) {
+      throw new Error(`Invalid file type: ${fileType}. Only image files are supported.`);
     }
 
     console.log('Processing file of type:', fileType);

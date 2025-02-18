@@ -39,7 +39,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
-  const processPDF = async (file: File, fileName: string) => {
+  const processImage = async (file: File, fileName: string) => {
     try {
       setIsProcessing(true);
       setProcessingError(null);
@@ -56,7 +56,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
 
       if (jobError) throw jobError;
 
-      // Call the edge function to process the PDF
+      // Call the edge function to process the image
       const { data, error } = await supabase.functions.invoke('process-utility-pdf', {
         body: { filePath: fileName, jobId: job.id }
       });
@@ -73,15 +73,15 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
 
       toast({
         title: "Success",
-        description: "Successfully extracted data from PDF! Please review and submit.",
+        description: "Successfully extracted data from image! Please review and submit.",
       });
     } catch (error: any) {
-      console.error("Error processing PDF:", error);
-      setProcessingError(error.message || "Failed to process PDF");
+      console.error("Error processing image:", error);
+      setProcessingError(error.message || "Failed to process image");
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to process PDF. Please try again.",
+        description: "Failed to process image. Please try again.",
       });
     } finally {
       setIsProcessing(false);
@@ -92,17 +92,17 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
-    if (selectedFile.type !== "application/pdf") {
+    if (!selectedFile.type.startsWith('image/')) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Please upload a PDF file.",
+        description: "Please upload an image file (JPEG, PNG, etc.).",
       });
       return;
     }
 
     setFile(selectedFile);
-    const fileName = `${crypto.randomUUID()}.pdf`;
+    const fileName = `${crypto.randomUUID()}.${selectedFile.name.split('.').pop()}`;
     
     try {
       // Upload to storage
@@ -112,14 +112,14 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
 
       if (uploadError) throw uploadError;
 
-      // Process the PDF
-      await processPDF(selectedFile, fileName);
+      // Process the image
+      await processImage(selectedFile, fileName);
     } catch (error: any) {
-      console.error("Error handling PDF:", error);
+      console.error("Error handling image:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to upload PDF.",
+        description: error.message || "Failed to upload image.",
       });
     }
   };
@@ -209,12 +209,12 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="file">Upload Utility Bill PDF</Label>
+            <Label htmlFor="file">Upload Utility Bill Image</Label>
             <div className="flex flex-col gap-2">
               <Input
                 id="file"
                 type="file"
-                accept=".pdf"
+                accept="image/*"
                 onChange={handleFileChange}
                 className="cursor-pointer"
                 disabled={isProcessing}
@@ -222,7 +222,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
               {isProcessing && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Processing PDF...
+                  Processing image...
                 </div>
               )}
               {processingError && (
