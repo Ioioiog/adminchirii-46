@@ -126,8 +126,8 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
           } else {
             console.log('No matching property found for:', extractedData.property_details);
             toast({
-              variant: "warning",
-              title: "Property Not Matched",
+              variant: "destructive",
+              title: "No Match Found",
               description: "Please select the property manually.",
             });
           }
