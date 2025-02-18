@@ -23,6 +23,7 @@ serve(async (req) => {
     );
   }
 
+  // When receiving the initial file data, we expect JSON
   if (contentType !== "application/json") {
     return new Response(
       JSON.stringify({ error: "Invalid content type. Expected application/json" }),
@@ -33,11 +34,11 @@ serve(async (req) => {
     );
   }
 
-  const { pdfPath, jobId } = await req.json();
+  const { filePath, jobId } = await req.json();
 
-  if (!pdfPath || !jobId) {
+  if (!filePath || !jobId) {
     return new Response(
-      JSON.stringify({ error: 'Missing required parameters: pdfPath or jobId' }),
+      JSON.stringify({ error: 'Missing required parameters: filePath or jobId' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -56,37 +57,39 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    console.log('Starting PDF processing for:', pdfPath);
+    console.log('Starting file processing for:', filePath);
 
-    // Download PDF from storage
-    const { data: pdfData, error: downloadError } = await supabase
+    // Download file from storage
+    const { data: fileData, error: downloadError } = await supabase
       .storage
       .from('utility-pdfs')
-      .download(pdfPath);
+      .download(filePath);
 
     if (downloadError) {
       console.error('Download error:', downloadError);
-      throw new Error(`Failed to download PDF: ${downloadError.message}`);
+      throw new Error(`Failed to download file: ${downloadError.message}`);
     }
 
-    if (!pdfData) {
-      throw new Error('No PDF data received from storage');
+    if (!fileData) {
+      throw new Error('No file data received from storage');
     }
 
-    // Verify it's actually a PDF
-    const fileType = pdfData.type;
-    if (fileType !== 'application/pdf') {
-      throw new Error(`Invalid file type: ${fileType}. Only PDF files are supported.`);
+    // Check file type and validate
+    const fileType = fileData.type;
+    if (!fileType.startsWith('image/') && fileType !== 'application/pdf') {
+      throw new Error(`Invalid file type: ${fileType}. Only PDF and image files are supported.`);
     }
 
-    // Convert PDF to base64 safely
-    const bytes = new Uint8Array(await pdfData.arrayBuffer());
+    console.log('Processing file of type:', fileType);
+
+    // Convert file to base64 safely
+    const bytes = new Uint8Array(await fileData.arrayBuffer());
     const base64String = btoa(
       Array.from(bytes)
         .map(byte => String.fromCharCode(byte))
         .join('')
     );
-    console.log('PDF converted to base64, length:', base64String.length);
+    console.log('File converted to base64, length:', base64String.length);
 
     // Process with OpenAI's Vision model
     console.log('Calling OpenAI API...');
@@ -113,7 +116,7 @@ serve(async (req) => {
               {
                 type: "image_url",
                 image_url: {
-                  url: `data:application/pdf;base64,${base64String}`
+                  url: `data:${fileType};base64,${base64String}`
                 }
               }
             ]
