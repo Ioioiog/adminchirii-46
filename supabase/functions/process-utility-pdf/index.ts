@@ -68,14 +68,34 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are a utility bill OCR assistant. Your response must be a single valid JSON object with no additional text or formatting. The JSON object must have these exact fields: invoice_number (string), issue_date (YYYY-MM-DD), due_date (YYYY-MM-DD), amount (number), utility_type (string, one of: electricity, water, gas, internet, other), currency (3-letter code). Example: {"invoice_number":"INV-123","issue_date":"2024-02-18","due_date":"2024-03-18","amount":150.50,"utility_type":"electricity","currency":"RON"}'
+            content: `You are a utility bill OCR assistant. Extract the following fields from the utility bill image and return them in a JSON object. DO NOT include any additional text or formatting in your response.
+
+Required fields to extract:
+1. Property details (look for address or property identifier)
+2. Utility type (must be one of: electricity, water, gas, internet, other)
+3. Amount (numeric value only)
+4. Currency (3-letter code, e.g., RON, USD, EUR)
+5. Due date (in YYYY-MM-DD format)
+6. Issued date (in YYYY-MM-DD format)
+7. Invoice number (string)
+
+Response format:
+{
+  "property_details": "string",
+  "utility_type": "string",
+  "amount": number,
+  "currency": "string",
+  "due_date": "YYYY-MM-DD",
+  "issued_date": "YYYY-MM-DD",
+  "invoice_number": "string"
+}`
           },
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: 'Extract the required information from this utility bill as a JSON object.'
+                text: 'Extract all the required fields from this utility bill image and return them in the specified JSON format. Make sure all dates are in YYYY-MM-DD format.'
               },
               {
                 type: 'image_url',
@@ -116,7 +136,7 @@ serve(async (req) => {
       extractedData = JSON.parse(cleanedContent);
       
       // Validate required fields
-      const requiredFields = ['invoice_number', 'issue_date', 'due_date', 'amount', 'utility_type', 'currency'];
+      const requiredFields = ['property_details', 'utility_type', 'amount', 'currency', 'due_date', 'issued_date', 'invoice_number'];
       const missingFields = requiredFields.filter(field => !(field in extractedData));
       
       if (missingFields.length > 0) {
@@ -148,7 +168,7 @@ serve(async (req) => {
         return date.toISOString().split('T')[0];
       };
 
-      extractedData.issue_date = validateDate(extractedData.issue_date, 'issue_date');
+      extractedData.issued_date = validateDate(extractedData.issued_date, 'issued_date');
       extractedData.due_date = validateDate(extractedData.due_date, 'due_date');
 
       // Normalize currency
