@@ -42,21 +42,28 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
 
   const findMatchingProperty = (extractedAddress: string) => {
     const normalizeAddress = (addr: string) => {
-      return addr
+      let normalized = addr
         .toLowerCase()
-        .replace(/[^\w\s\d]/g, '') // Keep digits while removing special characters
-        .replace(/\s+/g, '') // Remove spaces
-        .replace(/soseaua|str|strada|nr|bl|sc|et|ap/g, '') // Remove Romanian address prefixes
-        .replace(/bucuresti|romania/g, '') // Remove city/country names
+        .replace(/soseaua/i, 'sos')
+        .replace(/strada/i, 'str')
+        .replace(/nr\./i, 'nr')
+        .replace(/bloc/i, 'bl')
+        .replace(/scara/i, 'sc')
+        .replace(/etaj/i, 'et')
+        .replace(/apartament/i, 'ap')
+        .replace(/[.,]/g, '')
+        .replace(/\s+/g, ' ')
         .trim();
+
+      console.log('After initial normalization:', normalized);
+      return normalized;
     };
 
     const extractAptNumber = (addr: string) => {
       const patterns = [
-        /ap[artment]*\s*(\d+)$/i,  // matches "ap 53", "apartment 53" at end
-        /\b(\d+)$/, // matches number at end of string
-        /(?:ap|apartment)\s*(\d+)/i, // matches ap/apartment anywhere
-        /[^\d](\d+)[^\d]*$/ // matches last number in string
+        /ap\.?\s*(\d+)/i,         // matches "ap. 53", "ap 53"
+        /ap[artment]*\.?\s*(\d+)/i, // matches "apartament 53"
+        /(?:^|\s)(\d+)(?:\s*$)/,  // matches standalone number at end
       ];
 
       for (const pattern of patterns) {
@@ -67,6 +74,19 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
           return num;
         }
       }
+      
+      // Special case: try to find number after "ap" or at the end
+      const components = addr.split(/[\s,]+/);
+      for (let i = 0; i < components.length; i++) {
+        if (components[i].toLowerCase() === 'ap' && components[i + 1]) {
+          const num = parseInt(components[i + 1], 10);
+          if (!isNaN(num)) {
+            console.log(`Found apartment number ${num} after "ap" in components`);
+            return num;
+          }
+        }
+      }
+      
       return null;
     };
 
@@ -80,50 +100,45 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
     });
 
     // Try to find exact match first
-    let matchingProperty = properties.find(p => 
-      normalizeAddress(p.address || '') === normalizedExtractedAddr
-    );
+    let matchingProperty = properties.find(p => {
+      if (!p.address) return false;
 
-    if (!matchingProperty) {
-      matchingProperty = properties.find(p => {
-        if (!p.address) return false;
+      const hasGlucoza = 
+        normalizeAddress(p.address).includes('fabrica de glucoza') ||
+        normalizedExtractedAddr.includes('fabrica de glucoza');
+      
+      if (!hasGlucoza) return false;
 
-        const hasGlucoza = p.address.toLowerCase().includes('fabrica de glucoza') ||
-                          extractedAddress.toLowerCase().includes('fabrica de glucoza');
-        
-        if (!hasGlucoza) return false;
+      const propertyAptNum = extractAptNumber(p.address);
+      const extractedAptNum = extractAptNumber(extractedAddress);
+      
+      console.log('Detailed comparison:', {
+        property: p.name,
+        propertyAptNum,
+        extractedAptNum,
+        propertyAddress: normalizeAddress(p.address),
+        extractedAddress: normalizedExtractedAddr
+      });
+      
+      if (propertyAptNum === null || extractedAptNum === null) {
+        console.log('Could not extract apartment number from:', {
+          propertyAddress: p.address,
+          extractedAddress
+        });
+        return false;
+      }
 
-        const propertyAptNum = extractAptNumber(p.address);
-        const extractedAptNum = extractAptNumber(extractedAddress);
-        
-        console.log('Detailed comparison:', {
-          property: p.name,
-          address: p.address,
+      const isMatch = propertyAptNum === extractedAptNum;
+      if (isMatch) {
+        console.log('Found match!', {
+          propertyName: p.name,
           propertyAptNum,
-          extractedAddress,
           extractedAptNum
         });
-        
-        if (propertyAptNum === null || extractedAptNum === null) {
-          console.log('Could not extract apartment number from:', {
-            propertyAddress: p.address,
-            extractedAddress
-          });
-          return false;
-        }
-
-        const isMatch = propertyAptNum === extractedAptNum;
-        if (isMatch) {
-          console.log('Found match!', {
-            propertyName: p.name,
-            propertyAptNum,
-            extractedAptNum
-          });
-        }
-        
-        return isMatch;
-      });
-    }
+      }
+      
+      return isMatch;
+    });
 
     if (matchingProperty) {
       console.log('Successfully matched property:', matchingProperty);
