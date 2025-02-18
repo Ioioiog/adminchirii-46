@@ -40,16 +40,17 @@ serve(async (req) => {
     console.log('Initializing Supabase client...');
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('Getting public URL for file:', filePath);
-    const { data: publicUrlData } = await supabase.storage
+    console.log('Getting signed URL for file:', filePath);
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from('utility-invoices')
-      .getPublicUrl(filePath);
+      .createSignedUrl(filePath, 60); // URL valid for 60 seconds
 
-    if (!publicUrlData?.publicUrl) {
-      throw new Error('Failed to get public URL for file');
+    if (signedUrlError || !signedUrlData?.signedUrl) {
+      console.error('Error getting signed URL:', signedUrlError);
+      throw new Error('Failed to get signed URL for file');
     }
 
-    console.log('Calling OpenAI API with image URL');
+    console.log('Calling OpenAI API with signed image URL');
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -81,7 +82,7 @@ serve(async (req) => {
               {
                 type: 'image_url',
                 image_url: {
-                  url: publicUrlData.publicUrl
+                  url: signedUrlData.signedUrl
                 }
               }
             ]
