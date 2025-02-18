@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   Dialog,
@@ -38,6 +37,8 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
   const [file, setFile] = useState<File | null>(null);
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [issuedDate, setIssuedDate] = useState("");
 
   const processImage = async (file: File, fileName: string) => {
     try {
@@ -105,22 +106,44 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
     const fileName = `${crypto.randomUUID()}.${selectedFile.name.split('.').pop()}`;
     
     try {
+      setIsProcessing(true);
       // Upload to storage
       const { error: uploadError } = await supabase.storage
-        .from('utility-pdfs')
+        .from('utility-invoices')
         .upload(fileName, selectedFile);
 
       if (uploadError) throw uploadError;
 
-      // Process the image
-      await processImage(selectedFile, fileName);
+      // Process the image with OCR
+      const { data, error } = await supabase.functions.invoke('process-utility-pdf', {
+        body: { filePath: fileName, jobId: utility.id }
+      });
+
+      if (error) throw error;
+
+      // Update form with extracted data if available
+      if (data?.data) {
+        if (data.data.invoice_number) {
+          setInvoiceNumber(data.data.invoice_number);
+        }
+        if (data.data.issued_date) {
+          setIssuedDate(data.data.issued_date);
+        }
+      }
+
+      toast({
+        title: "Success",
+        description: "Successfully processed utility bill!",
+      });
     } catch (error: any) {
-      console.error("Error handling image:", error);
+      console.error("Error handling file:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to upload image.",
+        description: error.message || "Failed to process utility bill.",
       });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
