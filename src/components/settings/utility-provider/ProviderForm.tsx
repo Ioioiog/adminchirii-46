@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,22 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Eye, EyeOff } from "lucide-react";
-
-interface UtilityProvider {
-  id: string;
-  provider_name: string;
-  username: string;
-  encrypted_password?: string;
-  property_id?: string;
-  property?: {
-    name: string;
-    address: string;
-  };
-  utility_type?: 'electricity' | 'water' | 'gas';
-  start_day?: number;
-  end_day?: number;
-  location_name?: string;
-}
+import { UtilityProvider, PROVIDER_OPTIONS } from "./types";
 
 interface ProviderFormProps {
   onClose: () => void;
@@ -38,15 +23,26 @@ export function ProviderForm({ onClose, onSuccess, provider }: ProviderFormProps
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    provider_name: provider?.provider_name || "",
+    provider_name: provider?.provider_name || PROVIDER_OPTIONS[0].value,
     username: provider?.username || "",
-    password: "",  // We don't store the password in the provider object
+    password: "",
     location_name: provider?.location_name || "",
     property_id: provider?.property_id || "",
-    utility_type: provider?.utility_type || "electricity",
+    utility_type: provider?.utility_type || PROVIDER_OPTIONS[0].default_type,
     start_day: provider?.start_day?.toString() || "1",
     end_day: provider?.end_day?.toString() || "28"
   });
+
+  // Update utility type when provider changes
+  useEffect(() => {
+    const selectedProvider = PROVIDER_OPTIONS.find(p => p.value === formData.provider_name);
+    if (selectedProvider && !provider) {
+      setFormData(prev => ({
+        ...prev,
+        utility_type: selectedProvider.default_type
+      }));
+    }
+  }, [formData.provider_name, provider]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,13 +122,21 @@ export function ProviderForm({ onClose, onSuccess, provider }: ProviderFormProps
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="provider_name">Provider Name</Label>
-        <Input
-          id="provider_name"
+        <Select
           value={formData.provider_name}
-          onChange={(e) => setFormData({ ...formData, provider_name: e.target.value })}
-          placeholder="Enter provider name"
-          required
-        />
+          onValueChange={(value) => setFormData({ ...formData, provider_name: value })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select provider" />
+          </SelectTrigger>
+          <SelectContent>
+            {PROVIDER_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-2">
         <Label htmlFor="username">Username</Label>
@@ -192,6 +196,7 @@ export function ProviderForm({ onClose, onSuccess, provider }: ProviderFormProps
           value={formData.utility_type}
           onValueChange={(value: 'electricity' | 'water' | 'gas') => 
             setFormData({ ...formData, utility_type: value })}
+          disabled={formData.provider_name === 'engie_romania'}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select utility type" />

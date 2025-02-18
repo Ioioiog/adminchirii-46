@@ -20,3 +20,9 @@ export interface ScrapingJob {
   last_run_at: string | null;
   error_message: string | null;
 }
+
+export const PROVIDER_OPTIONS = [
+  { value: 'engie_romania', label: 'ENGIE Romania', default_type: 'gas' }
+] as const;
+
+export type ProviderName = typeof PROVIDER_OPTIONS[number]['value'];

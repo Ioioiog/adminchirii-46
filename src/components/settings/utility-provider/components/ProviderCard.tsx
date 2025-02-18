@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Edit2, Trash2 } from "lucide-react";
 import { ScrapingStatus } from "../ScrapingStatus";
-import { UtilityProvider, ScrapingJob } from "../types";
+import { UtilityProvider, ScrapingJob, PROVIDER_OPTIONS } from "../types";
 
 interface ProviderCardProps {
   provider: UtilityProvider;
@@ -23,11 +23,14 @@ export function ProviderCard({
   onDelete,
   onScrape
 }: ProviderCardProps) {
+  const providerOption = PROVIDER_OPTIONS.find(p => p.value === provider.provider_name);
+  const providerLabel = providerOption?.label || provider.provider_name;
+
   return (
     <div className="flex flex-col space-y-2 p-4 border rounded-lg">
       <div className="flex items-center justify-between">
         <div>
-          <p className="font-medium">{provider.provider_name}</p>
+          <p className="font-medium">{providerLabel}</p>
           <p className="text-sm text-muted-foreground">
             Username: {provider.username}
           </p>
