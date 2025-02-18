@@ -74,7 +74,9 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
           const propertyNumbers = (p.address || '').match(/\d+/g) || [];
           const extractedNumbers = extractedAddress.match(/\d+/g) || [];
           
-          return propertyNumbers.some(num => extractedNumbers.includes(num));
+          return extractedNumbers.some(extractedNum => 
+            propertyNumbers.includes(extractedNum)
+          );
         }
         
         return false;
