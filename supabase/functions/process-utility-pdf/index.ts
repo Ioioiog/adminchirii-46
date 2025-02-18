@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -58,7 +57,6 @@ serve(async (req) => {
   try {
     console.log('Starting file processing for:', filePath);
 
-    // Download file from storage
     const { data: fileData, error: downloadError } = await supabase
       .storage
       .from('utility-pdfs')
@@ -73,7 +71,6 @@ serve(async (req) => {
       throw new Error('No file data received from storage');
     }
 
-    // Check file type and validate
     const fileType = fileData.type;
     if (!fileType.startsWith('image/')) {
       throw new Error(`Invalid file type: ${fileType}. Only image files are supported.`);
@@ -81,7 +78,6 @@ serve(async (req) => {
 
     console.log('Processing file of type:', fileType);
 
-    // Convert file to base64 safely
     const bytes = new Uint8Array(await fileData.arrayBuffer());
     const base64String = btoa(
       Array.from(bytes)
@@ -90,7 +86,6 @@ serve(async (req) => {
     );
     console.log('File converted to base64');
 
-    // Process with OpenAI's Vision model
     console.log('Calling OpenAI API...');
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -103,14 +98,14 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You are an expert at extracting information from utility bills. Extract exactly these fields: amount (number), due_date (YYYY-MM-DD), utility_type (one of: Electricity/Water/Gas/Internet/Other). Format your response as a valid JSON object containing only these fields, nothing else. For example: {\"amount\": 123.45, \"due_date\": \"2024-02-15\", \"utility_type\": \"Electricity\"}"
+            content: "You are an expert at extracting information from utility bills. Extract exactly these fields: amount (number), due_date (YYYY-MM-DD), utility_type (one of: Electricity/Water/Gas/Internet/Other), property_id (optional string), currency (USD/EUR/RON). Format your response as a valid JSON object containing only these fields, nothing else. For example: {\"amount\": 123.45, \"due_date\": \"2024-02-15\", \"utility_type\": \"Electricity\", \"property_id\": \"123\", \"currency\": \"USD\"}"
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "Extract the amount, due date, and utility type from this utility bill image. Return ONLY a JSON object with amount, due_date, and utility_type fields."
+                text: "Extract the amount, due date, utility type, property identifier, and currency from this utility bill image. Return ONLY a JSON object with amount, due_date, utility_type, property_id, and currency fields."
               },
               {
                 type: "image_url",
@@ -122,7 +117,7 @@ serve(async (req) => {
           }
         ],
         max_tokens: 300,
-        temperature: 0 // Set to 0 for more deterministic responses
+        temperature: 0
       })
     });
 
@@ -150,14 +145,11 @@ serve(async (req) => {
 
     let extractedData;
     try {
-      // Try to parse the content as JSON
       const content = aiResult.choices[0].message.content.trim();
       console.log('Raw content:', content);
       
-      // Extract JSON from possible markdown code blocks
       let jsonContent = content;
       if (content.includes('```')) {
-        // Extract content between code blocks
         const match = content.match(/```(?:json)?\s*(\{.*?\})\s*```/s);
         if (match) {
           jsonContent = match[1];
@@ -171,13 +163,11 @@ serve(async (req) => {
       throw new Error(`Failed to parse content as JSON: ${aiResult.choices[0].message.content}`);
     }
 
-    // Validate the extracted data
     if (!extractedData.amount || !extractedData.due_date || !extractedData.utility_type) {
       console.error('Missing required fields in extracted data:', extractedData);
       throw new Error('Missing required fields in extracted data');
     }
 
-    // Validate data types
     if (typeof extractedData.amount !== 'number') {
       extractedData.amount = parseFloat(extractedData.amount);
       if (isNaN(extractedData.amount)) {
@@ -194,9 +184,13 @@ serve(async (req) => {
       throw new Error('Invalid utility type');
     }
 
+    const validCurrencies = ['USD', 'EUR', 'RON'];
+    if (!validCurrencies.includes(extractedData.currency)) {
+      extractedData.currency = 'USD'; // Default to USD if not found or invalid
+    }
+
     console.log('Successfully extracted and validated data:', extractedData);
 
-    // Update job status
     const { error: updateError } = await supabase
       .from('pdf_processing_jobs')
       .update({
@@ -218,7 +212,6 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in process-utility-pdf function:', error);
 
-    // Update job status with error
     try {
       const { error: updateError } = await supabase
         .from('pdf_processing_jobs')
