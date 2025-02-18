@@ -13,6 +13,7 @@ import { MeterReadingList } from "@/components/meter-readings/MeterReadingList";
 import { useProperties } from "@/hooks/useProperties";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Utility } from "@/integrations/supabase/types/utility";
 
 type UtilitiesSection = 'bills' | 'readings';
 
@@ -31,17 +32,7 @@ const Utilities = () => {
       const { data, error } = await supabase
         .from('utilities')
         .select(`
-          id,
-          property_id,
-          type,
-          amount,
-          currency,
-          due_date,
-          status,
-          issued_date,
-          invoice_number,
-          created_at,
-          updated_at,
+          *,
           property:properties (
             name,
             address

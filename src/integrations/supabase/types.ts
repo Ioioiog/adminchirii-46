@@ -1925,6 +1925,8 @@ export type Database = {
           currency: string
           due_date: string
           id: string
+          invoice_number: string | null
+          issued_date: string | null
           property_id: string
           status: string
           type: string
@@ -1936,6 +1938,8 @@ export type Database = {
           currency?: string
           due_date: string
           id?: string
+          invoice_number?: string | null
+          issued_date?: string | null
           property_id: string
           status?: string
           type: string
@@ -1947,6 +1951,8 @@ export type Database = {
           currency?: string
           due_date?: string
           id?: string
+          invoice_number?: string | null
+          issued_date?: string | null
           property_id?: string
           status?: string
           type?: string
