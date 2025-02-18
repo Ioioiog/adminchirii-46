@@ -73,27 +73,13 @@ serve(async (req) => {
           {
             role: 'system',
             content: `You are a utility bill OCR assistant. Carefully analyze the utility bill image and extract the following information:
-
-1. Invoice/Bill Number: Look for "Invoice No", "Bill Number", "Document Number", "Factura", "Nr.", etc.
-Example formats: "INV-12345", "F-123456", "Bill#789"
-
-2. Issue Date: Search for "Issue Date", "Bill Date", "Data facturii", "Date". Return in YYYY-MM-DD format.
-
-3. Due Date: Look for "Due Date", "Payment Due", "Scadenta", etc. Return in YYYY-MM-DD format.
-
-4. Amount: Find the total amount to be paid. Look for "Total", "Amount Due", "Total de plata", etc.
-- Return only the numeric value without currency symbol
-- If multiple amounts exist, return the final/total amount
-
-5. Utility Type: Determine if this is for:
-- Electricity (look for "Electric", "Power", "kWh", "Energie electrica")
-- Water (look for "Water", "Apa", "m³")
-- Gas (look for "Gas", "Gaz", "Natural Gas", "therm")
-- Internet (look for "Internet", "Broadband", "Data")
-Return ONLY one of: "Electricity", "Water", "Gas", "Internet", or "Other"
-
-6. Currency: Identify the currency used (look for currency symbols or codes)
-Return standard 3-letter code (e.g., "USD", "EUR", "RON", "GBP")`
+            
+            1. Invoice/Bill Number: Look for "Invoice No", "Bill Number", "Document Number", etc.
+            2. Issue Date: Return in YYYY-MM-DD format.
+            3. Due Date: Return in YYYY-MM-DD format.
+            4. Amount: Extract the total amount due (numeric only).
+            5. Utility Type: Return one of "Electricity", "Water", "Gas", "Internet", or "Other".
+            6. Currency: Return as a standard 3-letter code (e.g., "USD", "EUR", "RON", "GBP").`
           },
           {
             role: 'user',
@@ -133,44 +119,29 @@ Return standard 3-letter code (e.g., "USD", "EUR", "RON", "GBP")`
     try {
       console.log('Attempting to parse content:', openAIData.choices[0].message.content);
       extractedData = JSON.parse(openAIData.choices[0].message.content.trim());
-      console.log('Successfully parsed extracted data:', extractedData);
 
+      // Standardize date formats
       ['issued_date', 'due_date'].forEach(dateField => {
         if (extractedData[dateField]) {
           const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
           if (!dateRegex.test(extractedData[dateField])) {
-            console.log(`Invalid ${dateField} format, attempting to standardize:`, extractedData[dateField]);
-            try {
-              const parsedDate = new Date(extractedData[dateField]);
-              if (!isNaN(parsedDate.getTime())) {
-                extractedData[dateField] = parsedDate.toISOString().split('T')[0];
-                console.log(`Successfully standardized ${dateField} to:`, extractedData[dateField]);
-              } else {
-                console.log(`Could not parse ${dateField}, setting to null`);
-                extractedData[dateField] = null;
-              }
-            } catch (e) {
-              console.log(`Error parsing ${dateField}, setting to null`);
-              extractedData[dateField] = null;
-            }
+            extractedData[dateField] = new Date(extractedData[dateField]).toISOString().split('T')[0] || null;
           }
         }
       });
 
+      // Convert amount to numeric
       if (extractedData.amount) {
-        if (typeof extractedData.amount === 'string') {
-          extractedData.amount = parseFloat(extractedData.amount.replace(/[^\d.-]/g, ''));
-        }
-        if (isNaN(extractedData.amount)) {
-          extractedData.amount = null;
-        }
+        extractedData.amount = parseFloat(extractedData.amount.replace(/[^\d.-]/g, '')) || null;
       }
 
+      // Validate utility type
       const validTypes = ['Electricity', 'Water', 'Gas', 'Internet', 'Other'];
       if (!validTypes.includes(extractedData.utility_type)) {
         extractedData.utility_type = 'Other';
       }
 
+      // Standardize currency format
       if (extractedData.currency) {
         extractedData.currency = extractedData.currency.trim().toUpperCase();
         if (extractedData.currency.length !== 3) {
@@ -180,7 +151,6 @@ Return standard 3-letter code (e.g., "USD", "EUR", "RON", "GBP")`
 
     } catch (e) {
       console.error('Error parsing OpenAI response:', e);
-      console.error('Response content:', openAIData.choices[0].message.content);
       extractedData = {
         invoice_number: null,
         issued_date: null,
@@ -191,10 +161,33 @@ Return standard 3-letter code (e.g., "USD", "EUR", "RON", "GBP")`
       };
     }
 
+    console.log('Saving extracted data into Supabase...');
+    const { data: insertData, error: insertError } = await supabase
+      .from('utility_invoices')
+      .insert([{
+        file_path: filePath,
+        invoice_number: extractedData.invoice_number,
+        issued_date: extractedData.issued_date,
+        due_date: extractedData.due_date,
+        amount: extractedData.amount,
+        utility_type: extractedData.utility_type,
+        currency: extractedData.currency,
+        created_at: new Date().toISOString()
+      }])
+      .select();
+
+    if (insertError) {
+      console.error('Error inserting data into Supabase:', insertError);
+      throw new Error('Failed to save extracted data into database');
+    }
+
+    console.log('Data successfully saved into Supabase:', insertData);
+
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
+        success: true,
         data: extractedData,
-        success: true 
+        insert_id: insertData[0]?.id || null,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -206,9 +199,9 @@ Return standard 3-letter code (e.g., "USD", "EUR", "RON", "GBP")`
     console.error('Error in process-utility-pdf:', error);
     return new Response(
       JSON.stringify({
+        success: false,
         error: error.message,
-        details: error.stack,
-        success: false
+        details: error.stack
       }),
       {
         status: 500,
