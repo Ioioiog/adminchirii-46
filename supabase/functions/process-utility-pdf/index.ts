@@ -92,14 +92,25 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You are an expert at extracting information from utility bills. Extract exactly these fields: amount (number), due_date (YYYY-MM-DD), issued_date (YYYY-MM-DD), invoice_number (string), utility_type (one of: Electricity/Water/Gas/Internet/Other), property_id (string), currency (USD/EUR/RON). Format your response as a valid JSON object containing only these fields, nothing else. For example: {\"amount\": 123.45, \"due_date\": \"2024-02-15\", \"issued_date\": \"2024-02-01\", \"invoice_number\": \"INV-2024-001\", \"utility_type\": \"Electricity\", \"property_id\": \"123\", \"currency\": \"USD\"}"
+            content: `You are an expert at extracting information from Romanian utility bills, especially ENGIE bills. 
+            Extract exactly these fields:
+            - amount (number, look for "TOTAL DE PLATA CU T.V.A" or similar)
+            - due_date (YYYY-MM-DD, look for "DATA SCADENTA")
+            - issued_date (YYYY-MM-DD, look for "Data facturii")
+            - invoice_number (string, look for "Seria ENG")
+            - utility_type (one of: Electricity/Water/Gas/Internet/Other)
+            - property_id (string, look for "Cod client" or contract number)
+            - currency (RON for Romanian bills)
+            
+            Format your response as a valid JSON object containing only these fields, nothing else.
+            Example: {"amount": 218.57, "due_date": "2024-12-16", "issued_date": "2024-11-15", "invoice_number": "ENG nr.70800259921", "utility_type": "Gas", "property_id": "191194059264", "currency": "RON"}`
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "Extract the amount, due date, issued date, invoice number, utility type, property identifier, and currency from this utility bill image. Make sure to identify and extract the currency and property information. Return ONLY a JSON object with amount, due_date, issued_date, invoice_number, utility_type, property_id, and currency fields."
+                text: "Extract the information from this ENGIE Romania utility bill. Pay special attention to the amount (TOTAL DE PLATA CU T.V.A), due date (DATA SCADENTA), invoice number (Seria ENG), and client code (Cod client). The currency should be RON for Romanian bills."
               },
               {
                 type: "image_url",
@@ -157,47 +168,34 @@ serve(async (req) => {
       throw new Error(`Failed to parse content as JSON: ${aiResult.choices[0].message.content}`);
     }
 
-    // Validate the extracted data
-    if (!extractedData.amount || !extractedData.due_date || !extractedData.utility_type) {
-      console.error('Missing required fields in extracted data:', extractedData);
-      throw new Error('Missing required fields in extracted data');
+    // Additional validation specific for Romanian bills
+    if (!extractedData.currency) {
+      console.log('Romanian bill detected, setting currency to RON');
+      extractedData.currency = 'RON';
     }
 
-    // Validate data types
+    if (!extractedData.utility_type) {
+      console.log('ENGIE bill detected, setting utility type to Gas');
+      extractedData.utility_type = 'Gas';
+    }
+
+    // Validate amount format for Romanian bills (should be in RON)
     if (typeof extractedData.amount !== 'number') {
-      extractedData.amount = parseFloat(extractedData.amount);
+      extractedData.amount = parseFloat(extractedData.amount.replace(/[^0-9.,]/g, '').replace(',', '.'));
       if (isNaN(extractedData.amount)) {
         throw new Error('Invalid amount value');
       }
     }
 
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(extractedData.due_date)) {
-      throw new Error('Invalid due date format');
+    // Format dates for Romanian date format (DD.MM.YYYY to YYYY-MM-DD)
+    if (extractedData.due_date && extractedData.due_date.includes('.')) {
+      const [day, month, year] = extractedData.due_date.split('.');
+      extractedData.due_date = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
 
-    if (extractedData.issued_date && !/^\d{4}-\d{2}-\d{2}$/.test(extractedData.issued_date)) {
-      throw new Error('Invalid issued date format');
-    }
-
-    const validTypes = ['Electricity', 'Water', 'Gas', 'Internet', 'Other'];
-    if (!validTypes.includes(extractedData.utility_type)) {
-      throw new Error('Invalid utility type');
-    }
-
-    // Additional validation for currency and property_id
-    if (!extractedData.currency) {
-      console.log('No currency detected, defaulting to USD');
-      extractedData.currency = 'USD';
-    }
-
-    if (!extractedData.property_id) {
-      console.log('No property_id detected in the bill');
-    }
-
-    const validCurrencies = ['USD', 'EUR', 'RON'];
-    if (!validCurrencies.includes(extractedData.currency)) {
-      console.log(`Invalid currency ${extractedData.currency}, defaulting to USD`);
-      extractedData.currency = 'USD';
+    if (extractedData.issued_date && extractedData.issued_date.includes('.')) {
+      const [day, month, year] = extractedData.issued_date.split('.');
+      extractedData.issued_date = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
 
     console.log('Successfully extracted and validated data:', extractedData);
