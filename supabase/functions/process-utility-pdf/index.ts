@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
@@ -39,28 +40,16 @@ serve(async (req) => {
     console.log('Initializing Supabase client...');
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('Downloading file from storage...');
-    const { data: fileData, error: downloadError } = await supabase
-      .storage
+    console.log('Getting public URL for file:', filePath);
+    const { data: publicUrlData } = await supabase.storage
       .from('utility-invoices')
-      .download(filePath);
+      .getPublicUrl(filePath);
 
-    if (downloadError) {
-      console.error('Error downloading file:', downloadError);
-      throw downloadError;
+    if (!publicUrlData?.publicUrl) {
+      throw new Error('Failed to get public URL for file');
     }
 
-    if (!fileData) {
-      throw new Error('No file data received');
-    }
-
-    const fileBase64 = await fileData.arrayBuffer();
-    const base64String = btoa(String.fromCharCode(...new Uint8Array(fileBase64)));
-    const mimeType = fileData.type;
-
-    console.log('File downloaded and converted to base64');
-
-    console.log('Calling OpenAI API...');
+    console.log('Calling OpenAI API with image URL');
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -72,26 +61,27 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a utility bill OCR assistant. Carefully analyze the utility bill image and extract the following information:
-            
-            1. Invoice/Bill Number: Look for "Invoice No", "Bill Number", "Document Number", etc.
-            2. Issue Date: Return in YYYY-MM-DD format.
-            3. Due Date: Return in YYYY-MM-DD format.
-            4. Amount: Extract the total amount due (numeric only).
-            5. Utility Type: Return one of "Electricity", "Water", "Gas", "Internet", or "Other".
-            6. Currency: Return as a standard 3-letter code (e.g., "USD", "EUR", "RON", "GBP").`
+            content: `You are a utility bill OCR assistant. Analyze the utility bill image and extract:
+              - Invoice number
+              - Issue date (YYYY-MM-DD)
+              - Due date (YYYY-MM-DD)
+              - Amount (numeric)
+              - Utility type (Electricity/Water/Gas/Internet/Other)
+              - Currency (3-letter code)
+              
+              Return ONLY a JSON object with these fields, nothing else.`
           },
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: 'Extract all the required information from this utility bill.'
+                text: 'Extract the required information from this utility bill.'
               },
               {
                 type: 'image_url',
                 image_url: {
-                  url: `data:${mimeType};base64,${base64String}`
+                  url: publicUrlData.publicUrl
                 }
               }
             ]
@@ -109,7 +99,7 @@ serve(async (req) => {
     }
 
     const openAIData = await openAIResponse.json();
-    console.log('Raw OpenAI API response:', JSON.stringify(openAIData, null, 2));
+    console.log('OpenAI response:', openAIData);
 
     if (!openAIData.choices?.[0]?.message?.content) {
       throw new Error('Invalid response format from OpenAI');
@@ -117,77 +107,16 @@ serve(async (req) => {
 
     let extractedData;
     try {
-      console.log('Attempting to parse content:', openAIData.choices[0].message.content);
       extractedData = JSON.parse(openAIData.choices[0].message.content.trim());
-
-      // Standardize date formats
-      ['issued_date', 'due_date'].forEach(dateField => {
-        if (extractedData[dateField]) {
-          const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-          if (!dateRegex.test(extractedData[dateField])) {
-            extractedData[dateField] = new Date(extractedData[dateField]).toISOString().split('T')[0] || null;
-          }
-        }
-      });
-
-      // Convert amount to numeric
-      if (extractedData.amount) {
-        extractedData.amount = parseFloat(extractedData.amount.replace(/[^\d.-]/g, '')) || null;
-      }
-
-      // Validate utility type
-      const validTypes = ['Electricity', 'Water', 'Gas', 'Internet', 'Other'];
-      if (!validTypes.includes(extractedData.utility_type)) {
-        extractedData.utility_type = 'Other';
-      }
-
-      // Standardize currency format
-      if (extractedData.currency) {
-        extractedData.currency = extractedData.currency.trim().toUpperCase();
-        if (extractedData.currency.length !== 3) {
-          extractedData.currency = null;
-        }
-      }
-
-    } catch (e) {
-      console.error('Error parsing OpenAI response:', e);
-      extractedData = {
-        invoice_number: null,
-        issued_date: null,
-        due_date: null,
-        amount: null,
-        utility_type: 'Other',
-        currency: null
-      };
+    } catch (error) {
+      console.error('Error parsing OpenAI response:', error);
+      throw new Error('Failed to parse OpenAI response');
     }
-
-    console.log('Saving extracted data into Supabase...');
-    const { data: insertData, error: insertError } = await supabase
-      .from('utility_invoices')
-      .insert([{
-        file_path: filePath,
-        invoice_number: extractedData.invoice_number,
-        issued_date: extractedData.issued_date,
-        due_date: extractedData.due_date,
-        amount: extractedData.amount,
-        utility_type: extractedData.utility_type,
-        currency: extractedData.currency,
-        created_at: new Date().toISOString()
-      }])
-      .select();
-
-    if (insertError) {
-      console.error('Error inserting data into Supabase:', insertError);
-      throw new Error('Failed to save extracted data into database');
-    }
-
-    console.log('Data successfully saved into Supabase:', insertData);
 
     return new Response(
       JSON.stringify({
         success: true,
-        data: extractedData,
-        insert_id: insertData[0]?.id || null,
+        data: extractedData
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
