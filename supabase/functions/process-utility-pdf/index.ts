@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
@@ -40,21 +39,26 @@ serve(async (req) => {
     console.log('Initializing Supabase client...');
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('Getting public URL for file:', filePath);
-    const { data: { publicUrl }, error: urlError } = supabase.storage
+    console.log('Downloading file from storage...');
+    const { data: fileData, error: downloadError } = await supabase
+      .storage
       .from('utility-invoices')
-      .getPublicUrl(filePath);
+      .download(filePath);
 
-    if (urlError) {
-      console.error('Error getting public URL:', urlError);
-      throw urlError;
+    if (downloadError) {
+      console.error('Error downloading file:', downloadError);
+      throw downloadError;
     }
 
-    if (!publicUrl) {
-      throw new Error('Failed to get public URL for file');
+    if (!fileData) {
+      throw new Error('No file data received');
     }
 
-    console.log('Got public URL:', publicUrl);
+    const fileBase64 = await fileData.arrayBuffer();
+    const base64String = btoa(String.fromCharCode(...new Uint8Array(fileBase64)));
+    const mimeType = fileData.type;
+
+    console.log('File downloaded and converted to base64');
 
     console.log('Calling OpenAI API...');
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -89,17 +93,7 @@ Example formats: "INV-12345", "F-123456", "Bill#789"
 Return ONLY one of: "Electricity", "Water", "Gas", "Internet", or "Other"
 
 6. Currency: Identify the currency used (look for currency symbols or codes)
-Return standard 3-letter code (e.g., "USD", "EUR", "RON", "GBP")
-
-Return ONLY a JSON object with these fields:
-{
-  "invoice_number": string | null,
-  "issued_date": "YYYY-MM-DD" | null,
-  "due_date": "YYYY-MM-DD" | null,
-  "amount": number | null,
-  "utility_type": "Electricity" | "Water" | "Gas" | "Internet" | "Other",
-  "currency": string | null
-}`
+Return standard 3-letter code (e.g., "USD", "EUR", "RON", "GBP")`
           },
           {
             role: 'user',
@@ -111,7 +105,7 @@ Return ONLY a JSON object with these fields:
               {
                 type: 'image_url',
                 image_url: {
-                  url: publicUrl
+                  url: `data:${mimeType};base64,${base64String}`
                 }
               }
             ]
@@ -141,7 +135,6 @@ Return ONLY a JSON object with these fields:
       extractedData = JSON.parse(openAIData.choices[0].message.content.trim());
       console.log('Successfully parsed extracted data:', extractedData);
 
-      // Validate and normalize dates
       ['issued_date', 'due_date'].forEach(dateField => {
         if (extractedData[dateField]) {
           const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
@@ -164,7 +157,6 @@ Return ONLY a JSON object with these fields:
         }
       });
 
-      // Validate amount
       if (extractedData.amount) {
         if (typeof extractedData.amount === 'string') {
           extractedData.amount = parseFloat(extractedData.amount.replace(/[^\d.-]/g, ''));
@@ -174,13 +166,11 @@ Return ONLY a JSON object with these fields:
         }
       }
 
-      // Validate utility type
       const validTypes = ['Electricity', 'Water', 'Gas', 'Internet', 'Other'];
       if (!validTypes.includes(extractedData.utility_type)) {
         extractedData.utility_type = 'Other';
       }
 
-      // Validate currency
       if (extractedData.currency) {
         extractedData.currency = extractedData.currency.trim().toUpperCase();
         if (extractedData.currency.length !== 3) {
