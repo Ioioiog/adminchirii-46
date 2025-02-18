@@ -137,20 +137,20 @@ export function useScraping(providers: UtilityProvider[]) {
         provider: provider.provider_name,
         type: provider.utility_type,
         hasUsername: !!requestBody.username,
-        hasPassword: !!requestBody.password
+        hasPassword: !!requestBody.password,
+        requestBody: {
+          ...requestBody,
+          password: requestBody.password ? '[REDACTED]' : undefined
+        }
       });
 
       const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke('scrape-utility-invoices', {
-        body: JSON.stringify(requestBody)
+        body: requestBody
       });
 
       if (scrapeError) {
         console.error('Scrape function error:', scrapeError);
         throw new Error(`Scraping failed: ${scrapeError.message}`);
-      }
-
-      if (!scrapeData) {
-        throw new Error('No response data from scraping function');
       }
 
       console.log('Scrape completed successfully', { 
