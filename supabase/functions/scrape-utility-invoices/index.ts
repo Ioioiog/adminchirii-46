@@ -1,16 +1,12 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0'
+import { createScraper } from './scrapers/index.ts'
+import type { UtilityBill } from './scrapers/base.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-interface UtilityBill {
-  amount: number;
-  due_date: string;
-  type: string;
 }
 
 serve(async (req) => {
@@ -25,8 +21,8 @@ serve(async (req) => {
       password: requestBody.password ? '[REDACTED]' : undefined
     })
 
-    if (!requestBody.username || !requestBody.password || !requestBody.utilityId) {
-      throw new Error('Missing required fields: username, password, or utilityId')
+    if (!requestBody.username || !requestBody.password || !requestBody.utilityId || !requestBody.provider) {
+      throw new Error('Missing required fields')
     }
 
     // Create Supabase client
@@ -62,33 +58,34 @@ serve(async (req) => {
       throw new Error('Failed to fetch provider details')
     }
 
-    // Simulate fetching bills from provider's website
-    // In a real implementation, this would make actual HTTP requests to the provider's website
-    const mockBills: UtilityBill[] = [
-      {
-        amount: Math.floor(Math.random() * 200) + 50,
-        due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        type: requestBody.type || 'electricity'
-      },
-      {
-        amount: Math.floor(Math.random() * 200) + 50,
-        due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        type: requestBody.type || 'electricity'
-      }
-    ]
+    // Initialize and run the appropriate scraper
+    const scraper = createScraper(requestBody.provider, {
+      username: requestBody.username,
+      password: requestBody.password
+    })
 
-    console.log('Fetched bills:', mockBills)
+    const scrapingResult = await scraper.scrape()
+    
+    if (!scrapingResult.success) {
+      throw new Error(scrapingResult.error || 'Scraping failed')
+    }
+
+    console.log('Scraped bills:', scrapingResult.bills.length)
 
     // Insert bills into utilities table
-    for (const bill of mockBills) {
+    for (const bill of scrapingResult.bills) {
       const { error: billError } = await supabaseClient
         .from('utilities')
         .insert({
           property_id: provider.property_id,
-          type: bill.type,
+          type: requestBody.type || bill.type,
           amount: bill.amount,
           due_date: bill.due_date,
-          status: 'pending'
+          status: 'pending',
+          meter_reading: bill.meter_reading,
+          consumption: bill.consumption,
+          period_start: bill.period_start,
+          period_end: bill.period_end
         })
 
       if (billError) {
@@ -117,7 +114,7 @@ serve(async (req) => {
         success: true,
         message: 'Successfully fetched and stored utility bills',
         jobId: job.id,
-        billsCount: mockBills.length
+        billsCount: scrapingResult.bills.length
       }),
       { 
         headers: { 
