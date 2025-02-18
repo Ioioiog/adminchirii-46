@@ -68,26 +68,42 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a utility bill OCR assistant. Extract the following fields from the utility bill image and return them in a JSON object. DO NOT include any additional text or formatting in your response.
+            content: `You are a specialized utility bill OCR assistant. Your task is to extract specific information from utility bills and format it exactly as requested. Return ONLY a JSON object with no additional text or formatting.
 
-Required fields to extract:
-1. Property details (look for address or property identifier)
-2. Utility type (must be one of: electricity, water, gas, internet, other)
-3. Amount (numeric value only)
-4. Currency (3-letter code, e.g., RON, USD, EUR)
-5. Due date (in YYYY-MM-DD format)
-6. Issued date (in YYYY-MM-DD format)
-7. Invoice number (string)
+Look carefully through the entire image and find:
 
-Response format:
+1. Property Details:
+   - Look for service address, property location, or any building/apartment identifiers
+   - Include full address if available
+
+2. Utility Type:
+   - Must be one of: ["Electricity", "Water", "Gas", "Internet", "Other"]
+   - Look for company names (e.g., water company indicates water utility)
+   - Look for service type descriptions
+
+3. Amount and Currency:
+   - Find the total amount due
+   - Identify the currency (must be 3-letter code like RON, USD, EUR)
+   - Extract just the numeric value for amount
+
+4. Dates:
+   - Due Date: When payment is required (format as YYYY-MM-DD)
+   - Issued Date: When bill was issued (format as YYYY-MM-DD)
+   - Convert any date format to YYYY-MM-DD
+
+5. Invoice Number:
+   - Look for: "Invoice #", "Bill Number", "Reference Number", etc.
+   - Include full number with any prefix/suffix
+
+Response format MUST be exactly:
 {
-  "property_details": "string",
-  "utility_type": "string",
-  "amount": number,
-  "currency": "string",
+  "property_details": "complete address or identifier",
+  "utility_type": "one of the allowed types",
+  "amount": number only,
+  "currency": "3-letter code",
   "due_date": "YYYY-MM-DD",
   "issued_date": "YYYY-MM-DD",
-  "invoice_number": "string"
+  "invoice_number": "complete number"
 }`
           },
           {
@@ -95,7 +111,7 @@ Response format:
             content: [
               {
                 type: 'text',
-                text: 'Extract all the required fields from this utility bill image and return them in the specified JSON format. Make sure all dates are in YYYY-MM-DD format.'
+                text: 'Extract ALL the required fields from this utility bill image. Make sure to find and include EVERY field specified in the format.'
               },
               {
                 type: 'image_url',
@@ -175,6 +191,11 @@ Response format:
       extractedData.currency = extractedData.currency.toUpperCase();
       if (extractedData.currency.length !== 3) {
         throw new Error('Currency must be a 3-letter code');
+      }
+
+      // Ensure property_details is not empty
+      if (!extractedData.property_details || extractedData.property_details.trim() === '') {
+        throw new Error('Property details cannot be empty');
       }
 
     } catch (error) {
