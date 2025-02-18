@@ -62,15 +62,23 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a utility bill OCR assistant. Analyze the utility bill image and extract:
-              - Invoice number
+            content: `You are a utility bill OCR assistant. Extract these fields from the utility bill image:
+              - Invoice number (string)
               - Issue date (YYYY-MM-DD)
               - Due date (YYYY-MM-DD)
-              - Amount (numeric)
-              - Utility type (Electricity/Water/Gas/Internet/Other)
-              - Currency (3-letter code)
+              - Amount (number)
+              - Utility type (one of: "electricity", "water", "gas", "internet", "other")
+              - Currency (3-letter code, e.g. "RON", "USD", "EUR")
               
-              Return ONLY a JSON object with these fields, nothing else.`
+              Return a JSON object with ONLY these fields, using exactly these field names. Example:
+              {
+                "invoice_number": "INV-123",
+                "issue_date": "2024-02-18",
+                "due_date": "2024-03-18",
+                "amount": 150.50,
+                "utility_type": "electricity",
+                "currency": "RON"
+              }`
           },
           {
             role: 'user',
@@ -100,19 +108,54 @@ serve(async (req) => {
     }
 
     const openAIData = await openAIResponse.json();
-    console.log('OpenAI response:', openAIData);
+    console.log('Raw OpenAI response:', JSON.stringify(openAIData, null, 2));
 
     if (!openAIData.choices?.[0]?.message?.content) {
-      throw new Error('Invalid response format from OpenAI');
+      console.error('Invalid OpenAI response format:', openAIData);
+      throw new Error('OpenAI response missing required content');
     }
+
+    const rawContent = openAIData.choices[0].message.content.trim();
+    console.log('Attempting to parse content:', rawContent);
 
     let extractedData;
     try {
-      extractedData = JSON.parse(openAIData.choices[0].message.content.trim());
+      extractedData = JSON.parse(rawContent);
+      
+      // Validate required fields
+      const requiredFields = ['invoice_number', 'issue_date', 'due_date', 'amount', 'utility_type', 'currency'];
+      const missingFields = requiredFields.filter(field => !(field in extractedData));
+      
+      if (missingFields.length > 0) {
+        console.error('Missing required fields:', missingFields);
+        throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+      }
+
+      // Validate field types
+      if (typeof extractedData.amount !== 'number') {
+        console.error('Invalid amount type:', typeof extractedData.amount);
+        throw new Error('Amount must be a number');
+      }
+
+      const validUtilityTypes = ['electricity', 'water', 'gas', 'internet', 'other'];
+      if (!validUtilityTypes.includes(extractedData.utility_type)) {
+        console.error('Invalid utility type:', extractedData.utility_type);
+        throw new Error(`Utility type must be one of: ${validUtilityTypes.join(', ')}`);
+      }
+
+      // Validate date formats
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(extractedData.issue_date) || !dateRegex.test(extractedData.due_date)) {
+        console.error('Invalid date format:', { issue_date: extractedData.issue_date, due_date: extractedData.due_date });
+        throw new Error('Dates must be in YYYY-MM-DD format');
+      }
+
     } catch (error) {
-      console.error('Error parsing OpenAI response:', error);
-      throw new Error('Failed to parse OpenAI response');
+      console.error('Error parsing or validating OpenAI response:', error);
+      throw new Error(`Failed to parse OpenAI response: ${error.message}`);
     }
+
+    console.log('Successfully extracted and validated data:', extractedData);
 
     return new Response(
       JSON.stringify({
