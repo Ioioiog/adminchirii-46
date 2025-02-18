@@ -4,6 +4,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL');
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,26 +18,25 @@ serve(async (req) => {
   }
 
   try {
-    const { filePath, jobId } = await req.json();
+    const { filePath } = await req.json();
+    console.log('Processing file:', filePath);
 
     // Initialize Supabase client
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const supabase = createClient(supabaseUrl ?? '', supabaseServiceKey ?? '');
 
-    // Download file from storage
-    const { data: fileData, error: downloadError } = await supabase.storage
+    // Get file URL instead of downloading
+    const { data: { publicUrl }, error: urlError } = supabase.storage
       .from('utility-invoices')
-      .download(filePath);
+      .getPublicUrl(filePath);
 
-    if (downloadError) throw downloadError;
+    if (urlError) {
+      console.error('Error getting public URL:', urlError);
+      throw urlError;
+    }
 
-    // Convert file to base64
-    const bytes = await fileData.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(bytes)));
+    console.log('Got public URL:', publicUrl);
 
-    // Call OpenAI API
+    // Call OpenAI API with the public URL
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -47,7 +48,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are a utility bill OCR assistant. Extract the invoice number and issue date from the image.'
+            content: 'You are a utility bill OCR assistant. Extract the invoice number and issue date from the image. Return ONLY a JSON object with "invoice_number" and "issued_date" fields.'
           },
           {
             role: 'user',
@@ -55,20 +56,27 @@ serve(async (req) => {
               {
                 type: 'image',
                 image_url: {
-                  url: `data:image/jpeg;base64,${base64}`
+                  url: publicUrl
                 }
               },
-              'Please extract the invoice number and issue date from this utility bill. Return the result as JSON with "invoice_number" and "issued_date" fields. Format the date as YYYY-MM-DD.'
+              'Extract the invoice number and issue date. Return ONLY a JSON object.'
             ]
           }
         ]
       }),
     });
 
+    if (!response.ok) {
+      console.error('OpenAI API error:', await response.text());
+      throw new Error('Failed to process image with OpenAI');
+    }
+
     const data = await response.json();
+    console.log('OpenAI response:', data);
+
     let extractedData;
-    
     try {
+      // Parse the content as JSON
       extractedData = JSON.parse(data.choices[0].message.content);
     } catch (e) {
       console.error('Error parsing OpenAI response:', e);
@@ -78,26 +86,23 @@ serve(async (req) => {
       };
     }
 
-    // Update the utility record with extracted data
-    const { error: updateError } = await supabase
-      .from('utilities')
-      .update({
-        invoice_number: extractedData.invoice_number,
-        issued_date: extractedData.issued_date
-      })
-      .eq('id', jobId);
-
-    if (updateError) throw updateError;
+    console.log('Extracted data:', extractedData);
 
     return new Response(JSON.stringify({ data: extractedData }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Error processing utility bill:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error('Error in process-utility-pdf:', error);
+    return new Response(
+      JSON.stringify({ 
+        error: error.message,
+        details: error.stack
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
   }
 });
