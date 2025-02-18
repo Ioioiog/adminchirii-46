@@ -68,23 +68,37 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a utility bill OCR assistant. Carefully analyze the utility bill image and extract:
+            content: `You are a utility bill OCR assistant. Carefully analyze the utility bill image and extract the following information:
 
-1. Invoice/Bill Number: Look for numbers labeled as "Invoice No", "Bill Number", "Document Number", "Factura", "Nr.", etc.
+1. Invoice/Bill Number: Look for "Invoice No", "Bill Number", "Document Number", "Factura", "Nr.", etc.
 Example formats: "INV-12345", "F-123456", "Bill#789"
 
-2. Issue Date: Search for dates labeled as "Issue Date", "Bill Date", "Data facturii", "Date", etc.
-Return the date in YYYY-MM-DD format.
+2. Issue Date: Search for "Issue Date", "Bill Date", "Data facturii", "Date". Return in YYYY-MM-DD format.
 
-IMPORTANT: 
-- Be thorough in your search - check headers, footers, and corners
-- If you find multiple dates, prefer the issue date over due date
-- Look for standard invoice number patterns
-- If you can't find a field with high confidence, return null
-- Return ONLY a JSON object with these fields, nothing else:
+3. Due Date: Look for "Due Date", "Payment Due", "Scadenta", etc. Return in YYYY-MM-DD format.
+
+4. Amount: Find the total amount to be paid. Look for "Total", "Amount Due", "Total de plata", etc.
+- Return only the numeric value without currency symbol
+- If multiple amounts exist, return the final/total amount
+
+5. Utility Type: Determine if this is for:
+- Electricity (look for "Electric", "Power", "kWh", "Energie electrica")
+- Water (look for "Water", "Apa", "m³")
+- Gas (look for "Gas", "Gaz", "Natural Gas", "therm")
+- Internet (look for "Internet", "Broadband", "Data")
+Return ONLY one of: "Electricity", "Water", "Gas", "Internet", or "Other"
+
+6. Currency: Identify the currency used (look for currency symbols or codes)
+Return standard 3-letter code (e.g., "USD", "EUR", "RON", "GBP")
+
+Return ONLY a JSON object with these fields:
 {
   "invoice_number": string | null,
-  "issued_date": "YYYY-MM-DD" | null
+  "issued_date": "YYYY-MM-DD" | null,
+  "due_date": "YYYY-MM-DD" | null,
+  "amount": number | null,
+  "utility_type": "Electricity" | "Water" | "Gas" | "Internet" | "Other",
+  "currency": string | null
 }`
           },
           {
@@ -92,7 +106,7 @@ IMPORTANT:
             content: [
               {
                 type: 'text',
-                text: 'Analyze this utility bill image and extract the invoice number and issue date.'
+                text: 'Extract all the required information from this utility bill.'
               },
               {
                 type: 'image_url',
@@ -104,7 +118,7 @@ IMPORTANT:
           }
         ],
         max_tokens: 500,
-        temperature: 0.1 // Lower temperature for more focused extraction
+        temperature: 0.1
       }),
     });
 
@@ -127,46 +141,50 @@ IMPORTANT:
       extractedData = JSON.parse(openAIData.choices[0].message.content.trim());
       console.log('Successfully parsed extracted data:', extractedData);
 
-      // Validate and normalize the date format if present
-      if (extractedData.issued_date) {
-        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-        if (!dateRegex.test(extractedData.issued_date)) {
-          console.log('Invalid date format, attempting to standardize:', extractedData.issued_date);
-          // Try multiple date formats
-          const possibleFormats = [
-            'DD-MM-YYYY',
-            'MM-DD-YYYY',
-            'YYYY-MM-DD',
-            'DD.MM.YYYY',
-            'MM.DD.YYYY',
-            'DD/MM/YYYY',
-            'MM/DD/YYYY'
-          ];
-          
-          let parsedDate = null;
-          for (const format of possibleFormats) {
-            const attemptedDate = new Date(extractedData.issued_date);
-            if (!isNaN(attemptedDate.getTime())) {
-              parsedDate = attemptedDate;
-              break;
+      // Validate and normalize dates
+      ['issued_date', 'due_date'].forEach(dateField => {
+        if (extractedData[dateField]) {
+          const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+          if (!dateRegex.test(extractedData[dateField])) {
+            console.log(`Invalid ${dateField} format, attempting to standardize:`, extractedData[dateField]);
+            try {
+              const parsedDate = new Date(extractedData[dateField]);
+              if (!isNaN(parsedDate.getTime())) {
+                extractedData[dateField] = parsedDate.toISOString().split('T')[0];
+                console.log(`Successfully standardized ${dateField} to:`, extractedData[dateField]);
+              } else {
+                console.log(`Could not parse ${dateField}, setting to null`);
+                extractedData[dateField] = null;
+              }
+            } catch (e) {
+              console.log(`Error parsing ${dateField}, setting to null`);
+              extractedData[dateField] = null;
             }
           }
-          
-          if (parsedDate) {
-            extractedData.issued_date = parsedDate.toISOString().split('T')[0];
-            console.log('Successfully standardized date to:', extractedData.issued_date);
-          } else {
-            console.log('Could not parse date, setting to null');
-            extractedData.issued_date = null;
-          }
+        }
+      });
+
+      // Validate amount
+      if (extractedData.amount) {
+        if (typeof extractedData.amount === 'string') {
+          extractedData.amount = parseFloat(extractedData.amount.replace(/[^\d.-]/g, ''));
+        }
+        if (isNaN(extractedData.amount)) {
+          extractedData.amount = null;
         }
       }
 
-      // Validate invoice number
-      if (extractedData.invoice_number) {
-        extractedData.invoice_number = extractedData.invoice_number.trim();
-        if (extractedData.invoice_number === '') {
-          extractedData.invoice_number = null;
+      // Validate utility type
+      const validTypes = ['Electricity', 'Water', 'Gas', 'Internet', 'Other'];
+      if (!validTypes.includes(extractedData.utility_type)) {
+        extractedData.utility_type = 'Other';
+      }
+
+      // Validate currency
+      if (extractedData.currency) {
+        extractedData.currency = extractedData.currency.trim().toUpperCase();
+        if (extractedData.currency.length !== 3) {
+          extractedData.currency = null;
         }
       }
 
@@ -175,7 +193,11 @@ IMPORTANT:
       console.error('Response content:', openAIData.choices[0].message.content);
       extractedData = {
         invoice_number: null,
-        issued_date: null
+        issued_date: null,
+        due_date: null,
+        amount: null,
+        utility_type: 'Other',
+        currency: null
       };
     }
 
