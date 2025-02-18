@@ -37,6 +37,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
   const [dueDate, setDueDate] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [processingError, setProcessingError] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
 
   const processPDF = async (file: File, fileName: string) => {
     try {
@@ -67,11 +68,12 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
         setUtilityType(data.data.utility_type || "");
         setAmount(data.data.amount?.toString() || "");
         setDueDate(data.data.due_date || "");
+        setShowForm(true);
       }
 
       toast({
         title: "Success",
-        description: "Successfully extracted data from PDF!",
+        description: "Successfully extracted data from PDF! Please review and submit.",
       });
     } catch (error: any) {
       console.error("Error processing PDF:", error);
@@ -79,7 +81,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to process PDF. Please fill in the details manually.",
+        description: "Failed to process PDF. Please try again.",
       });
     } finally {
       setIsProcessing(false);
@@ -90,29 +92,35 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
+    if (selectedFile.type !== "application/pdf") {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please upload a PDF file.",
+      });
+      return;
+    }
+
     setFile(selectedFile);
+    const fileName = `${crypto.randomUUID()}.pdf`;
+    
+    try {
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from('utility-pdfs')
+        .upload(fileName, selectedFile);
 
-    if (selectedFile.type === "application/pdf") {
-      const fileName = `${crypto.randomUUID()}.pdf`;
-      
-      try {
-        // Upload to storage
-        const { error: uploadError } = await supabase.storage
-          .from('utility-pdfs')
-          .upload(fileName, selectedFile);
+      if (uploadError) throw uploadError;
 
-        if (uploadError) throw uploadError;
-
-        // Process the PDF
-        await processPDF(selectedFile, fileName);
-      } catch (error: any) {
-        console.error("Error handling PDF:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error.message || "Failed to upload PDF.",
-        });
-      }
+      // Process the PDF
+      await processPDF(selectedFile, fileName);
+    } catch (error: any) {
+      console.error("Error handling PDF:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to upload PDF.",
+      });
     }
   };
 
@@ -201,14 +209,15 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="file">Upload Bill (PDF for automatic processing)</Label>
+            <Label htmlFor="file">Upload Utility Bill PDF</Label>
             <div className="flex flex-col gap-2">
               <Input
                 id="file"
                 type="file"
-                accept=".pdf,image/*"
+                accept=".pdf"
                 onChange={handleFileChange}
                 className="cursor-pointer"
+                disabled={isProcessing}
               />
               {isProcessing && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -224,84 +233,90 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
             </div>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="type">Utility Type</Label>
-            <Select value={utilityType} onValueChange={setUtilityType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Electricity">Electricity</SelectItem>
-                <SelectItem value="Water">Water</SelectItem>
-                <SelectItem value="Gas">Gas</SelectItem>
-                <SelectItem value="Internet">Internet</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {showForm && (
+            <>
+              <div className="grid gap-2">
+                <Label htmlFor="property">Property</Label>
+                <Select value={propertyId} onValueChange={setPropertyId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select property" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {properties.map((property) => (
+                      <SelectItem key={property.id} value={property.id}>
+                        {property.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="amount">Amount</Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-            </div>
+              <div className="grid gap-2">
+                <Label htmlFor="type">Utility Type</Label>
+                <Select value={utilityType} onValueChange={setUtilityType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Electricity">Electricity</SelectItem>
+                    <SelectItem value="Water">Water</SelectItem>
+                    <SelectItem value="Gas">Gas</SelectItem>
+                    <SelectItem value="Internet">Internet</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="currency">Currency</Label>
-              <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select currency" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableCurrencies.map((curr) => (
-                    <SelectItem key={curr.code} value={curr.code}>
-                      {curr.code} - {curr.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="amount">Amount</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    step="0.01"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                  />
+                </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="property">Property</Label>
-            <Select value={propertyId} onValueChange={setPropertyId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select property" />
-              </SelectTrigger>
-              <SelectContent>
-                {properties.map((property) => (
-                  <SelectItem key={property.id} value={property.id}>
-                    {property.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="currency">Currency</Label>
+                  <Select value={currency} onValueChange={setCurrency}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableCurrencies.map((curr) => (
+                        <SelectItem key={curr.code} value={curr.code}>
+                          {curr.code} - {curr.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="dueDate">Due Date</Label>
-            <Input
-              id="dueDate"
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-            />
-          </div>
+              <div className="grid gap-2">
+                <Label htmlFor="dueDate">Due Date</Label>
+                <Input
+                  id="dueDate"
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                />
+              </div>
+            </>
+          )}
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? "Adding..." : "Add Utility Bill"}
-          </Button>
+          {showForm && (
+            <Button onClick={handleSubmit} disabled={isSubmitting}>
+              {isSubmitting ? "Adding..." : "Add Utility Bill"}
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
