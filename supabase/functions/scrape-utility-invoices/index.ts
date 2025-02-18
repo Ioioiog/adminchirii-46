@@ -10,28 +10,37 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
     const requestBody = await req.json()
-    console.log("Received request body:", {
-      ...requestBody,
-      password: requestBody.password ? '[REDACTED]' : undefined
+    console.log("Received scraping request:", {
+      provider: requestBody.provider,
+      utilityId: requestBody.utilityId,
+      type: requestBody.type,
+      username: requestBody.username,
+      hasPassword: !!requestBody.password
     })
 
+    // Validate request body
     if (!requestBody.username || !requestBody.password || !requestBody.utilityId || !requestBody.provider) {
-      throw new Error('Missing required fields')
+      throw new Error('Missing required fields: username, password, utilityId, and provider are required')
     }
 
-    // Create Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing required environment variables')
+    }
 
-    // Create scraping job
+    const supabaseClient = createClient(supabaseUrl, supabaseKey)
+
+    // Create scraping job record
     const { data: job, error: jobError } = await supabaseClient
       .from('scraping_jobs')
       .insert({
@@ -42,89 +51,109 @@ serve(async (req) => {
       .single()
 
     if (jobError) {
-      throw jobError
+      console.error('Failed to create scraping job:', jobError)
+      throw new Error('Failed to initialize scraping job')
     }
 
-    console.log('Created scraping job:', { jobId: job.id })
+    console.log('Created scraping job:', job.id)
 
-    // Get provider details
-    const { data: provider, error: providerError } = await supabaseClient
-      .from('utility_provider_credentials')
-      .select('property_id, provider_name')
-      .eq('id', requestBody.utilityId)
-      .single()
+    try {
+      // Get provider details
+      const { data: provider, error: providerError } = await supabaseClient
+        .from('utility_provider_credentials')
+        .select('property_id, provider_name')
+        .eq('id', requestBody.utilityId)
+        .single()
 
-    if (providerError || !provider) {
-      throw new Error('Failed to fetch provider details')
-    }
-
-    // Initialize and run the appropriate scraper
-    const scraper = createScraper(requestBody.provider, {
-      username: requestBody.username,
-      password: requestBody.password
-    })
-
-    const scrapingResult = await scraper.scrape()
-    
-    if (!scrapingResult.success) {
-      throw new Error(scrapingResult.error || 'Scraping failed')
-    }
-
-    console.log('Scraped bills:', scrapingResult.bills.length)
-
-    // Insert bills into utilities table
-    for (const bill of scrapingResult.bills) {
-      const { error: billError } = await supabaseClient
-        .from('utilities')
-        .insert({
-          property_id: provider.property_id,
-          type: requestBody.type || bill.type,
-          amount: bill.amount,
-          due_date: bill.due_date,
-          status: 'pending',
-          meter_reading: bill.meter_reading,
-          consumption: bill.consumption,
-          period_start: bill.period_start,
-          period_end: bill.period_end
-        })
-
-      if (billError) {
-        console.error('Error inserting bill:', billError)
-        throw new Error('Failed to store utility bill')
+      if (providerError || !provider) {
+        throw new Error('Failed to fetch provider details')
       }
-    }
 
-    // Update job status to completed
-    const { error: updateError } = await supabaseClient
-      .from('scraping_jobs')
-      .update({ 
-        status: 'completed',
-        last_run_at: new Date().toISOString()
+      // Initialize and run the appropriate scraper
+      console.log(`Initializing scraper for provider: ${requestBody.provider}`)
+      const scraper = createScraper(requestBody.provider, {
+        username: requestBody.username,
+        password: requestBody.password
       })
-      .eq('id', job.id)
 
-    if (updateError) {
-      throw updateError
-    }
-
-    console.log('Successfully completed scraping job')
-
-    return new Response(
-      JSON.stringify({ 
-        success: true,
-        message: 'Successfully fetched and stored utility bills',
-        jobId: job.id,
-        billsCount: scrapingResult.bills.length
-      }),
-      { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        } 
+      const scrapingResult = await scraper.scrape()
+      
+      if (!scrapingResult.success) {
+        throw new Error(scrapingResult.error || 'Scraping failed')
       }
-    )
+
+      console.log(`Successfully scraped ${scrapingResult.bills.length} bills`)
+
+      // Store the bills in the database
+      const billPromises = scrapingResult.bills.map(bill => 
+        supabaseClient
+          .from('utilities')
+          .insert({
+            property_id: provider.property_id,
+            type: requestBody.type || bill.type,
+            amount: bill.amount,
+            due_date: bill.due_date,
+            status: 'pending',
+            meter_reading: bill.meter_reading,
+            consumption: bill.consumption,
+            period_start: bill.period_start,
+            period_end: bill.period_end
+          })
+      )
+
+      const results = await Promise.all(billPromises)
+      const errors = results.filter(r => r.error)
+      
+      if (errors.length > 0) {
+        console.error('Errors storing bills:', errors)
+        throw new Error('Failed to store some utility bills')
+      }
+
+      // Update job status to completed
+      const { error: updateError } = await supabaseClient
+        .from('scraping_jobs')
+        .update({ 
+          status: 'completed',
+          last_run_at: new Date().toISOString()
+        })
+        .eq('id', job.id)
+
+      if (updateError) {
+        console.error('Failed to update job status:', updateError)
+        throw updateError
+      }
+
+      console.log('Successfully completed scraping job')
+
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          message: 'Successfully fetched and stored utility bills',
+          jobId: job.id,
+          billsCount: scrapingResult.bills.length
+        }),
+        { 
+          headers: { 
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          } 
+        }
+      )
+    } catch (error) {
+      // Update job status to failed
+      await supabaseClient
+        .from('scraping_jobs')
+        .update({ 
+          status: 'failed',
+          error_message: error.message,
+          last_run_at: new Date().toISOString()
+        })
+        .eq('id', job.id)
+
+      throw error
+    }
   } catch (error) {
-    console.error('Error:', error.message)
+    console.error('Error in scraping function:', error)
     return new Response(
       JSON.stringify({
         success: false,
