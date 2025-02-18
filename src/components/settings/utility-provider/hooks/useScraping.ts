@@ -19,40 +19,61 @@ export function useScraping(providers: UtilityProvider[]) {
 
   const processQueue = useCallback(async () => {
     if (isProcessingQueue || scrapingQueue.length === 0) {
-      console.log("Queue processing skipped:", { isProcessingQueue, queueLength: scrapingQueue.length });
+      console.log("Queue processing status:", { 
+        isProcessingQueue, 
+        queueLength: scrapingQueue.length,
+        shouldProcess: !isProcessingQueue && scrapingQueue.length > 0
+      });
       return;
     }
 
     setIsProcessingQueue(true);
     const providerId = scrapingQueue[0];
-    console.log(`Processing queue: Starting with provider ${providerId}`);
+    console.log(`Processing queue: Starting with provider ${providerId}`, {
+      queueLength: scrapingQueue.length,
+      remainingItems: scrapingQueue.slice(1)
+    });
 
     try {
       await handleScrapeWithRetry(providerId);
     } finally {
-      setScrapingQueue(prev => prev.slice(1));
+      const updatedQueue = scrapingQueue.slice(1);
+      setScrapingQueue(updatedQueue);
       setIsProcessingQueue(false);
       
       // Process next item in queue if any
-      setTimeout(() => {
-        if (scrapingQueue.length > 1) {
-          console.log(`Queue: ${scrapingQueue.length - 1} items remaining`);
+      if (updatedQueue.length > 0) {
+        console.log(`Queue: ${updatedQueue.length} items remaining:`, updatedQueue);
+        setTimeout(() => {
           processQueue();
-        }
-      }, 1000);
+        }, 1000);
+      } else {
+        console.log('Queue processing completed');
+      }
     }
   }, [isProcessingQueue, scrapingQueue]);
 
   // Effect to monitor queue changes and start processing
   useEffect(() => {
-    if (scrapingQueue.length > 0 && !isProcessingQueue) {
+    const shouldStartProcessing = scrapingQueue.length > 0 && !isProcessingQueue;
+    console.log('Queue state changed:', {
+      queueLength: scrapingQueue.length,
+      isProcessing: isProcessingQueue,
+      shouldStartProcessing
+    });
+    
+    if (shouldStartProcessing) {
       processQueue();
     }
   }, [scrapingQueue, isProcessingQueue, processQueue]);
 
   const addToQueue = useCallback((providerId: string) => {
     console.log(`Adding provider ${providerId} to scraping queue`);
-    setScrapingQueue(prev => [...prev, providerId]);
+    setScrapingQueue(prev => {
+      const newQueue = [...prev, providerId];
+      console.log('Updated queue:', newQueue);
+      return newQueue;
+    });
   }, []);
 
   const handleScrapeWithRetry = async (providerId: string, retryCount = 0): Promise<void> => {
