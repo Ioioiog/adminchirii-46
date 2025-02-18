@@ -14,7 +14,12 @@ interface UtilityProvider {
   id: string;
   provider_name: string;
   username: string;
+  encrypted_password?: string;
   property_id?: string;
+  property?: {
+    name: string;
+    address: string;
+  };
   utility_type?: 'electricity' | 'water' | 'gas';
   start_day?: number;
   end_day?: number;
@@ -35,7 +40,7 @@ export function ProviderForm({ onClose, onSuccess, provider }: ProviderFormProps
   const [formData, setFormData] = useState({
     provider_name: provider?.provider_name || "",
     username: provider?.username || "",
-    password: provider?.password || "",
+    password: "",  // We don't store the password in the provider object
     location_name: provider?.location_name || "",
     property_id: provider?.property_id || "",
     utility_type: provider?.utility_type || "electricity",
