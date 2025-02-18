@@ -71,12 +71,13 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
           normalizedExtractedAddr.includes('fabricadeglucoza');
         
         if (significantMatch) {
-          const propertyNumbers = (p.address || '').match(/\d+/g) || [];
-          const extractedNumbers = extractedAddress.match(/\d+/g) || [];
+          const propertyNumbers: string[] = (p.address || '').match(/\d+/g) || [];
+          const extractedNumbers: string[] = extractedAddress.match(/\d+/g) || [];
           
-          return extractedNumbers.some(extractedNum => 
-            propertyNumbers.includes(extractedNum)
-          );
+          const propertyNums = propertyNumbers.map(Number);
+          const extractedNums = extractedNumbers.map(Number);
+          
+          return extractedNums.some(num => propertyNums.includes(num));
         }
         
         return false;
