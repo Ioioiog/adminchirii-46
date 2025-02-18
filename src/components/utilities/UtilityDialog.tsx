@@ -16,6 +16,7 @@ import { Property } from "@/utils/propertyUtils";
 import { Plus, Upload, Download } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { ProviderCredentialsResponse } from "@/integrations/supabase/types/rpc";
+import { Database } from "@/integrations/supabase/types/rpc";
 
 interface UtilityDialogProps {
   properties: Property[];
@@ -122,12 +123,14 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       
       console.log("Fetching provider credentials for property:", propertyId);
       
-      const { data: credentialsResponse, error: credentialsError } = await supabase.rpc<ProviderCredentialsResponse, { property_id_input: string }>(
+      const { data: credentials, error: credentialsError } = await supabase.rpc(
         'get_decrypted_credentials',
         { property_id_input: propertyId }
       );
 
-      const credentials = credentialsResponse as ProviderCredentialsResponse;
+      if (credentialsError || !credentials) {
+        throw new Error('No utility provider found for this property');
+      }
 
       console.log("Credentials structure:", {
         id: credentials.id,

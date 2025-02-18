@@ -1,4 +1,3 @@
-
 import { Json } from './json';
 
 export interface RpcResponse<T> {
