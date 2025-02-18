@@ -84,7 +84,7 @@ serve(async (req) => {
                 text: "Extract the amount, due date, and utility type from this bill."
               },
               {
-                type: "image",
+                type: "image_url",
                 image_url: {
                   url: `data:application/pdf;base64,${base64String}`
                 }
