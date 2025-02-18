@@ -2213,7 +2213,7 @@ export type Database = {
         Args: {
           property_id_input: string
         }
-        Returns: Database["public"]["CompositeTypes"]["provider_credentials"]
+        Returns: Json
       }
       get_latest_tenancy: {
         Args: {
