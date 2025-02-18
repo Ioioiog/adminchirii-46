@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { UtilityProvider, ScrapingJob } from "../types";
@@ -17,13 +17,7 @@ export function useScraping(providers: UtilityProvider[]) {
   const [isProcessingQueue, setIsProcessingQueue] = useState(false);
   const { toast } = useToast();
 
-  const addToQueue = (providerId: string) => {
-    console.log(`Adding provider ${providerId} to scraping queue`);
-    setScrapingQueue(prev => [...prev, providerId]);
-    processQueue();
-  };
-
-  const processQueue = async () => {
+  const processQueue = useCallback(async () => {
     if (isProcessingQueue || scrapingQueue.length === 0) {
       console.log("Queue processing skipped:", { isProcessingQueue, queueLength: scrapingQueue.length });
       return;
@@ -40,12 +34,26 @@ export function useScraping(providers: UtilityProvider[]) {
       setIsProcessingQueue(false);
       
       // Process next item in queue if any
-      if (scrapingQueue.length > 1) {
-        console.log(`Queue: ${scrapingQueue.length - 1} items remaining`);
-        setTimeout(processQueue, 1000);
-      }
+      setTimeout(() => {
+        if (scrapingQueue.length > 1) {
+          console.log(`Queue: ${scrapingQueue.length - 1} items remaining`);
+          processQueue();
+        }
+      }, 1000);
     }
-  };
+  }, [isProcessingQueue, scrapingQueue]);
+
+  // Effect to monitor queue changes and start processing
+  useEffect(() => {
+    if (scrapingQueue.length > 0 && !isProcessingQueue) {
+      processQueue();
+    }
+  }, [scrapingQueue, isProcessingQueue, processQueue]);
+
+  const addToQueue = useCallback((providerId: string) => {
+    console.log(`Adding provider ${providerId} to scraping queue`);
+    setScrapingQueue(prev => [...prev, providerId]);
+  }, []);
 
   const handleScrapeWithRetry = async (providerId: string, retryCount = 0): Promise<void> => {
     try {
