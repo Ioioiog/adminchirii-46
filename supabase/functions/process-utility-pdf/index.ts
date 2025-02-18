@@ -88,7 +88,7 @@ serve(async (req) => {
         .map(byte => String.fromCharCode(byte))
         .join('')
     );
-    console.log('File converted to base64, length:', base64String.length);
+    console.log('File converted to base64');
 
     // Process with OpenAI's Vision model
     console.log('Calling OpenAI API...');
@@ -103,14 +103,14 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You are an expert at extracting information from utility bills. Extract exactly these fields: amount (number), due_date (YYYY-MM-DD), utility_type (one of: Electricity/Water/Gas/Internet/Other). Format your response as a valid JSON object containing only these fields, nothing else."
+            content: "You are an expert at extracting information from utility bills. Extract exactly these fields: amount (number), due_date (YYYY-MM-DD), utility_type (one of: Electricity/Water/Gas/Internet/Other). Format your response as a valid JSON object containing only these fields, nothing else. For example: {\"amount\": 123.45, \"due_date\": \"2024-02-15\", \"utility_type\": \"Electricity\"}"
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "Extract the amount, due date, and utility type from this bill."
+                text: "Extract the amount, due date, and utility type from this utility bill image. Return ONLY a JSON object with amount, due_date, and utility_type fields."
               },
               {
                 type: "image_url",
@@ -121,37 +121,68 @@ serve(async (req) => {
             ]
           }
         ],
-        max_tokens: 300
+        max_tokens: 300,
+        temperature: 0 // Set to 0 for more deterministic responses
       })
     });
+
+    if (!openAIResponse.ok) {
+      const errorText = await openAIResponse.text();
+      console.error('OpenAI API error response:', errorText);
+      throw new Error(`OpenAI API error: ${errorText}`);
+    }
 
     const responseText = await openAIResponse.text();
     console.log('OpenAI raw response:', responseText);
 
-    if (!openAIResponse.ok) {
-      throw new Error(`OpenAI API error: ${responseText}`);
+    let aiResult;
+    try {
+      aiResult = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Error parsing OpenAI response JSON:', parseError);
+      throw new Error(`Invalid JSON response from OpenAI: ${responseText}`);
+    }
+
+    if (!aiResult.choices?.[0]?.message?.content) {
+      console.error('Invalid AI response structure:', aiResult);
+      throw new Error('Invalid response format from OpenAI API');
     }
 
     let extractedData;
     try {
-      const aiResult = JSON.parse(responseText);
-      console.log('OpenAI parsed response:', aiResult);
-
-      if (!aiResult.choices?.[0]?.message?.content) {
-        throw new Error('Invalid response format from OpenAI API');
-      }
-
-      // Parse the content as JSON
-      extractedData = JSON.parse(aiResult.choices[0].message.content);
-      console.log('Extracted data:', extractedData);
-
-      if (!extractedData.amount || !extractedData.due_date || !extractedData.utility_type) {
-        throw new Error('Missing required fields in extracted data');
-      }
+      // Try to parse the content as JSON
+      const content = aiResult.choices[0].message.content.trim();
+      console.log('Attempting to parse content:', content);
+      extractedData = JSON.parse(content);
     } catch (parseError) {
-      console.error('Error parsing OpenAI response:', parseError);
-      throw new Error('Failed to parse utility bill data');
+      console.error('Error parsing content as JSON:', parseError);
+      throw new Error(`Failed to parse content as JSON: ${aiResult.choices[0].message.content}`);
     }
+
+    // Validate the extracted data
+    if (!extractedData.amount || !extractedData.due_date || !extractedData.utility_type) {
+      console.error('Missing required fields in extracted data:', extractedData);
+      throw new Error('Missing required fields in extracted data');
+    }
+
+    // Validate data types
+    if (typeof extractedData.amount !== 'number') {
+      extractedData.amount = parseFloat(extractedData.amount);
+      if (isNaN(extractedData.amount)) {
+        throw new Error('Invalid amount value');
+      }
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(extractedData.due_date)) {
+      throw new Error('Invalid date format');
+    }
+
+    const validTypes = ['Electricity', 'Water', 'Gas', 'Internet', 'Other'];
+    if (!validTypes.includes(extractedData.utility_type)) {
+      throw new Error('Invalid utility type');
+    }
+
+    console.log('Successfully extracted and validated data:', extractedData);
 
     // Update job status
     const { error: updateError } = await supabase
