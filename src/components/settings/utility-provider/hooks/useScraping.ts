@@ -3,6 +3,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { UtilityProvider, ScrapingJob } from "../types";
+import { ProviderCredentialsResponse } from "@/integrations/supabase/types/rpc";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000; // 2 seconds
@@ -71,7 +72,7 @@ export function useScraping(providers: UtilityProvider[]) {
 
     try {
       console.log('Fetching decrypted credentials...');
-      const { data: credentials, error: credentialsError } = await supabase.rpc(
+      const { data: credentials, error: credentialsError } = await supabase.rpc<ProviderCredentialsResponse>(
         'get_decrypted_credentials',
         { property_id_input: provider.property_id }
       );
