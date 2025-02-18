@@ -1,3 +1,4 @@
+
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -6,12 +7,16 @@ import { PaymentActions } from "@/components/payments/PaymentActions";
 import { Button } from "@/components/ui/button";
 import { FileText, Trash2 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
+import { Separator } from "@/components/ui/separator";
 
 interface Utility {
   id: string;
   type: string;
   amount: number;
+  currency: string;
   due_date: string;
+  issued_date: string | null;
+  invoice_number: string | null;
   status: string;
   property: {
     name: string;
@@ -70,13 +75,9 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
         .eq('utility_id', utilityId)
         .maybeSingle();
 
-      if (invoiceError) {
-        console.error("Error fetching invoice:", invoiceError);
-        throw invoiceError;
-      }
+      if (invoiceError) throw invoiceError;
 
-      if (!invoice) {
-        console.log("No invoice found for utility ID:", utilityId);
+      if (!invoice?.pdf_path) {
         toast({
           variant: "destructive",
           title: "Error",
@@ -85,29 +86,13 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
         return;
       }
 
-      if (!invoice.pdf_path) {
-        console.log("Invoice found but no PDF path for utility ID:", utilityId);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "No invoice file has been uploaded for this utility bill.",
-        });
-        return;
-      }
-
-      console.log("Creating signed URL for PDF path:", invoice.pdf_path);
-      
       const { data: { signedUrl }, error: urlError } = await supabase
         .storage
         .from('utility-invoices')
         .createSignedUrl(invoice.pdf_path, 60);
 
-      if (urlError) {
-        console.error("Error creating signed URL:", urlError);
-        throw urlError;
-      }
+      if (urlError) throw urlError;
 
-      console.log("Opening signed URL in new tab");
       window.open(signedUrl, '_blank');
     } catch (error) {
       console.error("Error viewing invoice:", error);
@@ -128,10 +113,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
         .delete()
         .eq('id', utilityId);
 
-      if (error) {
-        console.error("Error deleting utility:", error);
-        throw error;
-      }
+      if (error) throw error;
 
       toast({
         title: "Success",
@@ -168,37 +150,75 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
           return null;
         }
 
-        console.log('Rendering utility:', utility);
-
         return (
           <Card key={utility.id}>
             <CardContent className="p-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <div className="text-sm font-medium text-gray-500">Property</div>
-                  <div>{utility.property?.name || 'N/A'}</div>
+                  <div className="text-sm font-medium text-gray-500 mb-1">Property</div>
+                  <div className="font-medium">{utility.property?.name || 'N/A'}</div>
                   <div className="text-sm text-gray-500">{utility.property?.address || 'N/A'}</div>
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-gray-500">Type</div>
-                  <div className="capitalize">{utility.type}</div>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-500">Amount</div>
-                  <div>{formatAmount(utility.amount)}</div>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-500">Due Date</div>
-                  <div>{new Date(utility.due_date).toLocaleDateString()}</div>
+                  <div className="text-sm font-medium text-gray-500 mb-1">Bill Details</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <span className="text-sm text-gray-500">Type:</span>
+                      <div className="font-medium capitalize">{utility.type}</div>
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-500">Amount:</span>
+                      <div className="font-medium">
+                        {utility.amount} {utility.currency}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="mt-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
+
+              <Separator className="my-4" />
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                  <div className="text-sm font-medium text-gray-500 mb-1">Dates</div>
+                  <div className="grid gap-1">
+                    <div>
+                      <span className="text-sm text-gray-500">Due Date:</span>
+                      <div className="font-medium">
+                        {new Date(utility.due_date).toLocaleDateString()}
+                      </div>
+                    </div>
+                    {utility.issued_date && (
+                      <div>
+                        <span className="text-sm text-gray-500">Issued Date:</span>
+                        <div className="font-medium">
+                          {new Date(utility.issued_date).toLocaleDateString()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-500 mb-1">Invoice Details</div>
+                  {utility.invoice_number ? (
+                    <div className="font-medium">{utility.invoice_number}</div>
+                  ) : (
+                    <div className="text-sm text-gray-500">No invoice number</div>
+                  )}
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-500 mb-1">Status</div>
                   <Badge
                     variant={utility.status === "paid" ? "default" : "secondary"}
+                    className="mb-2"
                   >
                     {utility.status}
                   </Badge>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between mt-4">
+                <div className="flex items-center gap-4">
                   <Button
                     variant="outline"
                     size="sm"
@@ -206,7 +226,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
                     className="flex items-center gap-2"
                   >
                     <FileText className="h-4 w-4" />
-                    See Invoice
+                    View Invoice
                   </Button>
                   {userRole === "landlord" && (
                     <Button
