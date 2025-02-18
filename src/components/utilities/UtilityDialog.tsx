@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   Dialog,
@@ -123,17 +122,12 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       
       console.log("Fetching provider credentials for property:", propertyId);
       
-      const { data, error: credentialsError } = await supabase.rpc(
+      const { data: credentialsResponse, error: credentialsError } = await supabase.rpc<ProviderCredentialsResponse, { property_id_input: string }>(
         'get_decrypted_credentials',
         { property_id_input: propertyId }
       );
 
-      if (credentialsError || !data) {
-        console.error("Provider credentials error:", credentialsError);
-        throw new Error('No utility provider found for this property');
-      }
-
-      const credentials = data as ProviderCredentialsResponse;
+      const credentials = credentialsResponse as ProviderCredentialsResponse;
 
       console.log("Credentials structure:", {
         id: credentials.id,

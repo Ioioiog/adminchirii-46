@@ -72,7 +72,7 @@ export function useScraping(providers: UtilityProvider[]) {
 
     try {
       console.log('Fetching decrypted credentials...');
-      const { data: credentials, error: credentialsError } = await supabase.rpc<ProviderCredentialsResponse>(
+      const { data: credentialsResponse, error: credentialsError } = await supabase.rpc<ProviderCredentialsResponse, { property_id_input: string }>(
         'get_decrypted_credentials',
         { property_id_input: provider.property_id }
       );
@@ -82,6 +82,8 @@ export function useScraping(providers: UtilityProvider[]) {
         throw credentialsError;
       }
 
+      // Ensure the response matches our expected type
+      const credentials = credentialsResponse as ProviderCredentialsResponse;
       if (!credentials || !credentials.username || !credentials.password) {
         console.error('Invalid credentials:', { credentials });
         throw new Error('No valid utility provider credentials found. Please update the credentials.');
