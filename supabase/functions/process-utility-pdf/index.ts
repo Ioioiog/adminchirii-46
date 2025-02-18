@@ -43,7 +43,7 @@ serve(async (req) => {
     console.log('Getting signed URL for file:', filePath);
     const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from('utility-invoices')
-      .createSignedUrl(filePath, 300); // Extended to 5 minutes for better reliability
+      .createSignedUrl(filePath, 300);
 
     if (signedUrlError || !signedUrlData?.signedUrl) {
       console.error('Error getting signed URL:', signedUrlError);
@@ -62,30 +62,24 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a utility bill OCR assistant. Extract these fields from the utility bill image:
-              - Invoice number (string)
-              - Issue date (YYYY-MM-DD)
-              - Due date (YYYY-MM-DD)
-              - Amount (number)
-              - Utility type (one of: "electricity", "water", "gas", "internet", "other")
-              - Currency (3-letter code, e.g. "RON", "USD", "EUR")
-              
-              Return a JSON object with ONLY these fields, using exactly these field names. Example:
-              {
-                "invoice_number": "INV-123",
-                "issue_date": "2024-02-18",
-                "due_date": "2024-03-18",
-                "amount": 150.50,
-                "utility_type": "electricity",
-                "currency": "RON"
-              }`
+            content: `You are a utility bill OCR assistant. Extract data from the utility bill image and return ONLY a plain JSON object (no markdown, no code blocks) with these exact fields:
+
+invoice_number: string
+issue_date: YYYY-MM-DD string
+due_date: YYYY-MM-DD string
+amount: number
+utility_type: one of ["electricity", "water", "gas", "internet", "other"]
+currency: 3-letter code (e.g. "RON", "USD", "EUR")
+
+Example response (return ONLY this format, no other text):
+{"invoice_number":"INV-123","issue_date":"2024-02-18","due_date":"2024-03-18","amount":150.50,"utility_type":"electricity","currency":"RON"}`
           },
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: 'Extract the required information from this utility bill.'
+                text: 'Extract the required information from this utility bill and return it as a plain JSON object.'
               },
               {
                 type: 'image_url',
@@ -115,8 +109,13 @@ serve(async (req) => {
       throw new Error('OpenAI response missing required content');
     }
 
-    const rawContent = openAIData.choices[0].message.content.trim();
-    console.log('Attempting to parse content:', rawContent);
+    // Clean up the response content by removing any markdown formatting
+    let rawContent = openAIData.choices[0].message.content.trim();
+    console.log('Original content:', rawContent);
+
+    // Remove markdown code block indicators if present
+    rawContent = rawContent.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+    console.log('Cleaned content:', rawContent);
 
     let extractedData;
     try {
