@@ -17,7 +17,6 @@ import { Property } from "@/utils/propertyUtils";
 import { Loader2, Plus } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { format } from "date-fns";
 
 interface UtilityDialogProps {
   properties: Property[];
@@ -60,6 +59,8 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
     
     try {
       setIsProcessing(true);
+      setProcessingError(null);
+      
       // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('utility-invoices')
@@ -76,21 +77,58 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
 
       // Update form with extracted data if available
       if (data?.data) {
-        if (data.data.invoice_number) {
-          setInvoiceNumber(data.data.invoice_number);
-        }
-        if (data.data.issued_date) {
-          setIssuedDate(data.data.issued_date);
-        }
-        setShowForm(true);
-      }
+        const extractedData = data.data;
+        console.log('Extracted data:', extractedData);
 
-      toast({
-        title: "Success",
-        description: "Successfully processed utility bill!",
-      });
+        // Find property by address
+        if (extractedData.property_details) {
+          const matchingProperty = properties.find(p => 
+            p.address?.toLowerCase().includes(extractedData.property_details.toLowerCase()) ||
+            extractedData.property_details.toLowerCase().includes(p.address?.toLowerCase())
+          );
+          if (matchingProperty) {
+            setPropertyId(matchingProperty.id);
+          }
+        }
+
+        // Set utility type
+        if (extractedData.utility_type) {
+          const type = extractedData.utility_type.charAt(0).toUpperCase() + 
+                      extractedData.utility_type.slice(1).toLowerCase();
+          setUtilityType(type);
+        }
+
+        // Set amount and currency
+        if (extractedData.amount) {
+          setAmount(extractedData.amount.toString());
+        }
+        if (extractedData.currency) {
+          setCurrency(extractedData.currency.toUpperCase());
+        }
+
+        // Set dates
+        if (extractedData.due_date) {
+          setDueDate(extractedData.due_date);
+        }
+        if (extractedData.issued_date) {
+          setIssuedDate(extractedData.issued_date);
+        }
+
+        // Set invoice number
+        if (extractedData.invoice_number) {
+          setInvoiceNumber(extractedData.invoice_number);
+        }
+
+        setShowForm(true);
+        
+        toast({
+          title: "Success",
+          description: "Successfully processed utility bill!",
+        });
+      }
     } catch (error: any) {
       console.error("Error handling file:", error);
+      setProcessingError(error.message || "Failed to process utility bill.");
       toast({
         variant: "destructive",
         title: "Error",
