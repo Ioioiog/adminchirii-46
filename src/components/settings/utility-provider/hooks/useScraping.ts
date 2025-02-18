@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -6,6 +7,8 @@ import { Database } from "@/integrations/supabase/types/rpc";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000; // 2 seconds
+
+type GetDecryptedCredentialsResponse = Database['public']['Functions']['get_decrypted_credentials']['Returns'];
 
 export function useScraping(providers: UtilityProvider[]) {
   const [scrapingStates, setScrapingStates] = useState<Record<string, boolean>>({});
@@ -71,15 +74,16 @@ export function useScraping(providers: UtilityProvider[]) {
 
     try {
       console.log('Fetching decrypted credentials...');
-      const { data: credentials, error: credentialsError } = await supabase.rpc(
-        'get_decrypted_credentials',
-        { property_id_input: provider.property_id }
-      );
+      const { data, error: credentialsError } = await supabase.rpc('get_decrypted_credentials', {
+        property_id_input: provider.property_id
+      });
 
       if (credentialsError) {
         console.error('Credentials fetch failed:', credentialsError);
         throw credentialsError;
       }
+
+      const credentials = data as GetDecryptedCredentialsResponse;
 
       if (!credentials || !credentials.username || !credentials.password) {
         console.error('Invalid credentials:', { credentials });

@@ -18,6 +18,8 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { ProviderCredentialsResponse } from "@/integrations/supabase/types/rpc";
 import { Database } from "@/integrations/supabase/types/rpc";
 
+type GetDecryptedCredentialsResponse = Database['public']['Functions']['get_decrypted_credentials']['Returns'];
+
 interface UtilityDialogProps {
   properties: Property[];
   onUtilityCreated: () => void;
@@ -123,14 +125,15 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       
       console.log("Fetching provider credentials for property:", propertyId);
       
-      const { data: credentials, error: credentialsError } = await supabase.rpc(
-        'get_decrypted_credentials',
-        { property_id_input: propertyId }
-      );
+      const { data, error: credentialsError } = await supabase.rpc('get_decrypted_credentials', {
+        property_id_input: propertyId
+      });
 
-      if (credentialsError || !credentials) {
+      if (credentialsError || !data) {
         throw new Error('No utility provider found for this property');
       }
+
+      const credentials = data as GetDecryptedCredentialsResponse;
 
       console.log("Credentials structure:", {
         id: credentials.id,

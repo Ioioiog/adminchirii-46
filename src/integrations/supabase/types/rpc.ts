@@ -1,3 +1,4 @@
+
 import { Json } from './json';
 
 export interface RpcResponse<T> {
@@ -44,7 +45,7 @@ export interface Database {
       };
       get_decrypted_credentials: {
         Args: { property_id_input: string };
-        Returns: ProviderCredentialsResponse;
+        Returns: { id: string; username: string; password: string };
       };
       get_latest_tenancy: {
         Args: { p_tenant_id: string };
