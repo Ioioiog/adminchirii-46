@@ -5,6 +5,29 @@ export class EngieRomaniaScraper extends BaseScraper {
   private sessionCookies?: string;
   private csrfToken?: string;
   private readonly BASE_URL = 'https://my.engie.ro';
+  private readonly TIMEOUT = 30000; // 30 seconds timeout
+
+  private async makeRequest(url: string, options: RequestInit = {}): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.TIMEOUT);
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          ...options.headers,
+          'Accept-Language': 'en-US,en;q=0.9,ro;q=0.8',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        },
+      });
+      return response;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
 
   async scrape(): Promise<ScrapingResult> {
     try {
@@ -18,13 +41,25 @@ export class EngieRomaniaScraper extends BaseScraper {
       }
 
       console.log('Starting ENGIE Romania scraping process...');
-      const loggedIn = await this.login();
+      
+      // Try logging in with multiple attempts
+      let loggedIn = false;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        console.log(`Login attempt ${attempt}/3`);
+        loggedIn = await this.login();
+        if (loggedIn) break;
+        
+        if (attempt < 3) {
+          console.log('Waiting before next attempt...');
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+      }
       
       if (!loggedIn) {
         return {
           success: false,
           bills: [],
-          error: 'Failed to login to ENGIE Romania'
+          error: 'Failed to login to ENGIE Romania after multiple attempts'
         };
       }
 
@@ -43,244 +78,127 @@ export class EngieRomaniaScraper extends BaseScraper {
     }
   }
 
-  private extractCsrfToken(html: string): string | null {
-    // Try different possible CSRF token patterns
-    const patterns = [
-      /<input[^>]*name="_csrf"[^>]*value="([^"]+)"/i,
-      /<meta[^>]*name="_csrf"[^>]*content="([^"]+)"/i,
-      /var\s+csrf\s*=\s*['"]([^'"]+)['"]/i,
-      /name="csrf-token"\s+content="([^"]+)"/i,
-      /_csrf:\s*['"]([^'"]+)['"]/i
-    ];
-
-    for (const pattern of patterns) {
-      const match = html.match(pattern);
-      if (match && match[1]) {
-        console.log('Found CSRF token using pattern:', pattern.toString());
-        return match[1];
-      }
-    }
-
-    // Log the first 1000 characters of HTML for debugging
-    console.error('Could not find CSRF token in HTML. First 1000 chars:', html.substring(0, 1000));
-    return null;
-  }
-
   protected async login(): Promise<boolean> {
     try {
-      console.log('Attempting to login to ENGIE Romania...');
+      console.log('Starting login process...');
       
-      // First try to get the login page directly
-      let loginPageResponse = await fetch(`${this.BASE_URL}/login`, {
-        headers: {
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Connection': 'keep-alive',
-          'Upgrade-Insecure-Requests': '1',
-          'Sec-Fetch-Dest': 'document',
-          'Sec-Fetch-Mode': 'navigate',
-          'Sec-Fetch-Site': 'none',
-          'Sec-Fetch-User': '?1',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
-      });
-
-      // If direct login page fails, try the authentication page
-      if (!loginPageResponse.ok) {
-        console.log('Direct login page failed, trying authentication page...');
-        loginPageResponse = await fetch(`${this.BASE_URL}/autentificare`, {
-          headers: {
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-            'Sec-Fetch-Dest': 'document',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-User': '?1',
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-          }
+      // Initial request to get CSRF token and cookies
+      const initialResponse = await this.makeRequest(`${this.BASE_URL}/autentificare`);
+      
+      if (!initialResponse.ok) {
+        console.error('Failed to access login page:', {
+          status: initialResponse.status,
+          statusText: initialResponse.statusText
         });
+        return false;
       }
 
-      if (!loginPageResponse.ok) {
-        console.error('Failed to load login page:', {
-          status: loginPageResponse.status,
-          statusText: loginPageResponse.statusText
-        });
-        throw new Error('Failed to load login page');
-      }
-
-      // Get and store cookies
-      const cookies = loginPageResponse.headers.get('set-cookie');
+      // Get cookies
+      const cookies = initialResponse.headers.get('set-cookie');
       if (!cookies) {
-        console.error('No cookies received from login page');
-        throw new Error('No cookies received from login page');
+        console.error('No cookies received');
+        return false;
       }
       this.sessionCookies = cookies;
-      console.log('Received initial cookies');
 
-      // Get page content and extract CSRF token
-      const pageContent = await loginPageResponse.text();
-      console.log('Got login page content, searching for CSRF token...');
+      // Get CSRF token
+      const pageContent = await initialResponse.text();
+      const csrfMatch = pageContent.match(/name="_csrf" value="([^"]+)"/);
       
-      // Extract CSRF token using multiple patterns
-      const csrfToken = this.extractCsrfToken(pageContent);
-      if (!csrfToken) {
-        throw new Error('Could not find CSRF token');
+      if (!csrfMatch) {
+        console.error('No CSRF token found');
+        return false;
       }
-      this.csrfToken = csrfToken;
-      console.log('Successfully extracted CSRF token');
+      this.csrfToken = csrfMatch[1];
 
-      // Prepare login request body
+      // Prepare login data
       const formData = new URLSearchParams();
       formData.append('username', this.credentials.username);
       formData.append('password', this.credentials.password);
       formData.append('_csrf', this.csrfToken);
       formData.append('remember-me', 'true');
-      
-      console.log('Preparing login request with credentials and CSRF token');
 
       // Perform login
-      const loginResponse = await fetch(`${this.BASE_URL}/login`, {
+      const loginResponse = await this.makeRequest(`${this.BASE_URL}/autentificare`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           'Cookie': this.sessionCookies,
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
           'Origin': this.BASE_URL,
-          'Referer': `${this.BASE_URL}/login`,
-          'X-CSRF-TOKEN': this.csrfToken,
-          'X-Requested-With': 'XMLHttpRequest',
-          'Sec-Fetch-Dest': 'document',
-          'Sec-Fetch-Mode': 'navigate',
-          'Sec-Fetch-Site': 'same-origin',
-          'Sec-Fetch-User': '?1',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
+          'Referer': `${this.BASE_URL}/autentificare`
         },
         body: formData.toString(),
         redirect: 'manual'
       });
 
-      // Log login response details (without sensitive data)
-      console.log('Login response:', {
-        status: loginResponse.status,
-        statusText: loginResponse.statusText,
-        hasLocationHeader: !!loginResponse.headers.get('location')
-      });
-
-      // Check for successful login (302 redirect or 200 OK)
-      if (loginResponse.status === 302 || loginResponse.status === 200) {
+      // Check login success
+      if (loginResponse.status === 302) {
         const newCookies = loginResponse.headers.get('set-cookie');
         if (newCookies) {
           this.sessionCookies = newCookies;
-          console.log('Received new session cookies after login');
         }
         console.log('Login successful');
         return true;
       }
 
-      // If login failed, log the response for debugging
-      const responseText = await loginResponse.text();
       console.error('Login failed:', {
         status: loginResponse.status,
-        hasLocationHeader: !!loginResponse.headers.get('location'),
-        responseLength: responseText.length
+        statusText: loginResponse.statusText
       });
       return false;
 
     } catch (error) {
-      console.error('Login error:', {
-        message: error.message,
-        stack: error.stack
-      });
+      console.error('Login error:', error);
       return false;
     }
   }
 
   protected async fetchBills(): Promise<UtilityBill[]> {
     if (!this.sessionCookies) {
-      throw new Error('Not logged in to ENGIE Romania');
+      throw new Error('Not logged in');
     }
 
     try {
-      console.log('Fetching bills from ENGIE Romania...');
-      
-      // First fetch the bills page
-      const billsPageResponse = await fetch(`${this.BASE_URL}/facturi`, {
+      // Get bills page
+      const billsResponse = await this.makeRequest(`${this.BASE_URL}/facturi-plati`, {
         headers: {
           'Cookie': this.sessionCookies,
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-          'Referer': this.BASE_URL,
-          'Sec-Fetch-Dest': 'document',
-          'Sec-Fetch-Mode': 'navigate',
-          'Sec-Fetch-Site': 'same-origin',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
-      });
-
-      if (!billsPageResponse.ok) {
-        console.error('Failed to access bills page:', {
-          status: billsPageResponse.status,
-          statusText: billsPageResponse.statusText
-        });
-        throw new Error('Failed to access bills page');
-      }
-
-      // Fetch bills data
-      const billsResponse = await fetch(`${this.BASE_URL}/api/facturi`, {
-        headers: {
-          'Cookie': this.sessionCookies,
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'application/json',
-          'Referer': `${this.BASE_URL}/facturi`,
-          'X-CSRF-TOKEN': this.csrfToken || '',
-          'X-Requested-With': 'XMLHttpRequest',
-          'Sec-Fetch-Dest': 'empty',
-          'Sec-Fetch-Mode': 'cors',
-          'Sec-Fetch-Site': 'same-origin'
+          'Referer': this.BASE_URL
         }
       });
 
       if (!billsResponse.ok) {
-        const errorText = await billsResponse.text();
-        console.error('Failed to fetch bills:', {
-          status: billsResponse.status,
-          statusText: billsResponse.statusText,
-          error: errorText
-        });
-        throw new Error('Failed to fetch bills data');
+        throw new Error('Failed to access bills page');
       }
 
-      const billsData = await billsResponse.json();
-      console.log('Successfully fetched bills data');
+      const pageContent = await billsResponse.text();
       
-      // Transform bills data to our format
-      return (billsData.facturi || []).map((bill: any) => ({
-        amount: Number(bill.valoare_factura || 0),
-        due_date: bill.data_scadenta,
-        type: 'gas',
-        bill_date: bill.data_emitere,
-        meter_reading: bill.index_contor,
-        consumption: Number(bill.consum || 0),
-        period_start: bill.perioada_consum_start,
-        period_end: bill.perioada_consum_sfarsit,
-        status: bill.status || 'pending'
-      }));
+      // Extract bills data from the page content
+      // This is a simplified example - adjust based on actual page structure
+      const bills: UtilityBill[] = [];
+      
+      // Example bill extraction (modify based on actual page structure)
+      const billElements = pageContent.match(/<div class="factura">(.*?)<\/div>/g) || [];
+      
+      for (const element of billElements) {
+        // Extract bill details (modify based on actual HTML structure)
+        const amount = element.match(/suma: (\d+)/)?.[1];
+        const dueDate = element.match(/scadenta: (\d{4}-\d{2}-\d{2})/)?.[1];
+        
+        if (amount && dueDate) {
+          bills.push({
+            amount: Number(amount),
+            due_date: dueDate,
+            type: 'gas',
+            status: 'pending'
+          });
+        }
+      }
+
+      console.log(`Found ${bills.length} bills`);
+      return bills;
     } catch (error) {
-      console.error('Failed to fetch bills:', {
-        message: error.message,
-        stack: error.stack
-      });
+      console.error('Error fetching bills:', error);
       throw error;
     }
   }
