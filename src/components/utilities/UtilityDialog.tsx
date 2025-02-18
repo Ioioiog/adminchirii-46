@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   Dialog,
@@ -40,55 +41,6 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [issuedDate, setIssuedDate] = useState("");
 
-  const processImage = async (file: File, fileName: string) => {
-    try {
-      setIsProcessing(true);
-      setProcessingError(null);
-
-      // Create a processing job
-      const { data: job, error: jobError } = await supabase
-        .from('pdf_processing_jobs')
-        .insert({
-          file_path: fileName,
-          status: 'pending'
-        })
-        .select()
-        .single();
-
-      if (jobError) throw jobError;
-
-      // Call the edge function to process the image
-      const { data, error } = await supabase.functions.invoke('process-utility-pdf', {
-        body: { filePath: fileName, jobId: job.id }
-      });
-
-      if (error) throw error;
-
-      // Update form with extracted data
-      if (data?.data) {
-        setUtilityType(data.data.utility_type || "");
-        setAmount(data.data.amount?.toString() || "");
-        setDueDate(data.data.due_date || "");
-        setShowForm(true);
-      }
-
-      toast({
-        title: "Success",
-        description: "Successfully extracted data from image! Please review and submit.",
-      });
-    } catch (error: any) {
-      console.error("Error processing image:", error);
-      setProcessingError(error.message || "Failed to process image");
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to process image. Please try again.",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
@@ -116,7 +68,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
 
       // Process the image with OCR
       const { data, error } = await supabase.functions.invoke('process-utility-pdf', {
-        body: { filePath: fileName, jobId: utility.id }
+        body: { filePath: fileName }
       });
 
       if (error) throw error;
@@ -129,6 +81,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
         if (data.data.issued_date) {
           setIssuedDate(data.data.issued_date);
         }
+        setShowForm(true);
       }
 
       toast({
@@ -170,6 +123,8 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
             property_id: propertyId,
             due_date: dueDate,
             status: "pending",
+            invoice_number: invoiceNumber || null,
+            issued_date: issuedDate || null,
           },
         ])
         .select()
@@ -326,6 +281,26 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="issuedDate">Issued Date</Label>
+                <Input
+                  id="issuedDate"
+                  type="date"
+                  value={issuedDate}
+                  onChange={(e) => setIssuedDate(e.target.value)}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="invoiceNumber">Invoice Number</Label>
+                <Input
+                  id="invoiceNumber"
+                  type="text"
+                  value={invoiceNumber}
+                  onChange={(e) => setInvoiceNumber(e.target.value)}
                 />
               </div>
             </>
