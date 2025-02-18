@@ -82,7 +82,10 @@ Look carefully through the entire image and find:
    - Look for service type descriptions
 
 3. Amount and Currency:
-   - Find the total amount due
+   - Find the TOTAL amount due at the bottom or end of the bill
+   - Look for labels like "Total Amount", "Total to Pay", "Amount Due", "Grand Total"
+   - Ignore subtotals, previous balances, or individual line items
+   - Make sure to get the final amount that includes all taxes and fees
    - Identify the currency (must be 3-letter code like RON, USD, EUR)
    - Extract just the numeric value for amount
 
@@ -99,7 +102,7 @@ Response format MUST be exactly:
 {
   "property_details": "complete address or identifier",
   "utility_type": "one of the allowed types",
-  "amount": number only,
+  "amount": number only (must be total amount),
   "currency": "3-letter code",
   "due_date": "YYYY-MM-DD",
   "issued_date": "YYYY-MM-DD",
@@ -111,7 +114,7 @@ Response format MUST be exactly:
             content: [
               {
                 type: 'text',
-                text: 'Extract ALL the required fields from this utility bill image. Make sure to find and include EVERY field specified in the format.'
+                text: 'Extract ALL the required fields from this utility bill image. For the amount, make sure to get the TOTAL amount due, not any subtotals or partial amounts.'
               },
               {
                 type: 'image_url',
