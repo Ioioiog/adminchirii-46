@@ -33,10 +33,10 @@ export function ProviderForm({ onClose, onSuccess, provider }: ProviderFormProps
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    provider_name: provider?.provider_name || "Belvedere Utilities",
-    username: provider?.username || "mihaigruia@me.com",
-    password: provider?.password || "London123!!!",
-    location_name: provider?.location_name || "Belvedere 11a 53",
+    provider_name: provider?.provider_name || "",
+    username: provider?.username || "",
+    password: provider?.password || "",
+    location_name: provider?.location_name || "",
     property_id: provider?.property_id || "",
     utility_type: provider?.utility_type || "electricity",
     start_day: provider?.start_day?.toString() || "1",
