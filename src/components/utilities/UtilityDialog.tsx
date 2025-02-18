@@ -14,8 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Property } from "@/utils/propertyUtils";
-import { Plus } from "lucide-react";
+import { Loader2, Plus, Upload } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface UtilityDialogProps {
   properties: Property[];
@@ -25,6 +26,7 @@ interface UtilityDialogProps {
 export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogProps) {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const { availableCurrencies } = useCurrency();
 
@@ -34,6 +36,85 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
   const [propertyId, setPropertyId] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [processingError, setProcessingError] = useState<string | null>(null);
+
+  const processPDF = async (file: File, fileName: string) => {
+    try {
+      setIsProcessing(true);
+      setProcessingError(null);
+
+      // Create a processing job
+      const { data: job, error: jobError } = await supabase
+        .from('pdf_processing_jobs')
+        .insert({
+          file_path: fileName,
+          status: 'pending'
+        })
+        .select()
+        .single();
+
+      if (jobError) throw jobError;
+
+      // Call the edge function to process the PDF
+      const { data, error } = await supabase.functions.invoke('process-utility-pdf', {
+        body: { pdfPath: fileName, jobId: job.id }
+      });
+
+      if (error) throw error;
+
+      // Update form with extracted data
+      if (data?.data) {
+        setUtilityType(data.data.utility_type || "");
+        setAmount(data.data.amount?.toString() || "");
+        setDueDate(data.data.due_date || "");
+      }
+
+      toast({
+        title: "Success",
+        description: "Successfully extracted data from PDF!",
+      });
+    } catch (error: any) {
+      console.error("Error processing PDF:", error);
+      setProcessingError(error.message || "Failed to process PDF");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to process PDF. Please fill in the details manually.",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+
+    setFile(selectedFile);
+
+    if (selectedFile.type === "application/pdf") {
+      const fileName = `${crypto.randomUUID()}.pdf`;
+      
+      try {
+        // Upload to storage
+        const { error: uploadError } = await supabase.storage
+          .from('utility-pdfs')
+          .upload(fileName, selectedFile);
+
+        if (uploadError) throw uploadError;
+
+        // Process the PDF
+        await processPDF(selectedFile, fileName);
+      } catch (error: any) {
+        console.error("Error handling PDF:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error.message || "Failed to upload PDF.",
+        });
+      }
+    }
+  };
 
   const handleSubmit = async () => {
     if (!utilityType || !amount || !propertyId || !dueDate || !currency) {
@@ -120,6 +201,30 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
+            <Label htmlFor="file">Upload Bill (PDF for automatic processing)</Label>
+            <div className="flex flex-col gap-2">
+              <Input
+                id="file"
+                type="file"
+                accept=".pdf,image/*"
+                onChange={handleFileChange}
+                className="cursor-pointer"
+              />
+              {isProcessing && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Processing PDF...
+                </div>
+              )}
+              {processingError && (
+                <Alert variant="destructive">
+                  <AlertDescription>{processingError}</AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </div>
+
+          <div className="grid gap-2">
             <Label htmlFor="type">Utility Type</Label>
             <Select value={utilityType} onValueChange={setUtilityType}>
               <SelectTrigger>
@@ -187,17 +292,6 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="file">Upload Bill (Optional)</Label>
-            <Input
-              id="file"
-              type="file"
-              accept="image/*,.pdf"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-              className="cursor-pointer"
             />
           </div>
         </div>

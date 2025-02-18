@@ -1201,6 +1201,36 @@ export type Database = {
           },
         ]
       }
+      pdf_processing_jobs: {
+        Row: {
+          created_at: string | null
+          error: string | null
+          file_path: string
+          id: string
+          result: Json | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error?: string | null
+          file_path: string
+          id?: string
+          result?: Json | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error?: string | null
+          file_path?: string
+          id?: string
+          result?: Json | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
