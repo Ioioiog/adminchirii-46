@@ -103,19 +103,23 @@ export function useScraping(providers: UtilityProvider[]) {
 
     try {
       console.log('Fetching decrypted credentials...');
-      const { data, error: credentialsError } = await supabase.rpc('get_decrypted_credentials', {
+      const { data: credentialsData, error: credentialsError } = await supabase.rpc('get_decrypted_credentials', {
         property_id_input: provider.property_id
       });
 
       if (credentialsError) {
         console.error('Credentials fetch failed:', credentialsError);
-        throw credentialsError;
+        throw new Error(`Failed to fetch credentials: ${credentialsError.message}`);
       }
 
-      const credentials = data as GetDecryptedCredentialsResponse;
+      if (!credentialsData) {
+        throw new Error('No credentials returned from the server');
+      }
 
-      if (!credentials || !credentials.username || !credentials.password) {
-        console.error('Invalid credentials:', { credentials });
+      const credentials = credentialsData as GetDecryptedCredentialsResponse;
+
+      if (!credentials.username || !credentials.password) {
+        console.error('Invalid credentials:', { hasUsername: !!credentials.username, hasPassword: !!credentials.password });
         throw new Error('No valid utility provider credentials found. Please update the credentials.');
       }
 
@@ -131,19 +135,29 @@ export function useScraping(providers: UtilityProvider[]) {
       console.log('Invoking scrape function...', { 
         providerId, 
         provider: provider.provider_name,
-        type: provider.utility_type 
+        type: provider.utility_type,
+        hasUsername: !!requestBody.username,
+        hasPassword: !!requestBody.password
       });
 
-      const { data: scrapeData, error } = await supabase.functions.invoke('scrape-utility-invoices', {
+      const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke('scrape-utility-invoices', {
         body: JSON.stringify(requestBody)
       });
 
-      if (error) {
-        console.error('Scrape function error:', error);
-        throw error;
+      if (scrapeError) {
+        console.error('Scrape function error:', scrapeError);
+        throw new Error(`Scraping failed: ${scrapeError.message}`);
       }
 
-      console.log('Scrape completed successfully', { providerId });
+      if (!scrapeData) {
+        throw new Error('No response data from scraping function');
+      }
+
+      console.log('Scrape completed successfully', { 
+        providerId,
+        response: scrapeData 
+      });
+
       setScrapingJobs(prev => ({
         ...prev,
         [providerId]: {
@@ -158,7 +172,13 @@ export function useScraping(providers: UtilityProvider[]) {
         description: "Started fetching utility bills. This may take a few minutes.",
       });
     } catch (error: any) {
-      console.error('Scraping failed:', { providerId, error });
+      console.error('Scraping failed:', { 
+        providerId, 
+        error,
+        errorMessage: error.message,
+        errorDetails: error.details
+      });
+
       setScrapingJobs(prev => ({
         ...prev,
         [providerId]: {
