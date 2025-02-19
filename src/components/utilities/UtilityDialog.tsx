@@ -41,72 +41,43 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
   const [showForm, setShowForm] = useState(true);
 
   const findMatchingProperty = (extractedAddress: string) => {
-    const normalizeAddress = (addr: string) => {
-      let normalized = addr
+    console.log('Looking for match for address:', extractedAddress);
+    console.log('Available properties:', properties.map(p => ({
+      name: p.name,
+      address: p.address
+    })));
+
+    const normalize = (addr: string) => {
+      return addr
         .toLowerCase()
-        .replace(/soseaua|strada|str\./i, '')
-        .replace(/nr\./i, '')
-        .replace(/bloc|bl\./i, '')
-        .replace(/scara|sc\./i, '')
-        .replace(/etaj|et\./i, '')
-        .replace(/apartament|ap\./i, '')
-        .replace(/localitatea|bucuresti|romania/ig, '')
-        .replace(/[.,]/g, '')
         .replace(/\s+/g, ' ')
         .trim();
-
-      console.log('After initial normalization:', normalized);
-      return normalized;
     };
 
-    const extractLocationIdentifiers = (addr: string) => {
-      // Extract key location identifiers
-      const holbanMatch = addr.toLowerCase().includes('holban') || 
-                         addr.toLowerCase().includes('yacht kid');
-      const glucozaMatch = addr.toLowerCase().includes('fabrica de glucoza') || 
-                          addr.toLowerCase().includes('glucoza');
-      
-      return {
-        isHolban: holbanMatch,
-        isGlucoza: glucozaMatch
-      };
-    };
-
-    const normalizedExtractedAddr = normalizeAddress(extractedAddress);
-    console.log('Looking for match for address:', {
-      original: extractedAddress,
-      normalized: normalizedExtractedAddr
-    });
-
+    const extractedNormalized = normalize(extractedAddress);
+    
     let matchingProperty = properties.find(p => {
       if (!p.address) return false;
 
-      const extractedIdentifiers = extractLocationIdentifiers(extractedAddress);
-      const propertyIdentifiers = extractLocationIdentifiers(p.address);
+      const propertyNormalized = normalize(p.address);
+      
+      const isMatch = 
+        (extractedNormalized.includes('holban') && propertyNormalized.includes('holban')) ||
+        (extractedNormalized.includes('yacht') && propertyNormalized.includes('yacht')) ||
+        (extractedNormalized.includes('glucoza') && propertyNormalized.includes('glucoza'));
 
-      // Match based on location identifiers
-      const locationMatch = (
-        (extractedIdentifiers.isHolban && propertyIdentifiers.isHolban) ||
-        (extractedIdentifiers.isGlucoza && propertyIdentifiers.isGlucoza)
-      );
-
-      if (!locationMatch) {
-        console.log('No location match for property:', p.name);
-        return false;
+      if (isMatch) {
+        console.log('Found matching property:', {
+          propertyName: p.name,
+          propertyAddress: p.address,
+          extractedAddress: extractedAddress
+        });
       }
 
-      console.log('Found location match for property:', {
-        propertyName: p.name,
-        propertyAddress: p.address,
-        extractedAddress: extractedAddress
-      });
-
-      return true;
+      return isMatch;
     });
 
-    if (matchingProperty) {
-      console.log('Successfully matched property:', matchingProperty);
-    } else {
+    if (!matchingProperty) {
       console.log('No matching property found for address:', extractedAddress);
     }
 
