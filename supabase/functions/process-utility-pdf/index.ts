@@ -2,7 +2,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { PDFDocument } from "https://cdn.skypack.dev/pdf-lib";
+import { decode as base64Decode } from "https://deno.land/std@0.204.0/encoding/base64.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,28 +22,6 @@ const cleanJsonString = (str: string): string => {
   console.log('Cleaned JSON string:', cleaned);
   return cleaned;
 };
-
-async function convertPdfToImage(pdfData: ArrayBuffer): Promise<Uint8Array | null> {
-  try {
-    const pdfDoc = await PDFDocument.load(pdfData);
-    const pages = pdfDoc.getPages();
-    
-    if (pages.length === 0) {
-      console.error('PDF has no pages');
-      return null;
-    }
-
-    // Get the first page
-    const firstPage = pages[0];
-    
-    // Convert to PNG using built-in capabilities
-    const pngImage = await firstPage.toPng();
-    return pngImage;
-  } catch (error) {
-    console.error('Error converting PDF to image:', error);
-    return null;
-  }
-}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -69,27 +47,25 @@ serve(async (req) => {
 
     console.log('File downloaded successfully');
 
-    // Handle different file types
+    // For now, let's focus on image files only and inform users about PDF limitation
     const fileExtension = filePath.split('.').pop()?.toLowerCase();
-    let processableData: Blob = fileData;
-    let mimeType = 'image/png';
-
     if (fileExtension === 'pdf') {
-      console.log('Converting PDF to image...');
-      const pdfArrayBuffer = await fileData.arrayBuffer();
-      const pngData = await convertPdfToImage(pdfArrayBuffer);
-      
-      if (!pngData) {
-        throw new Error('Failed to convert PDF to image');
-      }
-      
-      processableData = new Blob([pngData], { type: 'image/png' });
-      mimeType = 'image/png';
-    } else {
-      mimeType = fileData.type;
+      throw new Error('PDF processing is temporarily unavailable. Please upload an image file (JPEG, PNG) instead.');
     }
 
-    const base64Image = await toBase64(processableData);
+    // Determine MIME type for images
+    const mimeType = fileExtension === 'png' ? 'image/png' :
+                    fileExtension === 'jpg' || fileExtension === 'jpeg' ? 'image/jpeg' :
+                    'application/octet-stream';
+
+    console.log('Processing image with MIME type:', mimeType);
+    
+    if (!['image/png', 'image/jpeg'].includes(mimeType)) {
+      throw new Error('Unsupported file type. Please upload a PNG or JPEG image.');
+    }
+
+    const base64Image = await toBase64(fileData);
+    console.log('Image converted to base64, calling OpenAI...');
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) throw new Error('OpenAI API key not found');
