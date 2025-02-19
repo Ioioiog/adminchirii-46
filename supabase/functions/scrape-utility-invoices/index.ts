@@ -1,11 +1,20 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { EngieRomaniaScraper } from "./scrapers/engie-romania.ts";
+import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+interface ScrapingRequest {
+  username: string;
+  password: string;
+  provider: string;
+  type: string;
+  utilityId: string;
+  location: string;
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -14,50 +23,45 @@ serve(async (req) => {
   }
 
   try {
-    if (req.method !== 'POST') {
-      throw new Error('Method not allowed');
-    }
-
-    const requestData = await req.json();
-    console.log('Received scraping request:', {
-      ...requestData,
-      password: '[REDACTED]'
+    const requestData: ScrapingRequest = await req.json();
+    console.log('Received scraping request for:', {
+      provider: requestData.provider,
+      type: requestData.type,
+      location: requestData.location
     });
 
-    // Get CAPTCHA API key from environment
-    const captchaApiKey = Deno.env.get("CAPTCHA_API_KEY");
-    if (!captchaApiKey) {
-      throw new Error("CAPTCHA API key not configured");
+    // Check provider type
+    if (requestData.provider !== 'engie_romania') {
+      throw new Error(`Unsupported provider: ${requestData.provider}`);
     }
 
-    let scraper;
-    switch (requestData.provider.toLowerCase()) {
-      case 'engie_romania':
-        scraper = new EngieRomaniaScraper({
+    // Call specific provider endpoint
+    const { data: scrapeData, error: scrapeError } = await fetch(
+      `${Deno.env.get('SUPABASE_URL')}/functions/v1/scrape-engie`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': req.headers.get('Authorization') || '',
+        },
+        body: JSON.stringify({
           username: requestData.username,
-          password: requestData.password,
-          captchaApiKey
-        });
-        break;
-      default:
-        throw new Error(`Unsupported provider: ${requestData.provider}`);
-    }
+          password: requestData.password
+        })
+      }
+    ).then(res => res.json());
 
-    const result = await scraper.scrape();
-    console.log('Scraping result:', {
-      success: result.success,
-      billCount: result.bills.length,
-      error: result.error
-    });
+    if (scrapeError) {
+      throw new Error(scrapeError);
+    }
 
     return new Response(
-      JSON.stringify(result),
-      {
-        status: 200,
-        headers: {
+      JSON.stringify(scrapeData),
+      { 
+        headers: { 
           ...corsHeaders,
           'Content-Type': 'application/json'
-        }
+        } 
       }
     );
 
@@ -67,15 +71,14 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
         bills: []
       }),
-      {
-        status: 200,
-        headers: {
+      { 
+        headers: { 
           ...corsHeaders,
           'Content-Type': 'application/json'
-        }
+        } 
       }
     );
   }
