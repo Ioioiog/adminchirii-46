@@ -3,7 +3,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { decode } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
-import { Document } from "https://deno.land/x/poppler@0.1.2/mod.ts";
+import { PDFDocument, rgb } from "https://cdn.skypack.dev/pdf-lib@1.17.1?dts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,18 +25,46 @@ const buildResponse = (body: any, status = 200) => {
 // Convert PDF to PNG image
 async function convertPDFToImage(pdfBuffer: ArrayBuffer): Promise<Uint8Array> {
   try {
-    console.log('Converting PDF to image...');
-    const doc = await Document.loadFromBinary(new Uint8Array(pdfBuffer));
-    const page = await doc.getPage(1); // Pages are 1-based in Poppler
+    console.log('Loading PDF document...');
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    const pages = pdfDoc.getPages();
     
-    // Render at a higher DPI for better quality
-    const image = await page.renderToImage({
-      dpi: 300,
-      format: 'png'
+    if (pages.length === 0) {
+      throw new Error('PDF document has no pages');
+    }
+    
+    const firstPage = pages[0];
+    const { width, height } = firstPage.getSize();
+    
+    // Create a new PDF with white background
+    const newPdfDoc = await PDFDocument.create();
+    const newPage = newPdfDoc.addPage([width, height]);
+    
+    // Fill with white background
+    newPage.drawRectangle({
+      x: 0,
+      y: 0,
+      width,
+      height,
+      color: rgb(1, 1, 1),
     });
     
+    // Copy content from original page
+    const [existingPage] = await newPdfDoc.copyPages(pdfDoc, [0]);
+    newPage.drawPage(existingPage);
+    
+    // Convert to PNG format
+    const pngBytes = await newPage.doc.saveAsBase64({ format: 'png' });
+    const pngData = atob(pngBytes);
+    
+    // Convert base64 to Uint8Array
+    const pngArray = new Uint8Array(pngData.length);
+    for (let i = 0; i < pngData.length; i++) {
+      pngArray[i] = pngData.charCodeAt(i);
+    }
+    
     console.log('PDF converted to PNG successfully');
-    return image;
+    return pngArray;
   } catch (error) {
     console.error('Error converting PDF to image:', error);
     throw new Error('Failed to convert PDF to image: ' + error.message);
@@ -76,7 +104,7 @@ async function analyzeImageWithOpenAI(imageBase64: string, openAIApiKey: string)
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4o',
+      model: 'gpt-4-vision-preview',
       messages: [
         {
           role: 'system',
