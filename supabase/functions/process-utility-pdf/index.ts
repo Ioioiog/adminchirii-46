@@ -21,6 +21,8 @@ serve(async (req) => {
       throw new Error('No file path provided');
     }
 
+    console.log('Processing file:', filePath);
+
     // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -33,18 +35,31 @@ serve(async (req) => {
       .download(filePath);
 
     if (downloadError) {
+      console.error('Download error:', downloadError);
       throw downloadError;
     }
 
-    // Convert the file to base64
-    const base64Image = await fileData.arrayBuffer().then(buffer => 
-      btoa(String.fromCharCode(...new Uint8Array(buffer)))
+    // Convert ArrayBuffer to Base64 in chunks to prevent stack overflow
+    const chunks: Uint8Array[] = [];
+    const chunkSize = 1024 * 512; // 512KB chunks
+    const array = new Uint8Array(await fileData.arrayBuffer());
+    
+    for (let i = 0; i < array.length; i += chunkSize) {
+      chunks.push(array.slice(i, i + chunkSize));
+    }
+
+    const base64Image = btoa(
+      chunks.reduce((acc, chunk) => acc + String.fromCharCode(...chunk), '')
     );
+
+    console.log('Image converted to base64');
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
       throw new Error('OpenAI API key not found');
     }
+
+    console.log('Calling OpenAI API...');
 
     // Call OpenAI API for analysis
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -58,26 +73,26 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a utility bill analyzer. Extract the following information from utility bills:
-            1. Look specifically for "Adresa locului de consum:" and extract that complete address
-            2. If not found, extract the delivery/service address
-            3. The utility type (gas, electricity, water, etc.)
-            4. The total amount to be paid
-            5. The currency
-            6. The due date
-            7. The issue date
-            8. The invoice number or document number
+            content: `Extract the following information from utility bills, paying special attention to the 'Adresa locului de consum' field which contains the service address:
 
-            Format your response as a JSON object with these exact keys:
-            {
-              "property_details": "the complete address",
-              "utility_type": "the type",
-              "amount": numeric amount,
-              "currency": "the currency code",
-              "due_date": "YYYY-MM-DD",
-              "issued_date": "YYYY-MM-DD",
-              "invoice_number": "the number"
-            }`
+1. The complete service address from 'Adresa locului de consum' field
+2. Utility type (gas, electricity, water)
+3. Total amount to be paid
+4. Currency
+5. Due date
+6. Issue date
+7. Invoice/document number
+
+Return only a JSON object with these exact keys, no other text:
+{
+  "property_details": "complete service address",
+  "utility_type": "type",
+  "amount": number,
+  "currency": "code",
+  "due_date": "YYYY-MM-DD",
+  "issued_date": "YYYY-MM-DD",
+  "invoice_number": "number"
+}`
           },
           {
             role: 'user',
@@ -87,10 +102,6 @@ serve(async (req) => {
                 image_url: {
                   url: `data:image/jpeg;base64,${base64Image}`
                 }
-              },
-              {
-                type: 'text',
-                text: 'Please analyze this utility bill and extract the required information. Make sure to find and extract the "Adresa locului de consum" field if present.'
               }
             ]
           }
@@ -99,18 +110,25 @@ serve(async (req) => {
       }),
     });
 
-    const data = await response.json();
-    console.log('OpenAI response:', data);
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('OpenAI API error:', errorData);
+      throw new Error(`OpenAI API error: ${response.status} ${errorData}`);
+    }
 
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      throw new Error('Invalid response from OpenAI');
+    const data = await response.json();
+    console.log('OpenAI response received');
+
+    if (!data.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response format from OpenAI');
     }
 
     let extractedData;
     try {
       const content = data.choices[0].message.content;
-      extractedData = JSON.parse(content);
-      console.log('Extracted data:', extractedData);
+      console.log('Raw content:', content);
+      extractedData = JSON.parse(content.trim());
+      console.log('Successfully extracted and validated data:', extractedData);
     } catch (error) {
       console.error('Error parsing OpenAI response:', error);
       throw new Error('Failed to parse extracted data from OpenAI response');
@@ -127,9 +145,12 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error processing utility bill:', error);
+    console.error('Error in process-utility-pdf function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.stack
+      }),
       { 
         status: 500,
         headers: { 
