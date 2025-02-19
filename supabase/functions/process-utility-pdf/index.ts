@@ -3,6 +3,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import * as imagescript from "https://deno.land/x/imagescript@1.2.17/mod.ts";
+import { Document } from "https://cdn.skypack.dev/pdf-lib@1.17.1?dts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,36 +24,53 @@ const cleanJsonString = (str: string): string => {
   return cleaned;
 };
 
-async function convertPdfToImage(pdfBuffer: ArrayBuffer): Promise<string> {
+async function extractImagesFromPdf(pdfBuffer: ArrayBuffer): Promise<Uint8Array[]> {
   try {
-    console.log('Starting PDF conversion process...');
-    
-    // For now, we'll temporarily store PDFs and support images only
-    throw new Error('PDF processing is temporarily disabled. Please convert your PDF to an image (PNG/JPEG) first.');
-    
-    // The commented code below is the structure for PDF processing once we implement it
-    /*
-    const image = await convertFirstPageToImage(pdfBuffer);
-    const encoded = await image.encode();
-    return `data:image/png;base64,${btoa(String.fromCharCode(...new Uint8Array(encoded)))}`;
-    */
+    console.log('Loading PDF document...');
+    const pdfDoc = await Document.load(pdfBuffer);
+    const pages = pdfDoc.getPages();
+    console.log(`PDF loaded successfully with ${pages.length} pages`);
+
+    const images: Uint8Array[] = [];
+    for (const [index, page] of pages.entries()) {
+      console.log(`Processing page ${index + 1}...`);
+      const { width, height } = page.getSize();
+      
+      // Extract images from the page
+      const pageImages = await page.getImages();
+      if (pageImages.length > 0) {
+        for (const image of pageImages) {
+          const imageBytes = await pdfDoc.getImage(image);
+          if (imageBytes) {
+            images.push(imageBytes);
+          }
+        }
+      }
+    }
+
+    return images;
   } catch (error) {
-    console.error('Error in PDF conversion:', error);
-    throw error;
+    console.error('Error extracting images from PDF:', error);
+    throw new Error('Failed to extract images from PDF: ' + error.message);
   }
 }
 
-async function processImage(fileData: Blob, mimeType: string): Promise<string> {
+async function processImage(imageData: Uint8Array | Blob): Promise<string> {
   try {
     console.log('Processing image...');
-    const arrayBuffer = await fileData.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
+    let uint8Array: Uint8Array;
+    
+    if (imageData instanceof Blob) {
+      const arrayBuffer = await imageData.arrayBuffer();
+      uint8Array = new Uint8Array(arrayBuffer);
+    } else {
+      uint8Array = imageData;
+    }
     
     // Load the image using imagescript
     const image = await imagescript.decode(uint8Array);
     
     // Ensure the image is in a format OpenAI can process
-    // Resize if too large (OpenAI has a 20MB limit)
     const maxDimension = 2048;
     if (image.width > maxDimension || image.height > maxDimension) {
       const scale = Math.min(maxDimension / image.width, maxDimension / image.height);
@@ -62,7 +80,7 @@ async function processImage(fileData: Blob, mimeType: string): Promise<string> {
       );
     }
     
-    // Convert to PNG
+    // Optimize image quality
     const processed = await image.encode();
     console.log('Image processed successfully');
     
@@ -71,6 +89,60 @@ async function processImage(fileData: Blob, mimeType: string): Promise<string> {
     console.error('Error processing image:', error);
     throw new Error('Failed to process image: ' + error.message);
   }
+}
+
+async function analyzeImageWithOpenAI(imageBase64: string, openAIApiKey: string): Promise<any> {
+  console.log('Calling OpenAI API...');
+  
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${openAIApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `Extract structured information from Romanian utility bills, with a focus on the "Adresa locului de consum" field.
+          Return ONLY a valid JSON object with these exact fields, no markdown formatting:
+          {
+            "property_details": "Full address as found on the bill",
+            "utility_type": "gas, water, electricity",
+            "amount": "456.73",
+            "currency": "LEI",
+            "due_date": "YYYY-MM-DD",
+            "issued_date": "YYYY-MM-DD",
+            "invoice_number": "Invoice number"
+          }
+          Do not include any additional text, markdown formatting, or code block markers.`,
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image_url',
+              image_url: {
+                url: imageBase64
+              }
+            }
+          ]
+        }
+      ],
+      max_tokens: 1000,
+    }),
+  });
+
+  const responseText = await response.text();
+  console.log('OpenAI raw response:', responseText);
+
+  if (!response.ok) throw new Error(`OpenAI API error: ${response.status} - ${responseText}`);
+
+  const data = JSON.parse(responseText);
+  const content = data.choices?.[0]?.message?.content?.trim();
+  const cleanedContent = cleanJsonString(content);
+  return JSON.parse(cleanedContent);
 }
 
 serve(async (req) => {
@@ -98,13 +170,40 @@ serve(async (req) => {
     console.log('File downloaded successfully');
 
     const fileExtension = filePath.split('.').pop()?.toLowerCase();
-    let imageBase64: string;
+    let extractedData;
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openAIApiKey) throw new Error('OpenAI API key not found');
 
-    // Handle different file types
     if (fileExtension === 'pdf') {
       console.log('Processing PDF file...');
       const pdfArrayBuffer = await fileData.arrayBuffer();
-      imageBase64 = await convertPdfToImage(pdfArrayBuffer);
+      
+      // Extract images from PDF
+      const pdfImages = await extractImagesFromPdf(pdfArrayBuffer);
+      
+      if (pdfImages.length === 0) {
+        throw new Error('No images found in PDF. Please upload a PDF that contains images of the utility bill.');
+      }
+      
+      // Process each image until we get valid data
+      for (const pdfImage of pdfImages) {
+        try {
+          const processedImage = await processImage(pdfImage);
+          extractedData = await analyzeImageWithOpenAI(processedImage, openAIApiKey);
+          
+          // If we successfully extract data, break the loop
+          if (extractedData && extractedData.property_details) {
+            break;
+          }
+        } catch (error) {
+          console.log('Failed to process image, trying next one:', error);
+          continue;
+        }
+      }
+      
+      if (!extractedData) {
+        throw new Error('Could not extract valid data from any images in the PDF');
+      }
     } else {
       // Handle image files
       const mimeType = fileExtension === 'png' ? 'image/png' :
@@ -112,75 +211,11 @@ serve(async (req) => {
                       'application/octet-stream';
 
       if (!['image/png', 'image/jpeg'].includes(mimeType)) {
-        throw new Error('Unsupported file type. Please upload a PNG or JPEG image.');
+        throw new Error('Unsupported file type. Please upload a PNG, JPEG, or PDF file.');
       }
 
-      imageBase64 = await processImage(fileData, mimeType);
-    }
-
-    console.log('Calling OpenAI API...');
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) throw new Error('OpenAI API key not found');
-
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4-vision-preview',
-        messages: [
-          {
-            role: 'system',
-            content: `Extract structured information from Romanian utility bills, with a focus on the "Adresa locului de consum" field.
-            Return ONLY a valid JSON object with these exact fields, no markdown formatting:
-            {
-              "property_details": "Full address as found on the bill",
-              "utility_type": "gas, water, electricity",
-              "amount": "456.73",
-              "currency": "LEI",
-              "due_date": "YYYY-MM-DD",
-              "issued_date": "YYYY-MM-DD",
-              "invoice_number": "Invoice number"
-            }
-            Do not include any additional text, markdown formatting, or code block markers.`,
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'image_url',
-                image_url: {
-                  url: imageBase64
-                }
-              }
-            ]
-          }
-        ],
-        max_tokens: 1000,
-      }),
-    });
-
-    const responseText = await response.text();
-    console.log('OpenAI raw response:', responseText);
-
-    if (!response.ok) throw new Error(`OpenAI API error: ${response.status} - ${responseText}`);
-
-    let extractedData;
-    try {
-      const data = JSON.parse(responseText);
-      const content = data.choices?.[0]?.message?.content?.trim();
-      console.log('Content before cleaning:', content);
-      
-      const cleanedContent = cleanJsonString(content);
-      console.log('Content after cleaning:', cleanedContent);
-      
-      extractedData = JSON.parse(cleanedContent);
-      console.log('Successfully parsed data:', extractedData);
-    } catch (error) {
-      console.error('Error parsing OpenAI response:', error);
-      throw new Error('Failed to parse extracted data');
+      const processedImage = await processImage(fileData);
+      extractedData = await analyzeImageWithOpenAI(processedImage, openAIApiKey);
     }
 
     return new Response(
