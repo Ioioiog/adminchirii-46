@@ -2,7 +2,8 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { decode as base64Decode } from "https://deno.land/std@0.204.0/encoding/base64.ts";
+import pdfjs from "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/+esm";
+import { Canvas } from "https://deno.land/x/canvas@v1.4.1/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,6 +23,41 @@ const cleanJsonString = (str: string): string => {
   console.log('Cleaned JSON string:', cleaned);
   return cleaned;
 };
+
+async function convertPdfToImage(pdfData: ArrayBuffer): Promise<string> {
+  try {
+    console.log('Loading PDF data...');
+    const pdf = await pdfjs.getDocument({ data: pdfData }).promise;
+    console.log('PDF loaded successfully');
+
+    const page = await pdf.getPage(1); // Get first page
+    const viewport = page.getViewport({ scale: 2.0 }); // Increase scale for better quality
+
+    // Create canvas with the right dimensions
+    const canvas = new Canvas(viewport.width, viewport.height);
+    const context = canvas.getContext('2d');
+
+    // Prepare canvas for PDF rendering
+    const renderContext = {
+      canvasContext: context,
+      viewport: viewport,
+    };
+
+    console.log('Rendering PDF page to canvas...');
+    await page.render(renderContext).promise;
+    console.log('PDF rendered to canvas');
+
+    // Convert canvas to PNG
+    const pngData = canvas.toBuffer('image/png');
+    console.log('Canvas converted to PNG');
+
+    // Convert to base64
+    return `data:image/png;base64,${btoa(String.fromCharCode(...new Uint8Array(pngData)))}`;
+  } catch (error) {
+    console.error('Error in PDF conversion:', error);
+    throw new Error('Failed to convert PDF to image: ' + error.message);
+  }
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -47,26 +83,29 @@ serve(async (req) => {
 
     console.log('File downloaded successfully');
 
-    // For now, let's focus on image files only and inform users about PDF limitation
+    // Process based on file type
     const fileExtension = filePath.split('.').pop()?.toLowerCase();
+    let imageBase64: string;
+
     if (fileExtension === 'pdf') {
-      throw new Error('PDF processing is temporarily unavailable. Please upload an image file (JPEG, PNG) instead.');
+      console.log('Converting PDF to image...');
+      const pdfArrayBuffer = await fileData.arrayBuffer();
+      imageBase64 = await convertPdfToImage(pdfArrayBuffer);
+      console.log('PDF converted to image successfully');
+    } else {
+      // Handle image files directly
+      const mimeType = fileExtension === 'png' ? 'image/png' :
+                      fileExtension === 'jpg' || fileExtension === 'jpeg' ? 'image/jpeg' :
+                      'application/octet-stream';
+
+      if (!['image/png', 'image/jpeg'].includes(mimeType)) {
+        throw new Error('Unsupported file type. Please upload a PNG, JPEG, or PDF file.');
+      }
+
+      imageBase64 = `data:${mimeType};base64,${await toBase64(fileData)}`;
     }
 
-    // Determine MIME type for images
-    const mimeType = fileExtension === 'png' ? 'image/png' :
-                    fileExtension === 'jpg' || fileExtension === 'jpeg' ? 'image/jpeg' :
-                    'application/octet-stream';
-
-    console.log('Processing image with MIME type:', mimeType);
-    
-    if (!['image/png', 'image/jpeg'].includes(mimeType)) {
-      throw new Error('Unsupported file type. Please upload a PNG or JPEG image.');
-    }
-
-    const base64Image = await toBase64(fileData);
-    console.log('Image converted to base64, calling OpenAI...');
-
+    console.log('Calling OpenAI API...');
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) throw new Error('OpenAI API key not found');
 
@@ -100,7 +139,7 @@ serve(async (req) => {
               {
                 type: 'image_url',
                 image_url: {
-                  url: `data:${mimeType};base64,${base64Image}`
+                  url: imageBase64
                 }
               }
             ]
