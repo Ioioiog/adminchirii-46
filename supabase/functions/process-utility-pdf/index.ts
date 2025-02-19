@@ -4,6 +4,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { PDFDocument } from "https://cdn.skypack.dev/pdf-lib@1.17.1?dts";
 import { Image, decode } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
+import * as pdfium from "https://deno.land/x/pdfium@v0.0.6/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,40 +23,36 @@ const buildResponse = (body: any, status = 200) => {
   });
 };
 
-// Since text extraction is not reliable with pdf-lib, we'll skip directly to image processing
-async function extractImagesFromPdf(pdfBuffer: ArrayBuffer): Promise<Uint8Array[]> {
+// Convert PDF to PNG image
+async function convertPDFToImage(pdfBuffer: ArrayBuffer): Promise<Uint8Array> {
   try {
-    console.log('Extracting images from PDF...');
-    const pdfDoc = await PDFDocument.load(pdfBuffer);
-    const targetDoc = await PDFDocument.create();
-    const [firstPage] = await targetDoc.copyPages(pdfDoc, [0]);
-    targetDoc.addPage(firstPage);
-
-    const pdfBytes = await targetDoc.save();
-    console.log('Successfully processed first page');
-
-    return [new Uint8Array(pdfBytes)];
+    console.log('Converting PDF to image...');
+    const pdf = await pdfium.loadPDF(new Uint8Array(pdfBuffer));
+    const page = await pdf.getPage(0); // Get first page
+    const width = Math.round(page.width * 2); // Double size for better quality
+    const height = Math.round(page.height * 2);
+    
+    const image = await page.renderPNG({
+      width,
+      height,
+    });
+    
+    console.log('PDF converted to PNG successfully');
+    return image;
   } catch (error) {
-    console.error('Error extracting images from PDF:', error);
-    throw new Error('Failed to extract images from PDF: ' + error.message);
+    console.error('Error converting PDF to image:', error);
+    throw new Error('Failed to convert PDF to image: ' + error.message);
   }
 }
 
 // Processes an image and converts it to Base64
-async function processImage(imageData: Uint8Array | Blob): Promise<string> {
+async function processImage(imageData: Uint8Array): Promise<string> {
   try {
     console.log('Processing image...');
-    let uint8Array: Uint8Array;
+    console.log('Image data length:', imageData.length);
     
-    if (imageData instanceof Blob) {
-      const arrayBuffer = await imageData.arrayBuffer();
-      uint8Array = new Uint8Array(arrayBuffer);
-    } else {
-      uint8Array = imageData;
-    }
-
     console.log('Attempting to decode image...');
-    const image = await decode(uint8Array);
+    const image = await decode(imageData);
     console.log('Successfully decoded image');
 
     console.log('Encoding image...');
@@ -133,9 +130,12 @@ serve(async (req) => {
 
     const pdfArrayBuffer = await fileData.arrayBuffer();
     
-    // Skip text extraction attempt and go straight to image processing
-    const pdfImages = await extractImagesFromPdf(pdfArrayBuffer);
-    const processedImage = await processImage(pdfImages[0]);
+    // Convert PDF to PNG image first
+    const pngImage = await convertPDFToImage(pdfArrayBuffer);
+    console.log('PDF converted to PNG, size:', pngImage.length);
+    
+    // Process the PNG image
+    const processedImage = await processImage(pngImage);
     const extractedData = await analyzeImageWithOpenAI(processedImage, Deno.env.get("OPENAI_API_KEY")!);
 
     return buildResponse({ status: "success", data: extractedData });
