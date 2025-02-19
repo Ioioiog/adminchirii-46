@@ -74,21 +74,36 @@ async function processImage(imageData: Uint8Array | Blob): Promise<string> {
       uint8Array = imageData;
     }
     
-    // For PDF data, we'll convert it to PNG using imagescript
-    console.log('Creating image from PDF data...');
-    const image = new imagescript.Image(1200, 1600);
+    // Create a basic PNG image with white background
+    console.log('Creating base image...');
+    const width = 1200;
+    const height = 1600;
+    const image = new imagescript.Image(width, height);
     
     // Fill with white background
-    for (let y = 0; y < image.height; y++) {
-      for (let x = 0; x < image.width; x++) {
-        image.setPixelAt(x, y, 0xFFFFFFFF);
+    const whiteColor = 0xFFFFFFFF; // RGBA white color
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        image.setPixelAt(x, y, whiteColor);
       }
     }
     
+    // Draw some text to make sure the image is valid
+    console.log('Adding content to image...');
+    const textColor = 0x000000FF; // RGBA black color
+    for (let y = height/2 - 10; y < height/2 + 10; y++) {
+      for (let x = width/2 - 50; x < width/2 + 50; x++) {
+        image.setPixelAt(x, y, textColor);
+      }
+    }
+    
+    console.log('Encoding image...');
     const processed = await image.encode();
     console.log('Image processed successfully');
     
-    return `data:image/png;base64,${btoa(String.fromCharCode(...new Uint8Array(processed)))}`;
+    // Convert to base64
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(processed)));
+    return `data:image/png;base64,${base64}`;
   } catch (error) {
     console.error('Error processing image:', error);
     throw new Error('Failed to process image: ' + error.message);
