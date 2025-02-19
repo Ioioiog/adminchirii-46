@@ -1,9 +1,8 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import * as imagescript from "https://deno.land/x/imagescript@1.2.17/mod.ts";
-import { Document } from "https://cdn.skypack.dev/pdf-lib@1.17.1?dts";
+import { PDFDocument } from "https://cdn.skypack.dev/pdf-lib@1.17.1?dts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,23 +39,21 @@ const cleanJsonString = (str: string): string => {
 async function extractImagesFromPdf(pdfBuffer: ArrayBuffer): Promise<Uint8Array[]> {
   try {
     console.log('Loading PDF document...');
-    const pdfDoc = await Document.load(pdfBuffer);
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
     const pages = pdfDoc.getPages();
     console.log(`PDF loaded successfully with ${pages.length} pages`);
 
     const images: Uint8Array[] = [];
     for (const [index, page] of pages.entries()) {
       console.log(`Processing page ${index + 1}...`);
-      const { width, height } = page.getSize();
       
       // Extract images from the page
-      const pageImages = await page.getImages();
-      if (pageImages.length > 0) {
-        for (const image of pageImages) {
-          const imageBytes = await pdfDoc.getImage(image);
-          if (imageBytes) {
-            images.push(imageBytes);
-          }
+      const { width, height } = page.getSize();
+      const pageImages = page.node.Resources().get('XObject')?.lookup() || {};
+      
+      for (const [name, image] of Object.entries(pageImages)) {
+        if (image instanceof Uint8Array) {
+          images.push(image);
         }
       }
     }
