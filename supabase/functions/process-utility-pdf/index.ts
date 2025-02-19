@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
@@ -12,7 +11,6 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 };
 
-// Ensure all responses include CORS headers
 const buildResponse = (body: any, status = 200) => {
   return new Response(JSON.stringify(body), {
     status,
@@ -44,35 +42,19 @@ async function extractImagesFromPdf(pdfBuffer: ArrayBuffer): Promise<Uint8Array[
     const pages = pdfDoc.getPages();
     console.log(`PDF loaded successfully with ${pages.length} pages`);
 
-    const images: Uint8Array[] = [];
+    if (pages.length === 0) {
+      throw new Error('PDF document has no pages');
+    }
+
+    console.log('Processing first page...');
+    const targetDoc = await PDFDocument.create();
+    const [firstPage] = await targetDoc.copyPages(pdfDoc, [0]);
+    targetDoc.addPage(firstPage);
     
-    // First try to extract images directly from PDF
-    for (let i = 0; i < pages.length; i++) {
-      const page = pages[i];
-      console.log(`Processing page ${i + 1}...`);
-
-      try {
-        // Convert the entire page to an image
-        const targetDoc = await PDFDocument.create();
-        const [copiedPage] = await targetDoc.copyPages(pdfDoc, [i]);
-        targetDoc.addPage(copiedPage);
-        
-        const pdfBytes = await targetDoc.save();
-        images.push(new Uint8Array(pdfBytes));
-        
-        console.log(`Successfully processed page ${i + 1}`);
-      } catch (error) {
-        console.error(`Error processing page ${i + 1}:`, error);
-        continue;
-      }
-    }
-
-    if (images.length === 0) {
-      throw new Error('No images could be extracted from the PDF');
-    }
-
-    console.log(`Successfully extracted ${images.length} images from PDF`);
-    return images;
+    const pdfBytes = await targetDoc.save();
+    console.log('Successfully processed first page');
+    
+    return [new Uint8Array(pdfBytes)];
   } catch (error) {
     console.error('Error extracting images from PDF:', error);
     throw new Error('Failed to extract images from PDF: ' + error.message);
@@ -95,7 +77,7 @@ async function processImage(imageData: Uint8Array | Blob): Promise<string> {
     if (uint8Array.length > 0 && uint8Array[0] === 37) { // Check if it's PDF data (starts with '%')
       console.log('Converting PDF page to image...');
       // Create a simple image representation of the data
-      const canvas = new imagescript.Image(800, 1000); // Default size for PDF pages
+      const canvas = new imagescript.Image(1200, 1600); // Increased size for better quality
       await canvas.encode();
       uint8Array = canvas.bitmap;
     }
@@ -184,7 +166,6 @@ async function analyzeImageWithOpenAI(imageBase64: string, openAIApiKey: string)
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
