@@ -3,7 +3,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { decode } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
-import { pdf2png } from "https://deno.land/x/pdf2png@0.1.1/mod.ts";
+import { Document } from "https://deno.land/x/poppler@0.1.2/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,13 +26,17 @@ const buildResponse = (body: any, status = 200) => {
 async function convertPDFToImage(pdfBuffer: ArrayBuffer): Promise<Uint8Array> {
   try {
     console.log('Converting PDF to image...');
-    const pngData = await pdf2png(new Uint8Array(pdfBuffer), {
-      page: 0, // First page only
-      scale: 2.0, // Double the resolution for better quality
+    const doc = await Document.loadFromBinary(new Uint8Array(pdfBuffer));
+    const page = await doc.getPage(1); // Pages are 1-based in Poppler
+    
+    // Render at a higher DPI for better quality
+    const image = await page.renderToImage({
+      dpi: 300,
+      format: 'png'
     });
     
     console.log('PDF converted to PNG successfully');
-    return pngData;
+    return image;
   } catch (error) {
     console.error('Error converting PDF to image:', error);
     throw new Error('Failed to convert PDF to image: ' + error.message);
