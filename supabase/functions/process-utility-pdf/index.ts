@@ -15,6 +15,16 @@ const toBase64 = async (file: Blob): Promise<string> => {
   return btoa(binary);
 };
 
+// Helper function to clean JSON string from markdown formatting
+const cleanJsonString = (str: string): string => {
+  // Remove markdown code block markers
+  let cleaned = str.replace(/```json\s?/g, '').replace(/```\s?/g, '');
+  // Remove any leading/trailing whitespace
+  cleaned = cleaned.trim();
+  console.log('Cleaned JSON string:', cleaned);
+  return cleaned;
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -64,20 +74,12 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',  // Using the correct model name as per guidelines
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
             content: `Extract structured information from Romanian utility bills, with a focus on the "Adresa locului de consum" field.
-
-            - Look for text near "Adresa locului de consum:"
-            - Extract the **entire address**, including:
-              - **Street name** (e.g., "Soseaua FABRICA DE GLUCOZA")
-              - **Building number** (e.g., "Nr. 6-8 Bl. B1.7")
-              - **Apartment details** (e.g., "SCA Et. 10 Ap. 60")
-              - **City and Postal Code** (e.g., "BUCURESTI 020332")
-
-            **Output Format (JSON):**
+            Return ONLY a valid JSON object with these exact fields, no markdown formatting:
             {
               "property_details": "Full address as found on the bill",
               "utility_type": "gas, water, electricity",
@@ -87,8 +89,7 @@ serve(async (req) => {
               "issued_date": "YYYY-MM-DD",
               "invoice_number": "Invoice number"
             }
-
-            Ensure the response is valid JSON with no additional text.`,
+            Do not include any additional text, markdown formatting, or code block markers.`,
           },
           {
             role: 'user',
@@ -115,7 +116,14 @@ serve(async (req) => {
     try {
       const data = JSON.parse(responseText);
       const content = data.choices?.[0]?.message?.content?.trim();
-      extractedData = JSON.parse(content);
+      console.log('Content before cleaning:', content);
+      
+      // Clean the content before parsing
+      const cleanedContent = cleanJsonString(content);
+      console.log('Content after cleaning:', cleanedContent);
+      
+      extractedData = JSON.parse(cleanedContent);
+      console.log('Successfully parsed data:', extractedData);
     } catch (error) {
       console.error('Error parsing OpenAI response:', error);
       throw new Error('Failed to parse extracted data');
