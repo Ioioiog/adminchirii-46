@@ -85,7 +85,7 @@ serve(async (req) => {
             role: 'user',
             content: [
               {
-                type: 'image',
+                type: 'image_url',
                 image_url: {
                   url: `data:${mimeType};base64,${base64Image}`
                 }
