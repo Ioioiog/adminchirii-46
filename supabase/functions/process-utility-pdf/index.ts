@@ -2,6 +2,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { PDFDocument } from "https://cdn.skypack.dev/pdf-lib";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,15 +16,34 @@ const toBase64 = async (file: Blob): Promise<string> => {
   return btoa(binary);
 };
 
-// Helper function to clean JSON string from markdown formatting
 const cleanJsonString = (str: string): string => {
-  // Remove markdown code block markers
   let cleaned = str.replace(/```json\s?/g, '').replace(/```\s?/g, '');
-  // Remove any leading/trailing whitespace
   cleaned = cleaned.trim();
   console.log('Cleaned JSON string:', cleaned);
   return cleaned;
 };
+
+async function convertPdfToImage(pdfData: ArrayBuffer): Promise<Uint8Array | null> {
+  try {
+    const pdfDoc = await PDFDocument.load(pdfData);
+    const pages = pdfDoc.getPages();
+    
+    if (pages.length === 0) {
+      console.error('PDF has no pages');
+      return null;
+    }
+
+    // Get the first page
+    const firstPage = pages[0];
+    
+    // Convert to PNG using built-in capabilities
+    const pngImage = await firstPage.toPng();
+    return pngImage;
+  } catch (error) {
+    console.error('Error converting PDF to image:', error);
+    return null;
+  }
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -36,12 +56,10 @@ serve(async (req) => {
 
     console.log('Processing file:', filePath);
 
-    // Supabase Client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Download File
     const { data: fileData, error: downloadError } = await supabase
       .storage
       .from('utility-invoices')
@@ -51,22 +69,31 @@ serve(async (req) => {
 
     console.log('File downloaded successfully');
 
-    // Convert to Base64
-    const base64Image = await toBase64(fileData);
+    // Handle different file types
+    const fileExtension = filePath.split('.').pop()?.toLowerCase();
+    let processableData: Blob = fileData;
+    let mimeType = 'image/png';
 
-    // OpenAI API Key
+    if (fileExtension === 'pdf') {
+      console.log('Converting PDF to image...');
+      const pdfArrayBuffer = await fileData.arrayBuffer();
+      const pngData = await convertPdfToImage(pdfArrayBuffer);
+      
+      if (!pngData) {
+        throw new Error('Failed to convert PDF to image');
+      }
+      
+      processableData = new Blob([pngData], { type: 'image/png' });
+      mimeType = 'image/png';
+    } else {
+      mimeType = fileData.type;
+    }
+
+    const base64Image = await toBase64(processableData);
+
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) throw new Error('OpenAI API key not found');
 
-    // Determine MIME Type
-    const fileExtension = filePath.split('.').pop()?.toLowerCase();
-    const mimeType = fileExtension === 'png' ? 'image/png' :
-                     fileExtension === 'jpg' || fileExtension === 'jpeg' ? 'image/jpeg' :
-                     'application/octet-stream';
-
-    console.log('Using MIME type:', mimeType);
-
-    // OpenAI Request
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -118,7 +145,6 @@ serve(async (req) => {
       const content = data.choices?.[0]?.message?.content?.trim();
       console.log('Content before cleaning:', content);
       
-      // Clean the content before parsing
       const cleanedContent = cleanJsonString(content);
       console.log('Content after cleaning:', cleanedContent);
       
