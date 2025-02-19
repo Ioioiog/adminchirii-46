@@ -58,6 +58,13 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
         return 'b1-10';
       }
 
+      // Try to match B.2.7 format
+      const bPattern = /b\.?2\.?7/i;
+      if (bPattern.test(address.toLowerCase())) {
+        console.log('Found B.2.7 format');
+        return 'b.2.7';
+      }
+
       // Then try other apartment number patterns
       const patterns = [
         /(?:ap|apartament|ap\.|apartment)\s*([a-z0-9\-\.]+)/i,
@@ -90,7 +97,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       if (!p.address) return false;
 
       const propertyNormalized = normalize(p.address);
-      const propertyAptNum = extractApartmentNumber(p.address);
+      const propertyAptNum = extractApartmentNumber(p.name); // Try to get apartment from property name first
       
       console.log('\nChecking property:', {
         name: p.name,
@@ -118,15 +125,28 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
         return false;
       }
 
-      // Then verify apartment number if available
-      if (extractedAptNum && propertyAptNum) {
-        const aptMatch = extractedAptNum === propertyAptNum;
-        console.log('Apartment number comparison:', {
-          extracted: extractedAptNum,
-          property: propertyAptNum,
-          matches: aptMatch
-        });
-        return aptMatch;
+      // If we found an apartment number in the extracted address, we MUST match it
+      if (extractedAptNum) {
+        // First try to match against property name (which often contains the apartment number)
+        const nameMatch = normalize(p.name) === extractedAptNum;
+        if (nameMatch) {
+          console.log('Matched apartment number from property name');
+          return true;
+        }
+        
+        // Then try to match against apartment number in address
+        if (propertyAptNum) {
+          const aptMatch = extractedAptNum === propertyAptNum;
+          console.log('Apartment number comparison:', {
+            extracted: extractedAptNum,
+            property: propertyAptNum,
+            matches: aptMatch
+          });
+          return aptMatch;
+        }
+        
+        console.log('Found apartment number in extracted address but no match in property');
+        return false;
       }
 
       console.log('No apartment numbers to compare, using location match only');
