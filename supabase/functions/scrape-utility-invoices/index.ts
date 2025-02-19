@@ -1,7 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { EngieRomaniaScraper } from "./scrapers/engie-romania.ts";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -16,11 +15,7 @@ serve(async (req) => {
 
     const { username, password, provider, utilityId, type, location } = await req.json();
 
-    if (!username || !password || !provider) {
-      throw new Error('Missing required credentials');
-    }
-
-    console.log('Starting scraping process for:', {
+    console.log('Received scraping request:', {
       provider,
       type,
       location,
@@ -29,19 +24,19 @@ serve(async (req) => {
       hasPassword: !!password
     });
 
-    let scraper;
-    switch (provider) {
-      case 'engie_romania':
-        scraper = new EngieRomaniaScraper({ username, password });
-        break;
-      default:
-        throw new Error(`Unsupported provider: ${provider}`);
-    }
-
-    const result = await scraper.scrape();
-    console.log('Scraping completed:', { success: result.success, billsCount: result.bills.length });
-
-    return new Response(JSON.stringify(result), {
+    // For now, return a mock response to test the connection
+    return new Response(JSON.stringify({
+      success: true,
+      bills: [{
+        amount: 100,
+        due_date: new Date().toISOString().split('T')[0],
+        invoice_number: "TEST-001",
+        period_start: "2024-01-01",
+        period_end: "2024-01-31",
+        type: "gas",
+        status: "pending"
+      }]
+    }), {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/json',
