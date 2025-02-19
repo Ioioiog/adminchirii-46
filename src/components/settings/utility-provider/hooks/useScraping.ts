@@ -91,19 +91,8 @@ export function useScraping(providers: UtilityProvider[]) {
   const handleScrapeWithRetry = async (providerId: string, retryCount = 0): Promise<void> => {
     try {
       await handleScrape(providerId);
-    } catch (error: any) {
+    } catch (error) {
       console.error(`Error during scraping attempt ${retryCount + 1}:`, error);
-      
-      // Check if it's an authentication error
-      if (error.message.includes('Authentication failed') || error.message.includes('Invalid credentials')) {
-        toast({
-          variant: "destructive",
-          title: "Authentication Error",
-          description: "Please check your username and password and try again.",
-        });
-        throw error; // Don't retry for auth errors
-      }
-      
       if (retryCount < MAX_RETRIES) {
         console.log(`Retry attempt ${retryCount + 1} for provider ${providerId}`);
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
@@ -122,6 +111,7 @@ export function useScraping(providers: UtilityProvider[]) {
     
     if (!Array.isArray(response.bills)) return false;
     
+    // If there's an error message, it should be a string
     if (response.error !== undefined && typeof response.error !== 'string') return false;
     
     return true;
@@ -165,14 +155,14 @@ export function useScraping(providers: UtilityProvider[]) {
 
       if (!credentials.username || !credentials.password) {
         console.error('Invalid credentials:', { hasUsername: !!credentials.username, hasPassword: !!credentials.password });
-        throw new Error('Please update your utility provider credentials.');
+        throw new Error('No valid utility provider credentials found. Please update the credentials.');
       }
 
       const requestBody = {
         username: credentials.username,
         password: credentials.password,
         utilityId: providerId,
-        provider: provider.provider_name.toLowerCase(),
+        provider: provider.provider_name,
         type: provider.utility_type,
         location: provider.location_name
       };
@@ -192,7 +182,7 @@ export function useScraping(providers: UtilityProvider[]) {
 
       if (scrapeError) {
         console.error('Scrape function error:', scrapeError);
-        throw new Error(scrapeError.message || 'Failed to scrape bills');
+        throw new Error(`Scraping failed: ${scrapeError.message || 'Unknown error'}`);
       }
 
       if (!scrapeData) {
@@ -236,28 +226,19 @@ export function useScraping(providers: UtilityProvider[]) {
         errorDetails: error.details
       });
 
-      let errorMessage = error.message || 'Failed to fetch utility bills.';
-      
-      // Enhance error message for common issues
-      if (errorMessage.includes('Authentication failed')) {
-        errorMessage = 'Invalid username or password. Please check your credentials.';
-      } else if (errorMessage.includes('CAPTCHA')) {
-        errorMessage = 'CAPTCHA verification failed. Please try again.';
-      }
-
       setScrapingJobs(prev => ({
         ...prev,
         [providerId]: {
           status: 'failed',
           last_run_at: new Date().toISOString(),
-          error_message: errorMessage
+          error_message: error.message || 'Failed to scrape bills'
         }
       }));
 
       toast({
         variant: "destructive",
         title: "Error",
-        description: errorMessage,
+        description: error.message || "Failed to fetch utility bills.",
       });
 
       throw error;

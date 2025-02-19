@@ -1,6 +1,6 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import * as cheerio from "https://esm.sh/cheerio@1.0.0-rc.12";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,91 +12,152 @@ interface ScraperCredentials {
   password: string;
 }
 
-async function scrapeEngie(credentials: ScraperCredentials): Promise<any> {
-  console.log('🚀 Starting ENGIE Romania scraping process');
+interface Bill {
+  amount: number;
+  due_date: string;
+  invoice_number: string;
+  period_start: string;
+  period_end: string;
+  type: 'gas' | 'electricity';
+  status: 'pending' | 'paid';
+}
+
+interface ScraperResult {
+  success: boolean;
+  bills: Bill[];
+  error?: string;
+}
+
+async function solveCaptcha(page: any, captchaApiKey: string): Promise<void> {
+  console.log('🔍 Solving reCAPTCHA...');
+  const sitekey = await page.$eval('[data-sitekey]', (el: any) => el.getAttribute('data-sitekey'));
+  const pageUrl = page.url();
+
+  const apiEndpoint = 'https://2captcha.com/in.php';
+  const submitUrl = `${apiEndpoint}?key=${captchaApiKey}&method=userrecaptcha&googlekey=${sitekey}&pageurl=${pageUrl}&json=1`;
   
+  const submitResponse = await fetch(submitUrl);
+  const submitResult = await submitResponse.json();
+
+  if (submitResult.status !== 1) {
+    throw new Error(`Failed to submit captcha: ${submitResult.request}`);
+  }
+
+  const captchaId = submitResult.request;
+  let solution = null;
+  let attempts = 0;
+
+  while (!solution && attempts < 30) {
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    
+    const checkUrl = `https://2captcha.com/res.php?key=${captchaApiKey}&action=get&id=${captchaId}&json=1`;
+    const checkResponse = await fetch(checkUrl);
+    const checkResult = await checkResponse.json();
+
+    if (checkResult.status === 1) {
+      solution = checkResult.request;
+      break;
+    }
+
+    attempts++;
+  }
+
+  if (!solution) {
+    throw new Error('Failed to solve CAPTCHA after maximum attempts');
+  }
+
+  await page.evaluate((token: string) => {
+    const elements = document.getElementsByClassName('g-recaptcha-response');
+    for (let i = 0; i < elements.length; i++) {
+      const element = elements[i] as HTMLTextAreaElement;
+      element.innerHTML = token;
+      element.value = token;
+    }
+    document.dispatchEvent(new Event('recaptcha-solved', { bubbles: true }));
+  }, solution);
+}
+
+async function handleCookies(page: any) {
+  console.log('🍪 Checking for cookie consent...');
   try {
-    // First, get the login page to obtain any CSRF tokens
-    const loginPageResponse = await fetch('https://my.engie.ro/login', {
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      }
-    });
-
-    if (!loginPageResponse.ok) {
-      throw new Error('Failed to access login page');
+    await page.waitForSelector('#cookieConsentBtnRight', { timeout: 5000 });
+    const acceptButton = await page.$('#cookieConsentBtnRight');
+    if (acceptButton) {
+      console.log('✅ Clicking "Acceptă toate"');
+      await acceptButton.click();
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
+  } catch {
+    console.log('✅ No cookie modal detected, proceeding...');
+  }
+}
 
-    const loginPageHtml = await loginPageResponse.text();
-    const $ = cheerio.load(loginPageHtml);
-    
-    // Get CSRF token if it exists
-    const csrfToken = $('input[name="_csrf"]').val() || '';
-    
-    console.log('📝 Attempting login...');
-    
-    // Perform login
-    const loginResponse = await fetch('https://my.engie.ro/j_spring_security_check', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Cookie': loginPageResponse.headers.get('set-cookie') || ''
-      },
-      body: new URLSearchParams({
-        'j_username': credentials.username,
-        'j_password': credentials.password,
-        '_csrf': csrfToken
-      })
-    });
+async function scrapeEngie(credentials: ScraperCredentials, captchaApiKey: string): Promise<ScraperResult> {
+  console.log('Starting ENGIE Romania scraping process');
+  const browser = await puppeteer.launch({
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-web-security'
+    ]
+  });
+  
+  const page = await browser.newPage();
 
-    if (!loginResponse.ok) {
-      throw new Error('Login request failed');
-    }
+  try {
+    // Login process
+    console.log('🔑 Navigating to login page...');
+    await page.goto('https://my.engie.ro/autentificare', { waitUntil: 'networkidle2' });
+    await handleCookies(page);
 
-    const responseUrl = loginResponse.url;
-    if (responseUrl.includes('login?error')) {
-      throw new Error('Authentication failed: Invalid credentials');
-    }
+    console.log('📝 Entering login credentials...');
+    await page.waitForSelector('#username', { visible: true });
+    await page.waitForSelector('#password', { visible: true });
 
-    // Get the session cookie
-    const cookies = loginResponse.headers.get('set-cookie');
-    if (!cookies) {
-      throw new Error('No session cookie received');
-    }
+    await page.type('#username', credentials.username, { delay: 100 });
+    await page.type('#password', credentials.password, { delay: 100 });
 
-    console.log('✅ Successfully logged in');
+    await solveCaptcha(page, captchaApiKey);
 
-    // Fetch bills page
-    const billsResponse = await fetch('https://my.engie.ro/facturi', {
-      headers: {
-        'Cookie': cookies,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      }
-    });
+    console.log('🔓 Submitting login form...');
+    await page.click('button[type="submit"].nj-btn.nj-btn--primary');
+    await page.waitForNavigation({ waitUntil: 'networkidle2' });
 
-    if (!billsResponse.ok) {
-      throw new Error('Failed to fetch bills');
-    }
+    // Navigate to invoices page
+    console.log('📄 Navigating to invoices page...');
+    await page.goto('https://my.engie.ro/facturi/istoric', { waitUntil: 'networkidle2' });
 
-    const billsHtml = await billsResponse.text();
-    const $bills = cheerio.load(billsHtml);
+    // Wait for and extract invoices
+    console.log('⏳ Waiting for invoices table...');
+    await page.waitForSelector('table', { timeout: 15000 });
 
-    // Extract bills data
-    const bills = [];
-    $bills('.invoice-item').each((_, element) => {
-      bills.push({
-        amount: parseFloat($bills(element).find('.amount').text().replace(/[^0-9.,]/g, '') || '0'),
-        due_date: $bills(element).find('.due-date').text().trim(),
-        invoice_number: $bills(element).find('.invoice-number').text().trim(),
-        period_start: $bills(element).find('.period-start').text().trim(),
-        period_end: $bills(element).find('.period-end').text().trim(),
-        type: 'gas',
-        status: $bills(element).find('.status').text().toLowerCase().includes('platit') ? 'paid' : 'pending'
+    const bills = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tbody tr'));
+      return rows.map(row => {
+        const cells = Array.from(row.querySelectorAll('td'));
+        const text = (cell: Element) => cell.textContent?.trim() || '';
+        
+        const amountText = text(cells[4]).replace(/[^\d.,]/g, '').replace(',', '.');
+        const amount = parseFloat(amountText);
+
+        const invoiceNumber = text(cells[0]);
+        const dueDate = text(cells[2]);
+        const status = text(cells[5]).toLowerCase();
+
+        return {
+          amount,
+          due_date: dueDate,
+          invoice_number: invoiceNumber,
+          period_start: dueDate, // ENGIE doesn't show period dates
+          period_end: dueDate,
+          type: 'gas' as const,
+          status: status.includes('platit') ? 'paid' as const : 'pending' as const
+        };
       });
     });
 
+    console.log(`✅ Found ${bills.length} invoices`);
     return { success: true, bills };
 
   } catch (error) {
@@ -106,10 +167,13 @@ async function scrapeEngie(credentials: ScraperCredentials): Promise<any> {
       bills: [],
       error: error instanceof Error ? error.message : 'Unknown error occurred'
     };
+  } finally {
+    await browser.close();
   }
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -119,31 +183,35 @@ serve(async (req) => {
       throw new Error('Method not allowed');
     }
 
-    const requestData = await req.json();
-    console.log('📨 Received scraping request');
-
-    if (!requestData.username || !requestData.password) {
-      throw new Error('Missing credentials');
+    const captchaApiKey = Deno.env.get("CAPTCHA_API_KEY");
+    if (!captchaApiKey) {
+      throw new Error("CAPTCHA API key not configured");
     }
+
+    const requestData = await req.json();
+    console.log('Received scraping request for:', requestData.username);
 
     const result = await scrapeEngie({
       username: requestData.username,
       password: requestData.password
-    });
+    }, captchaApiKey);
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('💥 Error in scrape-engie function:', error);
+    console.error('Error in scrape-engie function:', error);
+    
     return new Response(
       JSON.stringify({
         success: false,
-        bills: [],
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        bills: []
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
     );
   }
 });
