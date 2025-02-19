@@ -147,13 +147,22 @@ export function useScraping(providers: UtilityProvider[]) {
         hasPassword: !!requestBody.password
       });
 
-      const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke('scrape-utility-invoices', {
-        body: requestBody
+      const response = await supabase.functions.invoke('scrape-utility-invoices', {
+        body: requestBody,
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
-      if (scrapeError) {
-        console.error('Scrape function error:', scrapeError);
-        throw new Error(`Scraping failed: ${scrapeError.message}`);
+      if (response.error) {
+        console.error('Scrape function error:', response.error);
+        throw new Error(`Scraping failed: ${response.error.message || 'Unknown error'}`);
+      }
+
+      const scrapeData = response.data;
+      
+      if (!scrapeData?.success) {
+        throw new Error(scrapeData?.error || 'Scraping failed with no error message');
       }
 
       console.log('Scrape completed successfully', { 
