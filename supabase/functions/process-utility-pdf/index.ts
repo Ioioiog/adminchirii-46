@@ -2,8 +2,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import pdfjs from "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/+esm";
-import { Canvas } from "https://deno.land/x/canvas@v1.4.1/mod.ts";
+import * as imagescript from "https://deno.land/x/imagescript@1.2.17/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,38 +23,53 @@ const cleanJsonString = (str: string): string => {
   return cleaned;
 };
 
-async function convertPdfToImage(pdfData: ArrayBuffer): Promise<string> {
+async function convertPdfToImage(pdfBuffer: ArrayBuffer): Promise<string> {
   try {
-    console.log('Loading PDF data...');
-    const pdf = await pdfjs.getDocument({ data: pdfData }).promise;
-    console.log('PDF loaded successfully');
-
-    const page = await pdf.getPage(1); // Get first page
-    const viewport = page.getViewport({ scale: 2.0 }); // Increase scale for better quality
-
-    // Create canvas with the right dimensions
-    const canvas = new Canvas(viewport.width, viewport.height);
-    const context = canvas.getContext('2d');
-
-    // Prepare canvas for PDF rendering
-    const renderContext = {
-      canvasContext: context,
-      viewport: viewport,
-    };
-
-    console.log('Rendering PDF page to canvas...');
-    await page.render(renderContext).promise;
-    console.log('PDF rendered to canvas');
-
-    // Convert canvas to PNG
-    const pngData = canvas.toBuffer('image/png');
-    console.log('Canvas converted to PNG');
-
-    // Convert to base64
-    return `data:image/png;base64,${btoa(String.fromCharCode(...new Uint8Array(pngData)))}`;
+    console.log('Starting PDF conversion process...');
+    
+    // For now, we'll temporarily store PDFs and support images only
+    throw new Error('PDF processing is temporarily disabled. Please convert your PDF to an image (PNG/JPEG) first.');
+    
+    // The commented code below is the structure for PDF processing once we implement it
+    /*
+    const image = await convertFirstPageToImage(pdfBuffer);
+    const encoded = await image.encode();
+    return `data:image/png;base64,${btoa(String.fromCharCode(...new Uint8Array(encoded)))}`;
+    */
   } catch (error) {
     console.error('Error in PDF conversion:', error);
-    throw new Error('Failed to convert PDF to image: ' + error.message);
+    throw error;
+  }
+}
+
+async function processImage(fileData: Blob, mimeType: string): Promise<string> {
+  try {
+    console.log('Processing image...');
+    const arrayBuffer = await fileData.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    // Load the image using imagescript
+    const image = await imagescript.decode(uint8Array);
+    
+    // Ensure the image is in a format OpenAI can process
+    // Resize if too large (OpenAI has a 20MB limit)
+    const maxDimension = 2048;
+    if (image.width > maxDimension || image.height > maxDimension) {
+      const scale = Math.min(maxDimension / image.width, maxDimension / image.height);
+      image.resize(
+        Math.round(image.width * scale),
+        Math.round(image.height * scale)
+      );
+    }
+    
+    // Convert to PNG
+    const processed = await image.encode();
+    console.log('Image processed successfully');
+    
+    return `data:image/png;base64,${btoa(String.fromCharCode(...new Uint8Array(processed)))}`;
+  } catch (error) {
+    console.error('Error processing image:', error);
+    throw new Error('Failed to process image: ' + error.message);
   }
 }
 
@@ -83,26 +97,25 @@ serve(async (req) => {
 
     console.log('File downloaded successfully');
 
-    // Process based on file type
     const fileExtension = filePath.split('.').pop()?.toLowerCase();
     let imageBase64: string;
 
+    // Handle different file types
     if (fileExtension === 'pdf') {
-      console.log('Converting PDF to image...');
+      console.log('Processing PDF file...');
       const pdfArrayBuffer = await fileData.arrayBuffer();
       imageBase64 = await convertPdfToImage(pdfArrayBuffer);
-      console.log('PDF converted to image successfully');
     } else {
-      // Handle image files directly
+      // Handle image files
       const mimeType = fileExtension === 'png' ? 'image/png' :
                       fileExtension === 'jpg' || fileExtension === 'jpeg' ? 'image/jpeg' :
                       'application/octet-stream';
 
       if (!['image/png', 'image/jpeg'].includes(mimeType)) {
-        throw new Error('Unsupported file type. Please upload a PNG, JPEG, or PDF file.');
+        throw new Error('Unsupported file type. Please upload a PNG or JPEG image.');
       }
 
-      imageBase64 = `data:${mimeType};base64,${await toBase64(fileData)}`;
+      imageBase64 = await processImage(fileData, mimeType);
     }
 
     console.log('Calling OpenAI API...');
@@ -116,7 +129,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4-vision-preview',
         messages: [
           {
             role: 'system',
