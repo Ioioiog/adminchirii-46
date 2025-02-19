@@ -8,6 +8,19 @@ import { Document } from "https://cdn.skypack.dev/pdf-lib@1.17.1?dts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
+};
+
+// Ensure all responses include CORS headers
+const buildResponse = (body: any, status = 200) => {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'application/json',
+    },
+  });
 };
 
 const toBase64 = async (file: Blob): Promise<string> => {
@@ -94,70 +107,98 @@ async function processImage(imageData: Uint8Array | Blob): Promise<string> {
 async function analyzeImageWithOpenAI(imageBase64: string, openAIApiKey: string): Promise<any> {
   console.log('Calling OpenAI API...');
   
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${openAIApiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: `Extract structured information from Romanian utility bills, with a focus on the "Adresa locului de consum" field.
-          Return ONLY a valid JSON object with these exact fields, no markdown formatting:
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
           {
-            "property_details": "Full address as found on the bill",
-            "utility_type": "gas, water, electricity",
-            "amount": "456.73",
-            "currency": "LEI",
-            "due_date": "YYYY-MM-DD",
-            "issued_date": "YYYY-MM-DD",
-            "invoice_number": "Invoice number"
-          }
-          Do not include any additional text, markdown formatting, or code block markers.`,
-        },
-        {
-          role: 'user',
-          content: [
+            role: 'system',
+            content: `Extract structured information from Romanian utility bills, with a focus on the "Adresa locului de consum" field.
+            Return ONLY a valid JSON object with these exact fields, no markdown formatting:
             {
-              type: 'image_url',
-              image_url: {
-                url: imageBase64
-              }
+              "property_details": "Full address as found on the bill",
+              "utility_type": "gas, water, electricity",
+              "amount": "456.73",
+              "currency": "LEI",
+              "due_date": "YYYY-MM-DD",
+              "issued_date": "YYYY-MM-DD",
+              "invoice_number": "Invoice number"
             }
-          ]
-        }
-      ],
-      max_tokens: 1000,
-    }),
-  });
+            Do not include any additional text, markdown formatting, or code block markers.`,
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image_url',
+                image_url: {
+                  url: imageBase64
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 1000,
+      }),
+    });
 
-  const responseText = await response.text();
-  console.log('OpenAI raw response:', responseText);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+    }
 
-  if (!response.ok) throw new Error(`OpenAI API error: ${response.status} - ${responseText}`);
-
-  const data = JSON.parse(responseText);
-  const content = data.choices?.[0]?.message?.content?.trim();
-  const cleanedContent = cleanJsonString(content);
-  return JSON.parse(cleanedContent);
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content?.trim();
+    const cleanedContent = cleanJsonString(content);
+    return JSON.parse(cleanedContent);
+  } catch (error) {
+    console.error('Error in OpenAI API call:', error);
+    throw error;
+  }
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { filePath } = await req.json();
-    if (!filePath) throw new Error('No file path provided');
+    if (req.method !== 'POST') {
+      return buildResponse({ error: 'Method not allowed' }, 405);
+    }
+
+    const contentType = req.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+      return buildResponse({ error: 'Content-Type must be application/json' }, 400);
+    }
+
+    const requestData = await req.json().catch(error => {
+      console.error('Error parsing request body:', error);
+      throw new Error('Invalid JSON in request body');
+    });
+
+    const { filePath } = requestData;
+    if (!filePath) {
+      return buildResponse({ error: 'No file path provided' }, 400);
+    }
 
     console.log('Processing file:', filePath);
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing Supabase credentials');
+      return buildResponse({ error: 'Server configuration error' }, 500);
+    }
+
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { data: fileData, error: downloadError } = await supabase
@@ -165,69 +206,76 @@ serve(async (req) => {
       .from('utility-invoices')
       .download(filePath);
 
-    if (downloadError) throw new Error('Error downloading file: ' + downloadError.message);
+    if (downloadError) {
+      console.error('Error downloading file:', downloadError);
+      return buildResponse({ error: 'Failed to download file: ' + downloadError.message }, 500);
+    }
 
     console.log('File downloaded successfully');
 
     const fileExtension = filePath.split('.').pop()?.toLowerCase();
     let extractedData;
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) throw new Error('OpenAI API key not found');
+    
+    if (!openAIApiKey) {
+      return buildResponse({ error: 'OpenAI API key not found' }, 500);
+    }
 
     if (fileExtension === 'pdf') {
       console.log('Processing PDF file...');
       const pdfArrayBuffer = await fileData.arrayBuffer();
       
-      // Extract images from PDF
       const pdfImages = await extractImagesFromPdf(pdfArrayBuffer);
       
       if (pdfImages.length === 0) {
-        throw new Error('No images found in PDF. Please upload a PDF that contains images of the utility bill.');
+        return buildResponse({
+          error: 'No images found in PDF. Please upload a PDF that contains images of the utility bill.'
+        }, 400);
       }
       
-      // Process each image until we get valid data
+      let lastError = null;
       for (const pdfImage of pdfImages) {
         try {
           const processedImage = await processImage(pdfImage);
           extractedData = await analyzeImageWithOpenAI(processedImage, openAIApiKey);
           
-          // If we successfully extract data, break the loop
           if (extractedData && extractedData.property_details) {
             break;
           }
         } catch (error) {
           console.log('Failed to process image, trying next one:', error);
+          lastError = error;
           continue;
         }
       }
       
       if (!extractedData) {
-        throw new Error('Could not extract valid data from any images in the PDF');
+        return buildResponse({
+          error: lastError?.message || 'Could not extract valid data from any images in the PDF'
+        }, 400);
       }
     } else {
-      // Handle image files
       const mimeType = fileExtension === 'png' ? 'image/png' :
                       fileExtension === 'jpg' || fileExtension === 'jpeg' ? 'image/jpeg' :
                       'application/octet-stream';
 
       if (!['image/png', 'image/jpeg'].includes(mimeType)) {
-        throw new Error('Unsupported file type. Please upload a PNG, JPEG, or PDF file.');
+        return buildResponse({
+          error: 'Unsupported file type. Please upload a PNG, JPEG, or PDF file.'
+        }, 400);
       }
 
       const processedImage = await processImage(fileData);
       extractedData = await analyzeImageWithOpenAI(processedImage, openAIApiKey);
     }
 
-    return new Response(
-      JSON.stringify({ status: 'success', data: extractedData }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return buildResponse({ status: 'success', data: extractedData });
 
   } catch (error) {
-    console.error('Error:', error);
-    return new Response(
-      JSON.stringify({ status: 'error', message: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error('Error processing request:', error);
+    return buildResponse({
+      status: 'error',
+      message: error.message || 'An unexpected error occurred'
+    }, 500);
   }
 });
