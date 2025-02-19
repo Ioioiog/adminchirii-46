@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -111,6 +110,16 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
     try {
       console.log("Deleting utility with ID:", utilityId);
       
+      const { error: invoiceError } = await supabase
+        .from('utility_invoices')
+        .delete()
+        .eq('utility_id', utilityId);
+
+      if (invoiceError) {
+        console.error("Error deleting associated invoices:", invoiceError);
+        throw invoiceError;
+      }
+
       const { error } = await supabase
         .from('utilities')
         .delete()
