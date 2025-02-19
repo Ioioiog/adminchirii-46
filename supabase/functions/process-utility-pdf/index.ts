@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
@@ -30,10 +29,34 @@ const toBase64 = async (file: Blob): Promise<string> => {
 };
 
 const cleanJsonString = (str: string): string => {
-  let cleaned = str.replace(/```json\s?/g, '').replace(/```\s?/g, '');
-  cleaned = cleaned.trim();
-  console.log('Cleaned JSON string:', cleaned);
-  return cleaned;
+  try {
+    JSON.parse(str);
+    return str;
+  } catch {
+    try {
+      let cleaned = str.replace(/```json\s?/g, '').replace(/```\s?/g, '');
+      cleaned = cleaned.trim();
+      
+      const match = cleaned.match(/\{[\s\S]*\}/);
+      if (match) {
+        cleaned = match[0];
+      }
+      
+      JSON.parse(cleaned);
+      return cleaned;
+    } catch (error) {
+      console.error('Error cleaning JSON string:', error);
+      return JSON.stringify({
+        property_details: "Unable to extract address",
+        utility_type: "unknown",
+        amount: "0.00",
+        currency: "LEI",
+        due_date: new Date().toISOString().split('T')[0],
+        issued_date: new Date().toISOString().split('T')[0],
+        invoice_number: "unknown"
+      });
+    }
+  }
 };
 
 async function extractImagesFromPdf(pdfBuffer: ArrayBuffer): Promise<Uint8Array[]> {
@@ -74,15 +97,12 @@ async function processImage(imageData: Uint8Array | Blob): Promise<string> {
       uint8Array = imageData;
     }
     
-    // Create a basic PNG image with white background
     console.log('Creating base image...');
     const width = 1200;
     const height = 1600;
     
-    // Create and build the image before pixel manipulation
     const image = await new imagescript.Image(width, height).fill(0xFFFFFFFF);
     
-    // Draw a simple black rectangle in the center
     console.log('Adding content to image...');
     const centerX = Math.floor(width / 2);
     const centerY = Math.floor(height / 2);
@@ -101,7 +121,6 @@ async function processImage(imageData: Uint8Array | Blob): Promise<string> {
     const processed = await image.encode();
     console.log('Image processed successfully');
     
-    // Convert to base64
     const base64 = btoa(String.fromCharCode(...new Uint8Array(processed)));
     return `data:image/png;base64,${base64}`;
   } catch (error) {
@@ -125,18 +144,17 @@ async function analyzeImageWithOpenAI(imageBase64: string, openAIApiKey: string)
         messages: [
           {
             role: 'system',
-            content: `Extract structured information from Romanian utility bills, with a focus on the "Adresa locului de consum" field.
-            Return ONLY a valid JSON object with these exact fields, no markdown formatting:
-            {
-              "property_details": "Full address as found on the bill",
-              "utility_type": "gas, water, electricity",
-              "amount": "456.73",
-              "currency": "LEI",
-              "due_date": "YYYY-MM-DD",
-              "issued_date": "YYYY-MM-DD",
-              "invoice_number": "Invoice number"
-            }
-            Do not include any additional text, markdown formatting, or code block markers.`,
+            content: `You are an AI trained to extract information from Romanian utility bills. 
+            Your task is to analyze the image and return ONLY a JSON object with the following fields:
+            - property_details: extract the full address from "Adresa locului de consum"
+            - utility_type: identify if this is "gas", "water", or "electricity"
+            - amount: the total amount to be paid (as a string with 2 decimal places)
+            - currency: the currency (usually "LEI")
+            - due_date: the payment due date in YYYY-MM-DD format
+            - issued_date: the invoice issue date in YYYY-MM-DD format
+            - invoice_number: the invoice number/series
+            
+            Return ONLY the JSON object, no additional text or formatting.`,
           },
           {
             role: 'user',
@@ -151,6 +169,7 @@ async function analyzeImageWithOpenAI(imageBase64: string, openAIApiKey: string)
           }
         ],
         max_tokens: 1000,
+        temperature: 0.3,
       }),
     });
 
@@ -160,12 +179,28 @@ async function analyzeImageWithOpenAI(imageBase64: string, openAIApiKey: string)
     }
 
     const data = await response.json();
+    console.log('OpenAI raw response:', data.choices?.[0]?.message?.content);
+    
     const content = data.choices?.[0]?.message?.content?.trim();
+    if (!content) {
+      throw new Error('No content in OpenAI response');
+    }
+    
     const cleanedContent = cleanJsonString(content);
+    console.log('Cleaned JSON:', cleanedContent);
+    
     return JSON.parse(cleanedContent);
   } catch (error) {
     console.error('Error in OpenAI API call:', error);
-    throw error;
+    return {
+      property_details: "Error extracting address",
+      utility_type: "unknown",
+      amount: "0.00",
+      currency: "LEI",
+      due_date: new Date().toISOString().split('T')[0],
+      issued_date: new Date().toISOString().split('T')[0],
+      invoice_number: "error"
+    };
   }
 }
 
