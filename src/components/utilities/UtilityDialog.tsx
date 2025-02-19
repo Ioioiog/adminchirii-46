@@ -46,8 +46,8 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       return null;
     }
 
-    // Look for "Adresa locului de consum" pattern
-    const consumptionAddressPattern = /adresa\s+locului\s+de\s+consum[:\s]+([^\n]+)/i;
+    // Look for "loc de consum" pattern with more flexible matching
+    const consumptionAddressPattern = /(?:adresa\s+)?loc\s+de\s+consum[:\s]+([^\n]+)/i;
     const match = extractedAddress.match(consumptionAddressPattern);
     
     // If we find a consumption address, use that instead of the full text
