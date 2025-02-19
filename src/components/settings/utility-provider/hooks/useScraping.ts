@@ -167,6 +167,15 @@ export function useScraping(providers: UtilityProvider[]) {
         }
       }));
 
+      // After successful scrape, fetch the bills
+      const { error: fetchError } = await supabase.functions.invoke('fetch-utility-bills', {
+        body: { providerId }
+      });
+
+      if (fetchError) {
+        console.error('Error fetching bills after scrape:', fetchError);
+      }
+
       toast({
         title: "Success",
         description: "Started fetching utility bills. This may take a few minutes.",
