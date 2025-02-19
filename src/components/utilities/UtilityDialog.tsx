@@ -46,7 +46,13 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       return null;
     }
 
-    console.log('Attempting to match address:', extractedAddress);
+    // Look for "Adresa locului de consum" pattern
+    const consumptionAddressPattern = /adresa\s+locului\s+de\s+consum[:\s]+([^\n]+)/i;
+    const match = extractedAddress.match(consumptionAddressPattern);
+    
+    // If we find a consumption address, use that instead of the full text
+    const addressToMatch = match ? match[1].trim() : extractedAddress;
+    console.log('Starting property match for address:', addressToMatch);
 
     const normalize = (addr: string) => {
       return addr
@@ -56,18 +62,41 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
     };
 
     const extractApartmentNumber = (address: string) => {
-      // Extract apartment number using various patterns
+      // First try to match the B1-10 format specifically for Holban
+      const holbanPattern = /b1-?10/i;
+      if (holbanPattern.test(address.toLowerCase())) {
+        console.log('Found Holban specific apartment format B1-10');
+        return 'b110'; // Normalize to match the database format
+      }
+
+      // Try to match B.2.7 format
+      const bPattern = /b\.?2\.?7/i;
+      if (bPattern.test(address.toLowerCase())) {
+        console.log('Found B.2.7 format');
+        return 'b.2.7';
+      }
+
+      // Extract apartment number for Glucoza addresses
+      const glucozaPattern = /ap\.?\s*(\d+)/i;
+      const glucozaMatch = address.match(glucozaPattern);
+      if (glucozaMatch) {
+        console.log(`Found Glucoza apartment number: ${glucozaMatch[1]}`);
+        return glucozaMatch[1];
+      }
+
+      // Then try other apartment number patterns
       const patterns = [
-        /ap\.?\s*(\d+)/i,
-        /apartament\s*(\d+)/i,
-        /[^\d](\d+)\s*(?:$|,|\s)/   // Matches numbers at the end or before comma/space
+        /(?:ap|apartament|ap\.|apartment)\s*([a-z0-9\-\.]+)/i,
+        /bl[.]?\s+[a-z]+\s+ap[.]?\s+([a-z0-9\-\.]+)/i,
+        /(?:^|\s)([a-z0-9\-\.]+)(?:\s*$)/
       ];
 
       for (const pattern of patterns) {
         const match = address.match(pattern);
         if (match) {
-          console.log(`Found apartment number: ${match[1]} using pattern: ${pattern}`);
-          return match[1];
+          const aptNum = match[1].toLowerCase().replace(/[-\.]/g, '');
+          console.log(`Found apartment number '${aptNum}' in address: ${address}`);
+          return aptNum;
         }
       }
       
@@ -75,24 +104,12 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       return null;
     };
 
-    const extractBuildingNumber = (address: string) => {
-      const blockPattern = /bl\.?\s*(\d+)/i;
-      const match = address.match(blockPattern);
-      if (match) {
-        console.log(`Found building number: ${match[1]}`);
-        return match[1];
-      }
-      return null;
-    };
-
-    const extractedNormalized = normalize(extractedAddress);
-    const extractedAptNum = extractApartmentNumber(extractedAddress);
-    const extractedBlockNum = extractBuildingNumber(extractedAddress);
+    const extractedNormalized = normalize(addressToMatch);
+    const extractedAptNum = extractApartmentNumber(addressToMatch);
     
     console.log('Extracted details:', {
       normalizedAddress: extractedNormalized,
-      apartmentNumber: extractedAptNum,
-      blockNumber: extractedBlockNum
+      apartmentNumber: extractedAptNum
     });
 
     let matchingProperty = properties.find(p => {
@@ -103,47 +120,64 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       
       // Extract apartment number from property name for Belvedere properties
       const belvedereMatch = propertyName.match(/belvedere\s*(\d+)/i);
-      const propertyAptNum = belvedereMatch ? belvedereMatch[1] : extractApartmentNumber(p.address);
+      const propertyAptNum = belvedereMatch ? belvedereMatch[1] : null;
       
       console.log('\nChecking property:', {
         name: p.name,
         normalizedName: propertyName,
         originalAddress: p.address,
         normalizedAddress: propertyNormalized,
-        propertyAptNum
+        extractedAptNum: propertyAptNum
       });
 
-      // Check if this is a Glucoza/Belvedere address
-      const isGlucozaMatch = 
-        extractedNormalized.includes('glucoza') && 
-        propertyNormalized.includes('glucoza');
+      // First check if we're in the right building/street
+      const isHolbanMatch = extractedNormalized.includes('holban') && propertyNormalized.includes('holban');
+      const isYachtMatch = extractedNormalized.includes('yacht') && propertyNormalized.includes('yacht');
+      const isGlucozaMatch = extractedNormalized.includes('glucoza') && propertyNormalized.includes('glucoza');
       
-      if (!isGlucozaMatch) {
-        console.log('Location does not match Glucoza, skipping');
+      const isLocationMatch = isHolbanMatch || isYachtMatch || isGlucozaMatch;
+
+      console.log('Location matching results:', {
+        isHolbanMatch,
+        isYachtMatch,
+        isGlucozaMatch,
+        isLocationMatch
+      });
+
+      if (!isLocationMatch) {
+        console.log('Location does not match, skipping apartment check');
         return false;
       }
 
-      // For Belvedere/Glucoza properties, match building and apartment numbers
-      if (extractedAptNum && propertyAptNum) {
-        const buildingMatches = extractedBlockNum === '11'; // Belvedere is always in Block 11
-        const apartmentMatches = extractedAptNum === propertyAptNum;
-        
-        console.log('Glucoza/Belvedere comparison:', {
-          buildingMatches,
-          apartmentMatches,
-          extractedAptNum,
-          propertyAptNum,
-          extractedBlockNum
+      // Special handling for Belvedere properties
+      if (isGlucozaMatch && extractedAptNum && propertyAptNum) {
+        const matches = extractedAptNum === propertyAptNum;
+        console.log('Glucoza apartment comparison:', {
+          extracted: extractedAptNum,
+          property: propertyAptNum,
+          matches
         });
-
-        return buildingMatches && apartmentMatches;
+        return matches;
       }
 
+      // For Holban properties
+      if ((isHolbanMatch || isYachtMatch) && extractedAptNum) {
+        const normalizedPropertyName = propertyName.replace(/[-\.]/g, '');
+        const matches = normalizedPropertyName === extractedAptNum;
+        console.log('Holban/Yacht apartment comparison:', {
+          extracted: extractedAptNum,
+          propertyName: normalizedPropertyName,
+          matches
+        });
+        return matches;
+      }
+
+      console.log('No specific matching rules applied');
       return false;
     });
 
     if (!matchingProperty) {
-      console.log('❌ No matching property found for:', extractedAddress);
+      console.log('❌ No matching property found for:', addressToMatch);
     } else {
       console.log('✅ Found matching property:', {
         name: matchingProperty.name,
