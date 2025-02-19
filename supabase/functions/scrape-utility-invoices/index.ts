@@ -22,7 +22,8 @@ serve(async (req) => {
       utilityId: requestBody.utilityId,
       type: requestBody.type,
       username: requestBody.username,
-      hasPassword: !!requestBody.password
+      hasPassword: !!requestBody.password,
+      location: requestBody.location
     })
 
     // Validate request body
@@ -52,6 +53,18 @@ serve(async (req) => {
 
     const supabaseClient = createClient(supabaseUrl, supabaseKey)
 
+    // Get provider details
+    const { data: provider, error: providerError } = await supabaseClient
+      .from('utility_provider_credentials')
+      .select('property_id, provider_name')
+      .eq('id', requestBody.utilityId)
+      .single()
+
+    if (providerError || !provider) {
+      console.error('Failed to fetch provider details:', providerError)
+      throw new Error('Failed to fetch provider details')
+    }
+
     // Create scraping job record
     const { data: job, error: jobError } = await supabaseClient
       .from('scraping_jobs')
@@ -70,17 +83,6 @@ serve(async (req) => {
     console.log('Created scraping job:', job.id)
 
     try {
-      // Get provider details
-      const { data: provider, error: providerError } = await supabaseClient
-        .from('utility_provider_credentials')
-        .select('property_id, provider_name')
-        .eq('id', requestBody.utilityId)
-        .single()
-
-      if (providerError || !provider) {
-        throw new Error('Failed to fetch provider details')
-      }
-
       // Initialize and run the appropriate scraper
       console.log(`Initializing scraper for provider: ${requestBody.provider}`)
       const scraper = createScraper(requestBody.provider, {
@@ -94,11 +96,11 @@ serve(async (req) => {
         throw new Error(scrapingResult.error || 'Scraping failed')
       }
 
-      console.log(`Successfully scraped ${scrapingResult.bills.length} bills`)
+      console.log(`Successfully scraped ${scrapingResult.bills.length} bills for ${requestBody.provider}`)
 
       // Store the bills in the database
-      const billPromises = scrapingResult.bills.map(bill => 
-        supabaseClient
+      for (const bill of scrapingResult.bills) {
+        const { error: billError } = await supabaseClient
           .from('utilities')
           .insert({
             property_id: provider.property_id,
@@ -109,16 +111,15 @@ serve(async (req) => {
             meter_reading: bill.meter_reading,
             consumption: bill.consumption,
             period_start: bill.period_start,
-            period_end: bill.period_end
+            period_end: bill.period_end,
+            invoice_number: bill.invoice_number,
+            location_name: requestBody.location
           })
-      )
 
-      const results = await Promise.all(billPromises)
-      const errors = results.filter(r => r.error)
-      
-      if (errors.length > 0) {
-        console.error('Errors storing bills:', errors)
-        throw new Error('Failed to store some utility bills')
+        if (billError) {
+          console.error('Error storing bill:', { billError, bill })
+          throw new Error(`Failed to store utility bill: ${billError.message}`)
+        }
       }
 
       // Update job status to completed
@@ -135,7 +136,11 @@ serve(async (req) => {
         throw updateError
       }
 
-      console.log('Successfully completed scraping job')
+      console.log('Successfully completed scraping job:', {
+        jobId: job.id,
+        providerId: requestBody.utilityId,
+        billsCount: scrapingResult.bills.length
+      })
 
       return new Response(
         JSON.stringify({ 
@@ -153,7 +158,7 @@ serve(async (req) => {
       )
     } catch (error) {
       // Update job status to failed
-      await supabaseClient
+      const { error: updateError } = await supabaseClient
         .from('scraping_jobs')
         .update({ 
           status: 'failed',
@@ -161,6 +166,10 @@ serve(async (req) => {
           last_run_at: new Date().toISOString()
         })
         .eq('id', job.id)
+
+      if (updateError) {
+        console.error('Failed to update job status after error:', updateError)
+      }
 
       throw error
     }
