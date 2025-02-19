@@ -18,7 +18,7 @@ async function scrapeEngie(credentials: ScraperCredentials): Promise<any> {
   let browser;
   try {
     browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: ['--no-sandbox']
     });
 
     const page = await browser.newPage();
@@ -27,16 +27,13 @@ async function scrapeEngie(credentials: ScraperCredentials): Promise<any> {
     console.log('🔑 Navigating to login page...');
     await page.goto('https://my.engie.ro/login', { waitUntil: 'networkidle0' });
     
-    // Wait for login form elements
-    await page.waitForSelector('#username');
-    await page.waitForSelector('#password');
+    // Wait for login form elements with longer timeout
+    await page.waitForSelector('#username', { timeout: 10000 });
+    await page.waitForSelector('#password', { timeout: 10000 });
     
     console.log('📝 Entering credentials...');
     await page.type('#username', credentials.username);
     await page.type('#password', credentials.password);
-    
-    // Take a screenshot for debugging
-    await page.screenshot({ path: '/tmp/login-page.png' });
     
     console.log('🔓 Submitting login form...');
     await Promise.all([
@@ -48,7 +45,7 @@ async function scrapeEngie(credentials: ScraperCredentials): Promise<any> {
     const isLoggedIn = await page.evaluate(() => {
       const errorElement = document.querySelector('.alert-danger');
       if (errorElement) {
-        throw new Error('Login failed: ' + errorElement.textContent);
+        throw new Error(`Login failed: ${errorElement.textContent}`);
       }
       return document.querySelector('.dashboard') !== null;
     });
