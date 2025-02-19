@@ -22,26 +22,7 @@ const buildResponse = (body: any, status = 200) => {
   });
 };
 
-// Extracts raw text from a PDF file
-async function extractTextFromPDF(pdfBuffer: ArrayBuffer): Promise<string> {
-  try {
-    console.log("Extracting text from PDF...");
-    const pdfDoc = await PDFDocument.load(pdfBuffer);
-    let fullText = "";
-
-    for (const page of pdfDoc.getPages()) {
-      fullText += page.getTextContent();
-      fullText += "\n"; // Ensure spacing between pages
-    }
-
-    return fullText;
-  } catch (error) {
-    console.error("PDF Parsing Error:", error);
-    throw new Error("Failed to extract text from PDF");
-  }
-}
-
-// Extracts images from the first page of a PDF
+// Since text extraction is not reliable with pdf-lib, we'll skip directly to image processing
 async function extractImagesFromPdf(pdfBuffer: ArrayBuffer): Promise<Uint8Array[]> {
   try {
     console.log('Extracting images from PDF...');
@@ -87,25 +68,6 @@ async function processImage(imageData: Uint8Array | Blob): Promise<string> {
     console.error('Error processing image:', error);
     throw new Error('Failed to process image: ' + error.message);
   }
-}
-
-// Parses extracted text using regex
-function extractFieldsFromText(text: string) {
-  const addressRegex = /Adresa locului de consum:\s*(.*?)(?:\n|$)/i;
-  const amountRegex = /Factură curentă:\s*([\d,.]+)\s*LEI/i;
-  const dueDateRegex = /DATA SCADENTĂ\s*(\d{2}.\d{2}.\d{4})/i;
-  const issuedDateRegex = /Data facturii:\s*(\d{2}.\d{2}.\d{4})/i;
-  const invoiceRegex = /Seria ENG nr\.\s*(\d+)/i;
-
-  return {
-    property_details: text.match(addressRegex)?.[1]?.trim() || "Not found",
-    utility_type: "gas", // Default assumption
-    amount: text.match(amountRegex)?.[1]?.replace(",", ".") || "0.00",
-    currency: "LEI",
-    due_date: text.match(dueDateRegex)?.[1] || "Unknown",
-    issued_date: text.match(issuedDateRegex)?.[1] || "Unknown",
-    invoice_number: text.match(invoiceRegex)?.[1] || "Unknown",
-  };
 }
 
 // Calls OpenAI API for image analysis
@@ -170,18 +132,13 @@ serve(async (req) => {
     if (error) throw new Error("Failed to download file: " + error.message);
 
     const pdfArrayBuffer = await fileData.arrayBuffer();
-    const extractedText = await extractTextFromPDF(pdfArrayBuffer);
-    const extractedData = extractFieldsFromText(extractedText);
-
-    if (extractedData.property_details !== "Not found") {
-      return buildResponse({ status: "success", data: extractedData });
-    }
-
+    
+    // Skip text extraction attempt and go straight to image processing
     const pdfImages = await extractImagesFromPdf(pdfArrayBuffer);
     const processedImage = await processImage(pdfImages[0]);
-    const openAiData = await analyzeImageWithOpenAI(processedImage, Deno.env.get("OPENAI_API_KEY")!);
+    const extractedData = await analyzeImageWithOpenAI(processedImage, Deno.env.get("OPENAI_API_KEY")!);
 
-    return buildResponse({ status: "success", data: openAiData });
+    return buildResponse({ status: "success", data: extractedData });
 
   } catch (error) {
     console.error("Error:", error);
