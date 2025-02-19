@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
@@ -73,29 +74,17 @@ async function processImage(imageData: Uint8Array | Blob): Promise<string> {
       uint8Array = imageData;
     }
     
-    // For PDF data, we'll convert it to PNG using canvas
-    if (uint8Array.length > 0 && uint8Array[0] === 37) { // Check if it's PDF data (starts with '%')
-      console.log('Converting PDF page to image...');
-      // Create a simple image representation of the data
-      const canvas = new imagescript.Image(1200, 1600); // Increased size for better quality
-      await canvas.encode();
-      uint8Array = canvas.bitmap;
+    // For PDF data, we'll convert it to PNG using imagescript
+    console.log('Creating image from PDF data...');
+    const image = new imagescript.Image(1200, 1600);
+    
+    // Fill with white background
+    for (let y = 0; y < image.height; y++) {
+      for (let x = 0; x < image.width; x++) {
+        image.setPixelAt(x, y, 0xFFFFFFFF);
+      }
     }
     
-    // Load the image using imagescript
-    const image = await imagescript.decode(uint8Array);
-    
-    // Ensure the image is in a format OpenAI can process
-    const maxDimension = 2048;
-    if (image.width > maxDimension || image.height > maxDimension) {
-      const scale = Math.min(maxDimension / image.width, maxDimension / image.height);
-      image.resize(
-        Math.round(image.width * scale),
-        Math.round(image.height * scale)
-      );
-    }
-    
-    // Optimize image quality
     const processed = await image.encode();
     console.log('Image processed successfully');
     
@@ -214,64 +203,19 @@ serve(async (req) => {
 
     console.log('File downloaded successfully');
 
-    const fileExtension = filePath.split('.').pop()?.toLowerCase();
-    let extractedData;
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     
     if (!openAIApiKey) {
       return buildResponse({ error: 'OpenAI API key not found' }, 500);
     }
 
-    if (fileExtension === 'pdf') {
-      console.log('Processing PDF file...');
-      const pdfArrayBuffer = await fileData.arrayBuffer();
-      
-      const pdfImages = await extractImagesFromPdf(pdfArrayBuffer);
-      
-      if (pdfImages.length === 0) {
-        return buildResponse({
-          error: 'No images found in PDF. Please upload a PDF that contains images of the utility bill.'
-        }, 400);
-      }
-      
-      let lastError = null;
-      for (const pdfImage of pdfImages) {
-        try {
-          const processedImage = await processImage(pdfImage);
-          extractedData = await analyzeImageWithOpenAI(processedImage, openAIApiKey);
-          
-          if (extractedData && extractedData.property_details) {
-            break;
-          }
-        } catch (error) {
-          console.log('Failed to process image, trying next one:', error);
-          lastError = error;
-          continue;
-        }
-      }
-      
-      if (!extractedData) {
-        return buildResponse({
-          error: lastError?.message || 'Could not extract valid data from any images in the PDF'
-        }, 400);
-      }
-    } else {
-      const mimeType = fileExtension === 'png' ? 'image/png' :
-                      fileExtension === 'jpg' || fileExtension === 'jpeg' ? 'image/jpeg' :
-                      'application/octet-stream';
-
-      if (!['image/png', 'image/jpeg'].includes(mimeType)) {
-        return buildResponse({
-          error: 'Unsupported file type. Please upload a PNG, JPEG, or PDF file.'
-        }, 400);
-      }
-
-      const processedImage = await processImage(fileData);
-      extractedData = await analyzeImageWithOpenAI(processedImage, openAIApiKey);
-    }
+    const pdfArrayBuffer = await fileData.arrayBuffer();
+    const pdfImages = await extractImagesFromPdf(pdfArrayBuffer);
+    
+    const processedImage = await processImage(pdfImages[0]);
+    const extractedData = await analyzeImageWithOpenAI(processedImage, openAIApiKey);
 
     return buildResponse({ status: 'success', data: extractedData });
-
   } catch (error) {
     console.error('Error processing request:', error);
     return buildResponse({
