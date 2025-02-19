@@ -1,9 +1,9 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -15,7 +15,7 @@ serve(async (req) => {
 
     const { username, password, provider, utilityId, type, location } = await req.json();
 
-    console.log('Received scraping request:', {
+    console.log('Starting scraping process:', {
       provider,
       type,
       location,
@@ -34,46 +34,111 @@ serve(async (req) => {
       throw new Error(`Unsupported provider: ${provider}`);
     }
 
-    console.log('Generating mock response for location:', location);
+    // Launch browser
+    console.log('Launching browser...');
+    const browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
 
-    // Generate a more realistic mock response based on the request data
-    const currentDate = new Date();
-    const mockBills = Array.from({ length: 3 }).map((_, index) => {
-      const dueDate = new Date(currentDate);
-      dueDate.setDate(dueDate.getDate() + 14 + (index * 30)); // Spread out due dates
-
-      const startDate = new Date(currentDate);
-      startDate.setMonth(startDate.getMonth() - (index + 1));
+    try {
+      const page = await browser.newPage();
+      console.log('Navigating to ENGIE login page...');
       
-      const endDate = new Date(startDate);
-      endDate.setMonth(endDate.getMonth() + 1);
+      // Navigate to login page
+      await page.goto('https://my.engie.ro/login', { waitUntil: 'networkidle0' });
+      
+      // Accept cookies if present
+      try {
+        const cookieButton = await page.waitForSelector('#onetrust-accept-btn-handler', { timeout: 5000 });
+        if (cookieButton) {
+          await cookieButton.click();
+          console.log('Accepted cookies');
+        }
+      } catch (error) {
+        console.log('No cookie banner found or already accepted');
+      }
 
-      return {
-        amount: 150 + (Math.random() * 50), // Random amount between 150-200
-        due_date: dueDate.toISOString().split('T')[0],
-        invoice_number: `ENGIE-${utilityId.slice(0, 8)}-${index + 1}`,
-        period_start: startDate.toISOString().split('T')[0],
-        period_end: endDate.toISOString().split('T')[0],
-        type: type || 'gas',
-        status: 'pending'
-      };
-    });
+      // Fill login form
+      console.log('Filling login credentials...');
+      await page.type('input[name="username"]', username);
+      await page.type('input[name="password"]', password);
+      
+      // Submit login form
+      console.log('Submitting login form...');
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: 'networkidle0' }),
+        page.click('button[type="submit"]')
+      ]);
 
-    console.log('Generated mock bills:', {
-      count: mockBills.length,
-      location,
-      firstBill: mockBills[0]
-    });
+      // Check for login errors
+      const errorElement = await page.$('.alert-danger');
+      if (errorElement) {
+        const errorText = await page.evaluate(el => el.textContent, errorElement);
+        throw new Error(`Login failed: ${errorText}`);
+      }
 
-    return new Response(JSON.stringify({
-      success: true,
-      bills: mockBills
-    }), {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json',
-      },
-    });
+      // Navigate to bills page
+      console.log('Navigating to bills page...');
+      await page.goto('https://my.engie.ro/facturi-plati', { waitUntil: 'networkidle0' });
+
+      // Extract bill information
+      console.log('Extracting bill information...');
+      const bills = await page.evaluate(() => {
+        const billElements = document.querySelectorAll('.factura-item');
+        return Array.from(billElements).map(element => {
+          const amountText = element.querySelector('.suma')?.textContent || '0';
+          const amount = parseFloat(amountText.replace(/[^\d,]/g, '').replace(',', '.'));
+          
+          const dueDateElement = element.querySelector('.scadenta');
+          const dueDate = dueDateElement ? 
+            new Date(dueDateElement.textContent.trim().split(':')[1].trim()).toISOString().split('T')[0] : 
+            new Date().toISOString().split('T')[0];
+
+          const periodElement = element.querySelector('.perioada');
+          const periodText = periodElement ? periodElement.textContent.trim().split(':')[1].trim() : '';
+          const [startStr, endStr] = periodText.split('-').map(d => d.trim());
+          
+          const invoiceElement = element.querySelector('.numar');
+          const invoiceNumber = invoiceElement ? 
+            invoiceElement.textContent.trim().split(':')[1].trim() : 
+            `ENGIE-${Math.random().toString(36).substring(7)}`;
+
+          return {
+            amount,
+            due_date: dueDate,
+            invoice_number: invoiceNumber,
+            period_start: startStr ? new Date(startStr).toISOString().split('T')[0] : null,
+            period_end: endStr ? new Date(endStr).toISOString().split('T')[0] : null,
+            type: 'gas',
+            status: 'pending'
+          };
+        });
+      });
+
+      console.log('Extracted bills:', {
+        count: bills.length,
+        location,
+        firstBill: bills[0]
+      });
+
+      await browser.close();
+      console.log('Browser closed successfully');
+
+      return new Response(JSON.stringify({
+        success: true,
+        bills
+      }), {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+      });
+
+    } catch (error) {
+      console.error('Error during scraping:', error);
+      await browser.close();
+      throw error;
+    }
 
   } catch (error) {
     console.error('Error in scrape-utility-invoices function:', error);
