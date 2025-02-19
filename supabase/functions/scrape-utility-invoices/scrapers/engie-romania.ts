@@ -1,4 +1,3 @@
-
 import { Scraper, ScraperResult } from './base.ts';
 import { createBrowser } from 'https://deno.land/x/puppeteer@16.2.0/mod.ts';
 import { solve } from 'https://deno.land/x/captcha_solver@v1.0.0/mod.ts';
@@ -8,11 +7,7 @@ export class EngieRomaniaScraper implements Scraper {
   private password: string;
   private captchaApiKey: string;
 
-  constructor(credentials: { 
-    username: string; 
-    password: string;
-    captchaApiKey: string;
-  }) {
+  constructor(credentials: { username: string; password: string; captchaApiKey: string }) {
     this.username = credentials.username;
     this.password = credentials.password;
     this.captchaApiKey = credentials.captchaApiKey;
@@ -26,7 +21,7 @@ export class EngieRomaniaScraper implements Scraper {
       if (acceptButton) {
         console.log('✅ Clicking "Acceptă toate"');
         await acceptButton.click();
-        await page.waitForTimeout(1000);
+        await page.waitForTimeout(2000);
       }
     } catch {
       console.log('✅ No cookie modal detected, proceeding...');
@@ -43,7 +38,7 @@ export class EngieRomaniaScraper implements Scraper {
       const captchaSolution = await solve(this.captchaApiKey, {
         googlekey: sitekey,
         pageurl: page.url(),
-        invisible: true
+        invisible: true,
       });
 
       console.log('✅ CAPTCHA solved. Injecting...');
@@ -53,9 +48,10 @@ export class EngieRomaniaScraper implements Scraper {
         if (textArea) textArea.value = token;
         if (input) input.value = token;
       }, captchaSolution);
+
+      await page.waitForTimeout(2000);
     } catch (error) {
-      console.error('❌ CAPTCHA Error:', error);
-      throw error;
+      console.log('⚠️ No reCAPTCHA found, skipping...');
     }
   }
 
@@ -69,31 +65,30 @@ export class EngieRomaniaScraper implements Scraper {
     await page.waitForSelector('#username', { visible: true });
     await page.waitForSelector('#password', { visible: true });
 
-    // Clear input fields before typing
+    // Ensure the fields are cleared before entering credentials
     await page.evaluate(() => {
-      const username = document.querySelector('#username');
-      const password = document.querySelector('#password');
-      if (username) username.value = '';
-      if (password) password.value = '';
+      const usernameField = document.querySelector('#username') as HTMLInputElement;
+      const passwordField = document.querySelector('#password') as HTMLInputElement;
+      if (usernameField) usernameField.value = '';
+      if (passwordField) passwordField.value = '';
     });
 
-    await page.type('#username', this.username, { delay: 150 });
+    await page.type('#username', this.username, { delay: 100 });
 
-    // Handle password typing with retries
     let passwordCorrectlyEntered = false;
     for (let i = 0; i < 3; i++) {
       console.log(`🔑 Typing password attempt ${i + 1}...`);
 
       await page.evaluate(() => {
-        const password = document.querySelector('#password');
-        if (password) password.value = '';
+        const passwordField = document.querySelector('#password') as HTMLInputElement;
+        if (passwordField) passwordField.value = '';
       });
 
-      await page.type('#password', this.password, { delay: 150 });
+      await page.type('#password', this.password, { delay: 100 });
 
       const enteredPassword = await page.evaluate(() => {
-        const password = document.querySelector('#password');
-        return password ? password.value : '';
+        const passwordField = document.querySelector('#password') as HTMLInputElement;
+        return passwordField ? passwordField.value : '';
       });
 
       if (enteredPassword === this.password) {
@@ -140,7 +135,7 @@ export class EngieRomaniaScraper implements Scraper {
           amount,
           due_date: invoice.querySelector('.due-date')?.textContent?.trim() || '',
           status: invoice.querySelector('.status')?.textContent?.trim() || '',
-          download_link: invoice.querySelector('.download-button')?.getAttribute('href') || ''
+          download_link: invoice.querySelector('.download-button')?.getAttribute('href') || '',
         };
       });
     });
@@ -150,16 +145,17 @@ export class EngieRomaniaScraper implements Scraper {
   }
 
   async scrape(): Promise<ScraperResult> {
-    console.log('Starting ENGIE Romania scraping process');
+    console.log('🚀 Starting ENGIE Romania scraping process...');
     const browser = await createBrowser({
+      headless: false,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-web-security'
-      ]
+        '--disable-web-security',
+      ],
     });
-    
+
     const page = await browser.newPage();
 
     try {
@@ -168,25 +164,25 @@ export class EngieRomaniaScraper implements Scraper {
 
       const bills = invoices.map(invoice => ({
         amount: invoice.amount,
-        due_date: new Date(invoice.due_date).toISOString().split('T')[0],
+        due_date: invoice.due_date ? new Date(invoice.due_date).toISOString().split('T')[0] : 'Unknown',
         invoice_number: invoice.invoice_number,
-        period_start: new Date().toISOString().split('T')[0], // ENGIE doesn't show period dates, using current date
+        period_start: new Date().toISOString().split('T')[0],
         period_end: new Date().toISOString().split('T')[0],
         type: 'gas',
-        status: invoice.status.toLowerCase() === 'paid' ? 'paid' : 'pending'
+        status: invoice.status.toLowerCase() === 'paid' ? 'paid' : 'pending',
       }));
 
       console.log('✅ Scraping completed successfully');
       return {
         success: true,
-        bills
+        bills,
       };
     } catch (error) {
       console.error('❌ Scraping failed:', error);
       return {
         success: false,
         error: error.message,
-        bills: []
+        bills: [],
       };
     } finally {
       await browser.close();
