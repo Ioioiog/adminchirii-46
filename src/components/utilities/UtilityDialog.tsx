@@ -234,7 +234,16 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
           }
         }
 
-        if (extractedData.utility_type) {
+        const extractedText = (extractedData.raw_text || '').toLowerCase();
+        const maintenanceKeywords = ['water', 'cleaning', 'electricity', 'maintenance', 'cleaning'];
+        const keywordMatches = maintenanceKeywords.filter(keyword => 
+          extractedText.includes(keyword)
+        );
+
+        if (keywordMatches.length >= 2) {
+          setUtilityType("Building Maintenance");
+          console.log('Multiple utility keywords found, setting as Building Maintenance:', keywordMatches);
+        } else if (extractedData.utility_type) {
           setUtilityType(extractedData.utility_type.charAt(0).toUpperCase() + 
                       extractedData.utility_type.slice(1).toLowerCase());
         }
