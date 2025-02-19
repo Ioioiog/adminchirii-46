@@ -5,8 +5,8 @@ export interface UtilityBill {
   invoice_number: string;
   period_start: string;
   period_end: string;
-  type: 'electricity' | 'water' | 'gas';
-  status: 'pending' | 'paid' | 'overdue';
+  type: string;
+  status: 'pending' | 'paid';
 }
 
 export interface ScraperResult {
