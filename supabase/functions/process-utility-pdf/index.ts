@@ -8,6 +8,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const toBase64 = async (file: Blob): Promise<string> => {
+  const arrayBuffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+  const binary = Array.from(bytes).map(byte => String.fromCharCode(byte)).join('');
+  return btoa(binary);
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -39,27 +46,17 @@ serve(async (req) => {
       throw downloadError;
     }
 
-    // Convert ArrayBuffer to Base64 in chunks to prevent stack overflow
-    const chunks: Uint8Array[] = [];
-    const chunkSize = 1024 * 512; // 512KB chunks
-    const array = new Uint8Array(await fileData.arrayBuffer());
+    console.log('File downloaded successfully, converting to base64...');
     
-    for (let i = 0; i < array.length; i += chunkSize) {
-      chunks.push(array.slice(i, i + chunkSize));
-    }
-
-    const base64Image = btoa(
-      chunks.reduce((acc, chunk) => acc + String.fromCharCode(...chunk), '')
-    );
-
-    console.log('Image converted to base64');
+    // Convert file to base64 using the helper function
+    const base64Image = await toBase64(fileData);
+    
+    console.log('Image converted to base64, calling OpenAI...');
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
       throw new Error('OpenAI API key not found');
     }
-
-    console.log('Calling OpenAI API...');
 
     // Call OpenAI API for analysis
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -73,26 +70,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `Extract the following information from utility bills, paying special attention to the 'Adresa locului de consum' field which contains the service address:
-
-1. The complete service address from 'Adresa locului de consum' field
-2. Utility type (gas, electricity, water)
-3. Total amount to be paid
-4. Currency
-5. Due date
-6. Issue date
-7. Invoice/document number
-
-Return only a JSON object with these exact keys, no other text:
-{
-  "property_details": "complete service address",
-  "utility_type": "type",
-  "amount": number,
-  "currency": "code",
-  "due_date": "YYYY-MM-DD",
-  "issued_date": "YYYY-MM-DD",
-  "invoice_number": "number"
-}`
+            content: 'Extract these fields from utility bills: 1) "Adresa locului de consum" (service address) 2) utility type 3) amount 4) currency 5) due date 6) issue date 7) invoice number. Return as JSON with keys: property_details, utility_type, amount, currency, due_date, issued_date, invoice_number.'
           },
           {
             role: 'user',
@@ -111,13 +89,13 @@ Return only a JSON object with these exact keys, no other text:
     });
 
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error('OpenAI API error:', errorData);
-      throw new Error(`OpenAI API error: ${response.status} ${errorData}`);
+      const errorText = await response.text();
+      console.error('OpenAI API error:', errorText);
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('OpenAI response received');
+    console.log('Received response from OpenAI');
 
     if (!data.choices?.[0]?.message?.content) {
       throw new Error('Invalid response format from OpenAI');
@@ -125,13 +103,13 @@ Return only a JSON object with these exact keys, no other text:
 
     let extractedData;
     try {
-      const content = data.choices[0].message.content;
+      const content = data.choices[0].message.content.trim();
       console.log('Raw content:', content);
-      extractedData = JSON.parse(content.trim());
-      console.log('Successfully extracted and validated data:', extractedData);
+      extractedData = JSON.parse(content);
+      console.log('Parsed data:', extractedData);
     } catch (error) {
       console.error('Error parsing OpenAI response:', error);
-      throw new Error('Failed to parse extracted data from OpenAI response');
+      throw new Error('Failed to parse extracted data');
     }
 
     return new Response(
