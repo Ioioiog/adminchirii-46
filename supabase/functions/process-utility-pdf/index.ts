@@ -16,58 +16,47 @@ const toBase64 = async (file: Blob): Promise<string> => {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { filePath } = await req.json();
-    
-    if (!filePath) {
-      console.log('No file path provided');
-      throw new Error('No file path provided');
-    }
+    if (!filePath) throw new Error('No file path provided');
 
     console.log('Processing file:', filePath);
 
-    // Create Supabase client
+    // Supabase Client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Download file from Storage
+    // Download File
     const { data: fileData, error: downloadError } = await supabase
       .storage
       .from('utility-invoices')
       .download(filePath);
 
-    if (downloadError) {
-      console.error('Download error:', downloadError);
-      throw downloadError;
-    }
+    if (downloadError) throw new Error('Error downloading file: ' + downloadError.message);
 
-    console.log('File downloaded successfully, converting to base64...');
-    
-    // Convert file to base64 using the helper function
+    console.log('File downloaded successfully');
+
+    // Convert to Base64
     const base64Image = await toBase64(fileData);
-    
-    console.log('Image converted to base64, calling OpenAI...');
 
+    // OpenAI API Key
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key not found');
-    }
+    if (!openAIApiKey) throw new Error('OpenAI API key not found');
 
-    // Determine MIME type based on file extension
+    // Determine MIME Type
     const fileExtension = filePath.split('.').pop()?.toLowerCase();
-    const mimeType = fileExtension === 'png' ? 'image/png' : 
-                    fileExtension === 'jpg' || fileExtension === 'jpeg' ? 'image/jpeg' : 
-                    'application/octet-stream';
+    const mimeType = fileExtension === 'png' ? 'image/png' :
+                     fileExtension === 'jpg' || fileExtension === 'jpeg' ? 'image/jpeg' :
+                     'application/octet-stream';
 
     console.log('Using MIME type:', mimeType);
 
-    // Call OpenAI API for analysis with improved prompt
+    // OpenAI Request
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -75,25 +64,31 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o-mini',  // Using the correct model name as per guidelines
         messages: [
           {
             role: 'system',
-            content: `Extract information from Romanian utility bills. Pay special attention to the "Adresa locului de consum" field, which appears in various formats:
-            1. Look for text that follows "Adresa locului de consum:" or similar variants
-            2. Look for address patterns that include apartment numbers (ap., apartament)
-            3. Look for addresses with building numbers (bl., bloc)
-            
-            Return a JSON object with these keys:
-            - property_details: the full text found under "Adresa locului de consum" or the main service address
-            - utility_type: type of utility (gas, water, electricity)
-            - amount: numerical value
-            - currency: RON, LEI, etc.
-            - due_date: payment due date (YYYY-MM-DD)
-            - issued_date: bill issue date (YYYY-MM-DD)
-            - invoice_number: invoice or bill number
-            
-            Focus on capturing the complete address including apartment numbers and building details.`
+            content: `Extract structured information from Romanian utility bills, with a focus on the "Adresa locului de consum" field.
+
+            - Look for text near "Adresa locului de consum:"
+            - Extract the **entire address**, including:
+              - **Street name** (e.g., "Soseaua FABRICA DE GLUCOZA")
+              - **Building number** (e.g., "Nr. 6-8 Bl. B1.7")
+              - **Apartment details** (e.g., "SCA Et. 10 Ap. 60")
+              - **City and Postal Code** (e.g., "BUCURESTI 020332")
+
+            **Output Format (JSON):**
+            {
+              "property_details": "Full address as found on the bill",
+              "utility_type": "gas, water, electricity",
+              "amount": "456.73",
+              "currency": "LEI",
+              "due_date": "YYYY-MM-DD",
+              "issued_date": "YYYY-MM-DD",
+              "invoice_number": "Invoice number"
+            }
+
+            Ensure the response is valid JSON with no additional text.`,
           },
           {
             role: 'user',
@@ -114,53 +109,28 @@ serve(async (req) => {
     const responseText = await response.text();
     console.log('OpenAI raw response:', responseText);
 
-    if (!response.ok) {
-      console.error('OpenAI API error:', responseText);
-      throw new Error(`OpenAI API error: ${response.status} - ${responseText}`);
-    }
-
-    const data = JSON.parse(responseText);
-    console.log('Parsed OpenAI response:', data);
-
-    if (!data.choices?.[0]?.message?.content) {
-      throw new Error('Invalid response format from OpenAI');
-    }
+    if (!response.ok) throw new Error(`OpenAI API error: ${response.status} - ${responseText}`);
 
     let extractedData;
     try {
-      const content = data.choices[0].message.content.trim();
-      console.log('Raw content:', content);
+      const data = JSON.parse(responseText);
+      const content = data.choices?.[0]?.message?.content?.trim();
       extractedData = JSON.parse(content);
-      console.log('Parsed data:', extractedData);
     } catch (error) {
       console.error('Error parsing OpenAI response:', error);
       throw new Error('Failed to parse extracted data');
     }
 
     return new Response(
-      JSON.stringify({ data: extractedData }),
-      { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        } 
-      }
+      JSON.stringify({ status: 'success', data: extractedData }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Error in process-utility-pdf function:', error);
+    console.error('Error:', error);
     return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        details: error.stack
-      }),
-      { 
-        status: 500,
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        } 
-      }
+      JSON.stringify({ status: 'error', message: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
