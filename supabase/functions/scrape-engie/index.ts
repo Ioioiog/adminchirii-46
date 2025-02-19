@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { chromium } from "https://deno.land/x/playwright@0.3.0/mod.ts";
+import { chromium } from 'https://deno.land/x/puppeteer@16.2.0/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -91,7 +91,7 @@ async function solveCaptcha(page: any, captchaApiKey: string): Promise<void> {
 async function handleCookies(page: any) {
   console.log('🍪 Checking for cookie consent...');
   try {
-    const acceptButton = await page.waitForSelector('#cookieConsentBtnRight', { timeout: 5000 });
+    const acceptButton = await page.$('#cookieConsentBtnRight');
     if (acceptButton) {
       console.log('Accepting cookies...');
       await acceptButton.click();
@@ -110,8 +110,7 @@ async function scrapeEngie(credentials: ScraperCredentials, captchaApiKey: strin
   });
   
   try {
-    const context = await browser.newContext();
-    const page = await context.newPage();
+    const page = await browser.newPage();
 
     console.log('🔑 Navigating to login page...');
     await page.goto('https://my.engie.ro/autentificare');
@@ -119,8 +118,8 @@ async function scrapeEngie(credentials: ScraperCredentials, captchaApiKey: strin
     await handleCookies(page);
 
     console.log('📝 Entering credentials...');
-    await page.fill('#username', credentials.username);
-    await page.fill('#password', credentials.password);
+    await page.type('#username', credentials.username);
+    await page.type('#password', credentials.password);
 
     await solveCaptcha(page, captchaApiKey);
 
