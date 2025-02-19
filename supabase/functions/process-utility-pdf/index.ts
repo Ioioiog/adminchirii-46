@@ -78,22 +78,22 @@ async function processImage(imageData: Uint8Array | Blob): Promise<string> {
     console.log('Creating base image...');
     const width = 1200;
     const height = 1600;
-    const image = new imagescript.Image(width, height);
     
-    // Fill with white background
-    const whiteColor = 0xFFFFFFFF; // RGBA white color
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        image.setPixelAt(x, y, whiteColor);
-      }
-    }
+    // Create and build the image before pixel manipulation
+    const image = await new imagescript.Image(width, height).fill(0xFFFFFFFF);
     
-    // Draw some text to make sure the image is valid
+    // Draw a simple black rectangle in the center
     console.log('Adding content to image...');
-    const textColor = 0x000000FF; // RGBA black color
-    for (let y = height/2 - 10; y < height/2 + 10; y++) {
-      for (let x = width/2 - 50; x < width/2 + 50; x++) {
-        image.setPixelAt(x, y, textColor);
+    const centerX = Math.floor(width / 2);
+    const centerY = Math.floor(height / 2);
+    const rectWidth = 100;
+    const rectHeight = 20;
+    
+    for (let y = centerY - rectHeight/2; y < centerY + rectHeight/2; y++) {
+      for (let x = centerX - rectWidth/2; x < centerX + rectWidth/2; x++) {
+        if (x >= 0 && x < width && y >= 0 && y < height) {
+          await image.setPixelAt(Math.floor(x), Math.floor(y), 0x000000FF);
+        }
       }
     }
     
