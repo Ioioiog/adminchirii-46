@@ -111,7 +111,6 @@ export function useScraping(providers: UtilityProvider[]) {
     
     if (!Array.isArray(response.bills)) return false;
     
-    // If there's an error message, it should be a string
     if (response.error !== undefined && typeof response.error !== 'string') return false;
     
     return true;
@@ -162,7 +161,7 @@ export function useScraping(providers: UtilityProvider[]) {
         username: credentials.username,
         password: credentials.password,
         utilityId: providerId,
-        provider: provider.provider_name,
+        provider: provider.provider_name.toLowerCase(),
         type: provider.utility_type,
         location: provider.location_name
       };
