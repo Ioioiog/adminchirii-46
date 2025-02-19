@@ -41,7 +41,6 @@ export function useScraping(providers: UtilityProvider[]) {
       setScrapingQueue(updatedQueue);
       setIsProcessingQueue(false);
       
-      // Process next item in queue if any
       if (updatedQueue.length > 0) {
         console.log(`Queue: ${updatedQueue.length} items remaining:`, updatedQueue);
         setTimeout(() => {
@@ -53,7 +52,6 @@ export function useScraping(providers: UtilityProvider[]) {
     }
   }, [isProcessingQueue, scrapingQueue]);
 
-  // Effect to monitor queue changes and start processing
   useEffect(() => {
     const shouldStartProcessing = scrapingQueue.length > 0 && !isProcessingQueue;
     console.log('Queue state changed:', {
@@ -80,12 +78,12 @@ export function useScraping(providers: UtilityProvider[]) {
     try {
       await handleScrape(providerId);
     } catch (error) {
+      console.error(`Error during scraping attempt ${retryCount + 1}:`, error);
       if (retryCount < MAX_RETRIES) {
-        console.log(`Retry attempt ${retryCount + 1} for provider ${providerId}`, { error });
+        console.log(`Retry attempt ${retryCount + 1} for provider ${providerId}`);
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
         return handleScrapeWithRetry(providerId, retryCount + 1);
       }
-      console.error(`All retry attempts failed for provider ${providerId}`, { error });
       throw error;
     }
   };
@@ -100,6 +98,14 @@ export function useScraping(providers: UtilityProvider[]) {
 
     console.log(`Starting scrape for provider: ${providerId} property: ${provider.property_id}`);
     setScrapingStates(prev => ({ ...prev, [providerId]: true }));
+    setScrapingJobs(prev => ({
+      ...prev,
+      [providerId]: {
+        status: 'in_progress',
+        last_run_at: new Date().toISOString(),
+        error_message: null
+      }
+    }));
 
     try {
       console.log('Fetching decrypted credentials...');
@@ -136,12 +142,9 @@ export function useScraping(providers: UtilityProvider[]) {
         providerId, 
         provider: provider.provider_name,
         type: provider.utility_type,
+        location: provider.location_name,
         hasUsername: !!requestBody.username,
-        hasPassword: !!requestBody.password,
-        requestBody: {
-          ...requestBody,
-          password: requestBody.password ? '[REDACTED]' : undefined
-        }
+        hasPassword: !!requestBody.password
       });
 
       const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke('scrape-utility-invoices', {
@@ -166,15 +169,6 @@ export function useScraping(providers: UtilityProvider[]) {
           error_message: null
         }
       }));
-
-      // After successful scrape, fetch the bills
-      const { error: fetchError } = await supabase.functions.invoke('fetch-utility-bills', {
-        body: { providerId }
-      });
-
-      if (fetchError) {
-        console.error('Error fetching bills after scrape:', fetchError);
-      }
 
       toast({
         title: "Success",
