@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
@@ -98,16 +99,16 @@ async function processImage(imageData: Uint8Array | Blob): Promise<string> {
     }
     
     console.log('Creating base image...');
-    const width = 1200;
-    const height = 1600;
+    const width = 2400; // Increased resolution
+    const height = 3200; // Increased resolution
     
     const image = await new imagescript.Image(width, height).fill(0xFFFFFFFF);
     
     console.log('Adding content to image...');
     const centerX = Math.floor(width / 2);
     const centerY = Math.floor(height / 2);
-    const rectWidth = 100;
-    const rectHeight = 20;
+    const rectWidth = 200; // Increased size
+    const rectHeight = 40; // Increased size
     
     for (let y = centerY - rectHeight/2; y < centerY + rectHeight/2; y++) {
       for (let x = centerX - rectWidth/2; x < centerX + rectWidth/2; x++) {
@@ -144,17 +145,27 @@ async function analyzeImageWithOpenAI(imageBase64: string, openAIApiKey: string)
         messages: [
           {
             role: 'system',
-            content: `You are an AI trained to extract information from Romanian utility bills. 
-            Your task is to analyze the image and return ONLY a JSON object with the following fields:
-            - property_details: extract the full address from "Adresa locului de consum"
-            - utility_type: identify if this is "gas", "water", or "electricity"
-            - amount: the total amount to be paid (as a string with 2 decimal places)
-            - currency: the currency (usually "LEI")
-            - due_date: the payment due date in YYYY-MM-DD format
-            - issued_date: the invoice issue date in YYYY-MM-DD format
-            - invoice_number: the invoice number/series
-            
-            Return ONLY the JSON object, no additional text or formatting.`,
+            content: `You are an expert at extracting information from Romanian utility bills.
+            Carefully analyze the image of a utility bill and extract the following fields:
+            1. Look for "Adresa locului de consum" and extract the complete address
+            2. Determine if this is a gas, water, or electricity bill based on the provider and content
+            3. Find the total amount to be paid
+            4. Identify the currency (typically LEI)
+            5. Find the payment due date
+            6. Find the invoice issue date
+            7. Locate the invoice number or series
+
+            Return ONLY a JSON object with these fields:
+            {
+              "property_details": "[full address from Adresa locului de consum]",
+              "utility_type": "gas|water|electricity",
+              "amount": "[amount with 2 decimals]",
+              "currency": "LEI",
+              "due_date": "YYYY-MM-DD",
+              "issued_date": "YYYY-MM-DD",
+              "invoice_number": "[invoice number/series]"
+            }
+            No additional text, just the JSON object.`,
           },
           {
             role: 'user',
