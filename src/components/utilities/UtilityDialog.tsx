@@ -41,11 +41,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
   const [showForm, setShowForm] = useState(true);
 
   const findMatchingProperty = (extractedAddress: string) => {
-    console.log('Looking for match for address:', extractedAddress);
-    console.log('Available properties:', properties.map(p => ({
-      name: p.name,
-      address: p.address
-    })));
+    console.log('Starting property match for address:', extractedAddress);
 
     const normalize = (addr: string) => {
       return addr
@@ -55,61 +51,94 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
     };
 
     const extractApartmentNumber = (address: string) => {
+      // First try to match the B1-10 format specifically for Holban
+      const holbanPattern = /b1-10/i;
+      if (holbanPattern.test(address.toLowerCase())) {
+        console.log('Found Holban specific apartment format B1-10');
+        return 'b1-10';
+      }
+
+      // Then try other apartment number patterns
       const patterns = [
-        /(?:ap|apartament|ap\.|apartment)\s*([a-z0-9\-\.]+)/i,  // matches ap. 53, ap B1-10
-        /(?:^|\s)([a-z0-9\-\.]+)(?:\s*$)/  // matches number at end
+        /(?:ap|apartament|ap\.|apartment)\s*([a-z0-9\-\.]+)/i,
+        /bl[.]?\s+[a-z]+\s+ap[.]?\s+([a-z0-9\-\.]+)/i,
+        /(?:^|\s)([a-z0-9\-\.]+)(?:\s*$)/
       ];
 
       for (const pattern of patterns) {
         const match = address.match(pattern);
         if (match) {
           const aptNum = match[1].toLowerCase();
-          console.log(`Found apartment number ${aptNum} in address: ${address}`);
+          console.log(`Found apartment number '${aptNum}' in address: ${address}`);
           return aptNum;
         }
       }
+      
+      console.log('No apartment number found in address:', address);
       return null;
     };
 
     const extractedNormalized = normalize(extractedAddress);
     const extractedAptNum = extractApartmentNumber(extractedAddress);
     
+    console.log('Extracted details:', {
+      normalizedAddress: extractedNormalized,
+      apartmentNumber: extractedAptNum
+    });
+
     let matchingProperty = properties.find(p => {
       if (!p.address) return false;
 
       const propertyNormalized = normalize(p.address);
       const propertyAptNum = extractApartmentNumber(p.address);
       
-      // First check if we're in the right building/street
-      const isLocationMatch = 
-        (extractedNormalized.includes('holban') && propertyNormalized.includes('holban')) ||
-        (extractedNormalized.includes('yacht') && propertyNormalized.includes('yacht')) ||
-        (extractedNormalized.includes('glucoza') && propertyNormalized.includes('glucoza'));
+      console.log('\nChecking property:', {
+        name: p.name,
+        originalAddress: p.address,
+        normalizedAddress: propertyNormalized,
+        apartmentNumber: propertyAptNum
+      });
 
-      if (!isLocationMatch) return false;
+      // First check if we're in the right building/street
+      const isHolbanMatch = extractedNormalized.includes('holban') && propertyNormalized.includes('holban');
+      const isYachtMatch = extractedNormalized.includes('yacht') && propertyNormalized.includes('yacht');
+      const isGlucozaMatch = extractedNormalized.includes('glucoza') && propertyNormalized.includes('glucoza');
+      
+      const isLocationMatch = isHolbanMatch || isYachtMatch || isGlucozaMatch;
+
+      console.log('Location matching results:', {
+        isHolbanMatch,
+        isYachtMatch,
+        isGlucozaMatch,
+        isLocationMatch
+      });
+
+      if (!isLocationMatch) {
+        console.log('Location does not match, skipping apartment check');
+        return false;
+      }
 
       // Then verify apartment number if available
       if (extractedAptNum && propertyAptNum) {
-        console.log('Comparing apartment numbers:', {
-          extractedAptNum,
-          propertyAptNum,
-          propertyName: p.name,
-          propertyAddress: p.address
+        const aptMatch = extractedAptNum === propertyAptNum;
+        console.log('Apartment number comparison:', {
+          extracted: extractedAptNum,
+          property: propertyAptNum,
+          matches: aptMatch
         });
-        
-        return extractedAptNum === propertyAptNum;
+        return aptMatch;
       }
 
+      console.log('No apartment numbers to compare, using location match only');
       return isLocationMatch;
     });
 
     if (!matchingProperty) {
-      console.log('No matching property found for address:', extractedAddress);
+      console.log('❌ No matching property found');
     } else {
-      console.log('Found matching property:', {
+      console.log('✅ Found matching property:', {
         name: matchingProperty.name,
-        address: matchingProperty.address,
-        extractedAddress
+        address: matchingProperty.address
       });
     }
 
