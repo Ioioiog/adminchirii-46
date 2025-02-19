@@ -8,6 +8,8 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let browser = null;
+
   try {
     if (req.method !== 'POST') {
       throw new Error('Method not allowed');
@@ -34,65 +36,93 @@ serve(async (req) => {
       throw new Error(`Unsupported provider: ${provider}`);
     }
 
-    // Launch browser
+    // Launch browser with more specific configurations
     console.log('Launching browser...');
-    const browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    browser = await puppeteer.launch({
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--headless'
+      ]
     });
 
-    try {
-      const page = await browser.newPage();
-      console.log('Navigating to ENGIE login page...');
-      
-      // Navigate to login page
-      await page.goto('https://my.engie.ro/login', { waitUntil: 'networkidle0' });
-      
-      // Accept cookies if present
-      try {
-        const cookieButton = await page.waitForSelector('#onetrust-accept-btn-handler', { timeout: 5000 });
-        if (cookieButton) {
-          await cookieButton.click();
-          console.log('Accepted cookies');
-        }
-      } catch (error) {
-        console.log('No cookie banner found or already accepted');
-      }
+    const page = await browser.newPage();
+    
+    // Set viewport and user agent
+    await page.setViewport({ width: 1280, height: 800 });
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
 
-      // Fill login form
-      console.log('Filling login credentials...');
-      await page.type('input[name="username"]', username);
-      await page.type('input[name="password"]', password);
-      
-      // Submit login form
-      console.log('Submitting login form...');
-      await Promise.all([
-        page.waitForNavigation({ waitUntil: 'networkidle0' }),
-        page.click('button[type="submit"]')
-      ]);
+    // Add more detailed error logging
+    page.on('console', msg => console.log('Browser console:', msg.text()));
+    page.on('pageerror', err => console.error('Browser page error:', err));
 
-      // Check for login errors
-      const errorElement = await page.$('.alert-danger');
-      if (errorElement) {
-        const errorText = await page.evaluate(el => el.textContent, errorElement);
-        throw new Error(`Login failed: ${errorText}`);
-      }
+    console.log('Navigating to ENGIE login page...');
+    const response = await page.goto('https://my.engie.ro/login', {
+      waitUntil: 'networkidle0',
+      timeout: 30000
+    });
 
-      // Navigate to bills page
-      console.log('Navigating to bills page...');
-      await page.goto('https://my.engie.ro/facturi-plati', { waitUntil: 'networkidle0' });
+    if (!response?.ok()) {
+      throw new Error(`Failed to load login page: ${response?.status()} ${response?.statusText()}`);
+    }
 
-      // Extract bill information
-      console.log('Extracting bill information...');
-      const bills = await page.evaluate(() => {
-        const billElements = document.querySelectorAll('.factura-item');
-        return Array.from(billElements).map(element => {
+    // Wait for login form to be present
+    await page.waitForSelector('input[name="username"]', { timeout: 10000 });
+    await page.waitForSelector('input[name="password"]', { timeout: 10000 });
+
+    console.log('Login form found, filling credentials...');
+
+    // Type credentials with delay
+    await page.type('input[name="username"]', username, { delay: 100 });
+    await page.type('input[name="password"]', password, { delay: 100 });
+
+    console.log('Submitting login form...');
+    
+    // Click submit and wait for navigation
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 }),
+      page.click('button[type="submit"]')
+    ]);
+
+    // Check for login errors
+    const errorElement = await page.$('.alert-danger');
+    if (errorElement) {
+      const errorText = await page.evaluate(el => el.textContent, errorElement);
+      throw new Error(`Login failed: ${errorText}`);
+    }
+
+    console.log('Successfully logged in, navigating to bills page...');
+
+    // Navigate to bills page
+    const billsResponse = await page.goto('https://my.engie.ro/facturi-plati', {
+      waitUntil: 'networkidle0',
+      timeout: 30000
+    });
+
+    if (!billsResponse?.ok()) {
+      throw new Error(`Failed to load bills page: ${billsResponse?.status()} ${billsResponse?.statusText()}`);
+    }
+
+    // Wait for bills to load
+    await page.waitForSelector('.factura-item', { timeout: 30000 });
+
+    console.log('Extracting bill information...');
+    const bills = await page.evaluate(() => {
+      const billElements = document.querySelectorAll('.factura-item');
+      return Array.from(billElements).map(element => {
+        try {
           const amountText = element.querySelector('.suma')?.textContent || '0';
           const amount = parseFloat(amountText.replace(/[^\d,]/g, '').replace(',', '.'));
           
           const dueDateElement = element.querySelector('.scadenta');
           const dueDate = dueDateElement ? 
             new Date(dueDateElement.textContent.trim().split(':')[1].trim()).toISOString().split('T')[0] : 
-            new Date().toISOString().split('T')[0];
+            null;
 
           const periodElement = element.querySelector('.perioada');
           const periodText = periodElement ? periodElement.textContent.trim().split(':')[1].trim() : '';
@@ -101,7 +131,11 @@ serve(async (req) => {
           const invoiceElement = element.querySelector('.numar');
           const invoiceNumber = invoiceElement ? 
             invoiceElement.textContent.trim().split(':')[1].trim() : 
-            `ENGIE-${Math.random().toString(36).substring(7)}`;
+            null;
+
+          if (!amount || !dueDate || !invoiceNumber) {
+            throw new Error('Missing required bill information');
+          }
 
           return {
             amount,
@@ -112,36 +146,48 @@ serve(async (req) => {
             type: 'gas',
             status: 'pending'
           };
-        });
-      });
+        } catch (error) {
+          console.error('Error parsing bill element:', error);
+          return null;
+        }
+      }).filter(bill => bill !== null);
+    });
 
-      console.log('Extracted bills:', {
-        count: bills.length,
-        location,
-        firstBill: bills[0]
-      });
+    console.log('Extracted bills:', {
+      count: bills.length,
+      location,
+      firstBill: bills[0]
+    });
 
-      await browser.close();
-      console.log('Browser closed successfully');
-
-      return new Response(JSON.stringify({
-        success: true,
-        bills
-      }), {
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-      });
-
-    } catch (error) {
-      console.error('Error during scraping:', error);
-      await browser.close();
-      throw error;
+    if (bills.length === 0) {
+      throw new Error('No bills found on the page');
     }
+
+    await browser.close();
+    console.log('Browser closed successfully');
+
+    return new Response(JSON.stringify({
+      success: true,
+      bills
+    }), {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+      },
+    });
 
   } catch (error) {
     console.error('Error in scrape-utility-invoices function:', error);
+    
+    // Ensure browser is closed even if there's an error
+    if (browser) {
+      try {
+        await browser.close();
+        console.log('Browser closed after error');
+      } catch (closeError) {
+        console.error('Error closing browser:', closeError);
+      }
+    }
     
     return new Response(JSON.stringify({
       error: error.message,
