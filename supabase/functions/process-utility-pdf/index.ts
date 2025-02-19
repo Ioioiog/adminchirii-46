@@ -25,6 +25,7 @@ serve(async (req) => {
     const { filePath } = await req.json();
     
     if (!filePath) {
+      console.log('No file path provided');
       throw new Error('No file path provided');
     }
 
@@ -58,6 +59,14 @@ serve(async (req) => {
       throw new Error('OpenAI API key not found');
     }
 
+    // Determine MIME type based on file extension
+    const fileExtension = filePath.split('.').pop()?.toLowerCase();
+    const mimeType = fileExtension === 'png' ? 'image/png' : 
+                    fileExtension === 'jpg' || fileExtension === 'jpeg' ? 'image/jpeg' : 
+                    'application/octet-stream';
+
+    console.log('Using MIME type:', mimeType);
+
     // Call OpenAI API for analysis
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -78,7 +87,7 @@ serve(async (req) => {
               {
                 type: 'image',
                 image_url: {
-                  url: `data:image/jpeg;base64,${base64Image}`
+                  url: `data:${mimeType};base64,${base64Image}`
                 }
               }
             ]
@@ -88,14 +97,16 @@ serve(async (req) => {
       }),
     });
 
+    const responseText = await response.text();
+    console.log('OpenAI raw response:', responseText);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenAI API error:', errorText);
-      throw new Error(`OpenAI API error: ${response.status}`);
+      console.error('OpenAI API error:', responseText);
+      throw new Error(`OpenAI API error: ${response.status} - ${responseText}`);
     }
 
-    const data = await response.json();
-    console.log('Received response from OpenAI');
+    const data = JSON.parse(responseText);
+    console.log('Parsed OpenAI response:', data);
 
     if (!data.choices?.[0]?.message?.content) {
       throw new Error('Invalid response format from OpenAI');
