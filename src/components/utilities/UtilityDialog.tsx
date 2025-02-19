@@ -41,7 +41,18 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
   const [showForm, setShowForm] = useState(true);
 
   const findMatchingProperty = (extractedAddress: string) => {
-    console.log('Starting property match for address:', extractedAddress);
+    if (!extractedAddress) {
+      console.log('No address provided');
+      return null;
+    }
+
+    // Look for "Adresa locului de consum" pattern
+    const consumptionAddressPattern = /adresa\s+locului\s+de\s+consum[:\s]+([^\n]+)/i;
+    const match = extractedAddress.match(consumptionAddressPattern);
+    
+    // If we find a consumption address, use that instead of the full text
+    const addressToMatch = match ? match[1].trim() : extractedAddress;
+    console.log('Starting property match for address:', addressToMatch);
 
     const normalize = (addr: string) => {
       return addr
@@ -93,8 +104,8 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       return null;
     };
 
-    const extractedNormalized = normalize(extractedAddress);
-    const extractedAptNum = extractApartmentNumber(extractedAddress);
+    const extractedNormalized = normalize(addressToMatch);
+    const extractedAptNum = extractApartmentNumber(addressToMatch);
     
     console.log('Extracted details:', {
       normalizedAddress: extractedNormalized,
@@ -166,7 +177,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
     });
 
     if (!matchingProperty) {
-      console.log('❌ No matching property found');
+      console.log('❌ No matching property found for:', addressToMatch);
     } else {
       console.log('✅ Found matching property:', {
         name: matchingProperty.name,
