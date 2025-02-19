@@ -44,13 +44,13 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
     const normalizeAddress = (addr: string) => {
       let normalized = addr
         .toLowerCase()
-        .replace(/soseaua/i, 'sos')
-        .replace(/strada/i, 'str')
-        .replace(/nr\./i, 'nr')
-        .replace(/bloc/i, 'bl')
-        .replace(/scara/i, 'sc')
-        .replace(/etaj/i, 'et')
-        .replace(/apartament/i, 'ap')
+        .replace(/soseaua|strada|str\./i, '')
+        .replace(/nr\./i, '')
+        .replace(/bloc|bl\./i, '')
+        .replace(/scara|sc\./i, '')
+        .replace(/etaj|et\./i, '')
+        .replace(/apartament|ap\./i, '')
+        .replace(/localitatea|bucuresti|romania/ig, '')
         .replace(/[.,]/g, '')
         .replace(/\s+/g, ' ')
         .trim();
@@ -59,85 +59,49 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       return normalized;
     };
 
-    const extractAptNumber = (addr: string) => {
-      const patterns = [
-        /ap\.?\s*(\d+)/i,         // matches "ap. 53", "ap 53"
-        /ap[artment]*\.?\s*(\d+)/i, // matches "apartament 53"
-        /(?:^|\s)(\d+)(?:\s*$)/,  // matches standalone number at end
-      ];
-
-      for (const pattern of patterns) {
-        const match = addr.match(pattern);
-        if (match) {
-          const num = parseInt(match[1], 10);
-          console.log(`Found apartment number ${num} using pattern ${pattern} in address: ${addr}`);
-          return num;
-        }
-      }
+    const extractLocationIdentifiers = (addr: string) => {
+      // Extract key location identifiers
+      const holbanMatch = addr.toLowerCase().includes('holban') || 
+                         addr.toLowerCase().includes('yacht kid');
+      const glucozaMatch = addr.toLowerCase().includes('fabrica de glucoza') || 
+                          addr.toLowerCase().includes('glucoza');
       
-      // Special case: try to find number after "ap" or at the end
-      const components = addr.split(/[\s,]+/);
-      for (let i = 0; i < components.length; i++) {
-        if (components[i].toLowerCase() === 'ap' && components[i + 1]) {
-          const num = parseInt(components[i + 1], 10);
-          if (!isNaN(num)) {
-            console.log(`Found apartment number ${num} after "ap" in components`);
-            return num;
-          }
-        }
-      }
-      
-      return null;
+      return {
+        isHolban: holbanMatch,
+        isGlucoza: glucozaMatch
+      };
     };
 
     const normalizedExtractedAddr = normalizeAddress(extractedAddress);
-    console.log('Normalized extracted address:', normalizedExtractedAddr);
-
-    properties.forEach(p => {
-      const normalizedAddr = normalizeAddress(p.address || '');
-      const aptNum = extractAptNumber(p.address || '');
-      console.log('Property:', p.name, 'Normalized:', normalizedAddr, 'Apt:', aptNum);
+    console.log('Looking for match for address:', {
+      original: extractedAddress,
+      normalized: normalizedExtractedAddr
     });
 
-    // Try to find exact match first
     let matchingProperty = properties.find(p => {
       if (!p.address) return false;
 
-      const hasGlucoza = 
-        normalizeAddress(p.address).includes('fabrica de glucoza') ||
-        normalizedExtractedAddr.includes('fabrica de glucoza');
-      
-      if (!hasGlucoza) return false;
+      const extractedIdentifiers = extractLocationIdentifiers(extractedAddress);
+      const propertyIdentifiers = extractLocationIdentifiers(p.address);
 
-      const propertyAptNum = extractAptNumber(p.address);
-      const extractedAptNum = extractAptNumber(extractedAddress);
-      
-      console.log('Detailed comparison:', {
-        property: p.name,
-        propertyAptNum,
-        extractedAptNum,
-        propertyAddress: normalizeAddress(p.address),
-        extractedAddress: normalizedExtractedAddr
-      });
-      
-      if (propertyAptNum === null || extractedAptNum === null) {
-        console.log('Could not extract apartment number from:', {
-          propertyAddress: p.address,
-          extractedAddress
-        });
+      // Match based on location identifiers
+      const locationMatch = (
+        (extractedIdentifiers.isHolban && propertyIdentifiers.isHolban) ||
+        (extractedIdentifiers.isGlucoza && propertyIdentifiers.isGlucoza)
+      );
+
+      if (!locationMatch) {
+        console.log('No location match for property:', p.name);
         return false;
       }
 
-      const isMatch = propertyAptNum === extractedAptNum;
-      if (isMatch) {
-        console.log('Found match!', {
-          propertyName: p.name,
-          propertyAptNum,
-          extractedAptNum
-        });
-      }
-      
-      return isMatch;
+      console.log('Found location match for property:', {
+        propertyName: p.name,
+        propertyAddress: p.address,
+        extractedAddress: extractedAddress
+      });
+
+      return true;
     });
 
     if (matchingProperty) {
