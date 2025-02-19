@@ -1,7 +1,6 @@
 
 import { Scraper, ScraperResult } from './base.ts';
 import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
-import { solve } from 'https://deno.land/x/captcha_solver@v1.0.0/mod.ts';
 
 export class EngieRomaniaScraper implements Scraper {
   private username: string;
@@ -18,6 +17,57 @@ export class EngieRomaniaScraper implements Scraper {
     this.captchaApiKey = credentials.captchaApiKey;
   }
 
+  private async solveCaptcha(page: any, sitekey: string, pageUrl: string): Promise<string> {
+    console.log('🔍 Solving reCAPTCHA...');
+    
+    const apiEndpoint = 'https://api.2captcha.com/createTask';
+    const response = await fetch(apiEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        clientKey: this.captchaApiKey,
+        task: {
+          type: 'RecaptchaV2TaskProxyless',
+          websiteURL: pageUrl,
+          websiteKey: sitekey,
+          isInvisible: true
+        }
+      })
+    });
+
+    const result = await response.json();
+    if (!result.taskId) {
+      throw new Error('Failed to create captcha solving task');
+    }
+
+    // Poll for the solution
+    const taskId = result.taskId;
+    for (let i = 0; i < 30; i++) {
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds between checks
+      
+      const checkResponse = await fetch(`https://api.2captcha.com/getTaskResult`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          clientKey: this.captchaApiKey,
+          taskId: taskId
+        })
+      });
+
+      const checkResult = await checkResponse.json();
+      if (checkResult.status === 'ready') {
+        console.log('✅ CAPTCHA solved successfully');
+        return checkResult.solution.gRecaptchaResponse;
+      }
+    }
+
+    throw new Error('Captcha solving timeout');
+  }
+
   private async handleCookies(page: any) {
     console.log('🍪 Checking for cookie consent...');
     try {
@@ -30,32 +80,6 @@ export class EngieRomaniaScraper implements Scraper {
       }
     } catch {
       console.log('✅ No cookie modal detected, proceeding...');
-    }
-  }
-
-  private async solveCaptcha(page: any) {
-    console.log('🔍 Checking for reCAPTCHA...');
-    try {
-      await page.waitForSelector('[data-sitekey]', { timeout: 5000 });
-      const sitekey = await page.$eval('[data-sitekey]', (el: any) => el.getAttribute('data-sitekey'));
-
-      console.log('🔑 Requesting CAPTCHA solution...');
-      const captchaSolution = await solve(this.captchaApiKey, {
-        googlekey: sitekey,
-        pageurl: page.url(),
-        invisible: true
-      });
-
-      console.log('✅ CAPTCHA solved. Injecting...');
-      await page.evaluate((token: string) => {
-        const textArea = document.querySelector('textarea[name="g-recaptcha-response"]');
-        const input = document.querySelector('input[name="g-recaptcha-response"]');
-        if (textArea) textArea.value = token;
-        if (input) input.value = token;
-      }, captchaSolution);
-    } catch (error) {
-      console.error('❌ CAPTCHA Error:', error);
-      throw error;
     }
   }
 
@@ -109,7 +133,20 @@ export class EngieRomaniaScraper implements Scraper {
       throw new Error('❌ Failed to enter full password.');
     }
 
-    await this.solveCaptcha(page);
+    // Get the reCAPTCHA sitekey
+    const sitekey = await page.$eval('[data-sitekey]', (el: any) => el.getAttribute('data-sitekey'));
+    console.log('Found reCAPTCHA sitekey:', sitekey);
+
+    // Solve the CAPTCHA
+    const captchaSolution = await this.solveCaptcha(page, sitekey, page.url());
+
+    // Inject the CAPTCHA solution
+    await page.evaluate((token: string) => {
+      const textArea = document.querySelector('textarea[name="g-recaptcha-response"]');
+      const input = document.querySelector('input[name="g-recaptcha-response"]');
+      if (textArea) textArea.value = token;
+      if (input) input.value = token;
+    }, captchaSolution);
 
     console.log('🔓 Clicking login button...');
     await page.click('button[type="submit"].nj-btn.nj-btn--primary');
