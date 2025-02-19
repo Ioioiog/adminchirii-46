@@ -188,6 +188,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
     try {
       setIsProcessing(true);
       setProcessingError(null);
+      setShowForm(false); // Hide form while processing
       
       const { error: uploadError } = await supabase.storage
         .from('utility-invoices')
@@ -206,18 +207,15 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
         console.log('Extracted data:', extractedData);
 
         if (extractedData.property_details) {
-          console.log('Attempting to match property:', extractedData.property_details);
           const matchingProperty = findMatchingProperty(extractedData.property_details);
           
           if (matchingProperty) {
-            console.log('Found matching property:', matchingProperty);
             setPropertyId(matchingProperty.id);
             toast({
               title: "Property Matched",
               description: `Matched to property: ${matchingProperty.name}`,
             });
           } else {
-            console.log('No matching property found for:', extractedData.property_details);
             toast({
               variant: "destructive",
               title: "No Match Found",
@@ -227,9 +225,8 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
         }
 
         if (extractedData.utility_type) {
-          const type = extractedData.utility_type.charAt(0).toUpperCase() + 
-                      extractedData.utility_type.slice(1).toLowerCase();
-          setUtilityType(type);
+          setUtilityType(extractedData.utility_type.charAt(0).toUpperCase() + 
+                      extractedData.utility_type.slice(1).toLowerCase());
         }
 
         if (extractedData.amount) {
@@ -256,10 +253,13 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
           title: "Success",
           description: "Successfully processed utility bill!",
         });
+      } else {
+        throw new Error("No data extracted from the image");
       }
     } catch (error: any) {
       console.error("Error handling file:", error);
       setProcessingError(error.message || "Failed to process utility bill.");
+      setShowForm(true); // Show form even if there's an error
       toast({
         variant: "destructive",
         title: "Error",
@@ -345,7 +345,23 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(newOpen) => {
+      setOpen(newOpen);
+      if (!newOpen) {
+        // Reset state when dialog is closed
+        setIsProcessing(false);
+        setProcessingError(null);
+        setShowForm(true);
+        setFile(null);
+        setUtilityType("");
+        setAmount("");
+        setCurrency("");
+        setPropertyId("");
+        setDueDate("");
+        setIssuedDate("");
+        setInvoiceNumber("");
+      }
+    }}>
       <DialogTrigger asChild>
         <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-2">
           <Plus className="h-4 w-4" />
