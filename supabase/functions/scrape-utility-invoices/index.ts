@@ -29,12 +29,19 @@ serve(async (req) => {
       password: '[REDACTED]'
     });
 
+    // Get CAPTCHA API key from environment
+    const captchaApiKey = Deno.env.get("CAPTCHA_API_KEY");
+    if (!captchaApiKey) {
+      throw new Error("CAPTCHA API key not configured");
+    }
+
     let scraper;
     switch (requestData.provider.toLowerCase()) {
       case 'engie_romania':
         scraper = new EngieRomaniaScraper({
           username: requestData.username,
-          password: requestData.password
+          password: requestData.password,
+          captchaApiKey
         });
         break;
       default:
