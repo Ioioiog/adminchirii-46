@@ -192,11 +192,23 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
-    if (!selectedFile.type.startsWith('image/')) {
+    // Check file type and size
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+    if (!allowedTypes.includes(selectedFile.type)) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Please upload an image file (JPEG, PNG, etc.).",
+        description: "Please upload an image (JPEG, PNG) or PDF file.",
+      });
+      return;
+    }
+
+    // Check file size (5MB limit)
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "File size must be less than 5MB.",
       });
       return;
     }
@@ -377,12 +389,12 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="file">Upload Utility Bill Image</Label>
+            <Label htmlFor="file">Upload Utility Bill Image or PDF</Label>
             <div className="flex flex-col gap-2">
               <Input
                 id="file"
                 type="file"
-                accept="image/*"
+                accept="image/*,application/pdf"
                 onChange={handleFileChange}
                 className="cursor-pointer"
                 disabled={isProcessing}
@@ -390,7 +402,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
               {isProcessing && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Processing image...
+                  Processing file...
                 </div>
               )}
               {processingError && (
