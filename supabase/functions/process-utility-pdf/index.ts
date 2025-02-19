@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
@@ -99,36 +98,32 @@ async function processImage(imageData: Uint8Array | Blob): Promise<string> {
     }
     
     console.log('Creating base image...');
-    const width = 800;  // Reduced size to prevent stack overflow
-    const height = 1000; // Reduced size to prevent stack overflow
+    const width = 800;
+    const height = 1000;
     
-    // Create the base image
+    // Create and fill the base image
     const image = new imagescript.Image(width, height);
-    await image.fill(0xFFFFFFFF);
     
-    // Create a simplified test pattern
+    // Fill the image with white background
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        image.setPixel(x, y, 0xFFFFFFFF);
+      }
+    }
+    
+    // Draw a test rectangle in the center
     console.log('Adding content to image...');
-    const pixels = new Uint32Array(width * height);
     const centerX = Math.floor(width / 2);
     const centerY = Math.floor(height / 2);
     const rectWidth = 100;
     const rectHeight = 20;
     
-    // Use a more efficient way to set pixels
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const isInRect = (
-          x >= centerX - rectWidth/2 && 
-          x < centerX + rectWidth/2 && 
-          y >= centerY - rectHeight/2 && 
-          y < centerY + rectHeight/2
-        );
-        pixels[y * width + x] = isInRect ? 0x000000FF : 0xFFFFFFFF;
+    // Draw the rectangle
+    for (let y = Math.max(0, centerY - rectHeight/2); y < Math.min(height, centerY + rectHeight/2); y++) {
+      for (let x = Math.max(0, centerX - rectWidth/2); x < Math.min(width, centerX + rectWidth/2); x++) {
+        image.setPixel(x, y, 0x000000FF);
       }
     }
-    
-    // Set all pixels at once
-    await image.setPixels(pixels);
     
     console.log('Encoding image...');
     const processed = await image.encode();
