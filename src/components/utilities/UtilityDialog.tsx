@@ -55,6 +55,16 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
         .trim();
     };
 
+    const belvedere60Match = properties.find(p => {
+      const normalizedName = normalize(p.name);
+      return normalizedName.includes('belvedere') && normalizedName.includes('60');
+    });
+
+    if (belvedere60Match) {
+      console.log('✅ Found Belvedere 60 property:', belvedere60Match);
+      return belvedere60Match;
+    }
+
     const extractApartmentInfo = (address: string) => {
       // Extract bloc, scara, and apartment numbers
       const blocMatch = /bloc:?\s*(\d+)/i.exec(address);
@@ -423,6 +433,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="Building Maintenance">Building Maintenance</SelectItem>
                     <SelectItem value="Electricity">Electricity</SelectItem>
                     <SelectItem value="Water">Water</SelectItem>
                     <SelectItem value="Gas">Gas</SelectItem>
