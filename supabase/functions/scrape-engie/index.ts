@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { chromium } from 'https://deno.land/x/puppeteer@16.2.0/mod.ts';
+import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,16 +31,13 @@ interface ScraperResult {
 async function solveCaptcha(page: any, captchaApiKey: string): Promise<void> {
   console.log('🔍 Attempting to solve reCAPTCHA...');
   
-  const sitekey = await page.evaluate(() => {
-    const element = document.querySelector('[data-sitekey]');
-    return element?.getAttribute('data-sitekey') || null;
-  });
-
+  const sitekey = await page.$eval('[data-sitekey]', (el) => el.getAttribute('data-sitekey'));
+  
   if (!sitekey) {
     throw new Error('Could not find reCAPTCHA sitekey');
   }
 
-  const pageUrl = await page.evaluate(() => window.location.href);
+  const pageUrl = await page.url();
 
   const response = await fetch('https://2captcha.com/in.php', {
     method: 'POST',
@@ -105,15 +102,21 @@ async function handleCookies(page: any) {
 async function scrapeEngie(credentials: ScraperCredentials, captchaApiKey: string): Promise<ScraperResult> {
   console.log('🚀 Starting ENGIE Romania scraping process');
   
-  const browser = await chromium.launch({
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  const browser = await puppeteer.launch({
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu'
+    ]
   });
   
   try {
     const page = await browser.newPage();
+    await page.setDefaultNavigationTimeout(60000);
 
     console.log('🔑 Navigating to login page...');
-    await page.goto('https://my.engie.ro/autentificare');
+    await page.goto('https://my.engie.ro/autentificare', { waitUntil: 'networkidle0' });
     
     await handleCookies(page);
 
@@ -124,14 +127,10 @@ async function scrapeEngie(credentials: ScraperCredentials, captchaApiKey: strin
     await solveCaptcha(page, captchaApiKey);
 
     console.log('🔓 Submitting login form...');
-    await page.click('button[type="submit"].nj-btn.nj-btn--primary');
-    
-    try {
-      await page.waitForNavigation({ timeout: 30000 });
-    } catch (error) {
-      console.error('Navigation timeout after login');
-      throw new Error('Login failed - navigation timeout');
-    }
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'networkidle0' }),
+      page.click('button[type="submit"].nj-btn.nj-btn--primary')
+    ]);
 
     const isLoggedIn = await page.$('.dashboard');
     if (!isLoggedIn) {
@@ -139,10 +138,10 @@ async function scrapeEngie(credentials: ScraperCredentials, captchaApiKey: strin
     }
 
     console.log('📄 Navigating to invoices page...');
-    await page.goto('https://my.engie.ro/facturi/istoric');
+    await page.goto('https://my.engie.ro/facturi/istoric', { waitUntil: 'networkidle0' });
     
     console.log('⏳ Waiting for invoice table...');
-    await page.waitForSelector('table', { timeout: 15000 });
+    await page.waitForSelector('table');
 
     const bills = await page.evaluate(() => {
       const rows = Array.from(document.querySelectorAll('table tbody tr'));

@@ -8,4 +8,3 @@ verify_jwt = true
 [[config.functions]]
 name = "scrape-engie"
 verify_jwt = true
-
