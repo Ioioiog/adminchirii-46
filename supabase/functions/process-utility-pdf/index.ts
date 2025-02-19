@@ -99,24 +99,36 @@ async function processImage(imageData: Uint8Array | Blob): Promise<string> {
     }
     
     console.log('Creating base image...');
-    const width = 2400; // Increased resolution
-    const height = 3200; // Increased resolution
+    const width = 800;  // Reduced size to prevent stack overflow
+    const height = 1000; // Reduced size to prevent stack overflow
     
-    const image = await new imagescript.Image(width, height).fill(0xFFFFFFFF);
+    // Create the base image
+    const image = new imagescript.Image(width, height);
+    await image.fill(0xFFFFFFFF);
     
+    // Create a simplified test pattern
     console.log('Adding content to image...');
+    const pixels = new Uint32Array(width * height);
     const centerX = Math.floor(width / 2);
     const centerY = Math.floor(height / 2);
-    const rectWidth = 200; // Increased size
-    const rectHeight = 40; // Increased size
+    const rectWidth = 100;
+    const rectHeight = 20;
     
-    for (let y = centerY - rectHeight/2; y < centerY + rectHeight/2; y++) {
-      for (let x = centerX - rectWidth/2; x < centerX + rectWidth/2; x++) {
-        if (x >= 0 && x < width && y >= 0 && y < height) {
-          await image.setPixelAt(Math.floor(x), Math.floor(y), 0x000000FF);
-        }
+    // Use a more efficient way to set pixels
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const isInRect = (
+          x >= centerX - rectWidth/2 && 
+          x < centerX + rectWidth/2 && 
+          y >= centerY - rectHeight/2 && 
+          y < centerY + rectHeight/2
+        );
+        pixels[y * width + x] = isInRect ? 0x000000FF : 0xFFFFFFFF;
       }
     }
+    
+    // Set all pixels at once
+    await image.setPixels(pixels);
     
     console.log('Encoding image...');
     const processed = await image.encode();
