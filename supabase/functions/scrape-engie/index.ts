@@ -1,6 +1,6 @@
 
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import * as puppeteer from "https://deno.land/x/puppeteer@9.0.2/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,63 +30,73 @@ interface ScraperResult {
 
 async function solveCaptcha(page: any, captchaApiKey: string): Promise<void> {
   console.log('🔍 Solving reCAPTCHA...');
-  const sitekey = await page.$eval('[data-sitekey]', (el: any) => el.getAttribute('data-sitekey'));
-  const pageUrl = page.url();
-
-  const apiEndpoint = 'https://2captcha.com/in.php';
-  const submitUrl = `${apiEndpoint}?key=${captchaApiKey}&method=userrecaptcha&googlekey=${sitekey}&pageurl=${pageUrl}&json=1`;
   
-  const submitResponse = await fetch(submitUrl);
-  const submitResult = await submitResponse.json();
+  // Get the reCAPTCHA sitekey
+  const sitekey = await page.evaluate(() => {
+    const element = document.querySelector('[data-sitekey]');
+    return element ? element.getAttribute('data-sitekey') : null;
+  });
 
-  if (submitResult.status !== 1) {
-    throw new Error(`Failed to submit captcha: ${submitResult.request}`);
+  if (!sitekey) {
+    throw new Error('Could not find reCAPTCHA sitekey');
   }
 
-  const captchaId = submitResult.request;
-  let solution = null;
-  let attempts = 0;
+  const pageUrl = await page.url();
 
-  while (!solution && attempts < 30) {
+  // Submit CAPTCHA solving request
+  const response = await fetch('https://2captcha.com/in.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      key: captchaApiKey,
+      method: 'userrecaptcha',
+      googlekey: sitekey,
+      pageurl: pageUrl,
+      json: 1
+    })
+  });
+
+  const result = await response.json();
+  if (!result.request) {
+    throw new Error('Failed to submit CAPTCHA solving request');
+  }
+
+  // Poll for solution
+  const captchaId = result.request;
+  for (let i = 0; i < 30; i++) {
     await new Promise(resolve => setTimeout(resolve, 5000));
     
-    const checkUrl = `https://2captcha.com/res.php?key=${captchaApiKey}&action=get&id=${captchaId}&json=1`;
-    const checkResponse = await fetch(checkUrl);
+    const checkResponse = await fetch(`https://2captcha.com/res.php?key=${captchaApiKey}&action=get&id=${captchaId}&json=1`);
     const checkResult = await checkResponse.json();
-
+    
     if (checkResult.status === 1) {
-      solution = checkResult.request;
-      break;
+      // Insert the solution
+      await page.evaluate((token: string) => {
+        document.querySelectorAll<HTMLTextAreaElement>('.g-recaptcha-response').forEach(element => {
+          element.innerHTML = token;
+        });
+        document.querySelectorAll<HTMLInputElement>('input[name="g-recaptcha-response"]').forEach(element => {
+          element.value = token;
+        });
+      }, checkResult.request);
+      
+      console.log('✅ CAPTCHA solved successfully');
+      return;
     }
-
-    attempts++;
   }
 
-  if (!solution) {
-    throw new Error('Failed to solve CAPTCHA after maximum attempts');
-  }
-
-  await page.evaluate((token: string) => {
-    const elements = document.getElementsByClassName('g-recaptcha-response');
-    for (let i = 0; i < elements.length; i++) {
-      const element = elements[i] as HTMLTextAreaElement;
-      element.innerHTML = token;
-      element.value = token;
-    }
-    document.dispatchEvent(new Event('recaptcha-solved', { bubbles: true }));
-  }, solution);
+  throw new Error('CAPTCHA solving timeout');
 }
 
 async function handleCookies(page: any) {
   console.log('🍪 Checking for cookie consent...');
   try {
     await page.waitForSelector('#cookieConsentBtnRight', { timeout: 5000 });
-    const acceptButton = await page.$('#cookieConsentBtnRight');
-    if (acceptButton) {
-      console.log('✅ Clicking "Acceptă toate"');
-      await acceptButton.click();
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
+    await page.evaluate(() => {
+      const button = document.querySelector('#cookieConsentBtnRight') as HTMLElement;
+      if (button) button.click();
+    });
+    await new Promise(resolve => setTimeout(resolve, 1000));
   } catch {
     console.log('✅ No cookie modal detected, proceeding...');
   }
@@ -108,30 +118,47 @@ async function scrapeEngie(credentials: ScraperCredentials, captchaApiKey: strin
   try {
     // Login process
     console.log('🔑 Navigating to login page...');
-    await page.goto('https://my.engie.ro/autentificare', { waitUntil: 'networkidle2' });
+    await page.goto('https://my.engie.ro/autentificare');
+    await page.waitForSelector('#username', { visible: true });
+    
     await handleCookies(page);
 
+    // Fill credentials
     console.log('📝 Entering login credentials...');
-    await page.waitForSelector('#username', { visible: true });
-    await page.waitForSelector('#password', { visible: true });
-
-    await page.type('#username', credentials.username, { delay: 100 });
-    await page.type('#password', credentials.password, { delay: 100 });
+    await page.evaluate((username: string, password: string) => {
+      const usernameInput = document.querySelector('#username') as HTMLInputElement;
+      const passwordInput = document.querySelector('#password') as HTMLInputElement;
+      if (usernameInput) usernameInput.value = username;
+      if (passwordInput) passwordInput.value = password;
+    }, credentials.username, credentials.password);
 
     await solveCaptcha(page, captchaApiKey);
 
+    // Submit login
     console.log('🔓 Submitting login form...');
-    await page.click('button[type="submit"].nj-btn.nj-btn--primary');
-    await page.waitForNavigation({ waitUntil: 'networkidle2' });
+    await page.evaluate(() => {
+      const submitButton = document.querySelector('button[type="submit"].nj-btn.nj-btn--primary') as HTMLButtonElement;
+      if (submitButton) submitButton.click();
+    });
 
-    // Navigate to invoices page
+    // Wait for navigation
+    await page.waitForNavigation({ waitUntil: 'networkidle0' });
+
+    // Check login success
+    const isLoggedIn = await page.evaluate(() => {
+      return !!document.querySelector('.dashboard');
+    });
+
+    if (!isLoggedIn) {
+      throw new Error('Login failed');
+    }
+
+    // Navigate to invoices
     console.log('📄 Navigating to invoices page...');
-    await page.goto('https://my.engie.ro/facturi/istoric', { waitUntil: 'networkidle2' });
-
-    // Wait for and extract invoices
-    console.log('⏳ Waiting for invoices table...');
+    await page.goto('https://my.engie.ro/facturi/istoric');
     await page.waitForSelector('table', { timeout: 15000 });
 
+    // Extract invoices
     const bills = await page.evaluate(() => {
       const rows = Array.from(document.querySelectorAll('table tbody tr'));
       return rows.map(row => {
@@ -140,19 +167,16 @@ async function scrapeEngie(credentials: ScraperCredentials, captchaApiKey: strin
         
         const amountText = text(cells[4]).replace(/[^\d.,]/g, '').replace(',', '.');
         const amount = parseFloat(amountText);
-
-        const invoiceNumber = text(cells[0]);
         const dueDate = text(cells[2]);
-        const status = text(cells[5]).toLowerCase();
 
         return {
           amount,
           due_date: dueDate,
-          invoice_number: invoiceNumber,
-          period_start: dueDate, // ENGIE doesn't show period dates
+          invoice_number: text(cells[0]),
+          period_start: dueDate,
           period_end: dueDate,
-          type: 'gas' as const,
-          status: status.includes('platit') ? 'paid' as const : 'pending' as const
+          type: 'gas',
+          status: text(cells[5]).toLowerCase().includes('platit') ? 'paid' : 'pending'
         };
       });
     });
@@ -173,7 +197,6 @@ async function scrapeEngie(credentials: ScraperCredentials, captchaApiKey: strin
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -202,16 +225,13 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in scrape-engie function:', error);
-    
     return new Response(
       JSON.stringify({
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred',
         bills: []
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
