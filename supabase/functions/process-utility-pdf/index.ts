@@ -2,9 +2,8 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { PDFDocument } from "https://cdn.skypack.dev/pdf-lib@1.17.1?dts";
-import { Image, decode } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
-import * as pdfium from "https://deno.land/x/pdfium@v0.0.6/mod.ts";
+import { decode } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
+import { pdf2png } from "https://deno.land/x/pdf2png@0.1.1/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -27,18 +26,13 @@ const buildResponse = (body: any, status = 200) => {
 async function convertPDFToImage(pdfBuffer: ArrayBuffer): Promise<Uint8Array> {
   try {
     console.log('Converting PDF to image...');
-    const pdf = await pdfium.loadPDF(new Uint8Array(pdfBuffer));
-    const page = await pdf.getPage(0); // Get first page
-    const width = Math.round(page.width * 2); // Double size for better quality
-    const height = Math.round(page.height * 2);
-    
-    const image = await page.renderPNG({
-      width,
-      height,
+    const pngData = await pdf2png(new Uint8Array(pdfBuffer), {
+      page: 0, // First page only
+      scale: 2.0, // Double the resolution for better quality
     });
     
     console.log('PDF converted to PNG successfully');
-    return image;
+    return pngData;
   } catch (error) {
     console.error('Error converting PDF to image:', error);
     throw new Error('Failed to convert PDF to image: ' + error.message);
