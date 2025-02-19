@@ -2,8 +2,8 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { Image, decode } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
 import { PDFDocument } from "https://cdn.skypack.dev/pdf-lib@1.17.1?dts";
+import { Image, decode } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,63 +22,37 @@ const buildResponse = (body: any, status = 200) => {
   });
 };
 
-const toBase64 = async (file: Blob): Promise<string> => {
-  const arrayBuffer = await file.arrayBuffer();
-  const bytes = new Uint8Array(arrayBuffer);
-  const binary = Array.from(bytes).map(byte => String.fromCharCode(byte)).join('');
-  return btoa(binary);
-};
-
-const cleanJsonString = (str: string): string => {
+// Extracts raw text from a PDF file
+async function extractTextFromPDF(pdfBuffer: ArrayBuffer): Promise<string> {
   try {
-    JSON.parse(str);
-    return str;
-  } catch {
-    try {
-      let cleaned = str.replace(/```json\s?/g, '').replace(/```\s?/g, '');
-      cleaned = cleaned.trim();
-      
-      const match = cleaned.match(/\{[\s\S]*\}/);
-      if (match) {
-        cleaned = match[0];
-      }
-      
-      JSON.parse(cleaned);
-      return cleaned;
-    } catch (error) {
-      console.error('Error cleaning JSON string:', error);
-      return JSON.stringify({
-        property_details: "Unable to extract address",
-        utility_type: "unknown",
-        amount: "0.00",
-        currency: "LEI",
-        due_date: new Date().toISOString().split('T')[0],
-        issued_date: new Date().toISOString().split('T')[0],
-        invoice_number: "unknown"
-      });
-    }
-  }
-};
+    console.log("Extracting text from PDF...");
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    let fullText = "";
 
+    for (const page of pdfDoc.getPages()) {
+      fullText += page.getTextContent();
+      fullText += "\n"; // Ensure spacing between pages
+    }
+
+    return fullText;
+  } catch (error) {
+    console.error("PDF Parsing Error:", error);
+    throw new Error("Failed to extract text from PDF");
+  }
+}
+
+// Extracts images from the first page of a PDF
 async function extractImagesFromPdf(pdfBuffer: ArrayBuffer): Promise<Uint8Array[]> {
   try {
-    console.log('Loading PDF document...');
+    console.log('Extracting images from PDF...');
     const pdfDoc = await PDFDocument.load(pdfBuffer);
-    const pages = pdfDoc.getPages();
-    console.log(`PDF loaded successfully with ${pages.length} pages`);
-
-    if (pages.length === 0) {
-      throw new Error('PDF document has no pages');
-    }
-
-    console.log('Processing first page...');
     const targetDoc = await PDFDocument.create();
     const [firstPage] = await targetDoc.copyPages(pdfDoc, [0]);
     targetDoc.addPage(firstPage);
-    
+
     const pdfBytes = await targetDoc.save();
     console.log('Successfully processed first page');
-    
+
     return [new Uint8Array(pdfBytes)];
   } catch (error) {
     console.error('Error extracting images from PDF:', error);
@@ -86,6 +60,7 @@ async function extractImagesFromPdf(pdfBuffer: ArrayBuffer): Promise<Uint8Array[
   }
 }
 
+// Processes an image and converts it to Base64
 async function processImage(imageData: Uint8Array | Blob): Promise<string> {
   try {
     console.log('Processing image...');
@@ -98,45 +73,14 @@ async function processImage(imageData: Uint8Array | Blob): Promise<string> {
       uint8Array = imageData;
     }
 
-    // Try to decode the image first
-    let image;
-    try {
-      console.log('Attempting to decode existing image...');
-      image = await decode(uint8Array);
-      console.log('Successfully decoded existing image');
-    } catch (decodeError) {
-      console.log('Could not decode image, creating new one:', decodeError);
-      // If we can't decode, create a new image
-      const width = 800;
-      const height = 1000;
-      
-      image = new Image(width, height);
-      
-      // Fill with white background using imagescript's methods
-      for (let y = 0; y < height; y++) {
-        const row = new Uint32Array(width).fill(0xFFFFFFFF);
-        for (let x = 0; x < width; x++) {
-          image.setRGBAAt(x, y, 255, 255, 255, 255);
-        }
-      }
-      
-      // Draw a test rectangle in the center
-      const centerX = Math.floor(width / 2);
-      const centerY = Math.floor(height / 2);
-      const rectWidth = 100;
-      const rectHeight = 20;
-      
-      for (let y = Math.max(0, centerY - rectHeight/2); y < Math.min(height, centerY + rectHeight/2); y++) {
-        for (let x = Math.max(0, centerX - rectWidth/2); x < Math.min(width, centerX + rectWidth/2); x++) {
-          image.setRGBAAt(x, y, 0, 0, 0, 255);
-        }
-      }
-    }
-    
+    console.log('Attempting to decode image...');
+    const image = await decode(uint8Array);
+    console.log('Successfully decoded image');
+
     console.log('Encoding image...');
     const processed = await image.encode();
     console.log('Image processed successfully');
-    
+
     const base64 = btoa(String.fromCharCode(...new Uint8Array(processed)));
     return `data:image/png;base64,${base64}`;
   } catch (error) {
@@ -145,158 +89,102 @@ async function processImage(imageData: Uint8Array | Blob): Promise<string> {
   }
 }
 
+// Parses extracted text using regex
+function extractFieldsFromText(text: string) {
+  const addressRegex = /Adresa locului de consum:\s*(.*?)(?:\n|$)/i;
+  const amountRegex = /Factură curentă:\s*([\d,.]+)\s*LEI/i;
+  const dueDateRegex = /DATA SCADENTĂ\s*(\d{2}.\d{2}.\d{4})/i;
+  const issuedDateRegex = /Data facturii:\s*(\d{2}.\d{2}.\d{4})/i;
+  const invoiceRegex = /Seria ENG nr\.\s*(\d+)/i;
+
+  return {
+    property_details: text.match(addressRegex)?.[1]?.trim() || "Not found",
+    utility_type: "gas", // Default assumption
+    amount: text.match(amountRegex)?.[1]?.replace(",", ".") || "0.00",
+    currency: "LEI",
+    due_date: text.match(dueDateRegex)?.[1] || "Unknown",
+    issued_date: text.match(issuedDateRegex)?.[1] || "Unknown",
+    invoice_number: text.match(invoiceRegex)?.[1] || "Unknown",
+  };
+}
+
+// Calls OpenAI API for image analysis
 async function analyzeImageWithOpenAI(imageBase64: string, openAIApiKey: string): Promise<any> {
   console.log('Calling OpenAI API...');
   
-  try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: `You are an expert at extracting information from Romanian utility bills.
-            Carefully analyze the image of a utility bill and extract the following fields:
-            1. Look for "Adresa locului de consum" and extract the complete address
-            2. Determine if this is a gas, water, or electricity bill based on the provider and content
-            3. Find the total amount to be paid
-            4. Identify the currency (typically LEI)
-            5. Find the payment due date
-            6. Find the invoice issue date
-            7. Locate the invoice number or series
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${openAIApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'system',
+          content: `Extract structured data from Romanian utility bills:
+          - Full address from "Adresa locului de consum"
+          - Utility type (gas, water, electricity)
+          - Invoice amount
+          - Currency (LEI)
+          - Due date
+          - Invoice date
+          - Invoice number
 
-            Return ONLY a JSON object with these fields:
+          Return ONLY a JSON object with these fields.`,
+        },
+        {
+          role: 'user',
+          content: [
             {
-              "property_details": "[full address from Adresa locului de consum]",
-              "utility_type": "gas|water|electricity",
-              "amount": "[amount with 2 decimals]",
-              "currency": "LEI",
-              "due_date": "YYYY-MM-DD",
-              "issued_date": "YYYY-MM-DD",
-              "invoice_number": "[invoice number/series]"
-            }
-            No additional text, just the JSON object.`,
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'image_url',
-                image_url: {
-                  url: imageBase64
-                }
-              }
-            ]
-          }
-        ],
-        max_tokens: 1000,
-        temperature: 0.3,
-      }),
-    });
+              type: 'image_url',
+              image_url: { url: imageBase64 },
+            },
+          ],
+        }
+      ],
+      max_tokens: 1000,
+      temperature: 0.3,
+    }),
+  });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
-    }
+  if (!response.ok) throw new Error(`OpenAI API error: ${response.status}`);
 
-    const data = await response.json();
-    console.log('OpenAI raw response:', data.choices?.[0]?.message?.content);
-    
-    const content = data.choices?.[0]?.message?.content?.trim();
-    if (!content) {
-      throw new Error('No content in OpenAI response');
-    }
-    
-    const cleanedContent = cleanJsonString(content);
-    console.log('Cleaned JSON:', cleanedContent);
-    
-    return JSON.parse(cleanedContent);
-  } catch (error) {
-    console.error('Error in OpenAI API call:', error);
-    return {
-      property_details: "Error extracting address",
-      utility_type: "unknown",
-      amount: "0.00",
-      currency: "LEI",
-      due_date: new Date().toISOString().split('T')[0],
-      issued_date: new Date().toISOString().split('T')[0],
-      invoice_number: "error"
-    };
-  }
+  const data = await response.json();
+  return JSON.parse(data.choices?.[0]?.message?.content?.trim());
 }
 
+// Main API Handler
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    if (req.method !== 'POST') {
-      return buildResponse({ error: 'Method not allowed' }, 405);
-    }
+    const { filePath } = await req.json();
+    if (!filePath) return buildResponse({ error: "No file path provided" }, 400);
 
-    const contentType = req.headers.get('content-type');
-    if (!contentType?.includes('application/json')) {
-      return buildResponse({ error: 'Content-Type must be application/json' }, 400);
-    }
+    console.log("Processing file:", filePath);
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: fileData, error } = await supabase.storage.from("utility-invoices").download(filePath);
 
-    const requestData = await req.json().catch(error => {
-      console.error('Error parsing request body:', error);
-      throw new Error('Invalid JSON in request body');
-    });
-
-    const { filePath } = requestData;
-    if (!filePath) {
-      return buildResponse({ error: 'No file path provided' }, 400);
-    }
-
-    console.log('Processing file:', filePath);
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-    if (!supabaseUrl || !supabaseKey) {
-      console.error('Missing Supabase credentials');
-      return buildResponse({ error: 'Server configuration error' }, 500);
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const { data: fileData, error: downloadError } = await supabase
-      .storage
-      .from('utility-invoices')
-      .download(filePath);
-
-    if (downloadError) {
-      console.error('Error downloading file:', downloadError);
-      return buildResponse({ error: 'Failed to download file: ' + downloadError.message }, 500);
-    }
-
-    console.log('File downloaded successfully');
-
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    
-    if (!openAIApiKey) {
-      return buildResponse({ error: 'OpenAI API key not found' }, 500);
-    }
+    if (error) throw new Error("Failed to download file: " + error.message);
 
     const pdfArrayBuffer = await fileData.arrayBuffer();
-    const pdfImages = await extractImagesFromPdf(pdfArrayBuffer);
-    
-    const processedImage = await processImage(pdfImages[0]);
-    const extractedData = await analyzeImageWithOpenAI(processedImage, openAIApiKey);
+    const extractedText = await extractTextFromPDF(pdfArrayBuffer);
+    const extractedData = extractFieldsFromText(extractedText);
 
-    return buildResponse({ status: 'success', data: extractedData });
+    if (extractedData.property_details !== "Not found") {
+      return buildResponse({ status: "success", data: extractedData });
+    }
+
+    const pdfImages = await extractImagesFromPdf(pdfArrayBuffer);
+    const processedImage = await processImage(pdfImages[0]);
+    const openAiData = await analyzeImageWithOpenAI(processedImage, Deno.env.get("OPENAI_API_KEY")!);
+
+    return buildResponse({ status: "success", data: openAiData });
+
   } catch (error) {
-    console.error('Error processing request:', error);
-    return buildResponse({
-      status: 'error',
-      message: error.message || 'An unexpected error occurred'
-    }, 500);
+    console.error("Error:", error);
+    return buildResponse({ status: "error", message: error.message }, 500);
   }
 });
