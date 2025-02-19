@@ -4,3 +4,8 @@ project_id = "wecmvyohaxizmnhuvjly"
 [[config.functions]]
 name = "scrape-utility-invoices"
 verify_jwt = true
+
+[[config.functions]]
+name = "scrape-engie"
+verify_jwt = true
+
