@@ -240,9 +240,20 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
           extractedText.includes(keyword)
         );
 
-        if (keywordMatches.length >= 2) {
+        const isMultipleUtilities = keywordMatches.length >= 2;
+        const isBelvedere60 = properties.find(p => 
+          p.id === propertyId && 
+          p.name.toLowerCase().includes('belvedere') && 
+          p.name.includes('60')
+        );
+
+        if (isMultipleUtilities || isBelvedere60) {
           setUtilityType("Building Maintenance");
-          console.log('Multiple utility keywords found, setting as Building Maintenance:', keywordMatches);
+          console.log('Setting as Building Maintenance:', {
+            keywordMatches,
+            isMultipleUtilities,
+            isBelvedere60: !!isBelvedere60
+          });
         } else if (extractedData.utility_type) {
           setUtilityType(extractedData.utility_type.charAt(0).toUpperCase() + 
                       extractedData.utility_type.slice(1).toLowerCase());
