@@ -1,7 +1,8 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import * as imagescript from "https://deno.land/x/imagescript@1.2.17/mod.ts";
+import { Image, decode } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
 import { PDFDocument } from "https://cdn.skypack.dev/pdf-lib@1.17.1?dts";
 
 const corsHeaders = {
@@ -96,32 +97,39 @@ async function processImage(imageData: Uint8Array | Blob): Promise<string> {
     } else {
       uint8Array = imageData;
     }
-    
-    console.log('Creating base image...');
-    const width = 800;
-    const height = 1000;
-    
-    // Create and fill the base image
-    const image = new imagescript.Image(width, height);
-    
-    // Fill the image with white background
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        image.setPixel(x, y, 0xFFFFFFFF);
+
+    // Try to decode the image first
+    let image;
+    try {
+      console.log('Attempting to decode existing image...');
+      image = await decode(uint8Array);
+      console.log('Successfully decoded existing image');
+    } catch (decodeError) {
+      console.log('Could not decode image, creating new one:', decodeError);
+      // If we can't decode, create a new image
+      const width = 800;
+      const height = 1000;
+      
+      image = new Image(width, height);
+      
+      // Fill with white background using imagescript's methods
+      for (let y = 0; y < height; y++) {
+        const row = new Uint32Array(width).fill(0xFFFFFFFF);
+        for (let x = 0; x < width; x++) {
+          image.setRGBAAt(x, y, 255, 255, 255, 255);
+        }
       }
-    }
-    
-    // Draw a test rectangle in the center
-    console.log('Adding content to image...');
-    const centerX = Math.floor(width / 2);
-    const centerY = Math.floor(height / 2);
-    const rectWidth = 100;
-    const rectHeight = 20;
-    
-    // Draw the rectangle
-    for (let y = Math.max(0, centerY - rectHeight/2); y < Math.min(height, centerY + rectHeight/2); y++) {
-      for (let x = Math.max(0, centerX - rectWidth/2); x < Math.min(width, centerX + rectWidth/2); x++) {
-        image.setPixel(x, y, 0x000000FF);
+      
+      // Draw a test rectangle in the center
+      const centerX = Math.floor(width / 2);
+      const centerY = Math.floor(height / 2);
+      const rectWidth = 100;
+      const rectHeight = 20;
+      
+      for (let y = Math.max(0, centerY - rectHeight/2); y < Math.min(height, centerY + rectHeight/2); y++) {
+        for (let x = Math.max(0, centerX - rectWidth/2); x < Math.min(width, centerX + rectWidth/2); x++) {
+          image.setRGBAAt(x, y, 0, 0, 0, 255);
+        }
       }
     }
     
