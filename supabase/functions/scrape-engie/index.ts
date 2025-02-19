@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import * as puppeteer from "https://deno.land/x/puppeteer@9.0.2/mod.ts";
+import { chromium } from "https://deno.land/x/playwright@0.3.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -29,21 +29,19 @@ interface ScraperResult {
 }
 
 async function solveCaptcha(page: any, captchaApiKey: string): Promise<void> {
-  console.log('🔍 Solving reCAPTCHA...');
+  console.log('🔍 Attempting to solve reCAPTCHA...');
   
-  // Get the reCAPTCHA sitekey
   const sitekey = await page.evaluate(() => {
     const element = document.querySelector('[data-sitekey]');
-    return element ? element.getAttribute('data-sitekey') : null;
+    return element?.getAttribute('data-sitekey') || null;
   });
 
   if (!sitekey) {
     throw new Error('Could not find reCAPTCHA sitekey');
   }
 
-  const pageUrl = await page.url();
+  const pageUrl = await page.evaluate(() => window.location.href);
 
-  // Submit CAPTCHA solving request
   const response = await fetch('https://2captcha.com/in.php', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -61,8 +59,9 @@ async function solveCaptcha(page: any, captchaApiKey: string): Promise<void> {
     throw new Error('Failed to submit CAPTCHA solving request');
   }
 
-  // Poll for solution
   const captchaId = result.request;
+  let solution = null;
+
   for (let i = 0; i < 30; i++) {
     await new Promise(resolve => setTimeout(resolve, 5000));
     
@@ -70,95 +69,82 @@ async function solveCaptcha(page: any, captchaApiKey: string): Promise<void> {
     const checkResult = await checkResponse.json();
     
     if (checkResult.status === 1) {
-      // Insert the solution
-      await page.evaluate((token: string) => {
-        document.querySelectorAll<HTMLTextAreaElement>('.g-recaptcha-response').forEach(element => {
-          element.innerHTML = token;
-        });
-        document.querySelectorAll<HTMLInputElement>('input[name="g-recaptcha-response"]').forEach(element => {
-          element.value = token;
-        });
-      }, checkResult.request);
-      
-      console.log('✅ CAPTCHA solved successfully');
-      return;
+      solution = checkResult.request;
+      break;
     }
   }
 
-  throw new Error('CAPTCHA solving timeout');
+  if (!solution) {
+    throw new Error('Failed to solve CAPTCHA after maximum attempts');
+  }
+
+  await page.evaluate((token: string) => {
+    document.querySelectorAll<HTMLTextAreaElement>('.g-recaptcha-response').forEach(element => {
+      element.innerHTML = token;
+      element.value = token;
+    });
+  }, solution);
+
+  console.log('✅ CAPTCHA solved successfully');
 }
 
 async function handleCookies(page: any) {
   console.log('🍪 Checking for cookie consent...');
   try {
-    await page.waitForSelector('#cookieConsentBtnRight', { timeout: 5000 });
-    await page.evaluate(() => {
-      const button = document.querySelector('#cookieConsentBtnRight') as HTMLElement;
-      if (button) button.click();
-    });
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const acceptButton = await page.waitForSelector('#cookieConsentBtnRight', { timeout: 5000 });
+    if (acceptButton) {
+      console.log('Accepting cookies...');
+      await acceptButton.click();
+      await page.waitForTimeout(1000);
+    }
   } catch {
-    console.log('✅ No cookie modal detected, proceeding...');
+    console.log('✅ No cookie modal detected');
   }
 }
 
 async function scrapeEngie(credentials: ScraperCredentials, captchaApiKey: string): Promise<ScraperResult> {
-  console.log('Starting ENGIE Romania scraping process');
-  const browser = await puppeteer.launch({
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-web-security'
-    ]
+  console.log('🚀 Starting ENGIE Romania scraping process');
+  
+  const browser = await chromium.launch({
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
   
-  const page = await browser.newPage();
-
   try {
-    // Login process
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
     console.log('🔑 Navigating to login page...');
     await page.goto('https://my.engie.ro/autentificare');
-    await page.waitForSelector('#username', { visible: true });
     
     await handleCookies(page);
 
-    // Fill credentials
-    console.log('📝 Entering login credentials...');
-    await page.evaluate((username: string, password: string) => {
-      const usernameInput = document.querySelector('#username') as HTMLInputElement;
-      const passwordInput = document.querySelector('#password') as HTMLInputElement;
-      if (usernameInput) usernameInput.value = username;
-      if (passwordInput) passwordInput.value = password;
-    }, credentials.username, credentials.password);
+    console.log('📝 Entering credentials...');
+    await page.fill('#username', credentials.username);
+    await page.fill('#password', credentials.password);
 
     await solveCaptcha(page, captchaApiKey);
 
-    // Submit login
     console.log('🔓 Submitting login form...');
-    await page.evaluate(() => {
-      const submitButton = document.querySelector('button[type="submit"].nj-btn.nj-btn--primary') as HTMLButtonElement;
-      if (submitButton) submitButton.click();
-    });
-
-    // Wait for navigation
-    await page.waitForNavigation({ waitUntil: 'networkidle0' });
-
-    // Check login success
-    const isLoggedIn = await page.evaluate(() => {
-      return !!document.querySelector('.dashboard');
-    });
-
-    if (!isLoggedIn) {
-      throw new Error('Login failed');
+    await page.click('button[type="submit"].nj-btn.nj-btn--primary');
+    
+    try {
+      await page.waitForNavigation({ timeout: 30000 });
+    } catch (error) {
+      console.error('Navigation timeout after login');
+      throw new Error('Login failed - navigation timeout');
     }
 
-    // Navigate to invoices
+    const isLoggedIn = await page.$('.dashboard');
+    if (!isLoggedIn) {
+      throw new Error('Login failed - dashboard not found');
+    }
+
     console.log('📄 Navigating to invoices page...');
     await page.goto('https://my.engie.ro/facturi/istoric');
+    
+    console.log('⏳ Waiting for invoice table...');
     await page.waitForSelector('table', { timeout: 15000 });
 
-    // Extract invoices
     const bills = await page.evaluate(() => {
       const rows = Array.from(document.querySelectorAll('table tbody tr'));
       return rows.map(row => {
@@ -168,6 +154,7 @@ async function scrapeEngie(credentials: ScraperCredentials, captchaApiKey: strin
         const amountText = text(cells[4]).replace(/[^\d.,]/g, '').replace(',', '.');
         const amount = parseFloat(amountText);
         const dueDate = text(cells[2]);
+        const isPaid = text(cells[5]).toLowerCase().includes('platit');
 
         return {
           amount,
@@ -176,12 +163,12 @@ async function scrapeEngie(credentials: ScraperCredentials, captchaApiKey: strin
           period_start: dueDate,
           period_end: dueDate,
           type: 'gas',
-          status: text(cells[5]).toLowerCase().includes('platit') ? 'paid' : 'pending'
+          status: isPaid ? 'paid' : 'pending'
         };
       });
     });
 
-    console.log(`✅ Found ${bills.length} invoices`);
+    console.log(`✅ Successfully found ${bills.length} invoices`);
     return { success: true, bills };
 
   } catch (error) {
@@ -212,7 +199,7 @@ serve(async (req) => {
     }
 
     const requestData = await req.json();
-    console.log('Received scraping request for:', requestData.username);
+    console.log('📨 Received scraping request for:', requestData.username);
 
     const result = await scrapeEngie({
       username: requestData.username,
@@ -224,12 +211,12 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error in scrape-engie function:', error);
+    console.error('💥 Error in scrape-engie function:', error);
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
-        bills: []
+        bills: [],
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
