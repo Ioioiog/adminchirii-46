@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
+import * as cheerio from "https://esm.sh/cheerio@1.0.0-rc.12";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,63 +15,85 @@ interface ScraperCredentials {
 async function scrapeEngie(credentials: ScraperCredentials): Promise<any> {
   console.log('🚀 Starting ENGIE Romania scraping process');
   
-  let browser;
   try {
-    browser = await puppeteer.launch({
-      args: ['--no-sandbox']
-    });
-
-    const page = await browser.newPage();
-    await page.setDefaultNavigationTimeout(60000);
-    
-    console.log('🔑 Navigating to login page...');
-    await page.goto('https://my.engie.ro/login', { waitUntil: 'networkidle0' });
-    
-    // Wait for login form elements with longer timeout
-    await page.waitForSelector('#username', { timeout: 10000 });
-    await page.waitForSelector('#password', { timeout: 10000 });
-    
-    console.log('📝 Entering credentials...');
-    await page.type('#username', credentials.username);
-    await page.type('#password', credentials.password);
-    
-    console.log('🔓 Submitting login form...');
-    await Promise.all([
-      page.waitForNavigation({ waitUntil: 'networkidle0' }),
-      page.click('button[type="submit"]')
-    ]);
-
-    // Check if login was successful by looking for dashboard elements
-    const isLoggedIn = await page.evaluate(() => {
-      const errorElement = document.querySelector('.alert-danger');
-      if (errorElement) {
-        throw new Error(`Login failed: ${errorElement.textContent}`);
+    // First, get the login page to obtain any CSRF tokens
+    const loginPageResponse = await fetch('https://my.engie.ro/login', {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       }
-      return document.querySelector('.dashboard') !== null;
     });
 
-    if (!isLoggedIn) {
-      throw new Error('Authentication failed');
+    if (!loginPageResponse.ok) {
+      throw new Error('Failed to access login page');
+    }
+
+    const loginPageHtml = await loginPageResponse.text();
+    const $ = cheerio.load(loginPageHtml);
+    
+    // Get CSRF token if it exists
+    const csrfToken = $('input[name="_csrf"]').val() || '';
+    
+    console.log('📝 Attempting login...');
+    
+    // Perform login
+    const loginResponse = await fetch('https://my.engie.ro/j_spring_security_check', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Cookie': loginPageResponse.headers.get('set-cookie') || ''
+      },
+      body: new URLSearchParams({
+        'j_username': credentials.username,
+        'j_password': credentials.password,
+        '_csrf': csrfToken
+      })
+    });
+
+    if (!loginResponse.ok) {
+      throw new Error('Login request failed');
+    }
+
+    const responseUrl = loginResponse.url;
+    if (responseUrl.includes('login?error')) {
+      throw new Error('Authentication failed: Invalid credentials');
+    }
+
+    // Get the session cookie
+    const cookies = loginResponse.headers.get('set-cookie');
+    if (!cookies) {
+      throw new Error('No session cookie received');
     }
 
     console.log('✅ Successfully logged in');
-    
-    // Navigate to invoices page
-    await page.goto('https://my.engie.ro/facturi', { waitUntil: 'networkidle0' });
-    
+
+    // Fetch bills page
+    const billsResponse = await fetch('https://my.engie.ro/facturi', {
+      headers: {
+        'Cookie': cookies,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
+
+    if (!billsResponse.ok) {
+      throw new Error('Failed to fetch bills');
+    }
+
+    const billsHtml = await billsResponse.text();
+    const $bills = cheerio.load(billsHtml);
+
     // Extract bills data
-    const bills = await page.evaluate(() => {
-      const billElements = document.querySelectorAll('.invoice-item');
-      return Array.from(billElements).map(bill => {
-        return {
-          amount: parseFloat(bill.querySelector('.amount')?.textContent?.replace(/[^0-9.,]/g, '') || '0'),
-          due_date: bill.querySelector('.due-date')?.textContent?.trim() || '',
-          invoice_number: bill.querySelector('.invoice-number')?.textContent?.trim() || '',
-          period_start: bill.querySelector('.period-start')?.textContent?.trim() || '',
-          period_end: bill.querySelector('.period-end')?.textContent?.trim() || '',
-          type: 'gas',
-          status: bill.querySelector('.status')?.textContent?.toLowerCase().includes('platit') ? 'paid' : 'pending'
-        };
+    const bills = [];
+    $bills('.invoice-item').each((_, element) => {
+      bills.push({
+        amount: parseFloat($bills(element).find('.amount').text().replace(/[^0-9.,]/g, '') || '0'),
+        due_date: $bills(element).find('.due-date').text().trim(),
+        invoice_number: $bills(element).find('.invoice-number').text().trim(),
+        period_start: $bills(element).find('.period-start').text().trim(),
+        period_end: $bills(element).find('.period-end').text().trim(),
+        type: 'gas',
+        status: $bills(element).find('.status').text().toLowerCase().includes('platit') ? 'paid' : 'pending'
       });
     });
 
@@ -84,10 +106,6 @@ async function scrapeEngie(credentials: ScraperCredentials): Promise<any> {
       bills: [],
       error: error instanceof Error ? error.message : 'Unknown error occurred'
     };
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
   }
 }
 
