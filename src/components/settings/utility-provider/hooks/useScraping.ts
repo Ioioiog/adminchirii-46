@@ -147,42 +147,49 @@ export function useScraping(providers: UtilityProvider[]) {
         hasPassword: !!requestBody.password
       });
 
-      const response = await supabase.functions.invoke('scrape-utility-invoices', {
-        body: requestBody,
-        headers: {
-          'Content-Type': 'application/json'
-        }
+      const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke('scrape-utility-invoices', {
+        body: requestBody
       });
 
-      if (response.error) {
-        console.error('Scrape function error:', response.error);
-        throw new Error(`Scraping failed: ${response.error.message || 'Unknown error'}`);
+      if (scrapeError) {
+        console.error('Scrape function error:', scrapeError);
+        throw new Error(`Scraping failed: ${scrapeError.message || 'Unknown error'}`);
       }
 
-      const scrapeData = response.data;
-      
-      if (!scrapeData?.success) {
-        throw new Error(scrapeData?.error || 'Scraping failed with no error message');
+      if (!scrapeData) {
+        throw new Error('No response data received from scraping function');
       }
 
-      console.log('Scrape completed successfully', { 
-        providerId,
-        response: scrapeData 
-      });
-
-      setScrapingJobs(prev => ({
-        ...prev,
-        [providerId]: {
-          status: 'completed',
-          last_run_at: new Date().toISOString(),
-          error_message: null
+      try {
+        // Ensure we can parse the response
+        const parsedData = typeof scrapeData === 'string' ? JSON.parse(scrapeData) : scrapeData;
+        
+        if (!parsedData.success) {
+          throw new Error(parsedData.error || 'Scraping failed with no error message');
         }
-      }));
 
-      toast({
-        title: "Success",
-        description: "Started fetching utility bills. This may take a few minutes.",
-      });
+        console.log('Scrape completed successfully', { 
+          providerId,
+          response: parsedData
+        });
+
+        setScrapingJobs(prev => ({
+          ...prev,
+          [providerId]: {
+            status: 'completed',
+            last_run_at: new Date().toISOString(),
+            error_message: null
+          }
+        }));
+
+        toast({
+          title: "Success",
+          description: "Started fetching utility bills. This may take a few minutes.",
+        });
+      } catch (parseError) {
+        console.error('Error parsing scrape response:', parseError);
+        throw new Error('Invalid response format from scraping function');
+      }
     } catch (error: any) {
       console.error('Scraping failed:', { 
         providerId, 
