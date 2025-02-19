@@ -1,5 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import chromium from "https://esm.sh/chrome-aws-lambda@10.1.0";
+import puppeteer from "https://esm.sh/puppeteer-core@10.1.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -27,61 +29,145 @@ interface ScraperResult {
   error?: string;
 }
 
-async function getAuthToken(credentials: ScraperCredentials): Promise<string> {
-  const response = await fetch('https://my.engie.ro/api/auth/login', {
+async function solveCaptcha(page: any, captchaApiKey: string): Promise<void> {
+  console.log('🔍 Attempting to solve reCAPTCHA...');
+  
+  const sitekey = await page.$eval('[data-sitekey]', (el: any) => el.getAttribute('data-sitekey'));
+  
+  if (!sitekey) {
+    throw new Error('Could not find reCAPTCHA sitekey');
+  }
+
+  const pageUrl = await page.url();
+
+  const response = await fetch('https://2captcha.com/in.php', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      username: credentials.username,
-      password: credentials.password
+      key: captchaApiKey,
+      method: 'userrecaptcha',
+      googlekey: sitekey,
+      pageurl: pageUrl,
+      json: 1
     })
   });
 
-  if (!response.ok) {
-    throw new Error('Authentication failed');
+  const result = await response.json();
+  if (!result.request) {
+    throw new Error('Failed to submit CAPTCHA solving request');
   }
 
-  const data = await response.json();
-  return data.token;
+  const captchaId = result.request;
+  let solution = null;
+
+  for (let i = 0; i < 30; i++) {
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    
+    const checkResponse = await fetch(`https://2captcha.com/res.php?key=${captchaApiKey}&action=get&id=${captchaId}&json=1`);
+    const checkResult = await checkResponse.json();
+    
+    if (checkResult.status === 1) {
+      solution = checkResult.request;
+      break;
+    }
+  }
+
+  if (!solution) {
+    throw new Error('Failed to solve CAPTCHA after maximum attempts');
+  }
+
+  await page.evaluate((token: string) => {
+    (document.querySelectorAll('.g-recaptcha-response') as NodeListOf<HTMLTextAreaElement>).forEach(element => {
+      element.innerHTML = token;
+      element.value = token;
+    });
+  }, solution);
+
+  console.log('✅ CAPTCHA solved successfully');
 }
 
-async function scrapeEngie(credentials: ScraperCredentials): Promise<ScraperResult> {
-  console.log('🚀 Starting ENGIE Romania API scraping process');
-  
+async function handleCookies(page: any) {
+  console.log('🍪 Checking for cookie consent...');
   try {
-    // Get authentication token
-    console.log('🔑 Authenticating...');
-    const token = await getAuthToken(credentials);
+    const acceptButton = await page.$('#cookieConsentBtnRight');
+    if (acceptButton) {
+      console.log('Accepting cookies...');
+      await acceptButton.click();
+      await page.waitForTimeout(1000);
+    }
+  } catch {
+    console.log('✅ No cookie modal detected');
+  }
+}
 
-    // Fetch invoices
-    console.log('📄 Fetching invoices...');
-    const response = await fetch('https://my.engie.ro/api/invoices/history', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      }
+async function scrapeEngie(credentials: ScraperCredentials, captchaApiKey: string): Promise<ScraperResult> {
+  console.log('🚀 Starting ENGIE Romania scraping process');
+  
+  let browser;
+  try {
+    const executablePath = await chromium.executablePath;
+    
+    browser = await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath,
+      headless: chromium.headless,
+      ignoreHTTPSErrors: true,
     });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch invoices');
+    const page = await browser.newPage();
+    await page.setDefaultNavigationTimeout(60000);
+
+    console.log('🔑 Navigating to login page...');
+    await page.goto('https://my.engie.ro/autentificare', { waitUntil: 'networkidle0' });
+    
+    await handleCookies(page);
+
+    console.log('📝 Entering credentials...');
+    await page.type('#username', credentials.username);
+    await page.type('#password', credentials.password);
+
+    await solveCaptcha(page, captchaApiKey);
+
+    console.log('🔓 Submitting login form...');
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'networkidle0' }),
+      page.click('button[type="submit"].nj-btn.nj-btn--primary')
+    ]);
+
+    const isLoggedIn = await page.$('.dashboard');
+    if (!isLoggedIn) {
+      throw new Error('Login failed - dashboard not found');
     }
 
-    const invoices = await response.json();
+    console.log('📄 Navigating to invoices page...');
+    await page.goto('https://my.engie.ro/facturi/istoric', { waitUntil: 'networkidle0' });
     
-    // Transform the data into our expected format
-    const bills = invoices.map((invoice: any) => ({
-      amount: parseFloat(invoice.amount),
-      due_date: invoice.dueDate,
-      invoice_number: invoice.number,
-      period_start: invoice.periodStart,
-      period_end: invoice.periodEnd,
-      type: 'gas',
-      status: invoice.isPaid ? 'paid' : 'pending'
-    }));
+    console.log('⏳ Waiting for invoice table...');
+    await page.waitForSelector('table');
+
+    const bills = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tbody tr'));
+      return rows.map(row => {
+        const cells = Array.from(row.querySelectorAll('td'));
+        const text = (cell: Element) => cell.textContent?.trim() || '';
+        
+        const amountText = text(cells[4]).replace(/[^\d.,]/g, '').replace(',', '.');
+        const amount = parseFloat(amountText);
+        const dueDate = text(cells[2]);
+        const isPaid = text(cells[5]).toLowerCase().includes('platit');
+
+        return {
+          amount,
+          due_date: dueDate,
+          invoice_number: text(cells[0]),
+          period_start: dueDate,
+          period_end: dueDate,
+          type: 'gas',
+          status: isPaid ? 'paid' : 'pending'
+        };
+      });
+    });
 
     console.log(`✅ Successfully found ${bills.length} invoices`);
     return { success: true, bills };
@@ -93,6 +179,10 @@ async function scrapeEngie(credentials: ScraperCredentials): Promise<ScraperResu
       bills: [],
       error: error instanceof Error ? error.message : 'Unknown error occurred'
     };
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
   }
 }
 
@@ -106,13 +196,18 @@ serve(async (req) => {
       throw new Error('Method not allowed');
     }
 
+    const captchaApiKey = Deno.env.get("CAPTCHA_API_KEY");
+    if (!captchaApiKey) {
+      throw new Error("CAPTCHA API key not configured");
+    }
+
     const requestData = await req.json();
     console.log('📨 Received scraping request for:', requestData.username);
 
     const result = await scrapeEngie({
       username: requestData.username,
       password: requestData.password
-    });
+    }, captchaApiKey);
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
