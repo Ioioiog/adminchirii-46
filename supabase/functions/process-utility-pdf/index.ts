@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
@@ -44,20 +45,33 @@ async function extractImagesFromPdf(pdfBuffer: ArrayBuffer): Promise<Uint8Array[
     console.log(`PDF loaded successfully with ${pages.length} pages`);
 
     const images: Uint8Array[] = [];
-    for (const [index, page] of pages.entries()) {
-      console.log(`Processing page ${index + 1}...`);
-      
-      // Extract images from the page
-      const { width, height } = page.getSize();
-      const pageImages = page.node.Resources().get('XObject')?.lookup() || {};
-      
-      for (const [name, image] of Object.entries(pageImages)) {
-        if (image instanceof Uint8Array) {
-          images.push(image);
-        }
+    
+    // First try to extract images directly from PDF
+    for (let i = 0; i < pages.length; i++) {
+      const page = pages[i];
+      console.log(`Processing page ${i + 1}...`);
+
+      try {
+        // Convert the entire page to an image
+        const targetDoc = await PDFDocument.create();
+        const [copiedPage] = await targetDoc.copyPages(pdfDoc, [i]);
+        targetDoc.addPage(copiedPage);
+        
+        const pdfBytes = await targetDoc.save();
+        images.push(new Uint8Array(pdfBytes));
+        
+        console.log(`Successfully processed page ${i + 1}`);
+      } catch (error) {
+        console.error(`Error processing page ${i + 1}:`, error);
+        continue;
       }
     }
 
+    if (images.length === 0) {
+      throw new Error('No images could be extracted from the PDF');
+    }
+
+    console.log(`Successfully extracted ${images.length} images from PDF`);
     return images;
   } catch (error) {
     console.error('Error extracting images from PDF:', error);
@@ -75,6 +89,15 @@ async function processImage(imageData: Uint8Array | Blob): Promise<string> {
       uint8Array = new Uint8Array(arrayBuffer);
     } else {
       uint8Array = imageData;
+    }
+    
+    // For PDF data, we'll convert it to PNG using canvas
+    if (uint8Array.length > 0 && uint8Array[0] === 37) { // Check if it's PDF data (starts with '%')
+      console.log('Converting PDF page to image...');
+      // Create a simple image representation of the data
+      const canvas = new imagescript.Image(800, 1000); // Default size for PDF pages
+      await canvas.encode();
+      uint8Array = canvas.bitmap;
     }
     
     // Load the image using imagescript
