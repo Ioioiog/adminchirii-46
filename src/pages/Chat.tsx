@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from "react";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { ChatHeader } from "@/components/chat/ChatHeader";
@@ -28,7 +27,6 @@ const Chat = () => {
   const { userRole } = useUserRole();
   const { data: tenants, isLoading: isTenantsLoading } = useTenants();
 
-  // Deduplicate tenants based on email and get the latest record for each tenant
   const uniqueTenants = tenants?.reduce((acc, current) => {
     const existingTenant = acc.find(item => item.email === current.email);
     if (!existingTenant) {
@@ -116,7 +114,6 @@ const Chat = () => {
     <div className="flex h-screen bg-[#F1F0FB] dark:bg-slate-900">
       <DashboardSidebar />
       <div className="flex-1 flex">
-        {/* Tenants List Sidebar */}
         {userRole === "landlord" && (
           <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
             <div className="p-4 border-b">
@@ -172,10 +169,8 @@ const Chat = () => {
           </div>
         )}
 
-        {/* Main Chat Area */}
         <div className="flex-1 flex flex-col overflow-hidden bg-white rounded-lg shadow-lg m-4">
           <ChatHeader 
-            onTenantSelect={handleTenantSelect}
             selectedTenantId={selectedTenantId}
             onVideoCall={handleStartVideoCall}
           />
