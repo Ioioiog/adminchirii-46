@@ -3,6 +3,7 @@ import { DashboardHeader } from "./sections/DashboardHeader";
 import { DashboardMetrics } from "./DashboardMetrics";
 import { RevenueSection } from "./sections/RevenueSection";
 import { UpcomingIncomeSection } from "./sections/UpcomingIncomeSection";
+import { CalendarSection } from "./sections/CalendarSection";
 import { useTranslation } from "react-i18next";
 
 interface LandlordDashboardProps {
@@ -23,6 +24,11 @@ export function LandlordDashboard({ userId, userName }: LandlordDashboardProps) 
       {/* Metrics Section */}
       <section className="bg-white rounded-xl shadow-sm p-6">
         <DashboardMetrics userId={userId} userRole="landlord" />
+      </section>
+
+      {/* Calendar Section */}
+      <section>
+        <CalendarSection />
       </section>
 
       {/* Revenue Section */}
