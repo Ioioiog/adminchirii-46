@@ -4,7 +4,7 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { format, setDate } from "date-fns";
+import { format, setDate, isSameMonth, isSameDay } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -34,7 +34,7 @@ const getBadgeColor = (type: Event['type']) => {
 
 export function CalendarSection() {
   const { toast } = useToast();
-  const [date, setSelectedDate] = React.useState<Date | undefined>(new Date());
+  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(new Date());
 
   // Fetch payments, maintenance requests, contracts, and tenancies
   const { data: events = [], isLoading } = useQuery({
@@ -162,9 +162,21 @@ export function CalendarSection() {
     }
   });
 
-  const selectedDateEvents = events.filter(
-    event => date && format(event.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
-  );
+  const filteredEvents = React.useMemo(() => {
+    if (!selectedDate || !events.length) return [];
+    
+    // If a specific day is selected (user clicked on a day)
+    if (selectedDate.getHours() !== 0) {
+      return events.filter(event => 
+        isSameDay(event.date, selectedDate)
+      );
+    }
+    
+    // If only month is selected (initial view or month changed)
+    return events.filter(event => 
+      isSameMonth(event.date, selectedDate)
+    );
+  }, [selectedDate, events]);
 
   return (
     <Card className="col-span-full lg:col-span-4">
@@ -179,22 +191,39 @@ export function CalendarSection() {
           <div>
             <Calendar
               mode="single"
-              selected={date}
-              onSelect={setSelectedDate}
+              selected={selectedDate}
+              onSelect={(date) => {
+                if (date) {
+                  // Set hours to distinguish between month view (0) and day view (1)
+                  const newDate = new Date(date);
+                  newDate.setHours(1);
+                  setSelectedDate(newDate);
+                }
+              }}
               className="rounded-md border"
             />
           </div>
           <div className="space-y-4">
             <h4 className="font-medium text-sm text-gray-500">
-              {date ? format(date, 'MMMM d, yyyy') : 'Select a date'}
+              {selectedDate 
+                ? selectedDate.getHours() === 0 
+                  ? `Events for ${format(selectedDate, 'MMMM yyyy')}`
+                  : `Events for ${format(selectedDate, 'MMMM d, yyyy')}`
+                : 'Select a date'
+              }
             </h4>
             {isLoading ? (
               <p className="text-sm text-gray-500">Loading events...</p>
-            ) : selectedDateEvents.length > 0 ? (
+            ) : filteredEvents.length > 0 ? (
               <div className="space-y-3">
-                {selectedDateEvents.map((event, idx) => (
+                {filteredEvents.map((event, idx) => (
                   <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm font-medium">{event.title}</span>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">{event.title}</span>
+                      <span className="text-xs text-gray-500">
+                        {format(event.date, 'MMM d, yyyy')}
+                      </span>
+                    </div>
                     <Badge className={getBadgeColor(event.type)}>
                       {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
                     </Badge>
@@ -202,7 +231,9 @@ export function CalendarSection() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500">No events scheduled for this date</p>
+              <p className="text-sm text-gray-500">
+                No events {selectedDate?.getHours() === 0 ? 'this month' : 'on this day'}
+              </p>
             )}
           </div>
         </div>
