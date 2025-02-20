@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 interface Event {
   date: Date;
   title: string;
-  type: 'payment' | 'maintenance' | 'contract';
+  type: 'payment' | 'maintenance' | 'contract' | 'tenancy';
 }
 
 const getBadgeColor = (type: Event['type']) => {
@@ -23,6 +23,8 @@ const getBadgeColor = (type: Event['type']) => {
       return 'bg-blue-100 text-blue-800';
     case 'contract':
       return 'bg-purple-100 text-purple-800';
+    case 'tenancy':
+      return 'bg-orange-100 text-orange-800';
     default:
       return 'bg-gray-100 text-gray-800';
   }
@@ -32,7 +34,7 @@ export function CalendarSection() {
   const { toast } = useToast();
   const [date, setDate] = React.useState<Date | undefined>(new Date());
 
-  // Fetch payments, maintenance requests, and contracts
+  // Fetch payments, maintenance requests, contracts, and tenancies
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['calendar-events'],
     queryFn: async () => {
@@ -73,9 +75,21 @@ export function CalendarSection() {
             valid_until,
             property:properties (name)
           `)
-          .eq('status', 'signed'); // Changed from 'active' to 'signed'
+          .eq('status', 'signed');
 
         if (contractsError) throw contractsError;
+
+        // Fetch tenancies
+        const { data: tenancies, error: tenanciesError } = await supabase
+          .from('tenancies')
+          .select(`
+            start_date,
+            end_date,
+            property:properties (name)
+          `)
+          .eq('status', 'active');
+
+        if (tenanciesError) throw tenanciesError;
 
         // Transform data into events
         const events: Event[] = [
@@ -88,7 +102,7 @@ export function CalendarSection() {
 
           // Maintenance events
           ...maintenance
-            .filter(m => m.scheduled_date) // Only include maintenance with scheduled dates
+            .filter(m => m.scheduled_date)
             .map(m => ({
               date: new Date(m.scheduled_date!),
               title: `${m.title} - ${m.property.name}`,
@@ -97,11 +111,27 @@ export function CalendarSection() {
 
           // Contract events
           ...contracts
-            .filter(c => c.valid_until) // Only include contracts with end dates
+            .filter(c => c.valid_until)
             .map(c => ({
               date: new Date(c.valid_until!),
               title: `Contract Renewal - ${c.property.name}`,
               type: 'contract' as const
+            })),
+
+          // Tenancy start dates
+          ...tenancies.map(tenancy => ({
+            date: new Date(tenancy.start_date),
+            title: `Tenancy Starts - ${tenancy.property.name}`,
+            type: 'tenancy' as const
+          })),
+
+          // Tenancy end dates (if they exist)
+          ...tenancies
+            .filter(t => t.end_date)
+            .map(tenancy => ({
+              date: new Date(tenancy.end_date!),
+              title: `Tenancy Ends - ${tenancy.property.name}`,
+              type: 'tenancy' as const
             }))
         ];
 
