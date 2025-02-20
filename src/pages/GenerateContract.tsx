@@ -150,51 +150,55 @@ export default function GenerateContract() {
     setAssets(newAssets);
   };
 
-  // Add error state
   const [errors, setErrors] = useState<Record<string, boolean>>({});
 
   const validateForm = () => {
     const newErrors: Record<string, boolean> = {};
 
-    // Contract basic details
-    if (!contractNumber) newErrors.contractNumber = true;
-    if (!validFrom) newErrors.validFrom = true;
+    const isEmpty = (value: any) => {
+      if (typeof value === 'number') return false;
+      if (typeof value === 'string') return !value.trim();
+      return !value;
+    };
 
-    // Owner details
-    if (!ownerDetails.name) newErrors.ownerName = true;
-    if (!ownerDetails.reg) newErrors.ownerReg = true;
-    if (!ownerDetails.fiscal) newErrors.ownerFiscal = true;
-    if (!ownerDetails.address) newErrors.ownerAddress = true;
-    if (!ownerDetails.representative) newErrors.ownerRepresentative = true;
+    if (isEmpty(contractNumber)) newErrors.contractNumber = true;
+    if (isEmpty(validFrom)) newErrors.validFrom = true;
 
-    // Tenant details
-    if (!tenantDetails.name) newErrors.tenantName = true;
-    if (!tenantDetails.reg) newErrors.tenantReg = true;
-    if (!tenantDetails.fiscal) newErrors.tenantFiscal = true;
-    if (!tenantDetails.address) newErrors.tenantAddress = true;
-    if (!tenantDetails.representative) newErrors.tenantRepresentative = true;
+    if (isEmpty(ownerDetails.name)) newErrors.ownerName = true;
+    if (isEmpty(ownerDetails.fiscal)) newErrors.ownerFiscal = true;
+    if (isEmpty(ownerDetails.address)) newErrors.ownerAddress = true;
 
-    // Property details
-    if (!propertyDetails.address) newErrors.propertyAddress = true;
-    if (!propertyDetails.rentAmount) newErrors.rentAmount = true;
-    if (!propertyDetails.paymentDay) newErrors.paymentDay = true;
-    if (!propertyDetails.contractDuration) newErrors.contractDuration = true;
+    if (isEmpty(tenantDetails.name)) newErrors.tenantName = true;
+    if (isEmpty(tenantDetails.fiscal)) newErrors.tenantFiscal = true;
+    if (isEmpty(tenantDetails.address)) newErrors.tenantAddress = true;
 
-    // Utilities
-    if (!utilities.waterCold) newErrors.waterCold = true;
-    if (!utilities.waterHot) newErrors.waterHot = true;
-    if (!utilities.electricity) newErrors.electricity = true;
-    if (!utilities.gas) newErrors.gas = true;
+    if (isEmpty(propertyDetails.address)) newErrors.propertyAddress = true;
+    if (isEmpty(propertyDetails.rentAmount)) newErrors.rentAmount = true;
+
+    if (isEmpty(selectedTemplate)) newErrors.selectedTemplate = true;
+    if (isEmpty(selectedProperty)) newErrors.selectedProperty = true;
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleGenerateContract = async () => {
+    console.log("Attempting to generate contract with values:", {
+      contractNumber,
+      selectedTemplate,
+      selectedProperty,
+      contractType,
+      validFrom,
+      ownerDetails,
+      tenantDetails,
+      propertyDetails
+    });
+
     if (!validateForm()) {
+      console.log("Validation failed. Errors:", errors);
       toast({
         title: "Error",
-        description: "Please fill in all required fields",
+        description: "Te rugăm să completezi toate câmpurile obligatorii",
         variant: "destructive",
       });
       return;
@@ -204,7 +208,7 @@ export default function GenerateContract() {
       if (!selectedTemplate || !selectedProperty || !contractType || !validFrom) {
         toast({
           title: "Error",
-          description: "Please fill in all required fields",
+          description: "Te rugăm să selectezi un șablon și o proprietate",
           variant: "destructive",
         });
         return;
@@ -216,11 +220,9 @@ export default function GenerateContract() {
         throw new Error("Template not found");
       }
 
-      // Get current user's ID for landlord_id
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error("User not found");
 
-      // Create contract content
       const contractContent = {
         contractNumber,
         ownerDetails,
@@ -233,7 +235,6 @@ export default function GenerateContract() {
         baseTemplate: selectedTemplateData.content
       };
 
-      // Create contract with the correct types
       const { data, error } = await supabase
         .from("contracts")
         .insert({
@@ -262,13 +263,12 @@ export default function GenerateContract() {
       console.error("Error generating contract:", error);
       toast({
         title: "Error",
-        description: "Failed to generate contract",
+        description: "A apărut o eroare la generarea contractului",
         variant: "destructive",
       });
     }
   };
 
-  // Helper function to add error styling
   const inputClassName = (errorKey: string) =>
     `${errors[errorKey] ? "border-red-500 focus-visible:ring-red-500" : ""}`;
 
