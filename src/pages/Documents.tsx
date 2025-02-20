@@ -198,7 +198,7 @@ const Documents = () => {
                     onClick={() => setShowAddModal(true)}
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Upload Contract
+                    {activeTab === 'contracts' ? 'Upload Contract' : 'Upload Document'}
                   </Button>
                   {activeTab === "contracts" && (
                     <Button 
