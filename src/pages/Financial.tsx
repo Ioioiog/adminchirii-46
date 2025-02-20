@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { Button } from "@/components/ui/button";
@@ -57,7 +58,6 @@ const Financial = () => {
     },
   ];
 
-  // Only allow landlord or tenant roles to access this page
   if (!userRole || userRole === "service_provider") {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -70,20 +70,19 @@ const Financial = () => {
   }
 
   const renderSection = () => {
-    // Early return if role is not landlord or tenant
     if (userRole !== "landlord" && userRole !== "tenant") return null;
 
     switch (activeSection) {
       case 'invoices':
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-600 rounded-xl">
+                  <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-sm">
                     <FileText className="h-5 w-5 md:h-6 md:w-6 text-white" />
                   </div>
-                  <h2 className="text-2xl font-semibold">Invoices</h2>
+                  <h2 className="text-2xl font-semibold text-gray-900">Invoices</h2>
                 </div>
                 <p className="text-sm md:text-base text-gray-500">
                   Manage and track all your property-related invoices.
@@ -93,14 +92,16 @@ const Financial = () => {
                 <InvoiceDialog onInvoiceCreated={fetchInvoices} />
               )}
             </div>
-            <InvoiceFilters
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              statusFilter={statusFilter}
-              setStatusFilter={setStatusFilter}
-              dateRange={dateRange}
-              setDateRange={setDateRange}
-            />
+            <div className="bg-white/50 backdrop-blur-sm rounded-lg p-4 border shadow-sm">
+              <InvoiceFilters
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                statusFilter={statusFilter}
+                setStatusFilter={setStatusFilter}
+                dateRange={dateRange}
+                setDateRange={setDateRange}
+              />
+            </div>
             <InvoiceList
               invoices={invoices}
               userRole={userRole}
@@ -110,14 +111,14 @@ const Financial = () => {
         );
       case 'payments':
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-600 rounded-xl">
+                  <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-sm">
                     <DollarSign className="h-5 w-5 md:h-6 md:w-6 text-white" />
                   </div>
-                  <h2 className="text-2xl font-semibold">Payments</h2>
+                  <h2 className="text-2xl font-semibold text-gray-900">Payments</h2>
                 </div>
                 <p className="text-sm md:text-base text-gray-500">
                   Track and manage all property-related payments.
@@ -130,14 +131,16 @@ const Financial = () => {
                 />
               )}
             </div>
-            <PaymentFilters
-              status={paymentStatusFilter}
-              onStatusChange={setPaymentStatusFilter}
-              searchQuery={paymentSearchQuery}
-              onSearchChange={setPaymentSearchQuery}
-              dateRange={paymentDateRange}
-              onDateRangeChange={setPaymentDateRange}
-            />
+            <div className="bg-white/50 backdrop-blur-sm rounded-lg p-4 border shadow-sm">
+              <PaymentFilters
+                status={paymentStatusFilter}
+                onStatusChange={setPaymentStatusFilter}
+                searchQuery={paymentSearchQuery}
+                onSearchChange={setPaymentSearchQuery}
+                dateRange={paymentDateRange}
+                onDateRangeChange={setPaymentDateRange}
+              />
+            </div>
             <PaymentList payments={payments} userRole={userRole} />
           </div>
         );
@@ -153,28 +156,30 @@ const Financial = () => {
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       <DashboardSidebar />
       <main className="flex-1 p-8 overflow-y-auto">
         <div className="max-w-7xl mx-auto space-y-8">
-          <div className="w-full flex gap-4 bg-card p-4 rounded-lg shadow-sm overflow-x-auto">
-            {navigationItems.map((item) => (
-              <Button
-                key={item.id}
-                variant={activeSection === item.id ? 'default' : 'ghost'}
-                className={cn(
-                  "flex-shrink-0 gap-2",
-                  activeSection === item.id && "bg-primary text-primary-foreground"
-                )}
-                onClick={() => setActiveSection(item.id)}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </Button>
-            ))}
-          </div>
+          <Card className="p-4 bg-white/80 backdrop-blur-sm border shadow-sm">
+            <div className="flex gap-4 overflow-x-auto">
+              {navigationItems.map((item) => (
+                <Button
+                  key={item.id}
+                  variant={activeSection === item.id ? 'default' : 'ghost'}
+                  className={cn(
+                    "flex-shrink-0 gap-2 transition-all duration-200",
+                    activeSection === item.id && "bg-primary text-primary-foreground shadow-sm"
+                  )}
+                  onClick={() => setActiveSection(item.id)}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </Button>
+              ))}
+            </div>
+          </Card>
 
-          <Card className="p-6">
+          <Card className="p-6 bg-white/80 backdrop-blur-sm border shadow-sm">
             {renderSection()}
           </Card>
         </div>
