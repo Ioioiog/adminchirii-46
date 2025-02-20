@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { MaintenanceDialog } from "@/components/maintenance/MaintenanceDialog";
-import { MaintenanceHeader } from "@/components/maintenance/sections/MaintenanceHeader";
 import { MaintenanceSection } from "@/components/maintenance/dashboard/MaintenanceSection";
 import { ServiceProviderList } from "@/components/maintenance/ServiceProviderList";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { List, Users, PlusCircle, Search, Filter } from "lucide-react";
+import { List, Users, PlusCircle, Search, Filter, Wrench } from "lucide-react";
 import { useAuthState } from "@/hooks/useAuthState";
 import { useUserRole } from "@/hooks/use-user-role";
 
@@ -102,17 +101,22 @@ export default function Maintenance() {
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Role-specific header */}
           <Card className="p-6 bg-white/80 backdrop-blur-sm border shadow-sm">
-            <div>
-              <h1 className="text-2xl font-bold mb-2">
-                {userRole === 'tenant' && "My Maintenance Requests"}
-                {userRole === 'landlord' && "Property Maintenance Management"}
-                {userRole === 'service_provider' && "Assigned Maintenance Tasks"}
-              </h1>
-              <p className="text-muted-foreground">
-                {userRole === 'tenant' && "Submit and track your maintenance requests"}
-                {userRole === 'landlord' && "Monitor and manage property maintenance"}
-                {userRole === 'service_provider' && "View and update your assigned maintenance tasks"}
-              </p>
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-sm">
+                <Wrench className="h-5 w-5 md:h-6 md:w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900">
+                  {userRole === 'tenant' && "My Maintenance Requests"}
+                  {userRole === 'landlord' && "Property Maintenance Management"}
+                  {userRole === 'service_provider' && "Assigned Maintenance Tasks"}
+                </h1>
+                <p className="text-sm md:text-base text-gray-500">
+                  {userRole === 'tenant' && "Submit and track your maintenance requests"}
+                  {userRole === 'landlord' && "Monitor and manage property maintenance"}
+                  {userRole === 'service_provider' && "View and update your assigned maintenance tasks"}
+                </p>
+              </div>
             </div>
           </Card>
 
@@ -162,14 +166,12 @@ export default function Maintenance() {
                   </div>
 
                   {/* Maintenance Requests List */}
-                  <div className="grid grid-cols-1 gap-6">
-                    <MaintenanceSection
-                      title="Maintenance Requests"
-                      description="Manage and monitor all property maintenance requests"
-                      requests={filteredRequests}
-                      onRequestClick={handleRequestClick}
-                    />
-                  </div>
+                  <MaintenanceSection
+                    title="Maintenance Requests"
+                    description="Manage and monitor all property maintenance requests"
+                    requests={filteredRequests}
+                    onRequestClick={handleRequestClick}
+                  />
                 </TabsContent>
 
                 <TabsContent value="providers" className="p-6">
@@ -217,18 +219,16 @@ export default function Maintenance() {
               </div>
 
               {/* Maintenance Requests List */}
-              <div className="grid grid-cols-1 gap-6">
-                <MaintenanceSection
-                  title="Maintenance Requests"
-                  description={
-                    userRole === 'tenant' 
-                      ? "Track the status of your maintenance requests"
-                      : "Your assigned maintenance tasks"
-                  }
-                  requests={filteredRequests}
-                  onRequestClick={handleRequestClick}
-                />
-              </div>
+              <MaintenanceSection
+                title="Maintenance Requests"
+                description={
+                  userRole === 'tenant' 
+                    ? "Track the status of your maintenance requests"
+                    : "Your assigned maintenance tasks"
+                }
+                requests={filteredRequests}
+                onRequestClick={handleRequestClick}
+              />
             </Card>
           )}
 
