@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, ChevronDown, Building2, MapPin, User, Calendar, DollarSign, Home } from "lucide-react";
@@ -125,7 +126,7 @@ const Properties = () => {
                   </div>
                   <Button 
                     onClick={() => setShowAddModal(true)}
-                    className="w-full sm:w-auto flex items-center gap-2 bg-[#9b87f5] hover:bg-[#8B5CF6] transition-colors"
+                    className="w-full sm:w-auto flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white transition-colors"
                   >
                     <Plus className="h-4 w-4" />
                     <span>Add Property</span>
