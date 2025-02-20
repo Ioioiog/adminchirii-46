@@ -73,7 +73,7 @@ export function CalendarSection() {
             valid_until,
             property:properties (name)
           `)
-          .eq('status', 'active');
+          .eq('status', 'signed'); // Changed from 'active' to 'signed'
 
         if (contractsError) throw contractsError;
 
