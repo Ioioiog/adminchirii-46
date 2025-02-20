@@ -9,22 +9,67 @@ interface BrowserlessResponse {
   statusText: string;
 }
 
+interface ScrapingError {
+  message: string;
+  details?: unknown;
+  step: string;
+}
+
+const handleScrapingError = async (error: ScrapingError, supabaseClient: any, jobId?: string) => {
+  console.error(`Error during ${error.step}:`, {
+    message: error.message,
+    details: error.details
+  });
+
+  if (jobId) {
+    try {
+      await supabaseClient
+        .from('scraping_jobs')
+        .update({ 
+          status: 'failed',
+          error_message: `${error.step}: ${error.message}`,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', jobId);
+    } catch (updateError) {
+      console.error('Failed to update job status:', updateError);
+    }
+  }
+
+  return new Response(
+    JSON.stringify({
+      success: false,
+      error: error.message,
+      step: error.step
+    }),
+    {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500,
+    }
+  );
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
-  try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+  const supabaseClient = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
 
+  let jobId: string | undefined;
+
+  try {
     const { username, password, utilityId, provider, type, location } = await req.json()
     console.log(`Starting scraping for ${provider} at location ${location}`);
 
     if (!username || !password || !utilityId || !provider) {
-      throw new Error('Missing required parameters');
+      return handleScrapingError({
+        message: 'Missing required parameters',
+        step: 'parameter_validation'
+      }, supabaseClient);
     }
 
     // Create a scraping job record
@@ -40,15 +85,23 @@ serve(async (req) => {
       .single();
 
     if (jobError) {
-      throw new Error(`Failed to create scraping job: ${jobError.message}`);
+      return handleScrapingError({
+        message: `Failed to create scraping job: ${jobError.message}`,
+        details: jobError,
+        step: 'job_creation'
+      }, supabaseClient);
     }
 
-    console.log(`Created scraping job: ${jobData.id}`);
+    jobId = jobData.id;
+    console.log(`Created scraping job: ${jobId}`);
 
     // Make request to Browserless API
     const browserlessApiKey = Deno.env.get('BROWSERLESS_API_KEY');
     if (!browserlessApiKey) {
-      throw new Error('Browserless API key not configured');
+      return handleScrapingError({
+        message: 'Browserless API key not configured',
+        step: 'api_configuration'
+      }, supabaseClient, jobId);
     }
 
     console.log('Making request to Browserless API...');
@@ -57,23 +110,29 @@ serve(async (req) => {
     const script = `
       async () => {
         try {
+          console.log('Waiting for login form elements...');
           // Wait for the login form
           await page.waitForSelector('#email', { timeout: 10000 });
           await page.waitForSelector('#password', { timeout: 10000 });
           
+          console.log('Entering credentials...');
           // Type credentials
           await page.type('#email', '${username}');
           await page.type('#password', '${password}');
           
+          console.log('Submitting login form...');
           // Click login button
           await page.click('button[type="submit"]');
           
+          console.log('Waiting for navigation after login...');
           // Wait for navigation
           await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 20000 });
           
+          console.log('Getting page content...');
           // Get the page content
           return await page.content();
         } catch (error) {
+          console.error('Browser script error:', error);
           throw new Error('Failed to login: ' + error.message);
         }
       }
@@ -99,12 +158,28 @@ serve(async (req) => {
       }),
     });
 
+    const responseText = await response.text();
+    console.log('Browserless API raw response:', responseText);
+
     if (!response.ok) {
-      console.error('Browserless API response:', await response.text());
-      throw new Error(`Browserless API error: ${response.statusText}`);
+      return handleScrapingError({
+        message: `Browserless API error: ${response.statusText}`,
+        details: responseText,
+        step: 'browserless_api_call'
+      }, supabaseClient, jobId);
     }
 
-    const result = await response.json();
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch (error) {
+      return handleScrapingError({
+        message: 'Failed to parse Browserless API response',
+        details: { error, responseText },
+        step: 'response_parsing'
+      }, supabaseClient, jobId);
+    }
+
     console.log('Successfully fetched page content');
 
     // For testing purposes, create a sample bill
@@ -124,24 +199,35 @@ serve(async (req) => {
         .insert(bills);
 
       if (billsError) {
-        throw new Error(`Failed to insert bills: ${billsError.message}`);
+        return handleScrapingError({
+          message: `Failed to insert bills: ${billsError.message}`,
+          details: billsError,
+          step: 'bill_insertion'
+        }, supabaseClient, jobId);
       }
     }
 
     // Update job status to completed
     const { error: updateError } = await supabaseClient
       .from('scraping_jobs')
-      .update({ status: 'completed' })
-      .eq('id', jobData.id);
+      .update({ 
+        status: 'completed',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', jobId);
 
     if (updateError) {
-      throw new Error(`Failed to update job status: ${updateError.message}`);
+      return handleScrapingError({
+        message: `Failed to update job status: ${updateError.message}`,
+        details: updateError,
+        step: 'job_completion'
+      }, supabaseClient, jobId);
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        jobId: jobData.id,
+        jobId: jobId,
         billsCount: bills.length
       }),
       {
@@ -151,17 +237,10 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Scraping error:', error);
-    
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      }
-    )
+    return handleScrapingError({
+      message: error.message || 'An unexpected error occurred',
+      details: error,
+      step: 'unknown'
+    }, supabaseClient, jobId);
   }
 })
