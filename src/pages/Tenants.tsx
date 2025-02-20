@@ -5,7 +5,7 @@ import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { useToast } from "@/hooks/use-toast";
 import { TenantList } from "@/components/tenants/TenantList";
 import { useTenants } from "@/hooks/useTenants";
-import { Property } from "@/utils/propertyUtils";
+import { Property, PropertyStatus } from "@/utils/propertyUtils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TenantsHeader } from "@/components/tenants/TenantsHeader";
 import { TenantDashboard } from "@/components/tenants/TenantDashboard";
