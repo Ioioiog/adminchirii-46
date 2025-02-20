@@ -26,8 +26,37 @@ interface ScrapingResponse {
   error?: string;
 }
 
+async function scrapeUtilityBills(request: ScrapingRequest) {
+  try {
+    // Call the utility provider's API to fetch real bills
+    const response = await fetch('https://wecmvyohaxizmnhuvjly.supabase.co/functions/v1/fetch-utility-bills', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+      },
+      body: JSON.stringify({
+        username: request.username,
+        password: request.password,
+        provider: request.provider,
+        type: request.type
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch bills: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('Fetched utility bills:', data);
+    return data.bills;
+  } catch (error) {
+    console.error('Error scraping bills:', error);
+    throw error;
+  }
+}
+
 Deno.serve(async (req) => {
-  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -52,18 +81,16 @@ Deno.serve(async (req) => {
     const request: ScrapingRequest = await req.json();
     console.log('Processing request for provider:', request.provider);
 
-    // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!supabaseUrl || !supabaseKey) {
-      console.error('Missing Supabase environment variables');
       throw new Error('Server configuration error');
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get the utility provider details with property information
+    // Get the utility provider details
     const { data: providerData, error: providerError } = await supabase
       .from('utility_provider_credentials')
       .select(`
@@ -77,17 +104,14 @@ Deno.serve(async (req) => {
       .single();
 
     if (providerError || !providerData) {
-      console.error('Failed to fetch provider details:', providerError);
       throw new Error('Failed to fetch provider details');
     }
 
     if (!providerData.property_id) {
-      console.error('No property associated with provider');
       throw new Error('No property associated with provider');
     }
 
     // Create scraping job record
-    console.log('Creating scraping job');
     const { data: jobData, error: jobError } = await supabase
       .from('scraping_jobs')
       .insert({
@@ -102,7 +126,6 @@ Deno.serve(async (req) => {
       .single();
 
     if (jobError || !jobData) {
-      console.error('Failed to create scraping job:', jobError);
       throw new Error('Failed to create scraping job');
     }
 
@@ -114,50 +137,42 @@ Deno.serve(async (req) => {
       })
       .eq('id', jobData.id);
 
-    // Mock successful scraping
-    const scrapingResult: ScrapingResponse = {
-      success: true,
-      jobId: jobData.id,
-      bills: [{
-        amount: 150.00,
-        due_date: new Date().toISOString(),
-        invoice_number: "INV001",
-        type: request.type,
-        status: "pending"
-      }]
-    };
+    // Fetch real bills from the utility provider
+    const bills = await scrapeUtilityBills(request);
+    
+    if (!bills || !Array.isArray(bills)) {
+      throw new Error('No valid bills returned from scraping');
+    }
 
-    // Store the mock bill
-    if (scrapingResult.bills?.length) {
-      const { error: billError } = await supabase
-        .from('utilities')
-        .insert(
-          scrapingResult.bills.map(bill => ({
-            property_id: providerData.property_id,
-            utility_provider_id: request.utilityId,
-            type: request.type,
-            amount: bill.amount,
-            due_date: bill.due_date,
-            invoice_number: bill.invoice_number,
-            status: bill.status,
-            currency: 'USD'
-          }))
-        );
+    // Store the real bills
+    const { error: billError } = await supabase
+      .from('utilities')
+      .insert(
+        bills.map(bill => ({
+          property_id: providerData.property_id,
+          utility_provider_id: request.utilityId,
+          type: request.type,
+          amount: bill.amount,
+          due_date: bill.due_date,
+          invoice_number: bill.invoice_number,
+          status: bill.status,
+          currency: 'USD'
+        }))
+      );
 
-      if (billError) {
-        console.error('Failed to store utility bills:', billError);
+    if (billError) {
+      console.error('Failed to store utility bills:', billError);
+      
+      await supabase
+        .from('scraping_jobs')
+        .update({
+          status: 'failed' as ScrapingStatus,
+          error_message: billError.message,
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', jobData.id);
         
-        await supabase
-          .from('scraping_jobs')
-          .update({
-            status: 'failed' as ScrapingStatus,
-            error_message: billError.message,
-            completed_at: new Date().toISOString()
-          })
-          .eq('id', jobData.id);
-          
-        throw new Error(`Failed to store utility bills: ${billError.message}`);
-      }
+      throw new Error(`Failed to store utility bills: ${billError.message}`);
     }
 
     // Update job as completed
@@ -169,9 +184,13 @@ Deno.serve(async (req) => {
       })
       .eq('id', jobData.id);
 
-    console.log('Successfully completed scraping job');
+    console.log('Successfully completed scraping job with real data');
     return new Response(
-      JSON.stringify(scrapingResult),
+      JSON.stringify({
+        success: true,
+        jobId: jobData.id,
+        bills
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
