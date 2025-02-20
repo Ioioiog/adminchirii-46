@@ -183,7 +183,16 @@ Deno.serve(async (req) => {
   try {
     // Basic request validation
     if (!req.body) {
-      throw new Error('Request body is required');
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Request body is required'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
     }
 
     const request: ScrapingRequest = await req.json();
@@ -191,7 +200,16 @@ Deno.serve(async (req) => {
 
     // Validate required fields
     if (!request.username || !request.password || !request.utilityId || !request.provider) {
-      throw new Error('Missing required fields in request');
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Missing required fields in request'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
     }
 
     // Initialize Supabase client
@@ -200,7 +218,16 @@ Deno.serve(async (req) => {
     
     if (!supabaseUrl || !supabaseKey) {
       console.error('Missing Supabase environment variables');
-      throw new Error('Server configuration error');
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Server configuration error'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
     }
 
     console.log('Initializing Supabase client...');
@@ -222,7 +249,16 @@ Deno.serve(async (req) => {
 
     if (jobError) {
       console.error('Failed to create scraping job:', jobError);
-      throw new Error('Failed to create scraping job');
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Failed to create scraping job'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
     }
 
     try {
@@ -301,7 +337,18 @@ Deno.serve(async (req) => {
       if (updateError) {
         console.error('Error updating job status to failed:', updateError);
       }
-      throw error;
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: error instanceof Error ? error.message : 'An unexpected error occurred',
+          jobId: jobData.id
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200, // Keep 200 status even for errors
+        }
+      );
     }
 
   } catch (error) {
@@ -314,7 +361,7 @@ Deno.serve(async (req) => {
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 200, // Keep 200 status even for errors
       }
     );
   }
