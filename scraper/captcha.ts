@@ -79,20 +79,67 @@ export class CaptchaService {
             console.log('reCAPTCHA solved successfully');
             
             // Inject the captcha solution directly into the page
-            await page.evaluate((token: string) => {
-                // Find all textarea elements with class 'g-recaptcha-response'
-                const elements = document.getElementsByClassName('g-recaptcha-response');
-                for (let i = 0; i < elements.length; i++) {
-                    const element = elements[i] as HTMLTextAreaElement;
-                    element.innerHTML = token;
-                    // Also set the value property
-                    element.value = token;
-                }
+            try {
+                // Immediately inject the token without waiting
+                await page.evaluate((token: string) => {
+                    // Function to inject token
+                    const injectToken = () => {
+                        try {
+                            // Find all textarea elements with class 'g-recaptcha-response'
+                            const elements = document.getElementsByClassName('g-recaptcha-response');
+                            for (let i = 0; i < elements.length; i++) {
+                                const element = elements[i] as HTMLTextAreaElement;
+                                element.innerHTML = token;
+                                element.value = token;
+                            }
+                            
+                            // Try to call the reCAPTCHA callback if available
+                            // @ts-ignore
+                            if (window.___grecaptcha_cfg && window.___grecaptcha_cfg.clients) {
+                                // @ts-ignore
+                                const clientIds = Object.keys(window.___grecaptcha_cfg.clients);
+                                for (const clientId of clientIds) {
+                                    try {
+                                        // @ts-ignore
+                                        const client = window.___grecaptcha_cfg.clients[clientId];
+                                        if (client && client.callback) {
+                                            client.callback(token);
+                                        }
+                                    } catch (e) {
+                                        console.error('Error calling client callback:', e);
+                                    }
+                                }
+                            }
+                            
+                            // Dispatch events
+                            document.dispatchEvent(new Event('recaptcha-solved', { bubbles: true }));
+                            document.dispatchEvent(new Event('change', { bubbles: true }));
+                            
+                            return true;
+                        } catch (e) {
+                            console.error('Error injecting token:', e);
+                            return false;
+                        }
+                    };
+                    
+                    // Try to inject immediately
+                    let success = injectToken();
+                    
+                    // If not successful, try again after a short delay
+                    if (!success) {
+                        setTimeout(injectToken, 500);
+                    }
+                }, result);
                 
-                // Trigger a custom event to notify the form that reCAPTCHA was solved
-                const event = new Event('recaptcha-solved', { bubbles: true });
-                document.dispatchEvent(event);
-            }, result);
+                console.log('Successfully injected captcha token');
+                
+                // Small delay to let the token take effect
+                await this.delay(1000);
+                
+            } catch (error) {
+                console.error('Failed to inject token:', error);
+                throw error;
+            }
 
         } catch (error) {
             console.error('Failed to solve reCAPTCHA:', error);
