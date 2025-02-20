@@ -31,6 +31,7 @@ import { MeterReadingForm } from "./MeterReadingForm";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthState } from "@/hooks/useAuthState";
+import { PropertyStatus } from "@/utils/propertyUtils";
 
 interface Property {
   id: string;
@@ -57,7 +58,7 @@ const transformProperty = (property: any): Property => ({
   updated_at: property.updated_at,
   description: property.description || '',
   available_from: property.available_from || null,
-  status: property.status || 'vacant',
+  status: (property.status as PropertyStatus) || 'vacant',
   tenant_count: property.tenant_count || 0,
   landlord_id: property.landlord_id
 });
