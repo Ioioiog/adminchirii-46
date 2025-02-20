@@ -108,18 +108,29 @@ const Properties = () => {
         <ScrollArea className="h-screen">
           <div className="p-8">
             <div className="max-w-7xl mx-auto space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <h1 className="text-2xl font-semibold">Properties</h1>
-                  <p className="text-gray-500">Manage and track your properties</p>
+              <div className="bg-white p-8 rounded-lg shadow-sm mb-6 animate-fade-in">
+                <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-[#9b87f5] rounded-xl">
+                        <Home className="h-6 w-6 text-white" />
+                      </div>
+                      <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+                        Properties
+                      </h1>
+                    </div>
+                    <p className="text-gray-500 max-w-2xl">
+                      Manage and track your properties effectively
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={() => setShowAddModal(true)}
+                    className="w-full sm:w-auto flex items-center gap-2 bg-[#9b87f5] hover:bg-[#8B5CF6] transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Add Property</span>
+                  </Button>
                 </div>
-                <Button 
-                  onClick={() => setShowAddModal(true)}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Property
-                </Button>
               </div>
 
               <PropertyFilters
