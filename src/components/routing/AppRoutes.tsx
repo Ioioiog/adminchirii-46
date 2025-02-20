@@ -2,6 +2,7 @@
 import { Route, Routes, Navigate } from "react-router-dom";
 import AuthPage from "@/pages/Auth";
 import Properties from "@/pages/Properties";
+import PropertyDetails from "@/pages/PropertyDetails";
 import Tenants from "@/pages/Tenants";
 import Documents from "@/pages/Documents";
 import Settings from "@/pages/Settings";
@@ -93,6 +94,14 @@ export function AppRoutes({ isAuthenticated }: AppRoutesProps) {
         }
       />
       <Route
+        path="/properties/:id"
+        element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PropertyDetails />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/tenants"
         element={
           <ProtectedRoute isAuthenticated={isAuthenticated}>
@@ -148,7 +157,6 @@ export function AppRoutes({ isAuthenticated }: AppRoutesProps) {
           </ProtectedRoute>
         }
       />
-      {/* Only render chat route for non-service-provider users */}
       {userRole !== 'service_provider' && (
         <Route
           path="/chat"
