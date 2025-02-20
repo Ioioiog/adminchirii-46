@@ -775,7 +775,7 @@ export default function GenerateContract() {
                     </tr>
                   </thead>
                   <tbody>
-                    {formData.assets.map((asset, index) => (
+                    {(formData.assets || []).map((asset, index) => (
                       <tr key={index}>
                         <td className="border p-2">{asset.name}</td>
                         <td className="border p-2">{asset.value}</td>
