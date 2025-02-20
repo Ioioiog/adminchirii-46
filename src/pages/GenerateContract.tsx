@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -94,12 +93,15 @@ export default function GenerateContract() {
     setAssets(newAssets);
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <div className="flex bg-[#F8F9FC] min-h-screen">
       <DashboardSidebar />
       <main className="flex-1 p-8">
         <div className="max-w-4xl mx-auto">
-          {/* Edit Form - Only visible when not printing */}
           <div className="edit-form bg-white rounded-lg shadow-sm p-6 print:hidden">
             <h1 className="text-3xl font-bold text-center mb-8">CONTRACT DE ÎNCHIRIERE A LOCUINȚEI</h1>
             
@@ -408,86 +410,99 @@ export default function GenerateContract() {
             </Card>
 
             <Button 
-              onClick={() => window.print()}
+              onClick={handlePrint}
               className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg"
             >
               Printează Contractul
             </Button>
           </div>
 
-          {/* Printable Contract - Only visible when printing */}
-          <div className="hidden print:block">
-            <h1 className="text-3xl font-bold text-center mb-8">CONTRACT DE ÎNCHIRIERE A LOCUINȚEI</h1>
-            <p className="mb-4">Nr. {formData.contractNumber}</p>
-            
-            <h2 className="text-xl font-bold mb-4">I. PĂRȚILE CONTRACTANTE</h2>
-            
-            <p className="mb-4">
-              {formData.ownerName}, cu sediul în {formData.ownerAddress}, înregistrată la Registrul Comerțului sub nr. {formData.ownerReg}, 
-              având codul fiscal {formData.ownerFiscal}, cont bancar {formData.ownerBank} deschis la {formData.ownerBankName}, 
-              reprezentată prin {formData.ownerEmail}, telefon {formData.ownerPhone}, în calitate de PROPRIETAR
-            </p>
-            
-            <p className="mb-4">
-              și
-            </p>
-            
-            <p className="mb-8">
-              {formData.tenantName}, cu sediul în {formData.tenantAddress}, înregistrată la Registrul Comerțului sub nr. {formData.tenantReg}, 
-              având codul fiscal {formData.tenantFiscal}, cont bancar {formData.tenantBank} deschis la {formData.tenantBankName}, 
-              reprezentată prin {formData.tenantEmail}, telefon {formData.tenantPhone}, în calitate de CHIRIAȘ
-            </p>
-
-            <h2 className="text-xl font-bold mb-4">II. OBIECTUL CONTRACTULUI</h2>
-            <p className="mb-4">
-              Proprietarul închiriază, iar chiriașul ia în chirie imobilul situat în {formData.propertyAddress}, 
-              în schimbul unei chirii lunare de {formData.rentAmount} EUR {formData.vatIncluded === 'da' ? '(TVA inclus)' : '(+ TVA)'}.
-            </p>
-
-            <h2 className="text-xl font-bold mb-4">III. DURATA CONTRACTULUI</h2>
-            <p className="mb-4">
-              Durata contractului este de {formData.contractDuration} luni, începând cu data de {formData.contractDate}.
-            </p>
-
-            <h2 className="text-xl font-bold mb-4">IV. PLATA CHIRIEI</h2>
-            <p className="mb-4">
-              Chiria se va plăti lunar, până în ziua {formData.paymentDay} a fiecărei luni, pentru luna în curs.
-            </p>
-
-            {assets.length > 0 && (
-              <>
-                <h2 className="text-xl font-bold mb-4">V. INVENTARUL BUNURILOR</h2>
-                <table className="w-full mb-8">
-                  <thead>
-                    <tr>
-                      <th className="border p-2 text-left">Denumire bun</th>
-                      <th className="border p-2 text-left">Valoare (lei)</th>
-                      <th className="border p-2 text-left">Stare</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {assets.map((asset, index) => (
-                      <tr key={index}>
-                        <td className="border p-2">{asset.name}</td>
-                        <td className="border p-2">{asset.value}</td>
-                        <td className="border p-2">{asset.condition}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </>
-            )}
-
-            <div className="grid grid-cols-2 gap-8 mt-16">
-              <div>
-                <p className="font-bold mb-2">PROPRIETAR</p>
-                <p className="mb-1">{formData.ownerName}</p>
-                <p>Data: {formData.contractDate}</p>
+          <div className="hidden print:block print:p-8">
+            <div className="text-black">
+              <h1 className="text-3xl font-bold text-center mb-8">CONTRACT DE ÎNCHIRIERE A LOCUINȚEI</h1>
+              
+              <div className="mb-8">
+                <p className="text-right mb-4">Nr. {formData.contractNumber}</p>
+                <p className="text-right">Data: {formData.contractDate}</p>
               </div>
-              <div>
-                <p className="font-bold mb-2">CHIRIAȘ</p>
-                <p className="mb-1">{formData.tenantName}</p>
-                <p>Data: {formData.contractDate}</p>
+              
+              <div className="mb-8">
+                <h2 className="text-xl font-bold mb-4">I. PĂRȚILE CONTRACTANTE</h2>
+                
+                <p className="mb-4">
+                  {formData.ownerName}, cu sediul în {formData.ownerAddress}, înregistrată la Registrul Comerțului sub nr. {formData.ownerReg}, 
+                  având codul fiscal {formData.ownerFiscal}, cont bancar {formData.ownerBank} deschis la {formData.ownerBankName}, 
+                  reprezentată prin {formData.ownerEmail}, telefon {formData.ownerPhone}, în calitate de PROPRIETAR
+                </p>
+                
+                <p className="mb-4">și</p>
+                
+                <p className="mb-4">
+                  {formData.tenantName}, cu sediul în {formData.tenantAddress}, înregistrată la Registrul Comerțului sub nr. {formData.tenantReg}, 
+                  având codul fiscal {formData.tenantFiscal}, cont bancar {formData.tenantBank} deschis la {formData.tenantBankName}, 
+                  reprezentată prin {formData.tenantEmail}, telefon {formData.tenantPhone}, în calitate de CHIRIAȘ
+                </p>
+              </div>
+
+              <div className="mb-8">
+                <h2 className="text-xl font-bold mb-4">II. OBIECTUL CONTRACTULUI</h2>
+                <p className="mb-4">
+                  Proprietarul închiriază, iar chiriașul ia în chirie imobilul situat în {formData.propertyAddress}, 
+                  în schimbul unei chirii lunare de {formData.rentAmount} EUR {formData.vatIncluded === 'da' ? '(TVA inclus)' : '(+ TVA)'}.
+                </p>
+              </div>
+
+              <div className="mb-8">
+                <h2 className="text-xl font-bold mb-4">III. DURATA CONTRACTULUI</h2>
+                <p className="mb-4">
+                  Durata contractului este de {formData.contractDuration} luni, începând cu data de {formData.contractDate}.
+                </p>
+              </div>
+
+              <div className="mb-8">
+                <h2 className="text-xl font-bold mb-4">IV. PLATA CHIRIEI</h2>
+                <p className="mb-4">
+                  Chiria se va plăti lunar, până în ziua {formData.paymentDay} a fiecărei luni, pentru luna în curs.
+                </p>
+              </div>
+
+              {assets.length > 0 && (
+                <div className="mb-8">
+                  <h2 className="text-xl font-bold mb-4">V. INVENTARUL BUNURILOR</h2>
+                  <table className="w-full mb-8">
+                    <thead>
+                      <tr>
+                        <th className="border p-2 text-left">Denumire bun</th>
+                        <th className="border p-2 text-left">Valoare (lei)</th>
+                        <th className="border p-2 text-left">Stare</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {assets.map((asset, index) => (
+                        <tr key={index}>
+                          <td className="border p-2">{asset.name}</td>
+                          <td className="border p-2">{asset.value}</td>
+                          <td className="border p-2">{asset.condition}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div className="mt-16 print:break-before-page">
+                <div className="grid grid-cols-2 gap-8">
+                  <div>
+                    <p className="font-bold mb-2">PROPRIETAR</p>
+                    <p className="mb-1">{formData.ownerName}</p>
+                    <p>Data: {formData.contractDate}</p>
+                  </div>
+                  <div>
+                    <p className="font-bold mb-2">CHIRIAȘ</p>
+                    <p className="mb-1">{formData.tenantName}</p>
+                    <p>Data: {formData.contractDate}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
