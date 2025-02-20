@@ -15,7 +15,7 @@ export function LandlordDashboard({ userId, userName }: LandlordDashboardProps) 
   const { t } = useTranslation('dashboard');
   
   return (
-    <div className="p-8 space-y-8 max-w-7xl mx-auto bg-gradient-to-br from-white via-blue-50/10 to-indigo-50/10">
+    <div className="h-screen overflow-y-auto p-8 space-y-8 max-w-7xl mx-auto bg-gradient-to-br from-white via-blue-50/10 to-indigo-50/10">
       {/* Header Section */}
       <section className="bg-white rounded-xl shadow-sm p-6 transition-all duration-200 hover:shadow-md animate-fade-in">
         <DashboardHeader userName={userName} />
