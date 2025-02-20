@@ -1,4 +1,3 @@
-
 import { createClient } from 'npm:@supabase/supabase-js@2.39.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { Browser, launch } from 'https://deno.land/x/puppeteer@16.2.0/mod.ts';
@@ -45,24 +44,12 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
     page.setDefaultTimeout(60000);
     page.on('console', message => console.log('BROWSER:', message.text()));
 
-    // Updated login URL and navigation
+    // Use the correct login URL
     console.log('Navigating to login page...');
-    const loginUrl = 'https://engie.ro/servicii-online/';
+    const loginUrl = 'https://my.engie.ro/autentificare';
     await page.goto(loginUrl, {
       waitUntil: 'networkidle0'
     });
-
-    // Click the login button to open the login form if needed
-    try {
-      console.log('Looking for login button...');
-      const loginTrigger = await page.$('a[href*="autentificare"]');
-      if (loginTrigger) {
-        await loginTrigger.click();
-        await page.waitForTimeout(2000);
-      }
-    } catch (e) {
-      console.log('No login trigger button found, proceeding...');
-    }
 
     // Handle cookie consent if present
     try {
@@ -78,13 +65,13 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
     }
 
     console.log('Waiting for login form...');
-    await page.waitForSelector('input[type="text"]', { visible: true });
-    await page.waitForSelector('input[type="password"]', { visible: true });
+    await page.waitForSelector('#username', { visible: true });
+    await page.waitForSelector('#password', { visible: true });
 
     // Type credentials
     console.log('Filling login form...');
-    await page.type('input[type="text"]', username, { delay: 100 });
-    await page.type('input[type="password"]', password, { delay: 100 });
+    await page.type('#username', username, { delay: 100 });
+    await page.type('#password', password, { delay: 100 });
 
     // Submit form
     console.log('Submitting login form...');
@@ -101,12 +88,11 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
     // Wait for successful login
     await page.waitForTimeout(2000);
 
-    // Navigate to bills page with updated URLs
+    // Navigate to bills page
     console.log('Navigating to bills page...');
     const billsUrls = [
-      'https://engie.ro/servicii-online/facturi-plati/',
-      'https://engie.ro/servicii-online/facturi/',
-      'https://engie.ro/servicii-online/istoric-facturi/'
+      'https://my.engie.ro/facturi',
+      'https://my.engie.ro/facturi/istoric'
     ];
 
     let billsPageLoaded = false;
@@ -114,8 +100,7 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
       try {
         console.log(`Trying bills URL: ${url}`);
         await page.goto(url, { waitUntil: 'networkidle0' });
-        // Updated selector for bills table
-        const tableExists = await page.$('.facturi-table, .bills-table, table');
+        const tableExists = await page.$('table.nj-table');
         if (tableExists) {
           billsPageLoaded = true;
           break;
@@ -129,45 +114,32 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
       throw new Error('Could not load bills page');
     }
 
-    // Wait for table to load with updated selector
+    // Wait for table to load
     console.log('Waiting for bills table...');
-    await page.waitForSelector('.facturi-table, .bills-table, table', { visible: true });
+    await page.waitForSelector('table.nj-table', { visible: true });
     
-    // Extract bills data with more flexible selectors
+    // Extract bills data
     console.log('Extracting bills data...');
     const bills = await page.evaluate(() => {
-      const rows = Array.from(document.querySelectorAll('.facturi-table tr, .bills-table tr, table tr')).slice(1);
+      const rows = Array.from(document.querySelectorAll('table.nj-table tbody tr'));
       return rows.map(row => {
         const cells = Array.from(row.querySelectorAll('td'));
-        if (cells.length < 5) return null;
         
-        // More flexible data extraction
+        // Extract invoice number from first column
         const invoiceNumber = cells[0]?.textContent?.trim().replace(/[^\d]/g, '') || '';
         
-        // Handle different date formats
+        // Extract date from the date column (format: DD.MM.YYYY)
         const dateText = cells[2]?.textContent?.trim() || '';
-        let dueDate = '';
-        if (dateText) {
-          try {
-            const dateMatch = dateText.match(/(\d{1,2})[\.\/](\d{1,2})[\.\/](\d{4})/);
-            if (dateMatch) {
-              const [_, day, month, year] = dateMatch;
-              dueDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-            }
-          } catch (e) {
-            console.log('Date parsing error:', e);
-          }
-        }
+        const [day, month, year] = dateText.split('.');
+        const dueDate = `${year}-${month}-${day}`;
         
-        // Handle different amount formats
+        // Extract amount from amount column
         const amountText = cells[4]?.textContent?.trim().replace(/[^\d.,]/g, '') || '0';
         const amount = parseFloat(amountText.replace(',', '.'));
         
-        // More flexible status detection
+        // Extract status from status column
         const statusText = cells[5]?.textContent?.trim().toLowerCase() || '';
-        const status = /platit|achitat|paid/i.test(statusText) ? 'paid' : 'pending';
-        
-        if (!invoiceNumber || !dueDate || isNaN(amount)) return null;
+        const status = statusText.includes('platit') ? 'paid' : 'pending';
         
         return {
           invoice_number: invoiceNumber,
@@ -176,7 +148,7 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
           type: 'gas',
           status: status
         };
-      }).filter(bill => bill !== null);
+      }).filter(bill => bill.invoice_number && bill.amount > 0);
     });
 
     console.log(`Found ${bills.length} bills`);
