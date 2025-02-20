@@ -23,6 +23,9 @@ interface FormData {
   ownerBankName: string;
   ownerEmail: string;
   ownerPhone: string;
+  ownerCounty: string;
+  ownerCity: string;
+  ownerRepresentative: string;
   tenantName: string;
   tenantReg: string;
   tenantFiscal: string;
@@ -31,18 +34,15 @@ interface FormData {
   tenantBankName: string;
   tenantEmail: string;
   tenantPhone: string;
+  tenantCounty: string;
+  tenantCity: string;
+  tenantRepresentative: string;
   propertyAddress: string;
   rentAmount: string;
   vatIncluded: string;
   contractDuration: string;
   paymentDay: string;
-  ownerCounty: string;
-  ownerCity: string;
-  ownerRepresentative: string;
-  tenantCounty: string;
-  tenantCity: string;
-  tenantRepresentative: string;
-  propertyRooms: string;
+  roomCount: string;
   startDate: string;
   lateFee: string;
   renewalPeriod: string;
@@ -81,6 +81,9 @@ export default function GenerateContract() {
     ownerBankName: 'BANK S.A.',
     ownerEmail: 'xxxxx@xxxx.com',
     ownerPhone: '0700000000',
+    ownerCounty: 'București',
+    ownerCity: 'București',
+    ownerRepresentative: 'Administrator',
     tenantName: 'xxxx srl',
     tenantReg: 'J00/0000/0000',
     tenantFiscal: 'RO00000',
@@ -89,18 +92,15 @@ export default function GenerateContract() {
     tenantBankName: 'Banca Transilvania',
     tenantEmail: 'xxxxxx@gmail.com',
     tenantPhone: '07000000',
+    tenantCounty: 'București',
+    tenantCity: 'București',
+    tenantRepresentative: 'Administrator',
     propertyAddress: 'București, Fabrica de Glucoza, nr 6-8, bloc 4b, etaj 5, ap 26, sector 2',
     rentAmount: '1100',
     vatIncluded: 'nu',
     contractDuration: '12',
     paymentDay: '2',
-    ownerCounty: 'București',
-    ownerCity: 'București',
-    ownerRepresentative: 'Administrator',
-    tenantCounty: 'București',
-    tenantCity: 'București',
-    tenantRepresentative: 'Administrator',
-    propertyRooms: '2',
+    roomCount: '2',
     startDate: '2025-01-26',
     lateFee: '0.1',
     renewalPeriod: '12',
@@ -480,8 +480,8 @@ export default function GenerateContract() {
                   <Input 
                     type="number" 
                     id="propertyRooms" 
-                    value={formData.propertyRooms}
-                    onChange={(e) => handleInputChange('propertyRooms', e.target.value)}
+                    value={formData.roomCount}
+                    onChange={(e) => handleInputChange('roomCount', e.target.value)}
                   />
                 </div>
                 <div>
@@ -594,7 +594,7 @@ export default function GenerateContract() {
               <h2 className="text-xl font-bold mb-4">1. OBIECTUL CONTRACTULUI</h2>
               <div className="mb-8">
                 <p>1.1. Obiectul prezentului contract este închirierea apartamentului situat în {formData.propertyAddress || '_____'}, 
-                compus din {formData.propertyRooms || '_____'} camere, cu destinația de locuință. Chiriașul va utiliza apartamentul 
+                compus din {formData.roomCount || '_____'} camere, cu destinația de locuință. Chiriașul va utiliza apartamentul 
                 începând cu data de {formData.startDate || '_____'} ca locuință pentru familia sa.</p>
               </div>
 
