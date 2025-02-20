@@ -15,24 +15,24 @@ export function LandlordDashboard({ userId, userName }: LandlordDashboardProps) 
   const { t } = useTranslation('dashboard');
   
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-8 space-y-8 max-w-7xl mx-auto bg-gradient-to-br from-white via-blue-50/10 to-indigo-50/10">
       {/* Header Section */}
-      <section className="bg-white rounded-xl shadow-sm p-6 transition-all duration-200 hover:shadow-md">
+      <section className="bg-white rounded-xl shadow-sm p-6 transition-all duration-200 hover:shadow-md animate-fade-in">
         <DashboardHeader userName={userName} />
       </section>
 
       {/* Metrics Section */}
-      <section className="bg-white rounded-xl shadow-sm p-6">
+      <section className="bg-white rounded-xl shadow-sm p-6 animate-fade-in" style={{ animationDelay: '0.1s' }}>
         <DashboardMetrics userId={userId} userRole="landlord" />
       </section>
 
       {/* Calendar Section */}
-      <section>
+      <section className="animate-fade-in" style={{ animationDelay: '0.2s' }}>
         <CalendarSection />
       </section>
 
       {/* Revenue Section */}
-      <section className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 transition-all duration-200 hover:shadow-xl">
+      <section className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 transition-all duration-200 hover:shadow-xl animate-fade-in" style={{ animationDelay: '0.3s' }}>
         <div className="space-y-6">
           <div className="border-b border-gray-100 pb-5">
             <h2 className="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
@@ -46,7 +46,7 @@ export function LandlordDashboard({ userId, userName }: LandlordDashboardProps) 
       </section>
 
       {/* Upcoming Income Section */}
-      <section className="bg-white rounded-xl shadow-sm p-6">
+      <section className="bg-white rounded-xl shadow-sm p-6 animate-fade-in" style={{ animationDelay: '0.4s' }}>
         <UpcomingIncomeSection userId={userId} />
       </section>
     </div>
