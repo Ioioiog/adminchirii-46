@@ -1,6 +1,7 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Grid, List, Plus, FileText, FileContract } from "lucide-react";
+import { Grid, List, Plus, FileText, Files } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { Button } from "@/components/ui/button";
@@ -84,7 +85,7 @@ const Documents = () => {
     {
       id: 'contracts',
       label: 'Contracts',
-      icon: FileContract,
+      icon: Files,
     },
   ];
 
