@@ -97,12 +97,28 @@ const Utilities = () => {
   const handleDeleteProvider = async (id: string) => {
     try {
       console.log("Deleting utility provider:", id);
-      const { error } = await supabase
+      
+      // First, delete related scraping jobs
+      const { error: scrapingJobsError } = await supabase
+        .from("scraping_jobs")
+        .delete()
+        .eq("utility_provider_id", id);
+
+      if (scrapingJobsError) {
+        console.error("Error deleting scraping jobs:", scrapingJobsError);
+        throw scrapingJobsError;
+      }
+
+      // Then delete the provider
+      const { error: providerError } = await supabase
         .from("utility_provider_credentials")
         .delete()
         .eq("id", id);
 
-      if (error) throw error;
+      if (providerError) {
+        console.error("Error deleting provider:", providerError);
+        throw providerError;
+      }
 
       toast({
         title: "Success",
@@ -111,10 +127,10 @@ const Utilities = () => {
 
       queryClient.invalidateQueries({ queryKey: ["utility-providers"] });
     } catch (error) {
-      console.error("Error deleting provider:", error);
+      console.error("Error in delete operation:", error);
       toast({
         title: "Error",
-        description: "Failed to delete utility provider",
+        description: "Failed to delete utility provider. Please try again.",
         variant: "destructive",
       });
     }
