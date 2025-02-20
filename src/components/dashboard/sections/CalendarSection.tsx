@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 
 interface Event {
   date: Date;
@@ -164,16 +165,11 @@ export function CalendarSection() {
 
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return;
-
-    // If selecting the same date as currently selected, switch to day view
-    if (isSameDay(date, selectedDate)) {
-      setViewMode('day');
-    } else {
-      // If selecting a different date, stay in month view
-      setViewMode('month');
-    }
-    
     setSelectedDate(date);
+  };
+
+  const toggleViewMode = () => {
+    setViewMode(prev => prev === 'month' ? 'day' : 'month');
   };
 
   console.log('Selected Date:', selectedDate);
@@ -183,9 +179,18 @@ export function CalendarSection() {
   return (
     <Card className="col-span-full lg:col-span-4">
       <CardHeader>
-        <div className="flex items-center space-x-2">
-          <CalendarIcon className="h-5 w-5 text-gray-500" />
-          <h3 className="text-lg font-medium">Calendar</h3>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <CalendarIcon className="h-5 w-5 text-gray-500" />
+            <h3 className="text-lg font-medium">Calendar</h3>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleViewMode}
+          >
+            View {viewMode === 'month' ? 'Day' : 'Month'}
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
