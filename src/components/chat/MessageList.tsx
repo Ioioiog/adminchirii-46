@@ -1,11 +1,9 @@
-
 import React, { useEffect, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Message } from "./Message";
 import { TypingIndicator } from "./TypingIndicator";
-
 interface Message {
   id: string;
   sender_id: string;
@@ -18,7 +16,6 @@ interface Message {
     last_name: string | null;
   } | null;
 }
-
 interface MessageListProps {
   messages: Message[];
   currentUserId: string | null;
@@ -26,19 +23,19 @@ interface MessageListProps {
   typingUsers?: string[];
   className?: string; // Added className prop
 }
-
-export function MessageList({ 
-  messages = [], 
-  currentUserId, 
-  messagesEndRef, 
+export function MessageList({
+  messages = [],
+  currentUserId,
+  messagesEndRef,
   typingUsers = [],
-  className  // Add className to destructured props
+  className // Add className to destructured props
 }: MessageListProps) {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editedContent, setEditedContent] = useState("");
   const [visibleMessages, setVisibleMessages] = useState<Message[]>([]);
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
     if (!messages || messages.length === 0) {
       setVisibleMessages([]);
@@ -48,37 +45,29 @@ export function MessageList({
     const lastMessages = messages.slice(-12);
     setVisibleMessages(lastMessages);
   }, [messages]);
-
   useEffect(() => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      messagesEndRef.current.scrollIntoView({
+        behavior: "smooth"
+      });
     }
   }, [visibleMessages, messagesEndRef]);
-
   useEffect(() => {
     if (!currentUserId || !messages || messages.length === 0) return;
-
     const updateMessageStatus = async () => {
       try {
-        const unreadMessages = messages.filter(
-          msg => msg.sender_id !== currentUserId && !msg.read
-        );
-
+        const unreadMessages = messages.filter(msg => msg.sender_id !== currentUserId && !msg.read);
         if (unreadMessages.length === 0) return;
-
         const batchSize = 10;
         for (let i = 0; i < unreadMessages.length; i += batchSize) {
           const batch = unreadMessages.slice(i, i + batchSize);
-          
-          const { error } = await supabase
-            .from('messages')
-            .update({ 
-              status: 'read', 
-              read: true,
-              updated_at: new Date().toISOString()
-            })
-            .in('id', batch.map(msg => msg.id));
-
+          const {
+            error
+          } = await supabase.from('messages').update({
+            status: 'read',
+            read: true,
+            updated_at: new Date().toISOString()
+          }).in('id', batch.map(msg => msg.id));
           if (error) {
             throw error;
           }
@@ -88,129 +77,86 @@ export function MessageList({
         toast({
           title: "Error",
           description: "Failed to update message status",
-          variant: "destructive",
+          variant: "destructive"
         });
       }
     };
-
     updateMessageStatus();
   }, [messages, currentUserId, toast]);
-
   const handleEditMessage = (messageId: string, content: string) => {
     setEditingMessageId(messageId);
     setEditedContent(content);
   };
-
   const handleSaveEdit = async (messageId: string) => {
     try {
-      const { error } = await supabase
-        .from('messages')
-        .update({ 
-          content: editedContent,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', messageId);
-
+      const {
+        error
+      } = await supabase.from('messages').update({
+        content: editedContent,
+        updated_at: new Date().toISOString()
+      }).eq('id', messageId);
       if (error) throw error;
-
       setEditingMessageId(null);
       toast({
         title: "Message updated",
-        description: "Your message has been successfully updated.",
+        description: "Your message has been successfully updated."
       });
     } catch (error) {
       console.error('Error updating message:', error);
       toast({
         title: "Error",
         description: "Failed to update message. Please try again.",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const handleDeleteMessage = async (messageId: string) => {
     try {
-      const { error } = await supabase
-        .from('messages')
-        .delete()
-        .eq('id', messageId);
-
+      const {
+        error
+      } = await supabase.from('messages').delete().eq('id', messageId);
       if (error) throw error;
-
       toast({
         title: "Message deleted",
-        description: "Your message has been successfully deleted.",
+        description: "Your message has been successfully deleted."
       });
     } catch (error) {
       console.error('Error deleting message:', error);
       toast({
         title: "Error",
         description: "Failed to delete message. Please try again.",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const element = event.currentTarget;
     if (element.scrollTop === 0 && messages && messages.length > 0) {
       // When we reach the top, load more messages
-      const currentFirstMessageIndex = messages.findIndex(
-        msg => msg.id === visibleMessages[0]?.id
-      );
-      
+      const currentFirstMessageIndex = messages.findIndex(msg => msg.id === visibleMessages[0]?.id);
       if (currentFirstMessageIndex > 0) {
-        const nextMessages = messages.slice(
-          Math.max(0, currentFirstMessageIndex - 12),
-          currentFirstMessageIndex + visibleMessages.length
-        );
+        const nextMessages = messages.slice(Math.max(0, currentFirstMessageIndex - 12), currentFirstMessageIndex + visibleMessages.length);
         setVisibleMessages(nextMessages);
       }
     }
   };
-
   if (!messages || messages.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center p-8 text-center">
+    return <div className="flex-1 flex items-center justify-center p-8 text-center">
         <div className="text-gray-500">No messages yet</div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+  return <div className="flex-1 flex flex-col overflow-hidden">
       <ScrollArea className={className || "flex-1 h-full"}>
-        <div className="space-y-4 p-4" onScroll={handleScroll}>
-          {visibleMessages.map((message) => {
-            const senderName = message.sender
-              ? `${message.sender.first_name || ''} ${message.sender.last_name || ''}`.trim() || 'Unknown User'
-              : 'Unknown User';
-            const isCurrentUser = message.sender_id === currentUserId;
-
-            return (
-              <Message
-                key={message.id}
-                id={message.id}
-                content={message.content}
-                senderName={senderName}
-                createdAt={message.created_at}
-                isCurrentUser={isCurrentUser}
-                status={message.status}
-                isEditing={editingMessageId === message.id}
-                editedContent={editedContent}
-                onEditStart={handleEditMessage}
-                onEditSave={handleSaveEdit}
-                onEditCancel={() => setEditingMessageId(null)}
-                onEditChange={setEditedContent}
-                onDelete={handleDeleteMessage}
-              />
-            );
-          })}
+        <div onScroll={handleScroll} className="space-y-4 p-4 bg-primary-200 hover:bg-primary-100">
+          {visibleMessages.map(message => {
+          const senderName = message.sender ? `${message.sender.first_name || ''} ${message.sender.last_name || ''}`.trim() || 'Unknown User' : 'Unknown User';
+          const isCurrentUser = message.sender_id === currentUserId;
+          return <Message key={message.id} id={message.id} content={message.content} senderName={senderName} createdAt={message.created_at} isCurrentUser={isCurrentUser} status={message.status} isEditing={editingMessageId === message.id} editedContent={editedContent} onEditStart={handleEditMessage} onEditSave={handleSaveEdit} onEditCancel={() => setEditingMessageId(null)} onEditChange={setEditedContent} onDelete={handleDeleteMessage} />;
+        })}
           
           <TypingIndicator typingUsers={typingUsers} />
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
-    </div>
-  );
+    </div>;
 }
