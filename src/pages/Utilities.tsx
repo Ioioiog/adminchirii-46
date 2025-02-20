@@ -11,10 +11,11 @@ import { UtilityList } from "@/components/utilities/UtilityList";
 import { MeterReadingDialog } from "@/components/meter-readings/MeterReadingDialog";
 import { MeterReadingList } from "@/components/meter-readings/MeterReadingList";
 import { useProperties } from "@/hooks/useProperties";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query"; // Added useQueryClient
 import { supabase } from "@/integrations/supabase/client";
 import { ProviderList } from "@/components/settings/utility-provider/ProviderList";
 import { ProviderForm } from "@/components/settings/utility-provider/ProviderForm";
+import { useToast } from "@/hooks/use-toast"; // Added useToast
 import type { Utility } from "@/integrations/supabase/types/utility";
 
 type UtilitiesSection = 'bills' | 'readings' | 'providers';
@@ -24,6 +25,8 @@ const Utilities = () => {
   const [showProviderForm, setShowProviderForm] = useState(false);
   const [editingProvider, setEditingProvider] = useState(null);
   const { userRole } = useUserRole();
+  const { toast } = useToast(); // Initialize toast
+  const queryClient = useQueryClient(); // Initialize queryClient
   const { properties, isLoading: propertiesLoading } = useProperties({ 
     userRole: userRole === "landlord" || userRole === "tenant" ? userRole : "tenant"
   });
