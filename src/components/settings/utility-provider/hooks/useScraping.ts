@@ -76,9 +76,12 @@ export function useScraping(providers: UtilityProvider[]) {
 
     setIsProcessingQueue(true);
     const providerId = scrapingQueue[0];
+    console.log('Processing queue for provider:', providerId);
 
     try {
       await handleScrapeWithRetry(providerId);
+    } catch (error) {
+      console.error('Error processing queue:', error);
     } finally {
       setScrapingQueue(prev => prev.slice(1));
       setIsProcessingQueue(false);
@@ -89,6 +92,7 @@ export function useScraping(providers: UtilityProvider[]) {
     const shouldStartProcessing = scrapingQueue.length > 0 && !isProcessingQueue;
     
     if (shouldStartProcessing) {
+      console.log('Starting queue processing with', scrapingQueue.length, 'items');
       processQueue();
     }
   }, [scrapingQueue, isProcessingQueue, processQueue]);
@@ -100,11 +104,13 @@ export function useScraping(providers: UtilityProvider[]) {
 
   const handleScrapeWithRetry = async (providerId: string, retryCount = 0): Promise<void> => {
     try {
+      console.log(`Attempt ${retryCount + 1} for provider ${providerId}`);
       await handleScrape(providerId);
     } catch (error) {
       console.error(`Error during scraping attempt ${retryCount + 1}:`, error);
       
       if (retryCount < MAX_RETRIES) {
+        console.log(`Retrying in ${RETRY_DELAY}ms...`);
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
         return handleScrapeWithRetry(providerId, retryCount + 1);
       }
@@ -113,9 +119,11 @@ export function useScraping(providers: UtilityProvider[]) {
   };
 
   const handleScrape = async (providerId: string) => {
+    console.log('Starting scrape for provider:', providerId);
     const provider = providers.find(p => p.id === providerId);
     
     if (!provider || !provider.property_id) {
+      console.error('Invalid provider configuration:', provider);
       throw new Error('Invalid provider configuration');
     }
 
@@ -144,19 +152,28 @@ export function useScraping(providers: UtilityProvider[]) {
       const credentials = credentialsData as unknown as Credentials;
       console.log('Starting scraping for provider:', provider.provider_name);
 
+      const requestBody = {
+        username: credentials.username,
+        password: credentials.password,
+        utilityId: providerId,
+        provider: provider.provider_name,
+        type: provider.utility_type,
+        location: provider.location_name
+      };
+
+      console.log('Invoking scrape-utility-invoices function with body:', JSON.stringify({
+        ...requestBody,
+        password: '***' // Hide password in logs
+      }));
+
       const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke<ScrapingResponse>(
         'scrape-utility-invoices',
         {
-          body: JSON.stringify({
-            username: credentials.username,
-            password: credentials.password,
-            utilityId: providerId,
-            provider: provider.provider_name,
-            type: provider.utility_type,
-            location: provider.location_name
-          })
+          body: JSON.stringify(requestBody)
         }
       );
+
+      console.log('Scrape function response:', scrapeData);
 
       if (scrapeError) {
         console.error('Scraping error:', scrapeError);
@@ -172,6 +189,7 @@ export function useScraping(providers: UtilityProvider[]) {
 
       const checkJobInterval = setInterval(async () => {
         const status = await checkJobStatus(scrapeData.jobId!, providerId);
+        console.log('Job status check:', status);
         
         if (status === 'completed' || status === 'failed') {
           clearInterval(checkJobInterval);
