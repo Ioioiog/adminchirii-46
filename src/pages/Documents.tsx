@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Grid, List, Plus, FileText, CreditCard } from "lucide-react";
@@ -16,6 +15,7 @@ import { NavigationTabs } from "@/components/layout/NavigationTabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { ContractDetailsDialog } from "@/components/contracts/ContractDetailsDialog";
 
 const Documents = () => {
   const navigate = useNavigate();
@@ -28,6 +28,8 @@ const Documents = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [activeTab, setActiveTab] = useState("documents");
+  const [selectedContract, setSelectedContract] = useState(null);
+  const [showContractDetails, setShowContractDetails] = useState(false);
 
   const { data: properties } = useQuery({
     queryKey: ["properties"],
@@ -171,7 +173,10 @@ const Documents = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => navigate(`/contracts/${contract.id}`)}
+                        onClick={() => {
+                          setSelectedContract(contract);
+                          setShowContractDetails(true);
+                        }}
                       >
                         View Details
                       </Button>
@@ -248,6 +253,12 @@ const Documents = () => {
         onOpenChange={setShowAddModal}
         userId={userId}
         userRole={userRole}
+      />
+
+      <ContractDetailsDialog
+        open={showContractDetails}
+        onOpenChange={setShowContractDetails}
+        contract={selectedContract}
       />
     </div>
   );
