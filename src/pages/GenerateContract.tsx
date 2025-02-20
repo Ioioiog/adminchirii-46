@@ -106,7 +106,7 @@ export default function GenerateContract() {
     electricity: "",
     gas: ""
   });
-  const [assets, setAssets] = useState<Asset[]>([
+  const [assets, setAssets] = useState<Array<{ name: string; value: number; condition: string }>>([
     { name: "", value: 0, condition: "" }
   ]);
 
@@ -186,7 +186,6 @@ export default function GenerateContract() {
   };
 
   const generateContractPDF = () => {
-    const assets = assets;
     let assetsList = assets.map(asset => `
       <tr>
         <td>${asset.name}</td>
@@ -219,33 +218,31 @@ export default function GenerateContract() {
           
           <h2>Părțile,</h2>
           
-          <p>${ownerDetails.name}, Nr. ordine Reg. com./an: ${ownerReg}, Cod fiscal (C.U.I.): ${ownerFiscal}, cu sediul in ${ownerAddress}, Judetul: ${ownerCounty}, Localitatea: ${ownerCity}, cont bancar ${ownerBank}, deschis la ${ownerBankName}, reprezentat: ${ownerRepresentative}, e-mail: ${ownerEmail}, telefon: ${ownerPhone} în calitate de Proprietar,</p>
+          <p>${ownerDetails.name}, Nr. ordine Reg. com./an: ${ownerDetails.reg}, Cod fiscal (C.U.I.): ${ownerDetails.fiscal}, cu sediul in ${ownerDetails.address}, Judetul: ${ownerDetails.county}, Localitatea: ${ownerDetails.city}, cont bancar ${ownerDetails.bank}, deschis la ${ownerDetails.bankName}, reprezentat: ${ownerDetails.representative}, e-mail: ${ownerDetails.email}, telefon: ${ownerDetails.phone} în calitate de Proprietar,</p>
           
-          <p>${tenantDetails.name}, Nr. ordine Reg. com./an: ${tenantReg}, Cod fiscal (C.U.I.): ${tenantFiscal} cu domiciliul în ${tenantAddress}, Judetul: ${tenantCounty}, Localitatea: ${tenantCity}, cont bancar ${tenantBank}, deschis la ${tenantBankName}, reprezentat: ${tenantRepresentative}, e-mail: ${tenantEmail}, telefon: ${tenantPhone}, în calitate de Chiriaș,</p>
-          
-          <p>Au convenit încheierea prezentului contract de închiriere, în termenii și condițiile care urmează:</p>
+          <p>${tenantDetails.name}, Nr. ordine Reg. com./an: ${tenantDetails.reg}, Cod fiscal (C.U.I.): ${tenantDetails.fiscal} cu domiciliul în ${tenantDetails.address}, Judetul: ${tenantDetails.county}, Localitatea: ${tenantDetails.city}, cont bancar ${tenantDetails.bank}, deschis la ${tenantDetails.bankName}, reprezentat: ${tenantDetails.representative}, e-mail: ${tenantDetails.email}, telefon: ${tenantDetails.phone}, în calitate de Chiriaș,</p>
           
           <h2>1. OBIECTUL CONTRACTULUI</h2>
-          <p>1.1. Obiectul prezentului contract este închirierea apartamentului situat în ${propertyAddress}, compus din ${propertyRooms} camere, cu destinația de locuință. Chiriașul va utiliza apartamentul incepand cu data de ${startDate} ca locuință pentru familia sa.</p>
+          <p>1.1. Obiectul prezentului contract este închirierea apartamentului situat în ${propertyDetails.address}, compus din ${propertyDetails.rooms} camere, cu destinația de locuință. Chiriașul va utiliza apartamentul incepand cu data de ${validFrom} ca locuință pentru familia sa.</p>
           
           <h2>2. PREȚUL CONTRACTULUI</h2>
-          <p>2.1. Părțile convin un cuantum al chiriei lunare la nivelul sumei de ${rentAmount} euro ${vatIncluded === 'nu' ? '+ TVA' : 'TVA inclus'}. Plata chiriei se realizează în ziua de ${paymentDay} a fiecărei luni calendaristice pentru luna calendaristică următoare, în contul bancar al Proprietarului, indicat în preambulul prezentului contract. Plata se realizează în lei, la cursul de schimb euro/leu comunicat de BNR în ziua plății.</p>
-          <p>2.2. În cazul în care data plății este o zi nebancară, plata se va realiza în prima zi bancară care urmează zilei de ${paymentDay}.</p>
-          <p>2.3. Părțile convin că întârzierea la plată atrage aplicarea unor penalități în cuantum de ${lateFee}% pentru fiecare zi de întârziere.</p>
+          <p>2.1. Părțile convin un cuantum al chiriei lunare la nivelul sumei de ${propertyDetails.rentAmount} euro ${propertyDetails.vatIncluded === 'no' ? '+ TVA' : 'TVA inclus'}. Plata chiriei se realizează în ziua de ${propertyDetails.paymentDay} a fiecărei luni calendaristice pentru luna calendaristică următoare, în contul bancar al Proprietarului, indicat în preambulul prezentului contract. Plata se realizează în lei, la cursul de schimb euro/leu comunicat de BNR în ziua plății.</p>
+          <p>2.2. În cazul în care data plății este o zi nebancară, plata se va realiza în prima zi bancară care urmează zilei de ${propertyDetails.paymentDay}.</p>
+          <p>2.3. Părțile convin că întârzierea la plată atrage aplicarea unor penalități în cuantum de ${propertyDetails.lateFee}% pentru fiecare zi de întârziere.</p>
           <p>2.4. Prezentul contract se înregistrează, potrivit dispozițiilor legii în vigoare, la organele fiscale competente. Părțile cunosc că prezentul contract reprezintă titlu executoriu pentru plata chiriei la termenele stabilite prin prezentul contract, în conformitate cu prevederile art. 1798 Cod civil.</p>
-          <p>2.5. Părțile convin că, la expirarea perioadei inițiale de ${contractDuration} luni, Proprietarul are dreptul de a ajusta valoarea chiriei în funcție de condițiile pieței imobiliare, rata inflației și/sau alte criterii economice relevante. Proprietarul va notifica Chiriașul în scris cu cel puțin 30 de zile înainte de expirarea perioadei inițiale, indicând noua valoare propusă a chiriei.</p>
+          <p>2.5. Părțile convin că, la expirarea perioadei inițiale de ${propertyDetails.contractDuration} luni, Proprietarul are dreptul de a ajusta valoarea chiriei în funcție de condițiile pieței imobiliare, rata inflației și/sau alte criterii economice relevante. Proprietarul va notifica Chiriașul în scris cu cel puțin 30 de zile înainte de expirarea perioadei inițiale, indicând noua valoare propusă a chiriei.</p>
           <p>2.6. Chiriei i se va aplica anual indicele de inflație al EURO, comunicat de EUROSTAT (Statistical Office of the European Communities), calculat pentru anul precedent. Proprietarul se obligă să notifice Chiriașul în scris cu privire la valoarea ajustată a chiriei cu cel puțin 30 de zile înainte de data de aplicare, aceasta devenind efectivă de la 1 ianuarie al fiecărui an.</p>
-          <p>2.7. Dacă Chiriașul acceptă ajustarea, contractul se prelungește automat în noile condiții. Dacă Chiriașul nu este de acord, contractul încetează de drept la expirarea perioadei inițiale de ${contractDuration} luni, fără penalități pentru niciuna dintre părți.</p>
+          <p>2.7. Dacă Chiriașul acceptă ajustarea, contractul se prelungește automat în noile condiții. Dacă Chiriașul nu este de acord, contractul încetează de drept la expirarea perioadei inițiale de ${propertyDetails.contractDuration} luni, fără penalități pentru niciuna dintre părți.</p>
           
           <h2>3. DURATA CONTRACTULUI</h2>
-          <p>3.1. Părțile convin că încheie prezentul contract pentru o perioadă inițială minimă de ${contractDuration} luni. Părțile convin că perioada inițială minimă este de esența contractului.</p>
-          <p>3.2. Părțile convin că la expirarea perioadei inițiale minime, operează tacita relocațiune, adică prelungirea automată a perioadei contractuale, cu perioade succesive de câte ${renewalPeriod} luni.</p>
+          <p>3.1. Părțile convin că încheie prezentul contract pentru o perioadă inițială minimă de ${propertyDetails.contractDuration} luni. Părțile convin că perioada inițială minimă este de esența contractului.</p>
+          <p>3.2. Părțile convin că la expirarea perioadei inițiale minime, operează tacita relocațiune, adică prelungirea automată a perioadei contractuale, cu perioade succesive de câte ${propertyDetails.renewalPeriod} luni.</p>
           
           <h2>4. ÎNCETAREA CONTRACTULUI</h2>
-          <p>4.1. Părțile convin că denunțarea unilaterală a contractului se va realiza printr-o notificare scrisă comunicată celeilalte părți, prin e-mail, la adresele menționate în preambul. Locațiunea încetează în termen de ${unilateralNotice} de zile de la data comunicării.</p>
-          <p>4.2. Părțile convin că rezilierea contractului se va realiza printr-o notificare scrisă comunicată celeilalte părți, prin e-mail, la adresele menționate în preambul. Locațiunea încetează în termen de ${terminationNotice} de zile de la data comunicării, dacă în acest interval partea aflată în culpă contractuală nu remediază problema ce determină rezilierea contractului.</p>
-          <p>4.3. Părțile sunt de acord că dacă încetarea contractului intervine în perioada inițială de ${contractDuration} luni, din orice motiv, partea care denunță unilateral contractul sau cea din culpa căreia se solicită rezilierea contractului datorează celeilalte părți, cu titlu de daune-interese, o sumă egală cu ${earlyTerminationFee}.</p>
-          <p>4.4. Prin excepție, în situația întârzierii la plata chiriei cu mai mult de 30 de zile, locațiunea încetează în termen de ${latePaymentTermination} de zile de la scadența neonorată.</p>
+          <p>4.1. Părțile convin că denunțarea unilaterală a contractului se va realiza printr-o notificare scrisă comunicată celeilalte părți, prin e-mail, la adresele menționate în preambul. Locațiunea încetează în termen de ${propertyDetails.unilateralNotice} de zile de la data comunicării.</p>
+          <p>4.2. Părțile convin că rezilierea contractului se va realiza printr-o notificare scrisă comunicată celeilalte părți, prin e-mail, la adresele menționate în preambul. Locațiunea încetează în termen de ${propertyDetails.terminationNotice} de zile de la data comunicării, dacă în acest interval partea aflată în culpă contractuală nu remediază problema ce determină rezilierea contractului.</p>
+          <p>4.3. Părțile sunt de acord că dacă încetarea contractului intervine în perioada inițială de ${propertyDetails.contractDuration} luni, din orice motiv, partea care denunță unilateral contractul sau cea din culpa căreia se solicită rezilierea contractului datorează celeilalte părți, cu titlu de daune-interese, o sumă egală cu ${propertyDetails.earlyTerminationFee}.</p>
+          <p>4.4. Prin excepție, în situația întârzierii la plata chiriei cu mai mult de 30 de zile, locațiunea încetează în termen de ${propertyDetails.latePaymentTermination} de zile de la scadența neonorată.</p>
           <p>4.5. În ceea ce privește obligațiile de plată stabilite prin prezentul contract, părțile convin că se află de drept în întârziere.</p>
           
           <h2>5. OBLIGAȚIILE PROPRIETARULUI</h2>
@@ -270,8 +267,8 @@ export default function GenerateContract() {
           <p>6.14. Chiriasul este obligat la finalul contractului sa predea cheile, telecomanda parcare (daca este cazul) si orice bun pe care proprietarul l-a lasat in custodia chiriasului pe perioada derularii contractului.</p>
           
           <h2>7. GARANȚIA</h2>
-          <p>7.1. Chiriașul este de acord să ofere, cu titlu de garanție, ${securityDeposit}. Această sumă de bani va fi utilizată de Proprietar doar în situația în care Chiriașul nu își îndeplinește în mod corespunzător obligațiile asumate contractual. Garanția nu poate fi utilizată în contul ultimei chirii lunare, anterior încetării contractului din orice motiv. Garantia nu reprezinta o suma de bani perceputa de proprietar ca plata anticipata pentru eventuale daune ci reprezinta o plata anticipata cu acordul chiriasului pentru plati legate de intretinere, curent, apa, curatenie si igienizare, schimbarea yalei de la intrare, plati pe care proprietarul le primeste ulterior plecarii efective a chiriasului din imobil.</p>
-          <p>7.2. Părțile convin că suma constituită cu titlu de garanție se returnează Chiriașului după încetarea contractului, după expirarea unui termen suficient care să permită Proprietarului să verifice acuratețea consumurilor declarate de energie electrică, gaze naturale, apă rece/caldă, etc. fără ca această perioadă să depășească ${depositReturnPeriod} luni de la data încetării contractului.</p>
+          <p>7.1. Chiriașul este de acord să ofere, cu titlu de garanție, ${propertyDetails.securityDeposit}. Această sumă de bani va fi utilizată de Proprietar doar în situația în care Chiriașul nu își îndeplinește în mod corespunzător obligațiile asumate contractual. Garanția nu poate fi utilizată în contul ultimei chirii lunare, anterior încetării contractului din orice motiv. Garantia nu reprezinta o suma de bani perceputa de proprietar ca plata anticipata pentru eventuale daune ci reprezinta o plata anticipata cu acordul chiriasului pentru plati legate de intretinere, curent, apa, curatenie si igienizare, schimbarea yalei de la intrare, plati pe care proprietarul le primeste ulterior plecarii efective a chiriasului din imobil.</p>
+          <p>7.2. Părțile convin că suma constituită cu titlu de garanție se returnează Chiriașului după încetarea contractului, după expirarea unui termen suficient care să permită Proprietarului să verifice acuratețea consumurilor declarate de energie electrică, gaze naturale, apă rece/caldă, etc. fără ca această perioadă să depășească ${propertyDetails.depositReturnPeriod} luni de la data încetării contractului.</p>
           <p>7.3. Proprietarul are dreptul să rețină din suma constituită cu titlu de garanție orice sume reprezentând prejudicii cauzate de Chiriaș, contravaloare a reparațiilor necesare ca urmare a neefectuării lor de către Chiriaș precum si sume ce tin de curatenie si igienizare efectuate dupa eliberarea imobilului de catre chirias.</p>
           <p>7.4. Proprietarul nu are dreptul să pretindă Chiriașului despăgubiri pentru uzura normală a lucrurilor. Se consideră „uzură normală" modificările minore apărute în urma utilizării imobilului în conformitate cu destinația sa, cum ar fi:</p>
           <ul>
@@ -297,19 +294,19 @@ export default function GenerateContract() {
               </tr>
               <tr>
                   <td>Apă rece</td>
-                  <td>${waterColdMeter}</td>
+                  <td>${utilities.waterCold}</td>
               </tr>
               <tr>
                   <td>Apă caldă</td>
-                  <td>${waterHotMeter}</td>
+                  <td>${utilities.waterHot}</td>
               </tr>
               <tr>
                   <td>Curent electric</td>
-                  <td>${electricityMeter}</td>
+                  <td>${utilities.electricity}</td>
               </tr>
               <tr>
                   <td>Gaze naturale</td>
-                  <td>${gasMeter}</td>
+                  <td>${utilities.gas}</td>
               </tr>
           </table>
           
