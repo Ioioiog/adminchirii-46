@@ -3,6 +3,7 @@ import React from "react";
 import { Card } from "@/components/ui/card";
 import { Building2, Star, Heart, Phone, Mail, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
