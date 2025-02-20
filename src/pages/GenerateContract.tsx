@@ -24,17 +24,13 @@ import {
 } from "@/components/ui/select";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { format } from "date-fns";
+import { Json } from "@/integrations/supabase/types/json";
 
 interface ContractTemplate {
   id: string;
   name: string;
   category: string;
-  content: {
-    sections: Array<{
-      title: string;
-      content: string;
-    }>;
-  };
+  content: Json;
 }
 
 interface Property {
@@ -94,16 +90,23 @@ export default function GenerateContract() {
         throw new Error("Template not found");
       }
 
+      // Get current user's ID for landlord_id
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error("User not found");
+
+      // Create contract with the correct types
       const { data, error } = await supabase
         .from("contracts")
         .insert({
-          template_id: selectedTemplate,
           property_id: selectedProperty,
+          landlord_id: user.id,
           contract_type: contractType,
           valid_from: validFrom,
           valid_until: validUntil || null,
           status: "draft",
-          content: selectedTemplateData.content,
+          content: selectedTemplateData.content as Json,
+          template_id: selectedTemplate,
+          metadata: {} as Json
         })
         .select()
         .single();
