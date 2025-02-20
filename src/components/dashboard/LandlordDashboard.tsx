@@ -17,7 +17,7 @@ export function LandlordDashboard({ userId, userName }: LandlordDashboardProps) 
   return (
     <div className="h-screen overflow-y-auto p-6 space-y-4 max-w-7xl mx-auto bg-gradient-to-br from-white via-blue-50/10 to-indigo-50/10">
       {/* Header Section */}
-      <section className="bg-white rounded-xl shadow-sm p-6 transition-all duration-200 hover:shadow-md animate-fade-in">
+      <section className="bg-white rounded-xl shadow-sm p-4 transition-all duration-200 hover:shadow-md animate-fade-in">
         <DashboardHeader userName={userName} />
       </section>
 
