@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export type PropertyType = "Apartment" | "House" | "Condo" | "Commercial";
+export type PropertyStatus = "vacant" | "occupied" | "maintenance";
 
 export interface Property {
   id: string;
@@ -12,8 +13,10 @@ export interface Property {
   available_from?: string;
   landlord_id?: string;
   end_date?: string;
-  created_at: string; // Added this field
-  updated_at: string; // Added this for completeness since it exists in the DB
+  created_at: string;
+  updated_at: string;
+  status: PropertyStatus;
+  tenant_count?: number;
   tenancy?: {
     end_date: string | null;
     start_date: string;

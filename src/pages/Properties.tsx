@@ -22,7 +22,7 @@ const Properties = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const { properties, isLoading } = useProperties();
+  const { properties, isLoading } = useProperties({ userRole: "landlord" });
 
   const filteredProperties = properties?.filter((property) => {
     const matchesSearch = property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -55,6 +55,11 @@ const Properties = () => {
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const handleAddProperty = async (data: any) => {
+    // Implement property addition logic
+    return true;
   };
 
   return (
@@ -176,6 +181,8 @@ const Properties = () => {
       <PropertyDialog
         open={showAddModal}
         onOpenChange={setShowAddModal}
+        onSubmit={handleAddProperty}
+        mode="add"
       />
     </div>
   );

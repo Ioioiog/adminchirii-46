@@ -1,63 +1,49 @@
+
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+import { Search } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface PropertyFiltersProps {
   searchTerm: string;
   setSearchTerm: (value: string) => void;
-  typeFilter: string;
-  setTypeFilter: (value: string) => void;
-  showOccupied: boolean;
-  setShowOccupied: (value: boolean) => void;
-  userRole?: "landlord" | "tenant";
+  statusFilter: string;
+  setStatusFilter: (value: string) => void;
 }
 
 export function PropertyFilters({
   searchTerm,
   setSearchTerm,
-  typeFilter,
-  setTypeFilter,
-  showOccupied,
-  setShowOccupied,
-  userRole,
+  statusFilter,
+  setStatusFilter,
 }: PropertyFiltersProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <div>
-        <Label htmlFor="search">Search</Label>
+    <div className="flex flex-col sm:flex-row gap-4">
+      <div className="relative flex-1">
+        <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
         <Input
-          id="search"
           placeholder="Search properties..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-9"
         />
       </div>
-      <div>
-        <Label htmlFor="type">Property Type</Label>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger>
-            <SelectValue placeholder="All types" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All types</SelectItem>
-            <SelectItem value="Apartment">Apartment</SelectItem>
-            <SelectItem value="House">House</SelectItem>
-            <SelectItem value="Condo">Condo</SelectItem>
-            <SelectItem value="Commercial">Commercial</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      {userRole === 'landlord' && (
-        <div className="flex items-center space-x-2 pt-8">
-          <Switch
-            id="occupied"
-            checked={showOccupied}
-            onCheckedChange={setShowOccupied}
-          />
-          <Label htmlFor="occupied">Show only occupied properties</Label>
-        </div>
-      )}
+      <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <SelectTrigger className="w-[180px]">
+          <SelectValue placeholder="Filter by status" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Status</SelectItem>
+          <SelectItem value="vacant">Vacant</SelectItem>
+          <SelectItem value="occupied">Occupied</SelectItem>
+          <SelectItem value="maintenance">Maintenance</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 }
