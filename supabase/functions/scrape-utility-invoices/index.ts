@@ -40,20 +40,20 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
     const page = await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     
-    // Set default timeout
+    // Set default timeout and enable logging
     page.setDefaultNavigationTimeout(60000);
     page.setDefaultTimeout(60000);
-
-    // Enable logging
     page.on('console', message => console.log('BROWSER:', message.text()));
 
-    console.log('Navigating to login page...');
-    await page.goto('https://my.engie.ro/AUTENTIFICARE', {
+    // First navigate to the main page
+    console.log('Navigating to main page...');
+    await page.goto('https://my.engie.ro/', {
       waitUntil: 'networkidle0'
     });
 
     // Handle cookie consent if present
     try {
+      console.log('Checking for cookie consent...');
       const acceptCookieButton = await page.$('button#cookieConsentBtnRight');
       if (acceptCookieButton) {
         await acceptCookieButton.click();
@@ -63,19 +63,37 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
       console.log('No cookie consent dialog found');
     }
 
-    console.log('Filling login form...');
+    // Wait for and click the login button if present
+    try {
+      console.log('Looking for login button...');
+      const loginButton = await page.$('a[href*="login"], a[href*="autentificare"]');
+      if (loginButton) {
+        await loginButton.click();
+        await page.waitForNavigation({ waitUntil: 'networkidle0' });
+      }
+    } catch (e) {
+      console.log('No login button found, assuming we are on login page');
+    }
+
+    console.log('Waiting for login form...');
     await page.waitForSelector('#username', { visible: true });
     await page.waitForSelector('#password', { visible: true });
 
     // Type credentials
+    console.log('Filling login form...');
     await page.type('#username', username, { delay: 100 });
     await page.type('#password', password, { delay: 100 });
 
     // Submit form
     console.log('Submitting login form...');
+    const loginButton = await page.$('button[type="submit"]');
+    if (!loginButton) {
+      throw new Error('Login button not found');
+    }
+
     await Promise.all([
       page.waitForNavigation({ waitUntil: 'networkidle0' }),
-      page.click('button[type="submit"]')
+      loginButton.click()
     ]);
 
     // Wait for successful login
@@ -83,6 +101,7 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
 
     // Handle any popups
     try {
+      console.log('Checking for popups...');
       const popupClose = await page.$('button.close');
       if (popupClose) {
         await popupClose.click();
@@ -92,13 +111,36 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
       console.log('No popup found');
     }
 
-    // Navigate to bills page
+    // Navigate to bills page - try multiple possible URLs
     console.log('Navigating to bills page...');
-    await page.goto('https://my.engie.ro/FACTURI/ISTORIC', {
-      waitUntil: 'networkidle0'
-    });
+    const billsUrls = [
+      'https://my.engie.ro/facturi',
+      'https://my.engie.ro/FACTURI',
+      'https://my.engie.ro/facturi/istoric',
+      'https://my.engie.ro/FACTURI/ISTORIC'
+    ];
+
+    let billsPageLoaded = false;
+    for (const url of billsUrls) {
+      try {
+        console.log(`Trying bills URL: ${url}`);
+        await page.goto(url, { waitUntil: 'networkidle0' });
+        const tableExists = await page.$('table.nj-table');
+        if (tableExists) {
+          billsPageLoaded = true;
+          break;
+        }
+      } catch (e) {
+        console.log(`Failed to load ${url}, trying next...`);
+      }
+    }
+
+    if (!billsPageLoaded) {
+      throw new Error('Could not load bills page');
+    }
 
     // Wait for table to load
+    console.log('Waiting for bills table...');
     await page.waitForSelector('table.nj-table', { visible: true });
     
     // Extract bills data
