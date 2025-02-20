@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -151,7 +150,56 @@ export default function GenerateContract() {
     setAssets(newAssets);
   };
 
+  // Add error state
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
+
+  const validateForm = () => {
+    const newErrors: Record<string, boolean> = {};
+
+    // Contract basic details
+    if (!contractNumber) newErrors.contractNumber = true;
+    if (!validFrom) newErrors.validFrom = true;
+
+    // Owner details
+    if (!ownerDetails.name) newErrors.ownerName = true;
+    if (!ownerDetails.reg) newErrors.ownerReg = true;
+    if (!ownerDetails.fiscal) newErrors.ownerFiscal = true;
+    if (!ownerDetails.address) newErrors.ownerAddress = true;
+    if (!ownerDetails.representative) newErrors.ownerRepresentative = true;
+
+    // Tenant details
+    if (!tenantDetails.name) newErrors.tenantName = true;
+    if (!tenantDetails.reg) newErrors.tenantReg = true;
+    if (!tenantDetails.fiscal) newErrors.tenantFiscal = true;
+    if (!tenantDetails.address) newErrors.tenantAddress = true;
+    if (!tenantDetails.representative) newErrors.tenantRepresentative = true;
+
+    // Property details
+    if (!propertyDetails.address) newErrors.propertyAddress = true;
+    if (!propertyDetails.rentAmount) newErrors.rentAmount = true;
+    if (!propertyDetails.paymentDay) newErrors.paymentDay = true;
+    if (!propertyDetails.contractDuration) newErrors.contractDuration = true;
+
+    // Utilities
+    if (!utilities.waterCold) newErrors.waterCold = true;
+    if (!utilities.waterHot) newErrors.waterHot = true;
+    if (!utilities.electricity) newErrors.electricity = true;
+    if (!utilities.gas) newErrors.gas = true;
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleGenerateContract = async () => {
+    if (!validateForm()) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       if (!selectedTemplate || !selectedProperty || !contractType || !validFrom) {
         toast({
@@ -220,6 +268,10 @@ export default function GenerateContract() {
     }
   };
 
+  // Helper function to add error styling
+  const inputClassName = (errorKey: string) =>
+    `${errors[errorKey] ? "border-red-500 focus-visible:ring-red-500" : ""}`;
+
   if (isLoadingTemplates || isLoadingProperties) {
     return (
       <PageLayout>
@@ -244,16 +296,22 @@ export default function GenerateContract() {
               <CardTitle>Contract de Închiriere</CardTitle>
               <CardDescription>
                 Completați detaliile contractului de închiriere
+                {Object.keys(errors).length > 0 && (
+                  <p className="text-red-500 mt-2">* Câmpurile marcate sunt obligatorii</p>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="contract-number">Nr. contract</Label>
+                  <Label htmlFor="contract-number" className={errors.contractNumber ? "text-red-500" : ""}>
+                    Nr. contract *
+                  </Label>
                   <Input
                     id="contract-number"
                     value={contractNumber}
                     onChange={(e) => setContractNumber(e.target.value)}
+                    className={inputClassName("contractNumber")}
                   />
                 </div>
                 <div>
@@ -271,11 +329,14 @@ export default function GenerateContract() {
                 <h3 className="text-lg font-semibold">Detalii Proprietar</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="owner-name">Nume/Denumire</Label>
+                    <Label htmlFor="owner-name" className={errors.ownerName ? "text-red-500" : ""}>
+                      Nume/Denumire *
+                    </Label>
                     <Input
                       id="owner-name"
                       value={ownerDetails.name}
                       onChange={(e) => setOwnerDetails({...ownerDetails, name: e.target.value})}
+                      className={inputClassName("ownerName")}
                     />
                   </div>
                   <div>
@@ -690,7 +751,11 @@ export default function GenerateContract() {
                 </Button>
               </div>
 
-              <Button className="w-full" onClick={handleGenerateContract}>
+              <Button 
+                className="w-full" 
+                onClick={handleGenerateContract}
+                disabled={Object.keys(errors).length > 0}
+              >
                 Generează Contract
               </Button>
             </CardContent>
