@@ -32,7 +32,6 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
   const [tenantEmail, setTenantEmail] = useState<string | null>(null);
   const { availableCurrencies } = useCurrency();
 
-  // Fetch properties when component mounts
   useEffect(() => {
     const fetchProperties = async () => {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -58,7 +57,6 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
     fetchProperties();
   }, []);
 
-  // Fetch tenant email when property is selected
   useEffect(() => {
     const fetchTenantEmail = async () => {
       if (!selectedPropertyId) return;
@@ -72,7 +70,7 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
         `)
         .eq("property_id", selectedPropertyId)
         .eq("status", "active")
-        .single();
+        .maybeSingle();
 
       if (tenancyError) {
         console.error("Error fetching tenant:", tenancyError);
@@ -109,32 +107,29 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       setIsLoading(true);
       console.log("Submitting invoice with values:", values);
 
-      // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
       if (!user) throw new Error("No user found");
 
-      // Check if user is a landlord
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
       if (profileError) throw profileError;
-      if (profile.role !== "landlord") throw new Error("Only landlords can create invoices");
+      if (!profile || profile.role !== "landlord") throw new Error("Only landlords can create invoices");
 
-      // Get the first tenant for this property
       const { data: tenancy, error: tenancyError } = await supabase
         .from("tenancies")
         .select("tenant_id")
         .eq("property_id", values.property_id)
         .eq("status", "active")
-        .single();
+        .maybeSingle();
 
       if (tenancyError) throw tenancyError;
+      if (!tenancy) throw new Error("No active tenant found for this property");
 
-      // Update tenant email if provided
       if (values.tenant_email) {
         const { error: updateError } = await supabase
           .from("profiles")
@@ -144,10 +139,8 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
         if (updateError) throw updateError;
       }
 
-      // Format the due date as an ISO string date
       const dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-      // Create the invoice with currency
       const { data: invoice, error: invoiceError } = await supabase
         .from("invoices")
         .insert({
@@ -164,7 +157,6 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
 
       if (invoiceError) throw invoiceError;
 
-      // Create invoice items
       const { error: itemError } = await supabase
         .from("invoice_items")
         .insert({
@@ -176,7 +168,6 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
 
       if (itemError) throw itemError;
 
-      // Upload document if selected
       if (selectedFile) {
         const fileExt = selectedFile.name.split('.').pop();
         const filePath = `${invoice.id}/${crypto.randomUUID()}.${fileExt}`;
@@ -201,11 +192,11 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       setSelectedFile(null);
       setTenantEmail(null);
       setSelectedPropertyId(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating invoice:", error);
       toast({
         title: "Error",
-        description: "Failed to create invoice",
+        description: error.message || "Failed to create invoice",
         variant: "destructive",
       });
     } finally {
