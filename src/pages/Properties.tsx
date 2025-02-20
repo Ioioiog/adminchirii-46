@@ -16,7 +16,6 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
 const Properties = () => {
   const navigate = useNavigate();
   const {
@@ -31,7 +30,6 @@ const Properties = () => {
   } = useProperties({
     userRole: "landlord"
   });
-
   const handleAddProperty = async (formData: any) => {
     try {
       const {
@@ -58,13 +56,11 @@ const Properties = () => {
       return false;
     }
   };
-
   const filteredProperties = properties?.filter(property => {
     const matchesSearch = property.name.toLowerCase().includes(searchTerm.toLowerCase()) || property.address.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || property.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
-
   if (isLoading) {
     return <div className="flex h-screen overflow-hidden">
         <DashboardSidebar />
@@ -79,7 +75,6 @@ const Properties = () => {
         </main>
       </div>;
   }
-
   const getStatusColor = (status: PropertyStatus) => {
     if (!status) return 'bg-gray-100 text-gray-800';
     switch (status.toLowerCase()) {
@@ -93,16 +88,14 @@ const Properties = () => {
         return 'bg-gray-100 text-gray-800';
     }
   };
-
   const handlePropertyDetails = (propertyId: string) => {
     navigate(`/properties/${propertyId}`);
   };
-
   return <div className="flex h-screen overflow-hidden">
       <DashboardSidebar />
       <main className="flex-1 overflow-hidden">
         <ScrollArea className="h-screen">
-          <div className="p-8">
+          <div className="p-8 bg-zinc-100">
             <div className="max-w-7xl mx-auto space-y-6">
               <div className="bg-white p-8 rounded-lg shadow-sm mb-6 animate-fade-in">
                 <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
@@ -119,10 +112,7 @@ const Properties = () => {
                       Manage and track your properties effectively
                     </p>
                   </div>
-                  <Button 
-                    onClick={() => setShowAddModal(true)}
-                    className="w-full sm:w-auto flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white transition-colors"
-                  >
+                  <Button onClick={() => setShowAddModal(true)} className="w-full sm:w-auto flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white transition-colors">
                     <Plus className="h-4 w-4" />
                     <span>Add Property</span>
                   </Button>
@@ -207,13 +197,7 @@ const Properties = () => {
         </ScrollArea>
       </main>
 
-      <PropertyDialog
-        open={showAddModal}
-        onOpenChange={setShowAddModal}
-        onSubmit={handleAddProperty}
-        mode="add"
-      />
+      <PropertyDialog open={showAddModal} onOpenChange={setShowAddModal} onSubmit={handleAddProperty} mode="add" />
     </div>;
 };
-
 export default Properties;
