@@ -147,7 +147,7 @@ export function MessageList({
   }
   return <div className="flex-1 flex flex-col overflow-hidden">
       <ScrollArea className={className || "flex-1 h-full"}>
-        <div onScroll={handleScroll} className="space-y-4 p-4 bg-transparent">
+        <div onScroll={handleScroll} className="space-y-4 p-4 bg-sky-200 hover:bg-sky-100">
           {visibleMessages.map(message => {
           const senderName = message.sender ? `${message.sender.first_name || ''} ${message.sender.last_name || ''}`.trim() || 'Unknown User' : 'Unknown User';
           const isCurrentUser = message.sender_id === currentUserId;
