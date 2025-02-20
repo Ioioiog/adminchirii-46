@@ -71,13 +71,10 @@ export function MaintenanceSection({
   };
 
   return (
-    <Card className="p-6">
-      <h2 className="text-xl font-semibold mb-2">{title}</h2>
-      <p className="text-gray-500 text-sm mb-4">{description}</p>
-      
+    <div className="rounded-lg border bg-white/50 backdrop-blur-sm shadow-sm">
       {requests.length > 0 ? (
         <div className="space-y-4">
-          <div className="grid grid-cols-6 gap-4 px-4 py-2 bg-muted font-medium text-sm">
+          <div className="grid grid-cols-6 gap-4 px-4 py-2 bg-muted font-medium text-sm rounded-t-lg">
             <div>🔄 Status</div>
             <div>🏡 Property</div>
             <div>🔧 Issue</div>
@@ -86,42 +83,44 @@ export function MaintenanceSection({
             <div>📅 Due Date</div>
           </div>
           
-          {requests.map((request) => (
-            <Card
-              key={request.id}
-              className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => onRequestClick(request.id)}
-            >
-              <div className="grid grid-cols-6 gap-4 items-center text-sm">
-                <div>
-                  {getStatusBadge(request.status)}
-                </div>
+          <div className="p-4 space-y-2">
+            {requests.map((request) => (
+              <Card
+                key={request.id}
+                className="p-4 cursor-pointer hover:bg-muted/50 transition-colors border-0 shadow-none hover:shadow-sm"
+                onClick={() => onRequestClick(request.id)}
+              >
+                <div className="grid grid-cols-6 gap-4 items-center text-sm">
+                  <div>
+                    {getStatusBadge(request.status)}
+                  </div>
 
-                <div className="font-medium">
-                  {request.property.name}
-                </div>
+                  <div className="font-medium">
+                    {request.property.name}
+                  </div>
 
-                <div className="flex items-center gap-2">
-                  <span>{getIssueEmoji(request.title)}</span>
-                  <span>{request.title}</span>
-                </div>
+                  <div className="flex items-center gap-2">
+                    <span>{getIssueEmoji(request.title)}</span>
+                    <span>{request.title}</span>
+                  </div>
 
-                <div>
-                  {getPriorityBadge(request.priority)}
-                </div>
+                  <div>
+                    {getPriorityBadge(request.priority)}
+                  </div>
 
-                <div>
-                  {request.assigned_to || '-'}
-                </div>
+                  <div>
+                    {request.assigned_to || '-'}
+                  </div>
 
-                <div>
-                  {request.scheduled_date 
-                    ? format(new Date(request.scheduled_date), 'MMM d')
-                    : '-'}
+                  <div>
+                    {request.scheduled_date 
+                      ? format(new Date(request.scheduled_date), 'MMM d')
+                      : '-'}
+                  </div>
                 </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            ))}
+          </div>
         </div>
       ) : (
         <NoDataCard 
@@ -129,6 +128,6 @@ export function MaintenanceSection({
           message="No maintenance requests found"
         />
       )}
-    </Card>
+    </div>
   );
 }

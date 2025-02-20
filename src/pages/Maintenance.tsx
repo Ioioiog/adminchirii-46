@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -177,7 +176,6 @@ export default function Maintenance() {
       <DashboardSidebar />
       <main className="flex-1 p-8 overflow-y-auto">
         <div className="max-w-7xl mx-auto space-y-8">
-          {/* Navigation tabs */}
           <Card className="p-4 bg-white/80 backdrop-blur-sm border shadow-sm">
             <div className="flex gap-4 overflow-x-auto">
               {navigationItems.map((item) => (
@@ -197,12 +195,10 @@ export default function Maintenance() {
             </div>
           </Card>
 
-          {/* Content Section */}
           <Card className="p-6 bg-white/80 backdrop-blur-sm border shadow-sm">
             {renderSection()}
           </Card>
 
-          {/* Maintenance Request Dialog */}
           <MaintenanceDialog
             open={isDialogOpen}
             onOpenChange={handleDialogChange}
