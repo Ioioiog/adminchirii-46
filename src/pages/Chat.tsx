@@ -1,3 +1,4 @@
+
 import React, { useRef, useState } from "react";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { ChatHeader } from "@/components/chat/ChatHeader";
@@ -56,7 +57,9 @@ const Chat = () => {
   };
 
   const handleStartVideoCall = () => {
-    setIsVideoCallActive(true);
+    if (selectedTenantId) {
+      setIsVideoCallActive(true);
+    }
   };
 
   const handleEndVideoCall = () => {
@@ -105,6 +108,7 @@ const Chat = () => {
           newMessage={newMessage}
           setNewMessage={setNewMessage}
           handleSendMessage={handleSendMessage}
+          onStartVideoCall={handleStartVideoCall}
         />
       </>
     );

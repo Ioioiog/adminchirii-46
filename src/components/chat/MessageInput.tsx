@@ -10,12 +10,14 @@ interface MessageInputProps {
   newMessage: string;
   setNewMessage: (message: string) => void;
   handleSendMessage: (e: React.FormEvent) => void;
+  onStartVideoCall?: () => void;
 }
 
 export function MessageInput({
   newMessage,
   setNewMessage,
-  handleSendMessage
+  handleSendMessage,
+  onStartVideoCall
 }: MessageInputProps) {
   const onEmojiClick = (emojiData: EmojiClickData) => {
     setNewMessage(newMessage + emojiData.emoji);
@@ -54,6 +56,7 @@ export function MessageInput({
           variant="ghost" 
           size="icon" 
           className="h-9 w-9 rounded-full hover:bg-gray-100"
+          onClick={onStartVideoCall}
         >
           <Video className="h-5 w-5 text-gray-500" />
         </Button>
