@@ -37,6 +37,7 @@ interface ServiceProvider {
   }>;
   services?: ServiceProviderService[];
   isPreferred?: boolean;
+  isCustomProvider?: boolean; // Added to distinguish custom providers
 }
 
 interface ServiceProviderListContentProps {
@@ -108,10 +109,19 @@ export function ServiceProviderListContent({
           {providers.map((provider) => (
             <TableRow key={provider.id} className="hover:bg-muted/50">
               <TableCell>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   {provider.isPreferred && (
                     <Badge variant="default" className="bg-blue-100 text-blue-800">
                       Preferred
+                    </Badge>
+                  )}
+                  {provider.isCustomProvider ? (
+                    <Badge variant="outline" className="border-purple-500 text-purple-700">
+                      Custom Provider
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="border-green-500 text-green-700">
+                      Registered Provider
                     </Badge>
                   )}
                   <span className="font-medium">{getProviderName(provider)}</span>
@@ -210,7 +220,7 @@ export function ServiceProviderListContent({
                         />
                         {provider.isPreferred ? 'Remove Preferred' : 'Mark Preferred'}
                       </Button>
-                      {onEdit && (
+                      {onEdit && provider.isCustomProvider && (
                         <Button
                           variant="outline"
                           size="sm"
