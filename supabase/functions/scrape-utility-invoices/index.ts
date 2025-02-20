@@ -1,7 +1,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2.39.0';
 import { corsHeaders } from '../_shared/cors.ts';
-import { launch } from 'https://deno.land/x/puppeteer@16.2.0/mod.ts';
+import { Browser, launch } from 'https://deno.land/x/puppeteer@16.2.0/mod.ts';
 
 interface ScrapingRequest {
   username: string;
@@ -22,7 +22,7 @@ interface Bill {
 
 async function scrapeEngieRomania(username: string, password: string): Promise<Bill[]> {
   console.log('Starting ENGIE Romania scraping process');
-  let browser = null;
+  let browser: Browser | null = null;
 
   try {
     console.log('Launching browser...');
@@ -176,7 +176,9 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
   }
 }
 
+// Handle the incoming request
 Deno.serve(async (req) => {
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -185,6 +187,7 @@ Deno.serve(async (req) => {
     const request: ScrapingRequest = await req.json();
     console.log('Processing request for provider:', request.provider);
 
+    // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
@@ -194,6 +197,7 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Create scraping job
     const { data: jobData, error: jobError } = await supabase
       .from('scraping_jobs')
       .insert({
@@ -239,6 +243,7 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Update job status to completed
       const { error: updateError } = await supabase
         .from('scraping_jobs')
         .update({
@@ -264,6 +269,7 @@ Deno.serve(async (req) => {
       );
 
     } catch (error) {
+      // Update job status to failed
       const { error: updateError } = await supabase
         .from('scraping_jobs')
         .update({
