@@ -1,5 +1,5 @@
-
-import { Route, Routes, Navigate } from "react-router-dom";
+import React from "react";
+import { Routes, Route } from "react-router-dom";
 import AuthPage from "@/pages/Auth";
 import Properties from "@/pages/Properties";
 import PropertyDetails from "@/pages/PropertyDetails";
@@ -24,6 +24,7 @@ import Info from "@/pages/Info";
 import Contracts from "@/pages/Contracts";
 import ContractDetails from "@/pages/ContractDetails";
 import { useUserRole } from "@/hooks/use-user-role";
+import PropertyTenants from "@/pages/PropertyTenants";
 
 interface AppRoutesProps {
   isAuthenticated: boolean;
@@ -98,6 +99,14 @@ export function AppRoutes({ isAuthenticated }: AppRoutesProps) {
         element={
           <ProtectedRoute isAuthenticated={isAuthenticated}>
             <PropertyDetails />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/properties/:id/tenants"
+        element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PropertyTenants />
           </ProtectedRoute>
         }
       />
@@ -178,3 +187,5 @@ export function AppRoutes({ isAuthenticated }: AppRoutesProps) {
     </Routes>
   );
 }
+
+export default AppRoutes;
