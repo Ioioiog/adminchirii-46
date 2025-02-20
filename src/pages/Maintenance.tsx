@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,14 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { List, Users, PlusCircle, Search, Filter, Wrench } from "lucide-react";
 import { useAuthState } from "@/hooks/useAuthState";
 import { useUserRole } from "@/hooks/use-user-role";
+import { cn } from "@/lib/utils";
 
 type MaintenanceView = 'dashboard' | 'providers';
 
 export default function Maintenance() {
+  const [activeSection, setActiveSection] = useState<MaintenanceView>('dashboard');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<string | undefined>();
   const [priority, setPriority] = useState<"all" | "low" | "medium" | "high">("all");
@@ -94,6 +94,65 @@ export default function Maintenance() {
     }
   };
 
+  const navigationItems = [
+    {
+      id: 'dashboard' as MaintenanceView,
+      label: 'Maintenance Dashboard',
+      icon: List,
+    },
+    {
+      id: 'providers' as MaintenanceView,
+      label: 'Service Providers',
+      icon: Users,
+    },
+  ];
+
+  const renderSection = () => {
+    switch (activeSection) {
+      case 'dashboard':
+        return (
+          <div className="space-y-6">
+            {/* Action Bar */}
+            <div className="flex flex-col md:flex-row gap-4 mb-6">
+              <div className="flex-1 flex gap-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    placeholder="Search requests..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9"
+                  />
+                </div>
+                <Select value={priority} onValueChange={(value: any) => setPriority(value)}>
+                  <SelectTrigger className="w-[180px]">
+                    <Filter className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Filter by priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priorities</SelectItem>
+                    <SelectItem value="high">High Priority</SelectItem>
+                    <SelectItem value="medium">Medium Priority</SelectItem>
+                    <SelectItem value="low">Low Priority</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Maintenance Requests List */}
+            <MaintenanceSection
+              title="Maintenance Requests"
+              description="Manage and monitor all property maintenance requests"
+              requests={filteredRequests}
+              onRequestClick={handleRequestClick}
+            />
+          </div>
+        );
+      case 'providers':
+        return <ServiceProviderList />;
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       <DashboardSidebar />
@@ -120,65 +179,32 @@ export default function Maintenance() {
             </div>
           </Card>
 
-          {/* Tabs (only for landlord) */}
+          {/* Navigation (only for landlord) */}
           {userRole === 'landlord' && (
-            <Card className="bg-white/80 backdrop-blur-sm border shadow-sm">
-              <Tabs defaultValue="dashboard" className="w-full">
-                <div className="p-4 border-b">
-                  <TabsList className="w-full">
-                    <TabsTrigger value="dashboard" className="flex items-center gap-2 flex-1">
-                      <List className="h-4 w-4" />
-                      Maintenance Dashboard
-                    </TabsTrigger>
-                    <TabsTrigger value="providers" className="flex items-center gap-2 flex-1">
-                      <Users className="h-4 w-4" />
-                      Service Providers
-                    </TabsTrigger>
-                  </TabsList>
+            <>
+              <Card className="p-4 bg-white/80 backdrop-blur-sm border shadow-sm">
+                <div className="flex gap-4 overflow-x-auto">
+                  {navigationItems.map((item) => (
+                    <Button
+                      key={item.id}
+                      variant={activeSection === item.id ? 'default' : 'ghost'}
+                      className={cn(
+                        "flex-shrink-0 gap-2 transition-all duration-200",
+                        activeSection === item.id && "bg-primary text-primary-foreground shadow-sm"
+                      )}
+                      onClick={() => setActiveSection(item.id)}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {item.label}
+                    </Button>
+                  ))}
                 </div>
+              </Card>
 
-                <TabsContent value="dashboard" className="p-6">
-                  {/* Action Bar */}
-                  <div className="flex flex-col md:flex-row gap-4 mb-6">
-                    <div className="flex-1 flex gap-4">
-                      <div className="flex-1 relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                        <Input
-                          placeholder="Search requests..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full pl-9"
-                        />
-                      </div>
-                      <Select value={priority} onValueChange={(value: any) => setPriority(value)}>
-                        <SelectTrigger className="w-[180px]">
-                          <Filter className="h-4 w-4 mr-2" />
-                          <SelectValue placeholder="Filter by priority" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Priorities</SelectItem>
-                          <SelectItem value="high">High Priority</SelectItem>
-                          <SelectItem value="medium">Medium Priority</SelectItem>
-                          <SelectItem value="low">Low Priority</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Maintenance Requests List */}
-                  <MaintenanceSection
-                    title="Maintenance Requests"
-                    description="Manage and monitor all property maintenance requests"
-                    requests={filteredRequests}
-                    onRequestClick={handleRequestClick}
-                  />
-                </TabsContent>
-
-                <TabsContent value="providers" className="p-6">
-                  <ServiceProviderList />
-                </TabsContent>
-              </Tabs>
-            </Card>
+              <Card className="p-6 bg-white/80 backdrop-blur-sm border shadow-sm">
+                {renderSection()}
+              </Card>
+            </>
           )}
 
           {/* Non-landlord view */}
