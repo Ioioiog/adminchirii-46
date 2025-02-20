@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { List, Users, PlusCircle, Search, Filter, Wrench } from "lucide-react";
+import { List, Users, PlusCircle, Search, Filter } from "lucide-react";
 import { useAuthState } from "@/hooks/useAuthState";
 import { useUserRole } from "@/hooks/use-user-role";
 import { cn } from "@/lib/utils";
@@ -159,6 +160,8 @@ export default function Maintenance() {
               </div>
             </div>
             <MaintenanceSection
+              title="Maintenance Requests"
+              description="Track and manage all maintenance requests for your properties"
               requests={filteredRequests}
               onRequestClick={handleRequestClick}
             />
@@ -174,6 +177,7 @@ export default function Maintenance() {
       <DashboardSidebar />
       <main className="flex-1 p-8 overflow-y-auto">
         <div className="max-w-7xl mx-auto space-y-8">
+          {/* Navigation tabs */}
           <Card className="p-4 bg-white/80 backdrop-blur-sm border shadow-sm">
             <div className="flex gap-4 overflow-x-auto">
               {navigationItems.map((item) => (
@@ -193,10 +197,12 @@ export default function Maintenance() {
             </div>
           </Card>
 
+          {/* Content Section */}
           <Card className="p-6 bg-white/80 backdrop-blur-sm border shadow-sm">
             {renderSection()}
           </Card>
 
+          {/* Maintenance Request Dialog */}
           <MaintenanceDialog
             open={isDialogOpen}
             onOpenChange={handleDialogChange}
