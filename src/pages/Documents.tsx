@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Grid, List, Plus, FileText, Search } from "lucide-react";
+import { Grid, List, Plus, FileText, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,8 @@ import { DocumentDialog } from "@/components/documents/DocumentDialog";
 import { DocumentType } from "@/integrations/supabase/types/document-types";
 import { DocumentFilters } from "@/components/documents/DocumentFilters";
 import { useQuery } from "@tanstack/react-query";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
+import { NavigationTabs } from "@/components/layout/NavigationTabs";
 
 const Documents = () => {
   const navigate = useNavigate();
@@ -97,6 +97,75 @@ const Documents = () => {
 
   if (!userId || !userRole) return null;
 
+  const navigationItems = [
+    {
+      id: 'documents',
+      label: 'Documents',
+      icon: FileText,
+    },
+    {
+      id: 'contracts',
+      label: 'Contracts',
+      icon: CreditCard,
+    },
+  ];
+
+  const renderSection = () => {
+    switch (activeTab) {
+      case 'documents':
+        return (
+          <div className="space-y-4">
+            <DocumentFilters
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              typeFilter={typeFilter}
+              setTypeFilter={setTypeFilter}
+              propertyFilter={propertyFilter}
+              setPropertyFilter={setPropertyFilter}
+              properties={properties}
+            />
+            <DocumentList 
+              userId={userId} 
+              userRole={userRole}
+              propertyFilter={propertyFilter}
+              typeFilter={typeFilter}
+              searchTerm={searchTerm}
+              viewMode={viewMode}
+            />
+          </div>
+        );
+      case 'contracts':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {contracts?.map((contract) => (
+              <Card key={contract.id} className="p-4">
+                <h3 className="font-medium">{contract.properties?.name || 'Untitled Property'}</h3>
+                <p className="text-sm text-gray-500 capitalize">{contract.contract_type}</p>
+                <div className="mt-2 flex justify-between items-center">
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    contract.status === 'signed' ? 'bg-green-100 text-green-800' :
+                    contract.status === 'draft' ? 'bg-gray-100 text-gray-800' :
+                    'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {contract.status}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/contracts/${contract.id}`)}
+                  >
+                    View Details
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="flex bg-[#F8F9FC] min-h-screen">
       <DashboardSidebar />
@@ -138,59 +207,15 @@ const Documents = () => {
               )}
             </div>
 
-            <Tabs defaultValue="documents" className="w-full" onValueChange={value => setActiveTab(value)}>
-              <TabsList className="mb-4">
-                <TabsTrigger value="documents">Documents</TabsTrigger>
-                <TabsTrigger value="contracts">Contracts</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="documents" className="space-y-4">
-                <DocumentFilters
-                  searchTerm={searchTerm}
-                  setSearchTerm={setSearchTerm}
-                  typeFilter={typeFilter}
-                  setTypeFilter={setTypeFilter}
-                  propertyFilter={propertyFilter}
-                  setPropertyFilter={setPropertyFilter}
-                  properties={properties}
-                />
-                <DocumentList 
-                  userId={userId} 
-                  userRole={userRole}
-                  propertyFilter={propertyFilter}
-                  typeFilter={typeFilter}
-                  searchTerm={searchTerm}
-                  viewMode={viewMode}
-                />
-              </TabsContent>
-
-              <TabsContent value="contracts">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {contracts?.map((contract) => (
-                    <Card key={contract.id} className="p-4">
-                      <h3 className="font-medium">{contract.properties?.name || 'Untitled Property'}</h3>
-                      <p className="text-sm text-gray-500 capitalize">{contract.contract_type}</p>
-                      <div className="mt-2 flex justify-between items-center">
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          contract.status === 'signed' ? 'bg-green-100 text-green-800' :
-                          contract.status === 'draft' ? 'bg-gray-100 text-gray-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {contract.status}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/contracts/${contract.id}`)}
-                        >
-                          View Details
-                        </Button>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </TabsContent>
-            </Tabs>
+            <NavigationTabs
+              tabs={navigationItems}
+              activeTab={activeTab}
+              onTabChange={(id) => setActiveTab(id)}
+            />
+            
+            <div className="mt-6">
+              {renderSection()}
+            </div>
           </div>
         </div>
       </main>
