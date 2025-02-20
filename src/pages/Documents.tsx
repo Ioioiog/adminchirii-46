@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Grid, List, Plus, FileText, CreditCard } from "lucide-react";
@@ -171,21 +170,20 @@ const Documents = () => {
       <DashboardSidebar />
       <main className="flex-1 p-8">
         <div className="max-w-7xl mx-auto space-y-6">
+          <NavigationTabs
+            tabs={navigationItems}
+            activeTab={activeTab}
+            onTabChange={(id) => setActiveTab(id)}
+          />
+          
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between mb-8">
               <div className="space-y-1">
-                <div className="flex items-center gap-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-600 rounded-lg">
-                      <FileText className="h-6 w-6 text-white" />
-                    </div>
-                    <h1 className="text-2xl font-semibold">Documents</h1>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-600 rounded-lg">
+                    <FileText className="h-6 w-6 text-white" />
                   </div>
-                  <NavigationTabs
-                    tabs={navigationItems}
-                    activeTab={activeTab}
-                    onTabChange={(id) => setActiveTab(id)}
-                  />
+                  <h1 className="text-2xl font-semibold">Documents</h1>
                 </div>
                 <p className="text-gray-500">
                   Manage and track all your property-related documents and contracts.
