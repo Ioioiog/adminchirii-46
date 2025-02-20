@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -210,18 +211,21 @@ export function CalendarSection() {
   };
 
   return (
-    <Card className="col-span-full lg:col-span-4">
-      <CardHeader>
+    <Card className="col-span-full lg:col-span-4 bg-gradient-to-br from-white via-blue-50/10 to-indigo-50/10 backdrop-blur-sm border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+      <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <CalendarIcon className="h-5 w-5 text-gray-500" />
-            <h3 className="text-lg font-medium">Calendar</h3>
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-primary/5 rounded-lg">
+              <CalendarIcon className="h-5 w-5 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">Calendar</h3>
           </div>
           {selectedDate && (
             <Button
               variant="outline"
               size="sm"
               onClick={clearSelection}
+              className="hover:bg-primary/5 transition-colors"
             >
               Back to Month View
             </Button>
@@ -229,8 +233,8 @@ export function CalendarSection() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="h-[300px] flex items-center justify-center bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 backdrop-blur-sm border border-gray-100/80 rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl">
             <Calendar
               mode="single"
               selected={selectedDate || undefined}
@@ -239,31 +243,45 @@ export function CalendarSection() {
               onMonthChange={setCurrentMonth}
             />
           </div>
-          <div className="space-y-4">
-            <h4 className="font-medium text-sm text-gray-500">
-              {selectedDate 
-                ? `Events for ${format(selectedDate, 'MMMM d, yyyy')}`
-                : `Events for ${format(currentMonth, 'MMMM yyyy')}`
-              }
-            </h4>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h4 className="font-medium text-sm text-gray-600">
+                {selectedDate 
+                  ? `Events for ${format(selectedDate, 'MMMM d, yyyy')}`
+                  : `Events for ${format(currentMonth, 'MMMM yyyy')}`
+                }
+              </h4>
+              <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
+                {filteredEvents.length} Events
+              </Badge>
+            </div>
             {isLoading ? (
-              <p className="text-sm text-gray-500">Loading events...</p>
+              <div className="flex items-center justify-center h-[300px] bg-white/50 rounded-xl border border-gray-100">
+                <p className="text-sm text-gray-500">Loading events...</p>
+              </div>
             ) : filteredEvents.length > 0 ? (
-              <ScrollArea className="h-[300px] rounded-md border">
+              <ScrollArea className="h-[300px] rounded-xl border border-gray-100/50 bg-white/50 backdrop-blur-sm">
                 <div className="space-y-3 p-4">
                   {filteredEvents.map((event, idx) => (
                     <div 
                       key={idx} 
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors duration-200"
+                      className="flex items-center justify-between p-4 bg-white rounded-lg cursor-pointer hover:bg-gray-50/80 transition-colors duration-200 border border-gray-100/80 shadow-sm hover:shadow-md"
                       onClick={() => handleEventClick(event)}
                     >
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium">{event.title}</span>
-                        <span className="text-xs text-gray-500">
-                          {format(event.date, 'MMM d, yyyy')}
-                        </span>
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 rounded-lg bg-gray-50">
+                          <span className="text-xl" role="img" aria-label={event.type}>
+                            {getEventIcon(event.type)}
+                          </span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-gray-900">{event.title}</span>
+                          <span className="text-xs text-gray-500">
+                            {format(event.date, 'MMM d, yyyy')}
+                          </span>
+                        </div>
                       </div>
-                      <Badge className={getBadgeColor(event.type)}>
+                      <Badge className={`${getBadgeColor(event.type)} shadow-sm`}>
                         {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
                       </Badge>
                     </div>
@@ -271,56 +289,62 @@ export function CalendarSection() {
                 </div>
               </ScrollArea>
             ) : (
-              <p className="text-sm text-gray-500">
-                No events {selectedDate ? 'on this day' : 'this month'}
-              </p>
+              <div className="flex items-center justify-center h-[300px] bg-white/50 rounded-xl border border-gray-100">
+                <p className="text-sm text-gray-500">
+                  No events {selectedDate ? 'on this day' : 'this month'}
+                </p>
+              </div>
             )}
           </div>
         </div>
       </CardContent>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] bg-white/95 backdrop-blur-sm border-none shadow-2xl">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between pb-2">
+              <div className="flex items-center gap-3">
                 {selectedEvent && (
-                  <span className="text-2xl" role="img" aria-label={selectedEvent.type}>
-                    {getEventIcon(selectedEvent.type)}
-                  </span>
+                  <div className="p-2 bg-gray-50 rounded-lg">
+                    <span className="text-2xl" role="img" aria-label={selectedEvent.type}>
+                      {getEventIcon(selectedEvent.type)}
+                    </span>
+                  </div>
                 )}
-                <DialogTitle className="text-xl">Event Details</DialogTitle>
+                <DialogTitle className="text-xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                  Event Details
+                </DialogTitle>
               </div>
             </div>
           </DialogHeader>
 
           {selectedEvent && (
             <div className="space-y-6">
-              <div className="space-y-2">
+              <div className="space-y-2 bg-white/50 rounded-lg p-4">
                 <h4 className="font-medium text-sm text-gray-500">Title</h4>
-                <p className="text-base">{selectedEvent.title}</p>
+                <p className="text-base text-gray-900">{selectedEvent.title}</p>
               </div>
 
-              <Separator />
+              <Separator className="bg-gray-100" />
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
+                <div className="space-y-2 bg-white/50 rounded-lg p-4">
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-gray-500" />
                     <h4 className="font-medium text-sm text-gray-500">Date</h4>
                   </div>
-                  <p className="text-base">{format(selectedEvent.date, 'MMMM d, yyyy')}</p>
+                  <p className="text-base text-gray-900">{format(selectedEvent.date, 'MMMM d, yyyy')}</p>
                   <span className={`text-sm font-medium ${getEventUrgency(selectedEvent).color}`}>
                     {getEventUrgency(selectedEvent).text}
                   </span>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 bg-white/50 rounded-lg p-4">
                   <div className="flex items-center gap-2">
                     <AlertCircle className="h-4 w-4 text-gray-500" />
                     <h4 className="font-medium text-sm text-gray-500">Type</h4>
                   </div>
-                  <Badge className={getBadgeColor(selectedEvent.type)}>
+                  <Badge className={`${getBadgeColor(selectedEvent.type)} shadow-sm`}>
                     {selectedEvent.type.charAt(0).toUpperCase() + selectedEvent.type.slice(1)}
                   </Badge>
                 </div>
