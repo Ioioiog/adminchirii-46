@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -34,6 +35,16 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          50: "#f0f7ff",
+          100: "#e0efff",
+          200: "#b9ddff",
+          300: "#7cc2ff",
+          400: "#36a7ff",
+          500: "#0090ff",
+          600: "#0070dd",
+          700: "#0057b3",
+          800: "#004794",
+          900: "#003d7a",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -60,6 +71,16 @@ export default {
           foreground: "hsl(var(--card-foreground))",
         },
       },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+      boxShadow: {
+        'soft-xl': '0 20px 27px 0 rgb(0 0 0 / 0.05)',
+        'soft-md': '0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -1px rgb(0 0 0 / 0.05)',
+        'soft-sm': '0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05)',
+      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
@@ -69,43 +90,29 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        blob: {
-          "0%": {
-            transform: "translate(0px, 0px) scale(1)",
-          },
-          "33%": {
-            transform: "translate(30px, -50px) scale(1.1)",
-          },
-          "66%": {
-            transform: "translate(-20px, 20px) scale(0.9)",
-          },
-          "100%": {
-            transform: "translate(0px, 0px) scale(1)",
-          },
-        },
         float: {
-          "0%, 100%": {
-            transform: "translateY(0) rotate(0)",
-          },
-          "50%": {
-            transform: "translateY(-20px) rotate(10deg)",
-          },
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-10px)" },
+        },
+        "fade-in": {
+          "0%": { opacity: "0", transform: "translateY(10px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "fade-out": {
+          "0%": { opacity: "1", transform: "translateY(0)" },
+          "100%": { opacity: "0", transform: "translateY(10px)" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        blob: "blob 7s infinite",
-        "float-1": "float 10s ease-in-out infinite",
-        "float-2": "float 12s ease-in-out infinite 1s",
-        "float-3": "float 11s ease-in-out infinite 2s",
-        "float-4": "float 13s ease-in-out infinite 3s",
-        "float-5": "float 12s ease-in-out infinite 4s",
-        "float-6": "float 11s ease-in-out infinite 5s",
-        "float-7": "float 10s ease-in-out infinite 6s",
-        "float-8": "float 13s ease-in-out infinite 7s",
-        "float-9": "float 11s ease-in-out infinite 8s",
-        "float-10": "float 12s ease-in-out infinite 9s",
+        float: "float 6s ease-in-out infinite",
+        "fade-in": "fade-in 0.3s ease-out",
+        "fade-out": "fade-out 0.3s ease-out",
+      },
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+        'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
       },
     },
   },

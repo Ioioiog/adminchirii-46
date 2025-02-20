@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
@@ -12,7 +13,7 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;    /* #007bff */
+    --primary: 221.2 83.2% 53.3%;
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -25,7 +26,7 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    --radius: 0.75rem;
   }
 
   * {
@@ -34,10 +35,81 @@
   }
 
   body {
-    @apply bg-[#f9f9f9] text-foreground antialiased;
+    @apply bg-background text-foreground antialiased;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* ... keep existing code */
+  /* Global enhanced styles */
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-sm border border-white/20 shadow-lg;
+  }
+
+  .hover-lift {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
+  }
+
+  .gradient-border {
+    @apply border border-transparent bg-gradient-to-r from-blue-500/10 to-purple-500/10 bg-clip-border;
+  }
+
+  .gradient-bg-light {
+    @apply bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30;
+  }
+
+  .glass-button {
+    @apply bg-white/90 hover:bg-white/95 backdrop-blur-sm border border-white/20 shadow-sm 
+           transition-all duration-300 hover:shadow-md active:scale-95;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600;
+  }
+
+  .card-shadow {
+    @apply shadow-[0_8px_30px_rgb(0,0,0,0.04)];
+  }
+
+  .gradient-hover {
+    @apply hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50;
+  }
+
+  .input-highlight {
+    @apply focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/30;
+  }
+
+  .section-padding {
+    @apply py-12 px-4 sm:px-6 lg:px-8;
+  }
+}
+
+/* Animation keyframes */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Animation classes */
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-subtle-pulse {
+  animation: pulse 4s ease-in-out infinite;
+}
+
+.animate-gradient {
+  animation: gradient 15s ease infinite;
+  background-size: 200% 200%;
 }
