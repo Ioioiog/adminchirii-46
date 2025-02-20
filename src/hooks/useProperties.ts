@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Property } from "@/utils/propertyUtils";
@@ -41,12 +42,11 @@ export function useProperties({ userRole }: UsePropertiesProps): UsePropertiesRe
             .from("properties")
             .select(`
               *,
-              tenancies:tenancies(
+              tenancies!inner(
                 id,
-                start_date,
-                end_date,
                 status,
-                tenant:profiles(
+                tenant_id,
+                tenant:profiles!inner(
                   id,
                   first_name,
                   last_name,
@@ -55,6 +55,7 @@ export function useProperties({ userRole }: UsePropertiesProps): UsePropertiesRe
               )
             `)
             .eq("landlord_id", user.id)
+            .eq("tenancies.status", "active")
             .order('created_at', { ascending: false });
 
           if (error) {
@@ -67,17 +68,12 @@ export function useProperties({ userRole }: UsePropertiesProps): UsePropertiesRe
           // Transform the data to match our Property interface
           const transformedData = data?.map(property => ({
             ...property,
-            tenancy: property.tenancies?.find(t => t.status === 'active')
-              ? {
-                  start_date: property.tenancies.find(t => t.status === 'active')?.start_date,
-                  end_date: property.tenancies.find(t => t.status === 'active')?.end_date,
-                  tenant: property.tenancies.find(t => t.status === 'active')?.tenant
-                }
-              : undefined
-          }));
+            status: property.tenancies?.length > 0 ? 'occupied' : 'vacant',
+            tenant_count: property.tenancies?.length || 0
+          })) || [];
 
           console.log("Transformed landlord properties:", transformedData);
-          return transformedData || [];
+          return transformedData;
         } else {
           // For tenants, fetch through tenancies table
           console.log("Fetching tenant properties for user:", user.id);
@@ -101,6 +97,8 @@ export function useProperties({ userRole }: UsePropertiesProps): UsePropertiesRe
           
           const properties = tenanciesData?.map(item => ({
             ...item.property,
+            status: 'occupied',
+            tenant_count: 1,
             tenancy: {
               end_date: item.end_date,
               start_date: item.start_date
