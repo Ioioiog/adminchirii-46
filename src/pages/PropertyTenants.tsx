@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -35,7 +34,10 @@ const PropertyTenants = () => {
               first_name,
               last_name,
               email,
-              phone
+              phone,
+              role,
+              created_at,
+              updated_at
             )
           )
         `)
@@ -162,7 +164,14 @@ const PropertyTenants = () => {
                               <Badge variant="outline">Active</Badge>
                               <EditTenantDialog
                                 tenant={{
-                                  ...tenancy.tenant,
+                                  id: tenancy.tenant.id,
+                                  first_name: tenancy.tenant.first_name,
+                                  last_name: tenancy.tenant.last_name,
+                                  email: tenancy.tenant.email,
+                                  phone: tenancy.tenant.phone,
+                                  role: tenancy.tenant.role,
+                                  created_at: tenancy.tenant.created_at,
+                                  updated_at: tenancy.tenant.updated_at,
                                   tenancy: {
                                     id: tenancy.id,
                                     start_date: tenancy.start_date,
