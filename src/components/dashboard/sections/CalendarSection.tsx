@@ -195,7 +195,7 @@ export function CalendarSection() {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="h-[400px] flex items-center justify-center bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 backdrop-blur-sm border border-gray-100/80 rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 p-4">
+          <div className="h-[300px] flex items-center justify-center bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 backdrop-blur-sm border border-gray-100/80 rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 p-4">
             <Calendar
               mode="single"
               selected={selectedDate || undefined}
@@ -214,7 +214,7 @@ export function CalendarSection() {
             {isLoading ? (
               <p className="text-sm text-gray-500">Loading events...</p>
             ) : filteredEvents.length > 0 ? (
-              <ScrollArea className="h-[400px] rounded-md border">
+              <ScrollArea className="h-[300px] rounded-md border">
                 <div className="space-y-3 p-4">
                   {filteredEvents.map((event, idx) => (
                     <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
