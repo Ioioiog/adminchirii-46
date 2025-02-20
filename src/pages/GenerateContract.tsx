@@ -611,32 +611,45 @@ export default function GenerateContract() {
                 de expirarea perioadei inițiale, indicând noua valoare propusă a chiriei.
               </p>
               <p className="mb-4">
-                2.6. Chiriei i se va aplica anual indicele de inflație al EURO, comunicat de EUROSTAT (Statistical Office of the European Communities), calculat pentru anul precedent. Proprietarul se obligă să notifice Chiriașul în scris cu privire la valoarea ajustată a chiriei cu cel puțin 30 de zile înainte de data de aplicare, aceasta devenind efectivă de la 1 ianuarie al fiecărui an.
+                2.6. Chiriei i se va aplica anual indicele de inflație al EURO, comunicat de EUROSTAT (Statistical Office of the European Communities), 
+                calculat pentru anul precedent. Proprietarul se obligă să notifice Chiriașul în scris cu privire la valoarea ajustată a chiriei 
+                cu cel puțin 30 de zile înainte de data de aplicare, aceasta devenind efectivă de la 1 ianuarie al fiecărui an.
               </p>
               <p className="mb-4">
-                2.7. Dacă Chiriașul acceptă ajustarea, contractul se prelungește automat în noile condiții. Dacă Chiriașul nu este de acord, contractul încetează de drept la expirarea perioadei inițiale de {formData.contractDuration} luni, fără penalități pentru niciuna dintre părți.
+                2.7. Dacă Chiriașul acceptă ajustarea, contractul se prelungește automat în noile condiții. Dacă Chiriașul nu este de acord, 
+                contractul încetează de drept la expirarea perioadei inițiale de {formData.contractDuration} luni, fără penalități pentru niciuna dintre părți.
               </p>
 
               <h2 className="text-xl font-bold mb-4">3. DURATA CONTRACTULUI</h2>
               <p className="mb-4">
-                3.1. Părțile convin că încheie prezentul contract pentru o perioadă inițială minimă de {formData.contractDuration} luni. Părțile convin că perioada inițială minimă este de esența contractului.
+                3.1. Părțile convin că încheie prezentul contract pentru o perioadă inițială minimă de {formData.contractDuration} luni. 
+                Părțile convin că perioada inițială minimă este de esența contractului.
               </p>
               <p className="mb-4">
-                3.2. Părțile convin că la expirarea perioadei inițiale minime, operează tacita relocațiune, adică prelungirea automată a perioadei contractuale, cu perioade succesive de câte {formData.renewalPeriod} luni.
+                3.2. Părțile convin că la expirarea perioadei inițiale minime, operează tacita relocațiune, adică prelungirea automată 
+                a perioadei contractuale, cu perioade succesive de câte {formData.renewalPeriod} luni.
               </p>
 
               <h2 className="text-xl font-bold mb-4">4. ÎNCETAREA CONTRACTULUI</h2>
               <p className="mb-4">
-                4.1. Părțile convin că denunțarea unilaterală a contractului se va realiza printr-o notificare scrisă comunicată celeilalte părți, prin e-mail, la adresele menționate în preambul. Locațiunea încetează în termen de {formData.unilateralNotice} de zile de la data comunicării.
+                4.1. Părțile convin că denunțarea unilaterală a contractului se va realiza printr-o notificare scrisă comunicată 
+                celeilalte părți, prin e-mail, la adresele menționate în preambul. Locațiunea încetează în termen de {formData.unilateralNotice} 
+                de zile de la data comunicării.
               </p>
               <p className="mb-4">
-                4.2. Părțile convin că rezilierea contractului se va realiza printr-o notificare scrisă comunicată celeilalte părți, prin e-mail, la adresele menționate în preambul. Locațiunea încetează în termen de {formData.terminationNotice} de zile de la data comunicării, dacă în acest interval partea aflată în culpă contractuală nu remediază problema ce determină rezilierea contractului.
+                4.2. Părțile convin că rezilierea contractului se va realiza printr-o notificare scrisă comunicată celeilalte părți, 
+                prin e-mail, la adresele menționate în preambul. Locațiunea încetează în termen de {formData.terminationNotice} de zile 
+                de la data comunicării, dacă în acest interval partea aflată în culpă contractuală nu remediază problema ce determină 
+                rezilierea contractului.
               </p>
               <p className="mb-4">
-                4.3. Părțile sunt de acord că dacă încetarea contractului intervine în perioada inițială de {formData.contractDuration} luni, din orice motiv, partea care denunță unilateral contractul sau cea din culpa căreia se solicită rezilierea contractului datorează celeilalte părți, cu titlu de daune-interese, o sumă egală cu {formData.earlyTerminationFee}.
+                4.3. Părțile sunt de acord că dacă încetarea contractului intervine în perioada inițială de {formData.contractDuration} luni, 
+                din orice motiv, partea care denunță unilateral contractul sau cea din culpa căreia se solicită rezilierea contractului 
+                datorează celeilalte părți, cu titlu de daune-interese, o sumă egală cu {formData.earlyTerminationFee}.
               </p>
               <p className="mb-4">
-                4.4. Prin excepție, în situația întârzierii la plata chiriei cu mai mult de 30 de zile, locațiunea încetează în termen de {formData.latePaymentTermination} de zile de la scadența neonorată.
+                4.4. Prin excepție, în situația întârzierii la plata chiriei cu mai mult de 30 de zile, locațiunea încetează în termen 
+                de {formData.latePaymentTermination} de zile de la scadența neonorată.
               </p>
               <p className="mb-4">
                 4.5. În ceea ce privește obligațiile de plată stabilite prin prezentul contract, părțile convin că se află de drept în întârziere.
@@ -647,48 +660,69 @@ export default function GenerateContract() {
                 5.1. Proprietarul se obligă să pună la dispoziția Chiriașului apartamentul în scopul utilizării acestuia ca locuință.
               </p>
               <p className="mb-4">
-                5.2. Proprietarul este răspunzător și își asumă efectuarea oricăror reparații majore, care țin de structura de rezistență a apartamentului sau cele care devin necesare în vederea utilizării apartamentului în conformitate cu destinația sa.
+                5.2. Proprietarul este răspunzător și își asumă efectuarea oricăror reparații majore, care țin de structura de rezistență 
+                a apartamentului sau cele care devin necesare în vederea utilizării apartamentului în conformitate cu destinația sa.
               </p>
               <p className="mb-4">
-                5.3. Proprietarul va informa Chiriașul și va transmite acestuia orice facturi emise de furnizorii de utilități, cu excepția celor care sunt comunicate la adresa poștală a apartamentului.
+                5.3. Proprietarul va informa Chiriașul și va transmite acestuia orice facturi emise de furnizorii de utilități, 
+                cu excepția celor care sunt comunicate la adresa poștală a apartamentului.
               </p>
               <p className="mb-4">
-                5.4. Proprietarul va achita toate cheltuielile aferente întreținerii și utilităților pentru perioada anterioară predării apartamentului.
+                5.4. Proprietarul va achita toate cheltuielile aferente întreținerii și utilităților pentru perioada anterioară 
+                predării apartamentului.
               </p>
 
               <h2 className="text-xl font-bold mb-4">6. OBLIGAȚIILE CHIRIAȘULUI</h2>
               <p className="mb-4">
-                6.1. Chiriașul este obligat să folosească apartamentul cu prudență și diligență, să se îngrijească de acesta și să se asigure că utilizează echipamentele și electrocasnicele care se regăsesc în apartament în conformitate cu manualul și instrucțiunile de utilizare puse la dispoziție de Proprietar.
+                6.1. Chiriașul este obligat să folosească apartamentul cu prudență și diligență, să se îngrijească de acesta și să se 
+                asigure că utilizează echipamentele și electrocasnicele care se regăsesc în apartament în conformitate cu manualul și 
+                instrucțiunile de utilizare puse la dispoziție de Proprietar.
               </p>
               <p className="mb-4">
-                6.2. Chiriașul este răspunzător și își asumă pe deplin efectuarea oricăror reparații care țin de întreținerea curentă a apartamentului și a bunurilor din acesta. Pentru claritate, reparații ce țin de întreținerea curentă sunt, cu titlu exemplificativ: reparații necesare ca urmare a uzurii normale a lucrurilor (reparații minore de tâmplărie, reparația sau înlocuirea unor elemente precum prize, întrerupătoare, robineți, etc.).
+                6.2. Chiriașul este răspunzător și își asumă pe deplin efectuarea oricăror reparații care țin de întreținerea curentă 
+                a apartamentului și a bunurilor din acesta. Pentru claritate, reparații ce țin de întreținerea curentă sunt, cu titlu 
+                exemplificativ: reparații necesare ca urmare a uzurii normale a lucrurilor (reparații minore de tâmplărie, reparația 
+                sau înlocuirea unor elemente precum prize, întrerupătoare, robineți, etc.).
               </p>
               <p className="mb-4">
-                6.3. Orice reparații ce cad în sarcina Chiriașului se vor realiza doar cu instalatori/electricieni autorizați potrivit legii sau în cadrul unui service autorizat, după caz, pe bază de contract de prestări servicii și garanție pentru lucrările astfel efectuate.
+                6.3. Orice reparații ce cad în sarcina Chiriașului se vor realiza doar cu instalatori/electricieni autorizați potrivit 
+                legii sau în cadrul unui service autorizat, după caz, pe bază de contract de prestări servicii și garanție pentru 
+                lucrările astfel efectuate.
               </p>
               <p className="mb-4">
-                6.4. Chiriașul va notifica cu privire la orice defecțiuni sau reparații care sunt necesare și care cad în sarcina Proprietarului în cel mai scurt timp posibil, prin e-mail, astfel încât acestea să poată fi realizate în timp util. În ipoteza neîndeplinirii obligației de informare, reparațiile vor cădea în sarcina Chiriașului.
+                6.4. Chiriașul va notifica cu privire la orice defecțiuni sau reparații care sunt necesare și care cad în sarcina 
+                Proprietarului în cel mai scurt timp posibil, prin e-mail, astfel încât acestea să poată fi realizate în timp util. 
+                În ipoteza neîndeplinirii obligației de informare, reparațiile vor cădea în sarcina Chiriașului.
               </p>
               <p className="mb-4">
                 6.5. Chiriașul nu va face modificări apartamentului închiriat fără acordul scris și prealabil al Proprietarului.
               </p>
               <p className="mb-4">
-                6.6. Chiriașul își asumă plata tuturor facturilor de utilități, precum și efectuarea tuturor cheltuielilor ce țin de utilizarea apartamentului. În ipoteza neîndeplinirii la timp a obligațiilor de plată, Chiriașul este răspunzător și își asumă integral plata penalităților de întârziere și a eventualelor cheltuieli de recuperare a debitelor restante efectuate de furnizori, inclusiv cheltuieli de judecată, după caz.
+                6.6. Chiriașul își asumă plata tuturor facturilor de utilități, precum și efectuarea tuturor cheltuielilor ce țin de 
+                utilizarea apartamentului. În ipoteza neîndeplinirii la timp a obligațiilor de plată, Chiriașul este răspunzător și își 
+                asumă integral plata penalităților de întârziere și a eventualelor cheltuieli de recuperare a debitelor restante 
+                efectuate de furnizori, inclusiv cheltuieli de judecată, după caz.
               </p>
               <p className="mb-4">
-                6.7. Chiriașul va permite Proprietarului să inspecteze apartamentul închiriat, la solicitarea acestuia din urmă, la o dată și oră stabilite de comun acord, în avans. Părțile convin că lipsa repetată a disponibilității Chiriașului pentru îndeplinirea acestei obligații poate constitui motiv pentru rezilierea contractului.
+                6.7. Chiriașul va permite Proprietarului să inspecteze apartamentul închiriat, la solicitarea acestuia din urmă, 
+                la o dată și oră stabilite de comun acord, în avans. Părțile convin că lipsa repetată a disponibilității Chiriașului 
+                pentru îndeplinirea acestei obligații poate constitui motiv pentru rezilierea contractului.
               </p>
               <p className="mb-4">
-                6.8. Chiriașul nu are dreptul de schimba destinația apartamentului sau de a ceda folosința apartamentului, total sau parțial, cu titlu oneros sau gratuit, fără acordul prealabil scris al proprietarului.
+                6.8. Chiriașul nu are dreptul de schimba destinația apartamentului sau de a ceda folosința apartamentului, total sau 
+                parțial, cu titlu oneros sau gratuit, fără acordul prealabil scris al proprietarului.
               </p>
               <p className="mb-4">
-                6.9. Chiriașul are obligația ca odată cu încetarea contratului, să înceteze orice contracte de prestări servicii încheiate în numele său care presupun prestarea serviciilor la adresa apartamentului închiriat.
+                6.9. Chiriașul are obligația ca odată cu încetarea contratului, să înceteze orice contracte de prestări servicii 
+                încheiate în numele său care presupun prestarea serviciilor la adresa apartamentului închiriat.
               </p>
               <p className="mb-4">
-                6.10. Chiriasul nu are voie sa introduca in locatie animale, animale de companie sau orice fel de vietuitoare fara acordul prealabil in scris al proprietarului.
+                6.10. Chiriasul nu are voie sa introduca in locatie animale, animale de companie sau orice fel de vietuitoare 
+                fără acordul prealabil in scris al proprietarului.
               </p>
               <p className="mb-4">
-                6.11. Chiriasul trebuie sa mentioneze la momentul semnarii contractului numarul exact de persoane care vor locui in imobil pe perioada inchirierii, acest lucru fiind necesar proprietarului pentru a-l declara la administratie.
+                6.11. Chiriasul trebuie sa mentioneze la momentul semnarii contractului numarul exact de persoane care vor locui 
+                in imobil pe perioada inchirierii, acest lucru fiind necesar proprietarului pentru a-l declara la administratie.
               </p>
               <p className="mb-4">
                 6.12. Chiriasul este de acord sa semneze AXENA 1 care
