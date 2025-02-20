@@ -133,7 +133,7 @@ const Documents = () => {
                 {contracts?.map(contract => <TableRow key={contract.id}>
                     <TableCell>{contract.properties?.name || 'Untitled Property'}</TableCell>
                     <TableCell className="capitalize">{contract.contract_type}</TableCell>
-                    <TableCell>
+                    <TableCell className="bg-zinc-50">
                       <Badge variant="secondary" className={contract.status === 'signed' ? 'bg-green-100 text-green-800' : contract.status === 'draft' ? 'bg-gray-100 text-gray-800' : 'bg-yellow-100 text-yellow-800'}>
                         {contract.status}
                       </Badge>
@@ -158,7 +158,7 @@ const Documents = () => {
   };
   return <div className="flex bg-[#F8F9FC] min-h-screen">
       <DashboardSidebar />
-      <main className="flex-1 p-8 bg-blue-200 hover:bg-blue-100">
+      <main className="flex-1 p-8">
         <div className="max-w-7xl mx-auto space-y-6">
           <NavigationTabs tabs={navigationItems} activeTab={activeTab} onTabChange={id => setActiveTab(id)} />
           
