@@ -6,7 +6,7 @@ import { MessageInput } from "@/components/chat/MessageInput";
 import { useConversation } from "@/hooks/chat/useConversation";
 import { useMessages } from "@/hooks/chat/useMessages";
 import { useAuthState } from "@/hooks/useAuthState";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, MessageSquare } from "lucide-react";
 import { useUserRole } from "@/hooks/use-user-role";
 import { VideoCall } from "@/components/chat/VideoCall";
 import { useTenants } from "@/hooks/useTenants";
@@ -77,18 +77,15 @@ const Chat = () => {
     if (!conversationId) {
       return (
         <div className="flex-1 flex items-center justify-center p-8 text-center bg-[#F1F0FB] dark:bg-slate-900">
-          <div className="max-w-md glass-card p-8 rounded-xl">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <MessageList 
-                messages={[]}
-                currentUserId={currentUserId}
-                messagesEndRef={messagesEndRef}
-                className="w-8 h-8 text-blue-500"
-              />
+          <div className="max-w-md glass-card p-8 rounded-xl bg-white/70 dark:bg-slate-800/50 backdrop-blur-lg border border-gray-100 dark:border-gray-700/30 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] animate-fade-in">
+            <div className="w-16 h-16 bg-blue-100/80 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
+              <MessageSquare className="w-8 h-8 text-blue-500 dark:text-blue-400" />
             </div>
-            <h3 className="text-lg font-semibold mb-2 text-gray-800">Select a Conversation</h3>
-            <p className="text-gray-600">
-              Choose a tenant from the list to start chatting.
+            <h3 className="text-xl font-semibold mb-3 bg-gradient-to-r from-gray-800 to-gray-600 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+              Select a Conversation
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+              Choose a tenant from the list to start chatting and manage your communications efficiently.
             </p>
           </div>
         </div>
