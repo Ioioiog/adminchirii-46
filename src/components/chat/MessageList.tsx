@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
@@ -26,7 +27,7 @@ interface MessageListProps {
 }
 
 export function MessageList({ 
-  messages, 
+  messages = [], // Provide default empty array
   currentUserId, 
   messagesEndRef, 
   typingUsers = [] 
@@ -37,17 +38,23 @@ export function MessageList({
   const { toast } = useToast();
 
   useEffect(() => {
-    // Always show the last 12 messages initially
+    if (!messages || messages.length === 0) {
+      setVisibleMessages([]);
+      return;
+    }
+    // Show the last 12 messages initially
     const lastMessages = messages.slice(-12);
     setVisibleMessages(lastMessages);
   }, [messages]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
   }, [visibleMessages, messagesEndRef]);
 
   useEffect(() => {
-    if (!currentUserId) return;
+    if (!currentUserId || !messages || messages.length === 0) return;
 
     const updateMessageStatus = async () => {
       try {
@@ -144,7 +151,7 @@ export function MessageList({
 
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const element = event.currentTarget;
-    if (element.scrollTop === 0) {
+    if (element.scrollTop === 0 && messages && messages.length > 0) {
       // When we reach the top, load more messages
       const currentFirstMessageIndex = messages.findIndex(
         msg => msg.id === visibleMessages[0]?.id
@@ -159,6 +166,14 @@ export function MessageList({
       }
     }
   };
+
+  if (!messages || messages.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-8 text-center">
+        <div className="text-gray-500">No messages yet</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
