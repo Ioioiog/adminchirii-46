@@ -1,7 +1,6 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2.39.0';
 import { corsHeaders } from '../_shared/cors.ts';
-import * as playwright from 'https://deno.land/x/playwright@0.4.0/mod.ts';
 
 interface ScrapingRequest {
   username: string;
@@ -22,64 +21,81 @@ interface Bill {
 
 async function scrapeEngieRomania(username: string, password: string): Promise<Bill[]> {
   console.log('Starting ENGIE Romania scraping process');
-  
-  // Initialize playwright
-  await playwright.installBrowsers('chromium');
-  const browser = await playwright.createBrowser('chromium', { headless: true });
-  
-  try {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    
-    console.log('Navigating to login page...');
-    await page.goto('https://my.engie.ro/login');
 
-    // Handle cookie consent if present
-    try {
-      await page.click('#cookieConsentBtnRight', { timeout: 5000 });
-      await page.waitForTimeout(1000);
-    } catch (e) {
-      console.log('No cookie consent dialog found or already accepted');
+  try {
+    // First, get the CSRF token and session cookie
+    const loginPageResponse = await fetch('https://my.engie.ro/login', {
+      method: 'GET'
+    });
+
+    const cookies = loginPageResponse.headers.get('set-cookie') || '';
+    const pageText = await loginPageResponse.text();
+    const csrfMatch = pageText.match(/<meta name="_csrf" content="([^"]+)"/);
+    const csrfToken = csrfMatch ? csrfMatch[1] : '';
+
+    if (!csrfToken) {
+      throw new Error('Could not get CSRF token');
     }
 
     // Login
-    console.log('Entering credentials...');
-    await page.fill('#username', username);
-    await page.fill('#password', password);
-    await Promise.all([
-      page.waitForNavigation(),
-      page.click('button[type="submit"]')
-    ]);
-
-    // Navigate to invoices page
-    console.log('Navigating to invoices page...');
-    await page.goto('https://my.engie.ro/facturi/istoric');
-    await page.waitForSelector('table tbody tr');
-
-    // Extract bills
-    console.log('Extracting bill information...');
-    const bills = await page.$$eval('table tbody tr', (rows) => {
-      return rows.map(row => {
-        const cells = Array.from(row.querySelectorAll('td'));
-        const text = (cell: Element) => cell.textContent?.trim() || '';
-        
-        const amountText = text(cells[4]).replace(/[^\d.,]/g, '').replace(',', '.');
-        const amount = parseFloat(amountText);
-        
-        // Parse date from Romanian format to ISO
-        const dateText = text(cells[2]);
-        const [day, month, year] = dateText.split('.');
-        const due_date = `${year}-${month}-${day}`;
-
-        return {
-          amount,
-          due_date,
-          invoice_number: text(cells[0]),
-          type: 'gas',
-          status: text(cells[5]).toLowerCase().includes('platit') ? 'paid' : 'pending'
-        };
-      });
+    console.log('Attempting login...');
+    const loginResponse = await fetch('https://my.engie.ro/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Cookie': cookies,
+        'X-CSRF-TOKEN': csrfToken
+      },
+      body: new URLSearchParams({
+        username,
+        password,
+        '_csrf': csrfToken
+      })
     });
+
+    if (!loginResponse.ok) {
+      throw new Error('Login failed');
+    }
+
+    const sessionCookies = loginResponse.headers.get('set-cookie') || '';
+
+    // Fetch bills
+    console.log('Fetching bills...');
+    const billsResponse = await fetch('https://my.engie.ro/facturi/istoric', {
+      headers: {
+        'Cookie': sessionCookies
+      }
+    });
+
+    const billsHtml = await billsResponse.text();
+    
+    // Parse bills from HTML
+    const bills: Bill[] = [];
+    const rows = billsHtml.match(/<tr[^>]*>.*?<\/tr>/gs) || [];
+
+    for (const row of rows) {
+      const cells = row.match(/<td[^>]*>(.*?)<\/td>/gs) || [];
+      if (cells.length >= 6) {
+        const invoiceNumber = cells[0].replace(/<[^>]+>/g, '').trim();
+        const dateText = cells[2].replace(/<[^>]+>/g, '').trim();
+        const amountText = cells[4].replace(/<[^>]+>/g, '').trim()
+          .replace(/[^\d.,]/g, '')
+          .replace(',', '.');
+        const statusText = cells[5].replace(/<[^>]+>/g, '').trim();
+
+        // Parse date (assuming format: DD.MM.YYYY)
+        const [day, month, year] = dateText.split('.');
+        const dueDate = `${year}-${month}-${day}`;
+
+        bills.push({
+          amount: parseFloat(amountText),
+          due_date: dueDate,
+          invoice_number: invoiceNumber,
+          type: 'gas',
+          status: statusText.toLowerCase().includes('platit') ? 'paid' : 'pending'
+        });
+      }
+    }
 
     console.log(`Found ${bills.length} bills`);
     return bills;
@@ -87,8 +103,6 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
   } catch (error) {
     console.error('Error during scraping:', error);
     throw error;
-  } finally {
-    await browser.close();
   }
 }
 
