@@ -42,39 +42,32 @@ export function Message({
 
   return (
     <div className={cn(
-      "flex mb-4 px-4 animate-fade-in",
+      "flex mb-2 px-4 animate-fade-in group",
       isCurrentUser ? "justify-end" : "justify-start"
     )}>
       <div className={cn(
-        "max-w-[70%] group relative",
+        "max-w-[70%] relative",
         isCurrentUser ? "items-end" : "items-start"
       )}>
         <div className={cn(
-          "rounded-2xl px-4 py-2 shadow-sm transition-all",
+          "rounded-2xl px-4 py-2",
           isCurrentUser 
-            ? "bg-[#DCF8C6] dark:bg-emerald-800 rounded-br-sm" 
-            : "bg-white dark:bg-slate-700 rounded-bl-sm",
-          "hover:shadow-md transition-shadow duration-200"
+            ? "bg-[#DCF8C6] dark:bg-emerald-800" 
+            : "bg-white dark:bg-slate-700",
+          "shadow-sm hover:shadow-md transition-shadow duration-200"
         )}>
-          <div className="flex justify-between items-center mb-1">
-            <p className={cn(
-              "text-xs font-medium",
-              isCurrentUser 
-                ? "text-emerald-800 dark:text-emerald-200" 
-                : "text-blue-600 dark:text-blue-200"
-            )}>
+          {!isCurrentUser && (
+            <div className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-1">
               {senderName}
-            </p>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 ml-2">
-              {messageTime}
-            </span>
-          </div>
+            </div>
+          )}
+          
           {isEditing ? (
             <div className="flex gap-2">
               <Input
                 value={editedContent}
                 onChange={(e) => onEditChange(e.target.value)}
-                className="flex-1 h-8 text-sm bg-white/90 dark:bg-slate-900/90"
+                className="flex-1 h-8 text-sm bg-white/90"
               />
               <Button
                 size="sm"
@@ -94,11 +87,17 @@ export function Message({
               </Button>
             </div>
           ) : (
-            <p className="break-words whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-200">
-              {content}
-            </p>
+            <>
+              <p className="text-gray-800 dark:text-gray-200 text-sm whitespace-pre-wrap break-words">
+                {content}
+              </p>
+              <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 flex justify-end items-center gap-1">
+                {messageTime}
+              </div>
+            </>
           )}
         </div>
+        
         {isCurrentUser && !isEditing && (
           <MessageActions
             status={status}

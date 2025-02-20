@@ -46,7 +46,7 @@ const Chat = () => {
   const renderContent = () => {
     if (isConversationLoading) {
       return (
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center bg-gray-50">
           <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
         </div>
       );
@@ -54,10 +54,13 @@ const Chat = () => {
 
     if (userRole === "landlord" && !selectedTenantId) {
       return (
-        <div className="flex-1 flex items-center justify-center p-8 text-center bg-gradient-to-br from-slate-50/50 to-slate-100/50 dark:from-slate-900/50 dark:to-slate-800/50 backdrop-blur-sm">
-          <div className="max-w-md">
-            <h3 className="text-lg font-semibold mb-2">Select a Tenant</h3>
-            <p className="text-muted-foreground">
+        <div className="flex-1 flex items-center justify-center p-8 text-center bg-[#F1F0FB] dark:bg-slate-900">
+          <div className="max-w-md glass-card p-8 rounded-xl">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <MessageList className="w-8 h-8 text-blue-500" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2 text-gray-800">Select a Tenant</h3>
+            <p className="text-gray-600">
               Choose a tenant from the dropdown above to start a conversation.
             </p>
           </div>
@@ -67,10 +70,13 @@ const Chat = () => {
 
     if (!conversationId) {
       return (
-        <div className="flex-1 flex items-center justify-center p-8 text-center bg-gradient-to-br from-slate-50/50 to-slate-100/50 dark:from-slate-900/50 dark:to-slate-800/50 backdrop-blur-sm">
-          <div className="max-w-md">
-            <h3 className="text-lg font-semibold mb-2">No Conversation Found</h3>
-            <p className="text-muted-foreground">
+        <div className="flex-1 flex items-center justify-center p-8 text-center bg-[#F1F0FB] dark:bg-slate-900">
+          <div className="max-w-md glass-card p-8 rounded-xl">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <MessageList className="w-8 h-8 text-red-500" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2 text-gray-800">No Conversation Found</h3>
+            <p className="text-gray-600">
               {userRole === "landlord" 
                 ? "There seems to be an issue with the conversation. Please try selecting a different tenant."
                 : "There seems to be an issue with your conversation. Please contact support if this persists."}
@@ -100,14 +106,15 @@ const Chat = () => {
     <div className="flex h-screen bg-[#F1F0FB] dark:bg-slate-900">
       <DashboardSidebar />
       <div className="flex-1 flex flex-col min-h-0">
-        <div className="container mx-auto px-4 py-6 flex-1 flex">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg flex-1 flex flex-col overflow-hidden border border-slate-200 dark:border-slate-700">
+        <div className="flex-1 flex">
+          {/* Main Chat Container */}
+          <div className="flex-1 flex flex-col overflow-hidden bg-white rounded-lg shadow-lg m-4">
             <ChatHeader 
               onTenantSelect={handleTenantSelect}
               selectedTenantId={selectedTenantId}
               onVideoCall={handleStartVideoCall}
             />
-            <div className="flex-1 flex flex-col min-h-0 bg-[url('/chat-background.png')] bg-repeat">
+            <div className="flex-1 flex flex-col min-h-0 bg-[#F1F0FB] bg-[url('/chat-background.png')] bg-repeat">
               {renderContent()}
             </div>
           </div>
