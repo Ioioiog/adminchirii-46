@@ -144,16 +144,19 @@ export function useScraping(providers: UtilityProvider[]) {
       const credentials = credentialsData as unknown as Credentials;
       console.log('Starting scraping for provider:', provider.provider_name);
 
-      const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke<ScrapingResponse>('scrape-utility-invoices', {
-        body: {
-          username: credentials.username,
-          password: credentials.password,
-          utilityId: providerId,
-          provider: provider.provider_name,
-          type: provider.utility_type,
-          location: provider.location_name
+      const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke<ScrapingResponse>(
+        'scrape-utility-invoices',
+        {
+          body: JSON.stringify({
+            username: credentials.username,
+            password: credentials.password,
+            utilityId: providerId,
+            provider: provider.provider_name,
+            type: provider.utility_type,
+            location: provider.location_name
+          })
         }
-      });
+      );
 
       if (scrapeError) {
         console.error('Scraping error:', scrapeError);
@@ -193,7 +196,7 @@ export function useScraping(providers: UtilityProvider[]) {
         [providerId]: {
           status: 'failed',
           last_run_at: new Date().toISOString(),
-          error_message: error.message
+          error_message: error instanceof Error ? error.message : 'An unexpected error occurred'
         }
       }));
 
