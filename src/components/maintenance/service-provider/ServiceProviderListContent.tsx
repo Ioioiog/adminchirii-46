@@ -1,7 +1,17 @@
+
 import React from "react";
 import { Card } from "@/components/ui/card";
-import { Building2 } from "lucide-react";
-import { ServiceProviderCard } from "./ServiceProviderCard";
+import { Building2, Star, Heart, Phone, Mail, Globe } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 interface ServiceProviderService {
   name: string;
@@ -45,20 +55,16 @@ export function ServiceProviderListContent({
 }: ServiceProviderListContentProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {[1, 2].map((i) => (
-          <Card key={i} className="p-6">
-            <div className="animate-pulse space-y-4">
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              <div className="space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-full"></div>
-                <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+      <Card className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          <div className="space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-full"></div>
+            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+          </div>
+        </div>
+      </Card>
     );
   }
 
@@ -78,17 +84,148 @@ export function ServiceProviderListContent({
     );
   }
 
+  const getProviderName = (provider: ServiceProvider) => {
+    return provider.business_name || 
+      `${provider.profiles[0]?.first_name || ''} ${provider.profiles[0]?.last_name || ''}`.trim() ||
+      'Unknown Provider';
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {providers.map((provider) => (
-        <ServiceProviderCard
-          key={provider.id}
-          provider={provider}
-          onPreferredToggle={onPreferredToggle}
-          onEdit={onEdit}
-          userRole={userRole}
-        />
-      ))}
+    <div className="rounded-md border bg-white">
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-muted/50">
+            <TableHead>Provider Name</TableHead>
+            <TableHead>Services</TableHead>
+            <TableHead>Rating</TableHead>
+            <TableHead>Contact</TableHead>
+            <TableHead>Service Area</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {providers.map((provider) => (
+            <TableRow key={provider.id} className="hover:bg-muted/50">
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  {provider.isPreferred && (
+                    <Badge variant="default" className="bg-blue-100 text-blue-800">
+                      Preferred
+                    </Badge>
+                  )}
+                  <span className="font-medium">{getProviderName(provider)}</span>
+                </div>
+                {provider.description && (
+                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                    {provider.description}
+                  </p>
+                )}
+              </TableCell>
+              
+              <TableCell>
+                <div className="space-y-1">
+                  {provider.services?.map((service, index) => (
+                    <Badge 
+                      key={index}
+                      variant="outline" 
+                      className="mr-1"
+                    >
+                      {service.name}
+                    </Badge>
+                  ))}
+                </div>
+              </TableCell>
+
+              <TableCell>
+                <div className="flex items-center gap-1">
+                  <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                  <span>{provider.rating || 'N/A'}</span>
+                  {provider.review_count && provider.review_count > 0 && (
+                    <span className="text-sm text-muted-foreground">
+                      ({provider.review_count} reviews)
+                    </span>
+                  )}
+                </div>
+              </TableCell>
+
+              <TableCell>
+                <div className="space-y-1">
+                  {provider.contact_phone && (
+                    <div className="flex items-center gap-1 text-sm">
+                      <Phone className="h-3 w-3" />
+                      <span>{provider.contact_phone}</span>
+                    </div>
+                  )}
+                  {provider.contact_email && (
+                    <div className="flex items-center gap-1 text-sm">
+                      <Mail className="h-3 w-3" />
+                      <span>{provider.contact_email}</span>
+                    </div>
+                  )}
+                  {provider.website && (
+                    <div className="flex items-center gap-1 text-sm">
+                      <Globe className="h-3 w-3" />
+                      <a 
+                        href={provider.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        Website
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </TableCell>
+
+              <TableCell>
+                <div className="space-y-1">
+                  {provider.service_area?.map((area, index) => (
+                    <Badge 
+                      key={index}
+                      variant="secondary"
+                      className="mr-1"
+                    >
+                      {area}
+                    </Badge>
+                  ))}
+                </div>
+              </TableCell>
+
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-2">
+                  {userRole === "landlord" && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onPreferredToggle(provider)}
+                      >
+                        <Heart 
+                          className={cn(
+                            "h-4 w-4 mr-1",
+                            provider.isPreferred && "fill-red-500 text-red-500"
+                          )}
+                        />
+                        {provider.isPreferred ? 'Remove Preferred' : 'Mark Preferred'}
+                      </Button>
+                      {onEdit && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onEdit(provider)}
+                        >
+                          Edit
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }
