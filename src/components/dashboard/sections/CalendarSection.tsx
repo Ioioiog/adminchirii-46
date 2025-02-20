@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -154,17 +155,21 @@ export function CalendarSection() {
   const filteredEvents = React.useMemo(() => {
     if (!selectedDate || !events.length) return [];
 
-    return viewMode === 'day'
-      ? events.filter(event => isSameDay(event.date, selectedDate))
-      : events.filter(event => isSameMonth(event.date, selectedDate));
+    return events.filter(event => 
+      viewMode === 'day' 
+        ? isSameDay(event.date, selectedDate)
+        : isSameMonth(event.date, selectedDate)
+    );
   }, [selectedDate, events, viewMode]);
 
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return;
 
+    // If selecting the same date as currently selected, switch to day view
     if (isSameDay(date, selectedDate)) {
       setViewMode('day');
     } else {
+      // If selecting a different date, stay in month view
       setViewMode('month');
     }
     
