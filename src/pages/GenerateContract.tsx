@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,12 +13,71 @@ interface Asset {
   condition: string;
 }
 
+interface FormData {
+  contractNumber: string;
+  contractDate: string;
+  ownerName: string;
+  ownerReg: string;
+  ownerFiscal: string;
+  ownerAddress: string;
+  ownerBank: string;
+  ownerBankName: string;
+  ownerEmail: string;
+  ownerPhone: string;
+  tenantName: string;
+  tenantReg: string;
+  tenantFiscal: string;
+  tenantAddress: string;
+  tenantBank: string;
+  tenantBankName: string;
+  tenantEmail: string;
+  tenantPhone: string;
+  propertyAddress: string;
+  rentAmount: string;
+  vatIncluded: string;
+  contractDuration: string;
+  paymentDay: string;
+}
+
 export default function GenerateContract() {
   const [assets, setAssets] = useState<Asset[]>([{
     name: '',
     value: '',
     condition: ''
   }]);
+
+  const [formData, setFormData] = useState<FormData>({
+    contractNumber: '1/26.01.2025',
+    contractDate: '2025-01-26',
+    ownerName: 'Various',
+    ownerReg: 'J40/21592/2022',
+    ownerFiscal: '32586251',
+    ownerAddress: 'Șoseaua Fabrica de Glucoză, 6-8 Bloc 6b Ap 109 Et 10',
+    ownerBank: 'RO03BREL0002002669730100',
+    ownerBankName: 'LIBRA BANK S.A.',
+    ownerEmail: 'mihaigruia@me.com',
+    ownerPhone: '0744778792',
+    tenantName: 'NOT FOR THE FAKE S.R.L.',
+    tenantReg: 'J12/592/17.02.2020',
+    tenantFiscal: 'RO43247471',
+    tenantAddress: 'Strada Dorobantilor nr 99 sc 9b bl 1 et 7 ap 38',
+    tenantBank: 'RO78BTRLRONCRT0541567101',
+    tenantBankName: 'Banca Transilvania',
+    tenantEmail: 'culda.catalinam@gmail.com',
+    tenantPhone: '0748910682',
+    propertyAddress: 'București, Fabrica de Glucoza, nr 6-8, bloc 4b, etaj 5, ap 26, sector 2',
+    rentAmount: '1100',
+    vatIncluded: 'nu',
+    contractDuration: '12',
+    paymentDay: '2'
+  });
+
+  const handleInputChange = (field: keyof FormData, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
 
   const addAssetRow = () => {
     setAssets([...assets, { name: '', value: '', condition: '' }]);
@@ -34,16 +94,13 @@ export default function GenerateContract() {
     setAssets(newAssets);
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
     <div className="flex bg-[#F8F9FC] min-h-screen">
       <DashboardSidebar />
       <main className="flex-1 p-8">
         <div className="max-w-4xl mx-auto">
-          <div className="edit-form bg-white rounded-lg shadow-sm p-6">
+          {/* Edit Form - Only visible when not printing */}
+          <div className="edit-form bg-white rounded-lg shadow-sm p-6 print:hidden">
             <h1 className="text-3xl font-bold text-center mb-8">CONTRACT DE ÎNCHIRIERE A LOCUINȚEI</h1>
             
             <Card className="mb-8">
@@ -53,11 +110,39 @@ export default function GenerateContract() {
               <CardContent className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="contract-number">Nr. contract:</Label>
-                  <Input type="text" id="contract-number" defaultValue="1/26.01.2025" />
+                  <Input 
+                    type="text" 
+                    id="contract-number" 
+                    value={formData.contractNumber}
+                    onChange={(e) => handleInputChange('contractNumber', e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="contract-date">Data:</Label>
-                  <Input type="date" id="contract-date" defaultValue="2025-01-26" />
+                  <Input 
+                    type="date" 
+                    id="contract-date" 
+                    value={formData.contractDate}
+                    onChange={(e) => handleInputChange('contractDate', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="contract-duration">Durata (luni):</Label>
+                  <Input 
+                    type="number" 
+                    id="contract-duration" 
+                    value={formData.contractDuration}
+                    onChange={(e) => handleInputChange('contractDuration', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="payment-day">Ziua de plată:</Label>
+                  <Input 
+                    type="number" 
+                    id="payment-day" 
+                    value={formData.paymentDay}
+                    onChange={(e) => handleInputChange('paymentDay', e.target.value)}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -69,19 +154,75 @@ export default function GenerateContract() {
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="owner-name">Nume/Denumire:</Label>
-                  <Input type="text" id="owner-name" defaultValue="Various" />
+                  <Input 
+                    type="text" 
+                    id="owner-name" 
+                    value={formData.ownerName}
+                    onChange={(e) => handleInputChange('ownerName', e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="owner-reg">Nr. ordine Reg. com./an:</Label>
-                  <Input type="text" id="owner-reg" defaultValue="J40/21592/2022" />
+                  <Input 
+                    type="text" 
+                    id="owner-reg" 
+                    value={formData.ownerReg}
+                    onChange={(e) => handleInputChange('ownerReg', e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="owner-fiscal">Cod fiscal (C.U.I.):</Label>
-                  <Input type="text" id="owner-fiscal" defaultValue="32586251" />
+                  <Input 
+                    type="text" 
+                    id="owner-fiscal" 
+                    value={formData.ownerFiscal}
+                    onChange={(e) => handleInputChange('ownerFiscal', e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="owner-address">Sediul:</Label>
-                  <Input type="text" id="owner-address" defaultValue="Șoseaua Fabrica de Glucoză, 6-8 Bloc 6b Ap 109 Et 10" />
+                  <Input 
+                    type="text" 
+                    id="owner-address" 
+                    value={formData.ownerAddress}
+                    onChange={(e) => handleInputChange('ownerAddress', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="owner-bank">Cont bancar:</Label>
+                  <Input 
+                    type="text" 
+                    id="owner-bank" 
+                    value={formData.ownerBank}
+                    onChange={(e) => handleInputChange('ownerBank', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="owner-bank-name">Banca:</Label>
+                  <Input 
+                    type="text" 
+                    id="owner-bank-name" 
+                    value={formData.ownerBankName}
+                    onChange={(e) => handleInputChange('ownerBankName', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="owner-email">Email:</Label>
+                  <Input 
+                    type="email" 
+                    id="owner-email" 
+                    value={formData.ownerEmail}
+                    onChange={(e) => handleInputChange('ownerEmail', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="owner-phone">Telefon:</Label>
+                  <Input 
+                    type="tel" 
+                    id="owner-phone" 
+                    value={formData.ownerPhone}
+                    onChange={(e) => handleInputChange('ownerPhone', e.target.value)}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -93,19 +234,75 @@ export default function GenerateContract() {
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="tenant-name">Nume/Denumire:</Label>
-                  <Input type="text" id="tenant-name" defaultValue="NOT FOR THE FAKE S.R.L." />
+                  <Input 
+                    type="text" 
+                    id="tenant-name" 
+                    value={formData.tenantName}
+                    onChange={(e) => handleInputChange('tenantName', e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="tenant-reg">Nr. ordine Reg. com./an:</Label>
-                  <Input type="text" id="tenant-reg" defaultValue="J12/592/17.02.2020" />
+                  <Input 
+                    type="text" 
+                    id="tenant-reg" 
+                    value={formData.tenantReg}
+                    onChange={(e) => handleInputChange('tenantReg', e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="tenant-fiscal">Cod fiscal (C.U.I.):</Label>
-                  <Input type="text" id="tenant-fiscal" defaultValue="RO43247471" />
+                  <Input 
+                    type="text" 
+                    id="tenant-fiscal" 
+                    value={formData.tenantFiscal}
+                    onChange={(e) => handleInputChange('tenantFiscal', e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="tenant-address">Adresa:</Label>
-                  <Input type="text" id="tenant-address" defaultValue="Strada Dorobantilor nr 99 sc 9b bl 1 et 7 ap 38" />
+                  <Input 
+                    type="text" 
+                    id="tenant-address" 
+                    value={formData.tenantAddress}
+                    onChange={(e) => handleInputChange('tenantAddress', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="tenant-bank">Cont bancar:</Label>
+                  <Input 
+                    type="text" 
+                    id="tenant-bank" 
+                    value={formData.tenantBank}
+                    onChange={(e) => handleInputChange('tenantBank', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="tenant-bank-name">Banca:</Label>
+                  <Input 
+                    type="text" 
+                    id="tenant-bank-name" 
+                    value={formData.tenantBankName}
+                    onChange={(e) => handleInputChange('tenantBankName', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="tenant-email">Email:</Label>
+                  <Input 
+                    type="email" 
+                    id="tenant-email" 
+                    value={formData.tenantEmail}
+                    onChange={(e) => handleInputChange('tenantEmail', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="tenant-phone">Telefon:</Label>
+                  <Input 
+                    type="tel" 
+                    id="tenant-phone" 
+                    value={formData.tenantPhone}
+                    onChange={(e) => handleInputChange('tenantPhone', e.target.value)}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -120,16 +317,25 @@ export default function GenerateContract() {
                   <Input 
                     type="text" 
                     id="property-address" 
-                    defaultValue="București, Fabrica de Glucoza, nr 6-8, bloc 4b, etaj 5, ap 26, sector 2" 
+                    value={formData.propertyAddress}
+                    onChange={(e) => handleInputChange('propertyAddress', e.target.value)}
                   />
                 </div>
                 <div>
                   <Label htmlFor="rent-amount">Chirie lunară (EUR):</Label>
-                  <Input type="number" id="rent-amount" defaultValue="1100" />
+                  <Input 
+                    type="number" 
+                    id="rent-amount" 
+                    value={formData.rentAmount}
+                    onChange={(e) => handleInputChange('rentAmount', e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="vat-included">TVA inclus:</Label>
-                  <Select defaultValue="nu">
+                  <Select 
+                    value={formData.vatIncluded}
+                    onValueChange={(value) => handleInputChange('vatIncluded', value)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select VAT option" />
                     </SelectTrigger>
@@ -201,46 +407,89 @@ export default function GenerateContract() {
               </CardContent>
             </Card>
 
-            <div className="grid grid-cols-2 gap-8 mb-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle>PROPRIETAR</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="owner-signature-date">Data:</Label>
-                    <Input type="date" id="owner-signature-date" defaultValue="2025-01-26" />
-                  </div>
-                  <div>
-                    <Label htmlFor="owner-signature-name">Nume în clar:</Label>
-                    <Input type="text" id="owner-signature-name" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>CHIRIAȘ</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="tenant-signature-date">Data:</Label>
-                    <Input type="date" id="tenant-signature-date" defaultValue="2025-01-26" />
-                  </div>
-                  <div>
-                    <Label htmlFor="tenant-signature-name">Nume în clar:</Label>
-                    <Input type="text" id="tenant-signature-name" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
             <Button 
-              onClick={handlePrint}
+              onClick={() => window.print()}
               className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg"
             >
               Printează Contractul
             </Button>
+          </div>
+
+          {/* Printable Contract - Only visible when printing */}
+          <div className="hidden print:block">
+            <h1 className="text-3xl font-bold text-center mb-8">CONTRACT DE ÎNCHIRIERE A LOCUINȚEI</h1>
+            <p className="mb-4">Nr. {formData.contractNumber}</p>
+            
+            <h2 className="text-xl font-bold mb-4">I. PĂRȚILE CONTRACTANTE</h2>
+            
+            <p className="mb-4">
+              {formData.ownerName}, cu sediul în {formData.ownerAddress}, înregistrată la Registrul Comerțului sub nr. {formData.ownerReg}, 
+              având codul fiscal {formData.ownerFiscal}, cont bancar {formData.ownerBank} deschis la {formData.ownerBankName}, 
+              reprezentată prin {formData.ownerEmail}, telefon {formData.ownerPhone}, în calitate de PROPRIETAR
+            </p>
+            
+            <p className="mb-4">
+              și
+            </p>
+            
+            <p className="mb-8">
+              {formData.tenantName}, cu sediul în {formData.tenantAddress}, înregistrată la Registrul Comerțului sub nr. {formData.tenantReg}, 
+              având codul fiscal {formData.tenantFiscal}, cont bancar {formData.tenantBank} deschis la {formData.tenantBankName}, 
+              reprezentată prin {formData.tenantEmail}, telefon {formData.tenantPhone}, în calitate de CHIRIAȘ
+            </p>
+
+            <h2 className="text-xl font-bold mb-4">II. OBIECTUL CONTRACTULUI</h2>
+            <p className="mb-4">
+              Proprietarul închiriază, iar chiriașul ia în chirie imobilul situat în {formData.propertyAddress}, 
+              în schimbul unei chirii lunare de {formData.rentAmount} EUR {formData.vatIncluded === 'da' ? '(TVA inclus)' : '(+ TVA)'}.
+            </p>
+
+            <h2 className="text-xl font-bold mb-4">III. DURATA CONTRACTULUI</h2>
+            <p className="mb-4">
+              Durata contractului este de {formData.contractDuration} luni, începând cu data de {formData.contractDate}.
+            </p>
+
+            <h2 className="text-xl font-bold mb-4">IV. PLATA CHIRIEI</h2>
+            <p className="mb-4">
+              Chiria se va plăti lunar, până în ziua {formData.paymentDay} a fiecărei luni, pentru luna în curs.
+            </p>
+
+            {assets.length > 0 && (
+              <>
+                <h2 className="text-xl font-bold mb-4">V. INVENTARUL BUNURILOR</h2>
+                <table className="w-full mb-8">
+                  <thead>
+                    <tr>
+                      <th className="border p-2 text-left">Denumire bun</th>
+                      <th className="border p-2 text-left">Valoare (lei)</th>
+                      <th className="border p-2 text-left">Stare</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {assets.map((asset, index) => (
+                      <tr key={index}>
+                        <td className="border p-2">{asset.name}</td>
+                        <td className="border p-2">{asset.value}</td>
+                        <td className="border p-2">{asset.condition}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+
+            <div className="grid grid-cols-2 gap-8 mt-16">
+              <div>
+                <p className="font-bold mb-2">PROPRIETAR</p>
+                <p className="mb-1">{formData.ownerName}</p>
+                <p>Data: {formData.contractDate}</p>
+              </div>
+              <div>
+                <p className="font-bold mb-2">CHIRIAȘ</p>
+                <p className="mb-1">{formData.tenantName}</p>
+                <p>Data: {formData.contractDate}</p>
+              </div>
+            </div>
           </div>
         </div>
       </main>
