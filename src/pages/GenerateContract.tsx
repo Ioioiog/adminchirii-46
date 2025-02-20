@@ -1,4 +1,3 @@
-<lov-code>
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -140,10 +139,6 @@ export default function GenerateContract() {
     const newAssets = [...assets];
     newAssets[index][field] = value;
     setAssets(newAssets);
-  };
-
-  const handlePrint = () => {
-    window.print();
   };
 
   return (
@@ -699,4 +694,24 @@ export default function GenerateContract() {
                 6.12. Chiriasul este de acord sa semneze AXENA 1 care
               </p>
 
-              <div className="grid grid
+              <div className="grid grid-cols-2 gap-8 mt-16 print:break-before-page">
+                <div>
+                  <p className="font-bold mb-2">PROPRIETAR,</p>
+                  <p className="mb-2">Data: {formData.ownerSignatureDate}</p>
+                  <p className="mb-2">Nume în clar și semnătura:</p>
+                  <p>{formData.ownerSignatureName || "___________________________"}</p>
+                </div>
+                <div>
+                  <p className="font-bold mb-2">CHIRIAȘ,</p>
+                  <p className="mb-2">Data: {formData.tenantSignatureDate}</p>
+                  <p className="mb-2">Nume în clar și semnătura:</p>
+                  <p>{formData.tenantSignatureName || "___________________________"}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
