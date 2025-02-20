@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Home, User, DollarSign, MapPin, Calendar, Edit2, Save, X } from "lucide-react";
@@ -156,6 +155,62 @@ const PropertyDetails = () => {
 
   const status = property.tenancies?.some(t => t.status === 'active') ? 'occupied' : 'vacant';
   const activeTenants = property.tenancies?.filter(t => t.status === 'active') || [];
+
+  const renderTenantCard = (tenancy: any) => {
+    const startDate = tenancy.start_date ? format(new Date(tenancy.start_date), 'PPP') : 'Not specified';
+    const endDate = tenancy.end_date ? format(new Date(tenancy.end_date), 'PPP') : 'Ongoing';
+    
+    return (
+      <div key={tenancy.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div className="p-6">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
+                <User className="h-6 w-6 text-gray-600" />
+              </div>
+              <div>
+                <h3 className="font-medium text-gray-900">
+                  {tenancy.tenant.first_name} {tenancy.tenant.last_name}
+                </h3>
+                <p className="text-sm text-gray-500">{tenancy.tenant.email}</p>
+              </div>
+            </div>
+            <Badge variant="secondary" className="rounded-full">
+              {tenancy.status}
+            </Badge>
+          </div>
+          <div className="mt-6 grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-medium text-gray-500">Start Date</p>
+              <p className="mt-1 text-sm text-gray-900">{startDate}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">End Date</p>
+              <p className="mt-1 text-sm text-gray-900">{endDate}</p>
+            </div>
+          </div>
+          <div className="mt-6 flex gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => navigate(`/tenants/${tenancy.tenant.id}`)}
+            >
+              View Details
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => navigate(`/chat?tenantId=${tenancy.tenant.id}`)}
+            >
+              Message
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="flex bg-[#F8F9FC] min-h-screen">
@@ -338,39 +393,50 @@ const PropertyDetails = () => {
             </div>
           </div>
 
-          <Card className="rounded-xl shadow-soft-xl overflow-hidden">
-            <CardHeader className="bg-gray-50 border-b border-gray-100">
-              <h2 className="text-xl font-semibold text-gray-900">Active Tenants</h2>
-            </CardHeader>
-            <CardContent className="p-6">
-              {activeTenants.length > 0 ? (
-                <div className="divide-y divide-gray-100">
-                  {activeTenants.map((tenancy) => (
-                    <div key={tenancy.id} className="py-4 first:pt-0 last:pb-0">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {tenancy.tenant.first_name} {tenancy.tenant.last_name}
-                          </p>
-                          <p className="text-sm text-gray-600 mt-1">{tenancy.tenant.email}</p>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/tenants/${tenancy.tenant.id}`)}
-                          className="rounded-lg hover:bg-gray-50"
-                        >
-                          View Tenant
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+          <div className="bg-white rounded-xl shadow-soft-xl overflow-hidden">
+            <div className="border-b border-gray-100 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Tenants</h2>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Manage and view details of all tenants associated with this property
+                  </p>
+                </div>
+                <Button
+                  onClick={() => navigate(`/properties/${id}/invite-tenant`)}
+                  size="sm"
+                  className="rounded-lg"
+                >
+                  Invite Tenant
+                </Button>
+              </div>
+            </div>
+            <div className="p-6">
+              {property.tenancies && property.tenancies.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {property.tenancies.map((tenancy: any) => renderTenantCard(tenancy))}
                 </div>
               ) : (
-                <p className="text-gray-600">No active tenants</p>
+                <div className="text-center py-12">
+                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto">
+                    <User className="h-6 w-6 text-gray-400" />
+                  </div>
+                  <h3 className="mt-4 text-sm font-medium text-gray-900">No Tenants</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Get started by inviting tenants to this property
+                  </p>
+                  <Button
+                    onClick={() => navigate(`/properties/${id}/invite-tenant`)}
+                    variant="outline"
+                    size="sm"
+                    className="mt-4"
+                  >
+                    Invite Tenant
+                  </Button>
+                </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </main>
     </div>
