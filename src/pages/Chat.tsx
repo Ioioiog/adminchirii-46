@@ -13,7 +13,7 @@ import { VideoCall } from "@/components/chat/VideoCall";
 import { useTenants } from "@/hooks/useTenants";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const Chat = () => {
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
@@ -138,10 +138,10 @@ const Chat = () => {
                           : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
                       }`}
                     >
-                      <Avatar className="h-10 w-10">
-                        <div className="bg-blue-500 text-white h-full w-full flex items-center justify-center text-sm font-medium uppercase">
+                      <Avatar>
+                        <AvatarFallback className="bg-blue-500 text-white">
                           {tenant.first_name?.[0] || tenant.email?.[0] || "?"}
-                        </div>
+                        </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 text-left">
                         <div className="font-medium text-sm">
