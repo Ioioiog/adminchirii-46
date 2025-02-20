@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import {
   Table,
@@ -10,7 +11,7 @@ import {
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Send } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -248,6 +249,19 @@ export function MeterReadingList({
                       }}
                     >
                       <Trash2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        // Handle sending reading to provider
+                        toast({
+                          title: "Sending reading",
+                          description: "Your meter reading is being sent to the provider.",
+                        });
+                      }}
+                    >
+                      <Send className="h-4 w-4" />
                     </Button>
                   </div>
                 </TableCell>
