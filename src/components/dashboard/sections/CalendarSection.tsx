@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -234,12 +233,13 @@ export function CalendarSection() {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="flex justify-center items-center bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl">
+          <div className="relative p-6 rounded-xl bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.15)] transition-all duration-300">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-transparent to-indigo-50/50 rounded-xl" />
             <Calendar
               mode="single"
               selected={selectedDate || undefined}
               onSelect={handleDateSelect}
-              className="mx-auto"
+              className="relative z-10 mx-auto bg-transparent"
               onMonthChange={setCurrentMonth}
             />
           </div>
@@ -256,20 +256,20 @@ export function CalendarSection() {
               </Badge>
             </div>
             {isLoading ? (
-              <div className="flex items-center justify-center h-[300px] bg-white/50 rounded-xl border border-gray-100">
+              <div className="flex items-center justify-center h-[300px] bg-white/50 backdrop-blur-sm rounded-xl border border-gray-100/50 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
                 <p className="text-sm text-gray-500">Loading events...</p>
               </div>
             ) : filteredEvents.length > 0 ? (
-              <ScrollArea className="h-[300px] rounded-xl border border-gray-100/50 bg-white/50 backdrop-blur-sm">
+              <ScrollArea className="h-[420px] rounded-xl border border-gray-100/50 bg-white/50 backdrop-blur-sm shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
                 <div className="space-y-3 p-4">
                   {filteredEvents.map((event, idx) => (
                     <div 
                       key={idx} 
-                      className="flex items-center justify-between p-4 bg-white rounded-lg cursor-pointer hover:bg-gray-50/80 transition-colors duration-200 border border-gray-100/80 shadow-sm hover:shadow-md"
+                      className="flex items-center justify-between p-4 bg-white rounded-lg cursor-pointer hover:bg-gray-50/80 transition-all duration-200 border border-gray-100/80 shadow-sm hover:shadow-md"
                       onClick={() => handleEventClick(event)}
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="p-2 rounded-lg bg-gray-50">
+                        <div className="p-2 rounded-lg bg-gray-50/80 backdrop-blur-sm">
                           <span className="text-xl" role="img" aria-label={event.type}>
                             {getEventIcon(event.type)}
                           </span>
@@ -289,7 +289,7 @@ export function CalendarSection() {
                 </div>
               </ScrollArea>
             ) : (
-              <div className="flex items-center justify-center h-[300px] bg-white/50 rounded-xl border border-gray-100">
+              <div className="flex items-center justify-center h-[420px] bg-white/50 backdrop-blur-sm rounded-xl border border-gray-100/50 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
                 <p className="text-sm text-gray-500">
                   No events {selectedDate ? 'on this day' : 'this month'}
                 </p>
@@ -300,7 +300,7 @@ export function CalendarSection() {
       </CardContent>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] bg-white/95 backdrop-blur-sm border-none shadow-2xl">
+        <DialogContent className="sm:max-w-[500px] bg-white/95 backdrop-blur-sm border-none shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
           <DialogHeader>
             <div className="flex items-center justify-between pb-2">
               <div className="flex items-center gap-3">
