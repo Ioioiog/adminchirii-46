@@ -11,10 +11,8 @@ import { DocumentDialog } from "@/components/documents/DocumentDialog";
 import { DocumentType } from "@/integrations/supabase/types/document-types";
 import { DocumentFilters } from "@/components/documents/DocumentFilters";
 import { useQuery } from "@tanstack/react-query";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card } from "@/components/ui/card";
 
 const Documents = () => {
   const navigate = useNavigate();
@@ -26,6 +24,7 @@ const Documents = () => {
   const [typeFilter, setTypeFilter] = useState<"all" | DocumentType>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [activeTab, setActiveTab] = useState("documents");
 
   const { data: properties } = useQuery({
     queryKey: ["properties"],
@@ -33,6 +32,26 @@ const Documents = () => {
       const { data, error } = await supabase
         .from("properties")
         .select("id, name");
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: userRole === "landlord"
+  });
+
+  const { data: contracts } = useQuery({
+    queryKey: ["contracts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contracts")
+        .select(`
+          id,
+          contract_type,
+          status,
+          valid_from,
+          valid_until,
+          properties(name)
+        `);
       
       if (error) throw error;
       return data;
@@ -93,40 +112,85 @@ const Documents = () => {
                   <h1 className="text-2xl font-semibold">Documents</h1>
                 </div>
                 <p className="text-gray-500">
-                  Manage and track all your property-related documents.
+                  Manage and track all your property-related documents and contracts.
                 </p>
               </div>
 
               {userRole === "landlord" && (
-                <Button 
-                  className="bg-blue-600 hover:bg-blue-700"
-                  onClick={() => setShowAddModal(true)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Upload Document
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={() => setShowAddModal(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Upload Document
+                  </Button>
+                  {activeTab === "contracts" && (
+                    <Button 
+                      onClick={() => navigate("/generate-contract")}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Contract
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
 
-            <div className="space-y-4">
-              <DocumentFilters
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-                typeFilter={typeFilter}
-                setTypeFilter={setTypeFilter}
-                propertyFilter={propertyFilter}
-                setPropertyFilter={setPropertyFilter}
-                properties={properties}
-              />
-              <DocumentList 
-                userId={userId} 
-                userRole={userRole}
-                propertyFilter={propertyFilter}
-                typeFilter={typeFilter}
-                searchTerm={searchTerm}
-                viewMode={viewMode}
-              />
-            </div>
+            <Tabs defaultValue="documents" className="w-full" onValueChange={value => setActiveTab(value)}>
+              <TabsList className="mb-4">
+                <TabsTrigger value="documents">Documents</TabsTrigger>
+                <TabsTrigger value="contracts">Contracts</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="documents" className="space-y-4">
+                <DocumentFilters
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  typeFilter={typeFilter}
+                  setTypeFilter={setTypeFilter}
+                  propertyFilter={propertyFilter}
+                  setPropertyFilter={setPropertyFilter}
+                  properties={properties}
+                />
+                <DocumentList 
+                  userId={userId} 
+                  userRole={userRole}
+                  propertyFilter={propertyFilter}
+                  typeFilter={typeFilter}
+                  searchTerm={searchTerm}
+                  viewMode={viewMode}
+                />
+              </TabsContent>
+
+              <TabsContent value="contracts">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {contracts?.map((contract) => (
+                    <Card key={contract.id} className="p-4">
+                      <h3 className="font-medium">{contract.properties?.name || 'Untitled Property'}</h3>
+                      <p className="text-sm text-gray-500 capitalize">{contract.contract_type}</p>
+                      <div className="mt-2 flex justify-between items-center">
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          contract.status === 'signed' ? 'bg-green-100 text-green-800' :
+                          contract.status === 'draft' ? 'bg-gray-100 text-gray-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {contract.status}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/contracts/${contract.id}`)}
+                        >
+                          View Details
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </main>
