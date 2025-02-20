@@ -1,3 +1,4 @@
+
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -155,7 +156,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       {utilities.map((utility) => {
         if (!utility?.id) {
           console.error("Invalid utility object:", utility);
@@ -163,121 +164,121 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
         }
 
         return (
-          <Card key={utility.id}>
+          <Card key={utility.id} className="bg-white hover:shadow-md transition-shadow">
             <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="space-y-4">
+                {/* Property Info */}
                 <div>
-                  <div className="text-sm font-medium text-gray-500 mb-1">Property</div>
-                  <div className="font-medium">{utility.property?.name || 'N/A'}</div>
-                  <div className="text-sm text-gray-500">{utility.property?.address || 'N/A'}</div>
+                  <h3 className="font-semibold text-lg text-gray-900">
+                    {utility.property?.name || 'N/A'}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {utility.property?.address || 'N/A'}
+                  </p>
                 </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-500 mb-1">Bill Details</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <span className="text-sm text-gray-500">Type:</span>
-                      <div className="font-medium capitalize">{utility.type}</div>
-                    </div>
-                    <div>
-                      <span className="text-sm text-gray-500">Amount:</span>
-                      <div className="font-medium">
-                        {utility.amount} {utility.currency}
-                      </div>
-                    </div>
+
+                <Separator />
+
+                {/* Utility Details */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-sm font-medium text-gray-500">Type</span>
+                    <p className="font-medium capitalize">{utility.type}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-500">Amount</span>
+                    <p className="font-medium text-blue-600">
+                      {formatAmount(utility.amount, utility.currency)}
+                    </p>
                   </div>
                 </div>
-              </div>
 
-              <Separator className="my-4" />
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div>
-                  <div className="text-sm font-medium text-gray-500 mb-1">Dates</div>
-                  <div className="grid gap-1">
-                    <div>
-                      <span className="text-sm text-gray-500">Due Date:</span>
-                      <div className="font-medium">
-                        {new Date(utility.due_date).toLocaleDateString()}
-                      </div>
-                    </div>
-                    {utility.issued_date && (
-                      <div>
-                        <span className="text-sm text-gray-500">Issued Date:</span>
-                        <div className="font-medium">
-                          {new Date(utility.issued_date).toLocaleDateString()}
-                        </div>
-                      </div>
-                    )}
+                {/* Dates */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-sm font-medium text-gray-500">Due Date</span>
+                    <p className="font-medium">
+                      {new Date(utility.due_date).toLocaleDateString()}
+                    </p>
                   </div>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-500 mb-1">Invoice Details</div>
-                  {utility.invoice_number ? (
-                    <div className="font-medium">Invoice #{utility.invoice_number}</div>
-                  ) : (
-                    <div className="text-sm text-gray-500">No invoice number</div>
+                  {utility.issued_date && (
+                    <div>
+                      <span className="text-sm font-medium text-gray-500">Issued Date</span>
+                      <p className="font-medium">
+                        {new Date(utility.issued_date).toLocaleDateString()}
+                      </p>
+                    </div>
                   )}
                 </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-500 mb-1">Status</div>
+
+                {/* Invoice & Status */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    {utility.invoice_number && (
+                      <span className="text-sm text-gray-500">
+                        Invoice #{utility.invoice_number}
+                      </span>
+                    )}
+                  </div>
                   <Badge
                     variant={utility.status === "paid" ? "default" : "secondary"}
-                    className="mb-2"
+                    className="capitalize"
                   >
                     {utility.status}
                   </Badge>
                 </div>
-              </div>
 
-              <div className="flex items-center justify-between mt-4">
-                <div className="flex items-center gap-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleViewInvoice(utility.id)}
-                    className="flex items-center gap-2"
-                  >
-                    <FileText className="h-4 w-4" />
-                    View Invoice
-                  </Button>
-                  {userRole === "landlord" && (
+                <Separator />
+
+                {/* Actions */}
+                <div className="flex items-center justify-between pt-2">
+                  <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDelete(utility.id)}
-                      className="flex items-center gap-2 text-destructive hover:text-destructive"
+                      onClick={() => handleViewInvoice(utility.id)}
+                      className="flex items-center gap-2"
                     >
-                      <Trash2 className="h-4 w-4" />
-                      Delete
+                      <FileText className="h-4 w-4" />
+                      View Invoice
                     </Button>
+                    {userRole === "landlord" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(utility.id)}
+                        className="flex items-center gap-2 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </Button>
+                    )}
+                  </div>
+                  {userRole === "landlord" ? (
+                    <PaymentActions
+                      paymentId={utility.id}
+                      status={utility.status}
+                      userRole={userRole}
+                      onStatusChange={onStatusUpdate}
+                    />
+                  ) : (
+                    utility.status !== "paid" && (
+                      <PaymentActions
+                        paymentId={utility.id}
+                        status={utility.status}
+                        userRole={userRole}
+                        onStatusChange={onStatusUpdate}
+                      />
+                    )
                   )}
                 </div>
-                {userRole === "landlord" ? (
-                  <div className="flex gap-2">
-                    <PaymentActions
-                      paymentId={utility.id}
-                      status={utility.status}
-                      userRole={userRole}
-                      onStatusChange={onStatusUpdate}
-                    />
-                  </div>
-                ) : (
-                  utility.status !== "paid" && (
-                    <PaymentActions
-                      paymentId={utility.id}
-                      status={utility.status}
-                      userRole={userRole}
-                      onStatusChange={onStatusUpdate}
-                    />
-                  )
-                )}
               </div>
             </CardContent>
           </Card>
         );
       })}
       {utilities.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
+        <div className="col-span-full text-center py-8 text-gray-500">
           No utility bills found.
         </div>
       )}
