@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import {
   Table,
@@ -32,6 +31,24 @@ import { MeterReadingForm } from "./MeterReadingForm";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthState } from "@/hooks/useAuthState";
+
+interface Property {
+  id: string;
+  name: string;
+  address: string;
+  type: 'Apartment' | 'House' | 'Condo' | 'Commercial';
+  monthly_rent: number;
+  created_at: string;
+  updated_at: string;
+  status: 'vacant' | 'occupied' | 'rented';
+  tenant_count: number;
+}
+
+const transformProperty = (property: any): Property => ({
+  ...property,
+  status: property.status || 'vacant' as const,
+  tenant_count: property.tenant_count || 0,
+});
 
 interface MeterReading {
   id: string;
@@ -218,7 +235,7 @@ export function MeterReadingList({
         <TableBody>
           {readings.map((reading) => (
             <TableRow key={reading.id}>
-              <TableCell>{reading.property.name}</TableCell>
+              <TableCell>{transformProperty(reading.property).name}</TableCell>
               <TableCell>
                 <Badge variant="outline">
                   {reading.reading_type.charAt(0).toUpperCase() + reading.reading_type.slice(1)}

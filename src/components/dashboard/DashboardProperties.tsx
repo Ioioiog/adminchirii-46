@@ -1,117 +1,43 @@
-import { Property } from "@/utils/propertyUtils";
-import { PropertyList } from "@/components/properties/PropertyList";
-import { useProperties } from "@/hooks/useProperties";
-import { useState } from "react";
-import { PropertyDialog } from "@/components/properties/PropertyDialog";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PropertyFilters } from "@/components/properties/PropertyFilters";
-import { PropertyListHeader, SortOption } from "@/components/properties/PropertyListHeader";
-import { usePropertyOperations } from "@/hooks/usePropertyOperations";
+import { useProperties } from "@/hooks/useProperties";
+import { Property } from "@/utils/propertyUtils";
 
-interface DashboardPropertiesProps {
-  userRole: "landlord" | "tenant";
-  onEdit?: (property: Property, data: any) => void;
-  onDelete?: (property: Property) => void;
-}
-
-export function DashboardProperties({ 
-  userRole,
-  onDelete 
-}: DashboardPropertiesProps) {
-  const { properties, isLoading } = useProperties({ userRole });
-  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
-  const [showEditDialog, setShowEditDialog] = useState(false);
+export function DashboardProperties() {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [sortBy, setSortBy] = useState<SortOption>("name-asc");
-  const [showOccupied, setShowOccupied] = useState(false);
-  const { handleEdit, isSubmitting } = usePropertyOperations();
+  const [statusFilter, setStatusFilter] = useState("all");
+  const { properties, isLoading } = useProperties({ userRole: "landlord" });
 
-  console.log("DashboardProperties - userRole:", userRole);
-  console.log("DashboardProperties - properties:", properties);
-  console.log("DashboardProperties - isLoading:", isLoading);
-
-  const handleEditClick = (property: Property) => {
-    if (!property?.id || typeof property.id !== 'string') {
-      console.error("Invalid property data:", property);
-      return;
-    }
-    console.log("Setting selected property for edit:", property);
-    setSelectedProperty(property);
-    setShowEditDialog(true);
-  };
-
-  const sortProperties = (props: Property[]) => {
-    return [...props].sort((a, b) => {
-      switch (sortBy) {
-        case "name-asc":
-          return a.name.localeCompare(b.name);
-        case "name-desc":
-          return b.name.localeCompare(a.name);
-        case "rent-asc":
-          return a.monthly_rent - b.monthly_rent;
-        case "rent-desc":
-          return b.monthly_rent - a.monthly_rent;
-        case "date-asc":
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        case "date-desc":
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        default:
-          return 0;
-      }
-    });
-  };
-
-  const filteredProperties = properties?.filter(property => {
+  const filteredProperties = properties?.filter((property) => {
     const matchesSearch = property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         property.address.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter === "all" || property.type === typeFilter;
-    const matchesOccupied = !showOccupied || (property.tenancy !== undefined);
-    return matchesSearch && matchesType && matchesOccupied;
+      property.address.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || property.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
-  const sortedAndFilteredProperties = filteredProperties ? sortProperties(filteredProperties) : [];
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
-    <>
-      <div className="flex justify-between items-center mb-4">
-        <PropertyFilters
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          typeFilter={typeFilter}
-          setTypeFilter={setTypeFilter}
-          showOccupied={showOccupied}
-          setShowOccupied={setShowOccupied}
-          userRole={userRole}
-        />
-        
-        <PropertyListHeader
-          viewMode={viewMode}
-          setViewMode={setViewMode}
-          sortBy={sortBy}
-          setSortBy={setSortBy}
-        />
-      </div>
-
-      <PropertyList
-        properties={sortedAndFilteredProperties}
-        isLoading={isLoading}
-        userRole={userRole}
-        onEdit={handleEditClick}
-        onDelete={onDelete}
-        viewMode={viewMode}
+    <div>
+      <PropertyFilters
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
       />
-
-      {selectedProperty && (
-        <PropertyDialog
-          open={showEditDialog}
-          onOpenChange={setShowEditDialog}
-          onSubmit={(data) => handleEdit(selectedProperty, data)}
-          property={selectedProperty}
-          isSubmitting={isSubmitting}
-          mode="edit"
-        />
-      )}
-    </>
+      <div>
+        {filteredProperties?.map((property) => (
+          <div key={property.id}>
+            <h3>{property.name}</h3>
+            <p>{property.address}</p>
+            <p>Status: {property.status}</p>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
