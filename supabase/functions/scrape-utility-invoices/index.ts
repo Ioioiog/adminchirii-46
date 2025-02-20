@@ -2,6 +2,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.0';
 import { corsHeaders } from '../_shared/cors.ts';
 
+type ScrapingStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
+
 interface ScrapingRequest {
   username: string;
   password: string;
@@ -18,8 +20,6 @@ interface ScrapingResponse {
     amount: number;
     due_date: string;
     invoice_number: string;
-    period_start: string;
-    period_end: string;
     type: string;
     status: string;
   }>;
@@ -33,6 +33,8 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log('Scraping function called with method:', req.method);
+    
     // Parse request body
     if (!req.body) {
       console.error('No request body provided');
@@ -47,29 +49,9 @@ Deno.serve(async (req) => {
         }
       );
     }
-    
-    const request: ScrapingRequest = await req.json();
-    console.log('Received scraping request:', request);
 
-    // Validate request
-    if (!request.username || !request.password || !request.provider || !request.type) {
-      console.error('Missing required fields in request:', {
-        hasUsername: !!request.username,
-        hasPassword: !!request.password,
-        hasProvider: !!request.provider,
-        hasType: !!request.type
-      });
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Missing required fields'
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        }
-      );
-    }
+    const request: ScrapingRequest = await req.json();
+    console.log('Processing request for provider:', request.provider);
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -92,15 +74,12 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Create scraping job record
-    console.log('Creating scraping job for provider:', request.provider);
+    console.log('Creating scraping job');
     const { data: jobData, error: jobError } = await supabase
       .from('scraping_jobs')
       .insert({
         utility_provider_id: request.utilityId,
-        status: 'in_progress',
-        provider: request.provider,
-        type: request.type,
-        location: request.location
+        status: 'pending' as ScrapingStatus,
       })
       .select()
       .single();
@@ -110,7 +89,7 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: false,
-          error: `Failed to create scraping job: ${jobError.message}`
+          error: 'Failed to create scraping job'
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -119,7 +98,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Mock scraping response for now
+    // Update status to in_progress
+    const { error: updateError } = await supabase
+      .from('scraping_jobs')
+      .update({ status: 'in_progress' as ScrapingStatus })
+      .eq('id', jobData.id);
+
+    if (updateError) {
+      console.error('Failed to update job status:', updateError);
+    }
+
+    // Mock successful scraping
     const scrapingResult: ScrapingResponse = {
       success: true,
       jobId: jobData.id,
@@ -127,59 +116,46 @@ Deno.serve(async (req) => {
         amount: 150.00,
         due_date: new Date().toISOString(),
         invoice_number: "INV001",
-        period_start: new Date().toISOString(),
-        period_end: new Date().toISOString(),
         type: request.type,
         status: "pending"
       }]
     };
 
-    // Update job status
-    console.log('Updating job status to completed');
-    const { error: updateError } = await supabase
+    // Update job as completed
+    const { error: completionError } = await supabase
       .from('scraping_jobs')
       .update({
-        status: 'completed',
-        completed_at: new Date().toISOString()
+        status: 'completed' as ScrapingStatus,
+        last_run_at: new Date().toISOString()
       })
       .eq('id', jobData.id);
 
-    if (updateError) {
-      console.error('Failed to update job status:', updateError);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: `Failed to update job status: ${updateError.message}`
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500,
-        }
-      );
+    if (completionError) {
+      console.error('Failed to update job completion status:', completionError);
     }
 
-    // Store bills
+    // Store the mock bill
     if (scrapingResult.bills?.length) {
-      console.log('Storing bills:', scrapingResult.bills);
-      const { error: billsError } = await supabase
+      const { error: billError } = await supabase
         .from('utilities')
         .insert(
           scrapingResult.bills.map(bill => ({
-            utility_provider_id: request.utilityId,
+            property_id: request.utilityId, // Using utilityId as property_id
+            type: request.type,
             amount: bill.amount,
             due_date: bill.due_date,
             invoice_number: bill.invoice_number,
-            type: bill.type,
-            status: bill.status
+            status: bill.status,
+            currency: 'USD' // Default currency
           }))
         );
 
-      if (billsError) {
-        console.error('Failed to store bills:', billsError);
+      if (billError) {
+        console.error('Failed to store utility bills:', billError);
         return new Response(
           JSON.stringify({
             success: false,
-            error: `Failed to store bills: ${billsError.message}`
+            error: 'Failed to store utility bills'
           }),
           {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -189,7 +165,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log('Scraping completed successfully');
+    console.log('Successfully completed scraping job');
     return new Response(
       JSON.stringify(scrapingResult),
       {
@@ -199,8 +175,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Unexpected error in scrape-utility-invoices:', error);
-    
+    console.error('Unexpected error:', error);
     return new Response(
       JSON.stringify({
         success: false,
