@@ -1,8 +1,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2.39.0';
 import { corsHeaders } from '../_shared/cors.ts';
-
-type ScrapingStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
+import { chromium } from "https://deno.land/x/playwright@v1.41.2/mod.ts";
 
 interface ScrapingRequest {
   username: string;
@@ -13,65 +12,94 @@ interface ScrapingRequest {
   location: string;
 }
 
-interface ScrapingResponse {
-  success: boolean;
-  jobId?: string;
-  bills?: Array<{
-    amount: number;
-    due_date: string;
-    invoice_number: string;
-    type: string;
-    status: string;
-  }>;
-  error?: string;
+interface Bill {
+  amount: number;
+  due_date: string;
+  invoice_number: string;
+  type: string;
+  status: string;
 }
 
-// For initial testing, we'll use mock data
-async function mockScrapeEngie() {
-  console.log('Using mock data for testing edge function connectivity');
+async function scrapeEngieRomania(username: string, password: string): Promise<Bill[]> {
+  console.log('Starting ENGIE Romania scraping process');
+  const browser = await chromium.launch({
+    args: ['--no-sandbox']
+  });
   
-  // Simulate some processing time
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  
-  return {
-    success: true,
-    bills: [
-      {
-        amount: 150.50,
-        due_date: '2024-03-15',
-        invoice_number: 'TEST-001',
-        type: 'gas',
-        status: 'pending'
-      },
-      {
-        amount: 180.75,
-        due_date: '2024-02-15',
-        invoice_number: 'TEST-002',
-        type: 'gas',
-        status: 'paid'
-      }
-    ]
-  };
+  try {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    
+    console.log('Navigating to login page...');
+    await page.goto('https://my.engie.ro/login');
+
+    // Handle cookie consent if present
+    try {
+      await page.click('#cookieConsentBtnRight', { timeout: 5000 });
+      await page.waitForTimeout(1000);
+    } catch (e) {
+      console.log('No cookie consent dialog found or already accepted');
+    }
+
+    // Login
+    console.log('Entering credentials...');
+    await page.fill('#username', username);
+    await page.fill('#password', password);
+    await Promise.all([
+      page.waitForNavigation(),
+      page.click('button[type="submit"]')
+    ]);
+
+    // Navigate to invoices page
+    console.log('Navigating to invoices page...');
+    await page.goto('https://my.engie.ro/facturi/istoric');
+    await page.waitForSelector('table tbody tr');
+
+    // Extract bills
+    console.log('Extracting bill information...');
+    const bills = await page.$$eval('table tbody tr', (rows) => {
+      return rows.map(row => {
+        const cells = Array.from(row.querySelectorAll('td'));
+        const text = (cell: Element) => cell.textContent?.trim() || '';
+        
+        const amountText = text(cells[4]).replace(/[^\d.,]/g, '').replace(',', '.');
+        const amount = parseFloat(amountText);
+        
+        // Parse date from Romanian format to ISO
+        const dateText = text(cells[2]);
+        const [day, month, year] = dateText.split('.');
+        const due_date = `${year}-${month}-${day}`;
+
+        return {
+          amount,
+          due_date,
+          invoice_number: text(cells[0]),
+          type: 'gas',
+          status: text(cells[5]).toLowerCase().includes('platit') ? 'paid' : 'pending'
+        };
+      });
+    });
+
+    console.log(`Found ${bills.length} bills`);
+    return bills;
+
+  } catch (error) {
+    console.error('Error during scraping:', error);
+    throw error;
+  } finally {
+    await browser.close();
+  }
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    console.log('Starting scraping process...');
-    
-    // Validate request
-    if (!req.body) {
-      throw new Error('Request body is required');
-    }
-
     const request: ScrapingRequest = await req.json();
-    console.log('Received request for provider:', request.provider);
+    console.log('Processing request for provider:', request.provider);
 
-    // Validate env variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
@@ -81,31 +109,15 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get provider details
-    const { data: providerData, error: providerError } = await supabase
-      .from('utility_provider_credentials')
-      .select('id, property_id')
-      .eq('id', request.utilityId)
-      .single();
-
-    if (providerError || !providerData) {
-      throw new Error('Failed to fetch provider details');
-    }
-
-    if (!providerData.property_id) {
-      throw new Error('No property associated with provider');
-    }
-
     // Create scraping job
     const { data: jobData, error: jobError } = await supabase
       .from('scraping_jobs')
       .insert({
         utility_provider_id: request.utilityId,
-        status: 'pending',
+        status: 'in_progress',
         provider: request.provider,
         type: request.type,
-        location: request.location,
-        last_run_at: new Date().toISOString()
+        location: request.location
       })
       .select()
       .single();
@@ -114,22 +126,21 @@ Deno.serve(async (req) => {
       throw new Error('Failed to create scraping job');
     }
 
-    // Update job to in_progress
-    await supabase
-      .from('scraping_jobs')
-      .update({ status: 'in_progress' })
-      .eq('id', jobData.id);
+    // Perform scraping based on provider
+    let bills: Bill[] = [];
+    if (request.provider.toLowerCase() === 'engie_romania') {
+      bills = await scrapeEngieRomania(request.username, request.password);
+    } else {
+      throw new Error('Unsupported provider');
+    }
 
-    // Use mock data for now
-    const scrapingResult = await mockScrapeEngie();
-
-    if (scrapingResult.bills?.length) {
-      // Insert mock bills
+    // Store bills in database
+    if (bills.length > 0) {
       const { error: billError } = await supabase
         .from('utilities')
         .insert(
-          scrapingResult.bills.map(bill => ({
-            property_id: providerData.property_id,
+          bills.map(bill => ({
+            property_id: request.utilityId,
             utility_provider_id: request.utilityId,
             type: request.type,
             amount: bill.amount,
@@ -145,7 +156,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Mark job as completed
+    // Update job status to completed
     await supabase
       .from('scraping_jobs')
       .update({
@@ -158,7 +169,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         jobId: jobData.id,
-        bills: scrapingResult.bills
+        bills
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
