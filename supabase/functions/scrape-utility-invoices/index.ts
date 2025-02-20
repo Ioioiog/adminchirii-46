@@ -33,7 +33,7 @@ serve(async (req) => {
       .insert({
         utility_provider_id: utilityId,
         status: 'in_progress',
-        provider_name: provider,
+        provider: provider, // Changed from provider_name to provider
         location: location
       })
       .select()
