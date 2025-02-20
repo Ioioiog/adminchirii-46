@@ -174,11 +174,18 @@ const Documents = () => {
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between mb-8">
               <div className="space-y-1">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-600 rounded-lg">
-                    <FileText className="h-6 w-6 text-white" />
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-600 rounded-lg">
+                      <FileText className="h-6 w-6 text-white" />
+                    </div>
+                    <h1 className="text-2xl font-semibold">Documents</h1>
                   </div>
-                  <h1 className="text-2xl font-semibold">Documents</h1>
+                  <NavigationTabs
+                    tabs={navigationItems}
+                    activeTab={activeTab}
+                    onTabChange={(id) => setActiveTab(id)}
+                  />
                 </div>
                 <p className="text-gray-500">
                   Manage and track all your property-related documents and contracts.
@@ -206,12 +213,6 @@ const Documents = () => {
                 </div>
               )}
             </div>
-
-            <NavigationTabs
-              tabs={navigationItems}
-              activeTab={activeTab}
-              onTabChange={(id) => setActiveTab(id)}
-            />
             
             <div className="mt-6">
               {renderSection()}
