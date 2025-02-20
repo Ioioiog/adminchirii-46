@@ -1,6 +1,12 @@
+
 import { createClient } from '@supabase/supabase-js';
-import { corsHeaders } from '../_shared/cors.ts';
 import * as puppeteer from 'puppeteer';
+
+// Define CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 interface ScrapingRequest {
   username: string;
@@ -165,36 +171,43 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
   }
 }
 
+// Entry point for the Edge Function
 Deno.serve(async (req) => {
+  console.log('Received request:', req.method);
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    // Validate request body exists
+    // Basic request validation
     if (!req.body) {
       throw new Error('Request body is required');
     }
 
     const request: ScrapingRequest = await req.json();
-    console.log('Processing request for provider:', request.provider);
+    console.log('Request data:', JSON.stringify(request, null, 2));
 
+    // Validate required fields
     if (!request.username || !request.password || !request.utilityId || !request.provider) {
       throw new Error('Missing required fields in request');
     }
 
-    // Initialize Supabase client with error handling
+    // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing required environment variables');
+      console.error('Missing Supabase environment variables');
+      throw new Error('Server configuration error');
     }
 
+    console.log('Initializing Supabase client...');
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Create scraping job with error handling
+    // Create scraping job
+    console.log('Creating scraping job...');
     const { data: jobData, error: jobError } = await supabase
       .from('scraping_jobs')
       .insert({
@@ -207,15 +220,15 @@ Deno.serve(async (req) => {
       .select()
       .single();
 
-    if (jobError || !jobData) {
+    if (jobError) {
       console.error('Failed to create scraping job:', jobError);
       throw new Error('Failed to create scraping job');
     }
 
     try {
+      // Start scraping process
+      console.log('Starting scraping process...');
       let bills: Bill[] = [];
-      
-      console.log('Starting scraping for provider:', request.provider);
       
       if (request.provider.toLowerCase() === 'engie_romania') {
         bills = await scrapeEngieRomania(request.username, request.password);
@@ -223,9 +236,8 @@ Deno.serve(async (req) => {
         throw new Error('Unsupported provider');
       }
 
-      console.log('Scraping completed. Found bills:', bills.length);
-
       if (bills.length > 0) {
+        console.log('Storing bills in database...');
         const { error: billError } = await supabase
           .from('utilities')
           .insert(
@@ -242,12 +254,13 @@ Deno.serve(async (req) => {
           );
 
         if (billError) {
-          console.error('Failed to store utility bills:', billError);
+          console.error('Failed to store bills:', billError);
           throw new Error(`Failed to store utility bills: ${billError.message}`);
         }
       }
 
-      // Update job status to completed
+      // Update job status
+      console.log('Updating job status to completed...');
       const { error: updateError } = await supabase
         .from('scraping_jobs')
         .update({
@@ -273,7 +286,7 @@ Deno.serve(async (req) => {
       );
 
     } catch (error) {
-      console.error('Scraping error:', error);
+      console.error('Error during scraping process:', error);
       
       // Update job status to failed
       const { error: updateError } = await supabase
