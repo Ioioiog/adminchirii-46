@@ -8,6 +8,7 @@ import { MaintenanceHeader } from "@/components/maintenance/sections/Maintenance
 import { MaintenanceSection } from "@/components/maintenance/dashboard/MaintenanceSection";
 import { ServiceProviderList } from "@/components/maintenance/ServiceProviderList";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -95,86 +96,92 @@ export default function Maintenance() {
   };
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       <DashboardSidebar />
-      <div className="flex-1 overflow-auto">
-        <div className="container mx-auto p-8">
+      <main className="flex-1 p-8 overflow-y-auto">
+        <div className="max-w-7xl mx-auto space-y-8">
           {/* Role-specific header */}
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold mb-2">
-              {userRole === 'tenant' && "My Maintenance Requests"}
-              {userRole === 'landlord' && "Property Maintenance Management"}
-              {userRole === 'service_provider' && "Assigned Maintenance Tasks"}
-            </h1>
-            <p className="text-muted-foreground">
-              {userRole === 'tenant' && "Submit and track your maintenance requests"}
-              {userRole === 'landlord' && "Monitor and manage property maintenance"}
-              {userRole === 'service_provider' && "View and update your assigned maintenance tasks"}
-            </p>
-          </div>
+          <Card className="p-6 bg-white/80 backdrop-blur-sm border shadow-sm">
+            <div>
+              <h1 className="text-2xl font-bold mb-2">
+                {userRole === 'tenant' && "My Maintenance Requests"}
+                {userRole === 'landlord' && "Property Maintenance Management"}
+                {userRole === 'service_provider' && "Assigned Maintenance Tasks"}
+              </h1>
+              <p className="text-muted-foreground">
+                {userRole === 'tenant' && "Submit and track your maintenance requests"}
+                {userRole === 'landlord' && "Monitor and manage property maintenance"}
+                {userRole === 'service_provider' && "View and update your assigned maintenance tasks"}
+              </p>
+            </div>
+          </Card>
 
           {/* Tabs (only for landlord) */}
           {userRole === 'landlord' && (
-            <Tabs defaultValue="dashboard" className="w-full mb-6">
-              <TabsList>
-                <TabsTrigger value="dashboard" className="flex items-center gap-2">
-                  <List className="h-4 w-4" />
-                  Maintenance Dashboard
-                </TabsTrigger>
-                <TabsTrigger value="providers" className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Service Providers
-                </TabsTrigger>
-              </TabsList>
+            <Card className="bg-white/80 backdrop-blur-sm border shadow-sm">
+              <Tabs defaultValue="dashboard" className="w-full">
+                <div className="p-4 border-b">
+                  <TabsList className="w-full">
+                    <TabsTrigger value="dashboard" className="flex items-center gap-2 flex-1">
+                      <List className="h-4 w-4" />
+                      Maintenance Dashboard
+                    </TabsTrigger>
+                    <TabsTrigger value="providers" className="flex items-center gap-2 flex-1">
+                      <Users className="h-4 w-4" />
+                      Service Providers
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
 
-              <TabsContent value="dashboard">
-                {/* Action Bar */}
-                <div className="flex flex-col md:flex-row gap-4 mb-6">
-                  <div className="flex-1 flex gap-4">
-                    <div className="flex-1 relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                      <Input
-                        placeholder="Search requests..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9"
-                      />
+                <TabsContent value="dashboard" className="p-6">
+                  {/* Action Bar */}
+                  <div className="flex flex-col md:flex-row gap-4 mb-6">
+                    <div className="flex-1 flex gap-4">
+                      <div className="flex-1 relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        <Input
+                          placeholder="Search requests..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full pl-9"
+                        />
+                      </div>
+                      <Select value={priority} onValueChange={(value: any) => setPriority(value)}>
+                        <SelectTrigger className="w-[180px]">
+                          <Filter className="h-4 w-4 mr-2" />
+                          <SelectValue placeholder="Filter by priority" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Priorities</SelectItem>
+                          <SelectItem value="high">High Priority</SelectItem>
+                          <SelectItem value="medium">Medium Priority</SelectItem>
+                          <SelectItem value="low">Low Priority</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <Select value={priority} onValueChange={(value: any) => setPriority(value)}>
-                      <SelectTrigger className="w-[180px]">
-                        <Filter className="h-4 w-4 mr-2" />
-                        <SelectValue placeholder="Filter by priority" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Priorities</SelectItem>
-                        <SelectItem value="high">High Priority</SelectItem>
-                        <SelectItem value="medium">Medium Priority</SelectItem>
-                        <SelectItem value="low">Low Priority</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </div>
-                </div>
 
-                {/* Maintenance Requests List */}
-                <div className="grid grid-cols-1 gap-6 max-w-4xl mx-auto">
-                  <MaintenanceSection
-                    title="Maintenance Requests"
-                    description="Manage and monitor all property maintenance requests"
-                    requests={filteredRequests}
-                    onRequestClick={handleRequestClick}
-                  />
-                </div>
-              </TabsContent>
+                  {/* Maintenance Requests List */}
+                  <div className="grid grid-cols-1 gap-6">
+                    <MaintenanceSection
+                      title="Maintenance Requests"
+                      description="Manage and monitor all property maintenance requests"
+                      requests={filteredRequests}
+                      onRequestClick={handleRequestClick}
+                    />
+                  </div>
+                </TabsContent>
 
-              <TabsContent value="providers">
-                <ServiceProviderList />
-              </TabsContent>
-            </Tabs>
+                <TabsContent value="providers" className="p-6">
+                  <ServiceProviderList />
+                </TabsContent>
+              </Tabs>
+            </Card>
           )}
 
           {/* Non-landlord view */}
           {userRole !== 'landlord' && (
-            <>
+            <Card className="p-6 bg-white/80 backdrop-blur-sm border shadow-sm">
               {/* Action Bar */}
               <div className="flex flex-col md:flex-row gap-4 mb-6">
                 {userRole === 'tenant' && (
@@ -210,7 +217,7 @@ export default function Maintenance() {
               </div>
 
               {/* Maintenance Requests List */}
-              <div className="grid grid-cols-1 gap-6 max-w-4xl mx-auto">
+              <div className="grid grid-cols-1 gap-6">
                 <MaintenanceSection
                   title="Maintenance Requests"
                   description={
@@ -222,7 +229,7 @@ export default function Maintenance() {
                   onRequestClick={handleRequestClick}
                 />
               </div>
-            </>
+            </Card>
           )}
 
           {/* Maintenance Request Dialog */}
@@ -232,7 +239,7 @@ export default function Maintenance() {
             requestId={selectedRequestId}
           />
         </div>
-      </div>
+      </main>
     </div>
   );
 }
