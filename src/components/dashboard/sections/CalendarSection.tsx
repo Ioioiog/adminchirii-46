@@ -28,7 +28,7 @@ const getBadgeColor = (type: Event['type']) => {
     case 'payment':
       return 'bg-green-100 text-green-800';
     case 'maintenance':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-gray-100 text-gray-800';
     case 'contract':
       return 'bg-purple-100 text-purple-800';
     case 'tenancy':
@@ -215,8 +215,8 @@ export function CalendarSection() {
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-primary/5 rounded-lg">
-              <CalendarIcon className="h-5 w-5 text-primary" />
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <CalendarIcon className="h-5 w-5 text-gray-600" />
             </div>
             <h3 className="text-lg font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">Calendar</h3>
           </div>
@@ -225,7 +225,7 @@ export function CalendarSection() {
               variant="outline"
               size="sm"
               onClick={clearSelection}
-              className="hover:bg-primary/5 transition-colors"
+              className="hover:bg-gray-50 transition-colors"
             >
               Back to Month View
             </Button>
@@ -254,7 +254,7 @@ export function CalendarSection() {
                   : `Events for ${format(currentMonth, 'MMMM yyyy')}`
                 }
               </h4>
-              <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
+              <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
                 {filteredEvents.length} Events
               </Badge>
             </div>
