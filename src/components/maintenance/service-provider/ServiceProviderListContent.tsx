@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card } from "@/components/ui/card";
-import { Building2, Star, Heart, Phone, Mail, Globe } from "lucide-react";
+import { Building2, Star, Heart, Phone, Mail, Globe, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -37,7 +37,7 @@ interface ServiceProvider {
   }>;
   services?: ServiceProviderService[];
   isPreferred?: boolean;
-  isCustomProvider?: boolean; // Added to distinguish custom providers
+  isCustomProvider?: boolean;
 }
 
 interface ServiceProviderListContentProps {
@@ -93,27 +93,35 @@ export function ServiceProviderListContent({
   };
 
   return (
-    <div className="rounded-md border bg-white">
+    <div className="rounded-md border">
       <Table>
         <TableHeader>
-          <TableRow className="bg-muted/50">
-            <TableHead>Provider Name</TableHead>
-            <TableHead>Services</TableHead>
-            <TableHead>Rating</TableHead>
-            <TableHead>Contact</TableHead>
-            <TableHead>Service Area</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+          <TableRow className="bg-blue-50/50">
+            <TableHead className="font-semibold">Provider</TableHead>
+            <TableHead className="font-semibold">Services</TableHead>
+            <TableHead className="font-semibold">Rating</TableHead>
+            <TableHead className="font-semibold">Contact Information</TableHead>
+            <TableHead className="font-semibold">Service Areas</TableHead>
+            <TableHead className="text-right font-semibold">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {providers.map((provider) => (
-            <TableRow key={provider.id} className="hover:bg-muted/50">
-              <TableCell>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {provider.isPreferred && (
-                    <Badge variant="default" className="bg-blue-100 text-blue-800">
-                      Preferred
-                    </Badge>
+            <TableRow key={provider.id} className="hover:bg-gray-50">
+              <TableCell className="min-w-[200px]">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    {provider.isPreferred && (
+                      <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100/80">
+                        Preferred
+                      </Badge>
+                    )}
+                    <span className="font-medium">{getProviderName(provider)}</span>
+                  </div>
+                  {provider.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {provider.description}
+                    </p>
                   )}
                   {provider.isCustomProvider ? (
                     <Badge variant="outline" className="border-purple-500 text-purple-700">
@@ -124,22 +132,16 @@ export function ServiceProviderListContent({
                       Registered Provider
                     </Badge>
                   )}
-                  <span className="font-medium">{getProviderName(provider)}</span>
                 </div>
-                {provider.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                    {provider.description}
-                  </p>
-                )}
               </TableCell>
               
-              <TableCell>
-                <div className="space-y-1">
+              <TableCell className="min-w-[200px]">
+                <div className="flex flex-wrap gap-1">
                   {provider.services?.map((service, index) => (
                     <Badge 
                       key={index}
-                      variant="outline" 
-                      className="mr-1"
+                      variant="secondary"
+                      className="bg-gray-100 text-gray-700 hover:bg-gray-200"
                     >
                       {service.name}
                     </Badge>
@@ -150,32 +152,32 @@ export function ServiceProviderListContent({
               <TableCell>
                 <div className="flex items-center gap-1">
                   <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                  <span>{provider.rating || 'N/A'}</span>
+                  <span className="font-medium">{provider.rating || 'N/A'}</span>
                   {provider.review_count && provider.review_count > 0 && (
                     <span className="text-sm text-muted-foreground">
-                      ({provider.review_count} reviews)
+                      ({provider.review_count})
                     </span>
                   )}
                 </div>
               </TableCell>
 
-              <TableCell>
-                <div className="space-y-1">
+              <TableCell className="min-w-[200px]">
+                <div className="space-y-1.5">
                   {provider.contact_phone && (
-                    <div className="flex items-center gap-1 text-sm">
-                      <Phone className="h-3 w-3" />
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="h-3.5 w-3.5 text-gray-500" />
                       <span>{provider.contact_phone}</span>
                     </div>
                   )}
                   {provider.contact_email && (
-                    <div className="flex items-center gap-1 text-sm">
-                      <Mail className="h-3 w-3" />
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="h-3.5 w-3.5 text-gray-500" />
                       <span>{provider.contact_email}</span>
                     </div>
                   )}
                   {provider.website && (
-                    <div className="flex items-center gap-1 text-sm">
-                      <Globe className="h-3 w-3" />
+                    <div className="flex items-center gap-2 text-sm">
+                      <Globe className="h-3.5 w-3.5 text-gray-500" />
                       <a 
                         href={provider.website}
                         target="_blank"
@@ -189,16 +191,13 @@ export function ServiceProviderListContent({
                 </div>
               </TableCell>
 
-              <TableCell>
-                <div className="space-y-1">
+              <TableCell className="min-w-[150px]">
+                <div className="flex flex-wrap gap-1">
                   {provider.service_area?.map((area, index) => (
-                    <Badge 
-                      key={index}
-                      variant="secondary"
-                      className="mr-1"
-                    >
-                      {area}
-                    </Badge>
+                    <div key={index} className="flex items-center gap-1 text-sm">
+                      <MapPin className="h-3.5 w-3.5 text-gray-500" />
+                      <span>{area}</span>
+                    </div>
                   ))}
                 </div>
               </TableCell>
@@ -210,6 +209,7 @@ export function ServiceProviderListContent({
                       <Button
                         variant="outline"
                         size="sm"
+                        className="border-blue-200 hover:bg-blue-50"
                         onClick={() => onPreferredToggle(provider)}
                       >
                         <Heart 
@@ -218,7 +218,7 @@ export function ServiceProviderListContent({
                             provider.isPreferred && "fill-red-500 text-red-500"
                           )}
                         />
-                        {provider.isPreferred ? 'Remove Preferred' : 'Mark Preferred'}
+                        {provider.isPreferred ? 'Remove' : 'Preferred'}
                       </Button>
                       {onEdit && provider.isCustomProvider && (
                         <Button
