@@ -1,3 +1,4 @@
+
 interface ScrapingParams {
   username: string;
   password: string;
