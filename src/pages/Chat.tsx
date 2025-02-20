@@ -13,6 +13,7 @@ import { useTenants } from "@/hooks/useTenants";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
 const Chat = () => {
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
@@ -37,6 +38,7 @@ const Chat = () => {
     data: tenants,
     isLoading: isTenantsLoading
   } = useTenants();
+
   const uniqueTenants = tenants?.reduce((acc, current) => {
     const existingTenant = acc.find(item => item.email === current.email);
     if (!existingTenant) {
@@ -50,6 +52,7 @@ const Chat = () => {
     const query = searchQuery.toLowerCase();
     return fullName.includes(query) || email.includes(query);
   });
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newMessage.trim()) {
@@ -57,18 +60,22 @@ const Chat = () => {
       setNewMessage("");
     }
   };
+
   const handleTenantSelect = (tenantId: string) => {
     console.log("Selected tenant:", tenantId);
     setSelectedTenantId(tenantId);
   };
+
   const handleStartVideoCall = () => {
     if (selectedTenantId) {
       setIsVideoCallActive(true);
     }
   };
+
   const handleEndVideoCall = () => {
     setIsVideoCallActive(false);
   };
+
   const renderChatContent = () => {
     if (isConversationLoading) {
       return <div className="flex-1 flex items-center justify-center bg-gray-50">
@@ -93,42 +100,72 @@ const Chat = () => {
         <MessageInput newMessage={newMessage} setNewMessage={setNewMessage} handleSendMessage={handleSendMessage} onStartVideoCall={handleStartVideoCall} />
       </>;
   };
-  return <div className="min-h-screen flex w-full">
+
+  return (
+    <div className="min-h-screen flex w-full bg-[#F1F0FB]">
       <DashboardSidebar />
-      <div className="flex-1 flex flex-col h-screen bg-[#F1F0FB] dark:bg-slate-900">
+      <div className="flex-1 flex flex-col h-screen">
         <div className="flex flex-1 overflow-hidden">
-          {userRole === "landlord" && <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-              <div className="p-4 border-b">
+          {userRole === "landlord" && (
+            <div className="w-80 bg-white border-r border-gray-100 flex flex-col shadow-sm">
+              <div className="p-4 border-b border-gray-100">
                 <div className="relative">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                  <Input placeholder="Search tenants..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 bg-gray-50" />
+                  <Input
+                    placeholder="Search tenants..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 bg-gray-50/50 border-gray-100 focus:border-blue-100 focus:ring-blue-100/50"
+                  />
                 </div>
               </div>
               <ScrollArea className="flex-1">
-                {isTenantsLoading ? <div className="flex items-center justify-center h-full">
+                {isTenantsLoading ? (
+                  <div className="flex items-center justify-center h-full">
                     <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
-                  </div> : <div className="space-y-1 p-2">
-                    {filteredTenants?.map(tenant => <button key={tenant.id} onClick={() => handleTenantSelect(tenant.id)} className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${selectedTenantId === tenant.id ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"}`}>
-                        <Avatar>
-                          <AvatarFallback className="bg-blue-500 text-white">
+                  </div>
+                ) : (
+                  <div className="space-y-0.5 p-2">
+                    {filteredTenants?.map((tenant) => (
+                      <button
+                        key={tenant.id}
+                        onClick={() => handleTenantSelect(tenant.id)}
+                        className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-all duration-200 ${
+                          selectedTenantId === tenant.id
+                            ? "bg-blue-50/80 hover:bg-blue-50"
+                            : "hover:bg-gray-50"
+                        }`}
+                      >
+                        <Avatar className="shadow-sm border border-gray-100">
+                          <AvatarFallback className="bg-blue-500 text-white font-medium">
                             {tenant.first_name?.[0] || tenant.email?.[0] || "?"}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 text-left">
-                          <div className="font-medium text-sm">
-                            {tenant.first_name && tenant.last_name ? `${tenant.first_name} ${tenant.last_name}` : tenant.email}
+                          <div className="font-medium text-sm text-gray-800">
+                            {tenant.first_name && tenant.last_name
+                              ? `${tenant.first_name} ${tenant.last_name}`
+                              : tenant.email}
                           </div>
-                          {tenant.property?.name && <div className="text-xs text-gray-500 truncate">
+                          {tenant.property?.name && (
+                            <div className="text-xs text-gray-500 truncate">
                               {tenant.property.name}
-                            </div>}
+                            </div>
+                          )}
                         </div>
-                      </button>)}
-                  </div>}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </ScrollArea>
-            </div>}
+            </div>
+          )}
 
           <div className="flex-1 flex flex-col overflow-hidden bg-white rounded-lg shadow-lg m-4">
-            <ChatHeader selectedTenantId={selectedTenantId} onVideoCall={handleStartVideoCall} />
+            <ChatHeader
+              selectedTenantId={selectedTenantId}
+              onVideoCall={handleStartVideoCall}
+            />
             <div className="flex-1 flex flex-col min-h-0 bg-[#F1F0FB] bg-[url('/chat-background.png')] bg-repeat">
               {renderChatContent()}
             </div>
@@ -136,7 +173,16 @@ const Chat = () => {
         </div>
       </div>
 
-      {isVideoCallActive && conversationId && currentUserId && selectedTenantId && <VideoCall isOpen={isVideoCallActive} onClose={handleEndVideoCall} recipientId={selectedTenantId} isInitiator={true} />}
-    </div>;
+      {isVideoCallActive && conversationId && currentUserId && selectedTenantId && (
+        <VideoCall
+          isOpen={isVideoCallActive}
+          onClose={handleEndVideoCall}
+          recipientId={selectedTenantId}
+          isInitiator={true}
+        />
+      )}
+    </div>
+  );
 };
+
 export default Chat;
