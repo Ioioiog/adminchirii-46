@@ -1,7 +1,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2.39.0';
 import { corsHeaders } from '../_shared/cors.ts';
-import { chromium } from "https://deno.land/x/playwright@v1.41.2/mod.ts";
+import * as playwright from 'https://deno.land/x/playwright@0.4.0/mod.ts';
 
 interface ScrapingRequest {
   username: string;
@@ -22,9 +22,10 @@ interface Bill {
 
 async function scrapeEngieRomania(username: string, password: string): Promise<Bill[]> {
   console.log('Starting ENGIE Romania scraping process');
-  const browser = await chromium.launch({
-    args: ['--no-sandbox']
-  });
+  
+  // Initialize playwright
+  await playwright.installBrowsers('chromium');
+  const browser = await playwright.createBrowser('chromium', { headless: true });
   
   try {
     const context = await browser.newContext();
