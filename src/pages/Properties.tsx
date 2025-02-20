@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, ChevronDown, Building2, MapPin, User, Calendar, DollarSign, Home } from "lucide-react";
@@ -16,6 +15,7 @@ import { PropertyStatus } from "@/utils/propertyUtils";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const Properties = () => {
   const navigate = useNavigate();
@@ -67,12 +67,16 @@ const Properties = () => {
 
   if (isLoading) {
     return (
-      <div className="flex bg-[#F8F9FC] min-h-screen">
+      <div className="flex h-screen overflow-hidden">
         <DashboardSidebar />
-        <main className="flex-1 p-8">
-          <div className="max-w-7xl mx-auto">
-            Loading...
-          </div>
+        <main className="flex-1 overflow-hidden">
+          <ScrollArea className="h-screen">
+            <div className="p-8">
+              <div className="max-w-7xl mx-auto">
+                Loading...
+              </div>
+            </div>
+          </ScrollArea>
         </main>
       </div>
     );
@@ -98,114 +102,118 @@ const Properties = () => {
   };
 
   return (
-    <div className="flex bg-[#F8F9FC] min-h-screen">
+    <div className="flex h-screen overflow-hidden">
       <DashboardSidebar />
-      <main className="flex-1 p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <h1 className="text-2xl font-semibold">Properties</h1>
-              <p className="text-gray-500">Manage and track your properties</p>
-            </div>
-            <Button 
-              onClick={() => setShowAddModal(true)}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Property
-            </Button>
-          </div>
-
-          <PropertyFilters
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
-          />
-
-          <div className="grid gap-4">
-            {filteredProperties?.map((property) => (
-              <Card key={property.id} className="overflow-hidden">
-                <CardHeader className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <Home className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-lg">{property.name}</h3>
-                        <p className="text-sm text-gray-500">{property.address}</p>
-                      </div>
-                    </div>
-                    <Badge className={getStatusColor(property.status)}>
-                      {property.status || 'N/A'}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-6 pt-0">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div className="flex items-center gap-3">
-                      <MapPin className="h-5 w-5 text-gray-400" />
-                      <div>
-                        <p className="text-sm font-medium">Address</p>
-                        <p className="text-sm text-gray-500">{property.address}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <User className="h-5 w-5 text-gray-400" />
-                      <div>
-                        <p className="text-sm font-medium">Tenants</p>
-                        <p className="text-sm text-gray-500">
-                          {property.tenant_count || 0} Active
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <DollarSign className="h-5 w-5 text-gray-400" />
-                      <div>
-                        <p className="text-sm font-medium">Monthly Rent</p>
-                        <p className="text-sm text-gray-500">
-                          ${property.monthly_rent?.toLocaleString() || 0}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <Separator className="my-4" />
-                  <div className="flex items-center justify-end gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => handlePropertyDetails(property.id)}
-                    >
-                      View Details
-                    </Button>
-                    <Button
-                      variant="default"
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
-                      onClick={() => navigate(`/properties/${property.id}/tenants`)}
-                    >
-                      Manage Tenants
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-            {filteredProperties?.length === 0 && (
-              <div className="text-center py-12 bg-white rounded-lg shadow">
-                <Building2 className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No properties found</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Get started by creating a new property.
-                </p>
-                <div className="mt-6">
-                  <Button onClick={() => setShowAddModal(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Property
-                  </Button>
+      <main className="flex-1 overflow-hidden">
+        <ScrollArea className="h-screen">
+          <div className="p-8">
+            <div className="max-w-7xl mx-auto space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h1 className="text-2xl font-semibold">Properties</h1>
+                  <p className="text-gray-500">Manage and track your properties</p>
                 </div>
+                <Button 
+                  onClick={() => setShowAddModal(true)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Property
+                </Button>
               </div>
-            )}
+
+              <PropertyFilters
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                statusFilter={statusFilter}
+                setStatusFilter={setStatusFilter}
+              />
+
+              <div className="grid gap-4">
+                {filteredProperties?.map((property) => (
+                  <Card key={property.id} className="overflow-hidden">
+                    <CardHeader className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="p-2 bg-blue-100 rounded-lg">
+                            <Home className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium text-lg">{property.name}</h3>
+                            <p className="text-sm text-gray-500">{property.address}</p>
+                          </div>
+                        </div>
+                        <Badge className={getStatusColor(property.status)}>
+                          {property.status || 'N/A'}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-6 pt-0">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div className="flex items-center gap-3">
+                          <MapPin className="h-5 w-5 text-gray-400" />
+                          <div>
+                            <p className="text-sm font-medium">Address</p>
+                            <p className="text-sm text-gray-500">{property.address}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <User className="h-5 w-5 text-gray-400" />
+                          <div>
+                            <p className="text-sm font-medium">Tenants</p>
+                            <p className="text-sm text-gray-500">
+                              {property.tenant_count || 0} Active
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <DollarSign className="h-5 w-5 text-gray-400" />
+                          <div>
+                            <p className="text-sm font-medium">Monthly Rent</p>
+                            <p className="text-sm text-gray-500">
+                              ${property.monthly_rent?.toLocaleString() || 0}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <Separator className="my-4" />
+                      <div className="flex items-center justify-end gap-2 pt-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => handlePropertyDetails(property.id)}
+                        >
+                          View Details
+                        </Button>
+                        <Button
+                          variant="default"
+                          className="bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+                          onClick={() => navigate(`/properties/${property.id}/tenants`)}
+                        >
+                          Manage Tenants
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                {filteredProperties?.length === 0 && (
+                  <div className="text-center py-12 bg-white rounded-lg shadow">
+                    <Building2 className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No properties found</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Get started by creating a new property.
+                    </p>
+                    <div className="mt-6">
+                      <Button onClick={() => setShowAddModal(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Property
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
+        </ScrollArea>
       </main>
 
       <PropertyDialog
