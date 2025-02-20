@@ -158,105 +158,49 @@ export default function Maintenance() {
       <DashboardSidebar />
       <main className="flex-1 p-8 overflow-y-auto">
         <div className="max-w-7xl mx-auto space-y-8">
-          {/* Role-specific header */}
-          <Card className="p-6 bg-white/80 backdrop-blur-sm border shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-sm">
-                <Wrench className="h-5 w-5 md:h-6 md:w-6 text-white" />
+          {/* Role-specific header with tabs */}
+          <Card className="bg-white/80 backdrop-blur-sm border shadow-sm">
+            <div className="p-6 border-b border-border/10">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-sm">
+                  <Wrench className="h-5 w-5 md:h-6 md:w-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-semibold text-gray-900">
+                    {userRole === 'tenant' && "My Maintenance Requests"}
+                    {userRole === 'landlord' && "Property Maintenance Management"}
+                    {userRole === 'service_provider' && "Assigned Maintenance Tasks"}
+                  </h1>
+                  <p className="text-sm md:text-base text-gray-500">
+                    {userRole === 'tenant' && "Submit and track your maintenance requests"}
+                    {userRole === 'landlord' && "Monitor and manage property maintenance"}
+                    {userRole === 'service_provider' && "View and update your assigned maintenance tasks"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-2xl font-semibold text-gray-900">
-                  {userRole === 'tenant' && "My Maintenance Requests"}
-                  {userRole === 'landlord' && "Property Maintenance Management"}
-                  {userRole === 'service_provider' && "Assigned Maintenance Tasks"}
-                </h1>
-                <p className="text-sm md:text-base text-gray-500">
-                  {userRole === 'tenant' && "Submit and track your maintenance requests"}
-                  {userRole === 'landlord' && "Monitor and manage property maintenance"}
-                  {userRole === 'service_provider' && "View and update your assigned maintenance tasks"}
-                </p>
-              </div>
+            </div>
+            <div className="px-6 -mb-px flex gap-4 overflow-x-auto">
+              {navigationItems.map((item) => (
+                <Button
+                  key={item.id}
+                  variant="ghost"
+                  className={cn(
+                    "relative h-12 rounded-none border-b-2 border-transparent",
+                    activeSection === item.id && "border-primary text-primary font-medium"
+                  )}
+                  onClick={() => setActiveSection(item.id)}
+                >
+                  <item.icon className="h-4 w-4 mr-2" />
+                  {item.label}
+                </Button>
+              ))}
             </div>
           </Card>
 
-          {/* Navigation (only for landlord) */}
-          {userRole === 'landlord' && (
-            <>
-              <Card className="p-4 bg-white/80 backdrop-blur-sm border shadow-sm">
-                <div className="flex gap-4 overflow-x-auto">
-                  {navigationItems.map((item) => (
-                    <Button
-                      key={item.id}
-                      variant={activeSection === item.id ? 'default' : 'ghost'}
-                      className={cn(
-                        "flex-shrink-0 gap-2 transition-all duration-200",
-                        activeSection === item.id && "bg-primary text-primary-foreground shadow-sm"
-                      )}
-                      onClick={() => setActiveSection(item.id)}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {item.label}
-                    </Button>
-                  ))}
-                </div>
-              </Card>
-
-              <Card className="p-6 bg-white/80 backdrop-blur-sm border shadow-sm">
-                {renderSection()}
-              </Card>
-            </>
-          )}
-
-          {/* Non-landlord view */}
-          {userRole !== 'landlord' && (
-            <Card className="p-6 bg-white/80 backdrop-blur-sm border shadow-sm">
-              {/* Action Bar */}
-              <div className="flex flex-col md:flex-row gap-4 mb-6">
-                {userRole === 'tenant' && (
-                  <Button onClick={handleNewRequest} className="gap-2">
-                    <PlusCircle className="h-4 w-4" />
-                    New Maintenance Request
-                  </Button>
-                )}
-                
-                <div className="flex-1 flex gap-4">
-                  <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                    <Input
-                      placeholder="Search requests..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-9"
-                    />
-                  </div>
-                  <Select value={priority} onValueChange={(value: any) => setPriority(value)}>
-                    <SelectTrigger className="w-[180px]">
-                      <Filter className="h-4 w-4 mr-2" />
-                      <SelectValue placeholder="Filter by priority" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Priorities</SelectItem>
-                      <SelectItem value="high">High Priority</SelectItem>
-                      <SelectItem value="medium">Medium Priority</SelectItem>
-                      <SelectItem value="low">Low Priority</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Maintenance Requests List */}
-              <MaintenanceSection
-                title="Maintenance Requests"
-                description={
-                  userRole === 'tenant' 
-                    ? "Track the status of your maintenance requests"
-                    : "Your assigned maintenance tasks"
-                }
-                requests={filteredRequests}
-                onRequestClick={handleRequestClick}
-              />
-            </Card>
-          )}
+          {/* Content Section */}
+          <Card className="p-6 bg-white/80 backdrop-blur-sm border shadow-sm">
+            {renderSection()}
+          </Card>
 
           {/* Maintenance Request Dialog */}
           <MaintenanceDialog
