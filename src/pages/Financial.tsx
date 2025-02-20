@@ -58,7 +58,20 @@ const Financial = () => {
     },
   ];
 
+  // Filter out service providers from accessing financial features
+  const filteredUserRole = userRole === 'service_provider' ? null : userRole;
+
   const renderSection = () => {
+    // If user is a service provider, show access denied message
+    if (userRole === 'service_provider') {
+      return (
+        <div className="text-center p-8">
+          <h3 className="text-lg font-semibold text-gray-900">Access Denied</h3>
+          <p className="text-gray-500">Service providers do not have access to financial features.</p>
+        </div>
+      );
+    }
+
     switch (activeSection) {
       case 'invoices':
         return (
@@ -74,6 +87,8 @@ const Financial = () => {
               onSearchChange={setSearchTerm}
               filterContent={
                 <InvoiceFilters
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
                   statusFilter={statusFilter}
                   setStatusFilter={setStatusFilter}
                   dateRange={dateRange}
@@ -81,11 +96,13 @@ const Financial = () => {
                 />
               }
             />
-            <InvoiceList
-              invoices={invoices}
-              userRole={userRole}
-              onStatusUpdate={fetchInvoices}
-            />
+            {filteredUserRole && (
+              <InvoiceList
+                invoices={invoices}
+                userRole={filteredUserRole}
+                onStatusUpdate={fetchInvoices}
+              />
+            )}
           </div>
         );
       case 'payments':
@@ -102,6 +119,8 @@ const Financial = () => {
               onSearchChange={setPaymentSearchQuery}
               filterContent={
                 <PaymentFilters
+                  searchQuery={paymentSearchQuery}
+                  onSearchChange={setPaymentSearchQuery}
                   status={paymentStatusFilter}
                   onStatusChange={setPaymentStatusFilter}
                   dateRange={paymentDateRange}
@@ -109,7 +128,12 @@ const Financial = () => {
                 />
               }
             />
-            <PaymentList payments={payments} userRole={userRole} />
+            {filteredUserRole && (
+              <PaymentList 
+                payments={payments} 
+                userRole={filteredUserRole}
+              />
+            )}
           </div>
         );
     }
