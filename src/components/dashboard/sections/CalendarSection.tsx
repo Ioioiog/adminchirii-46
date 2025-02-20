@@ -36,8 +36,6 @@ export function CalendarSection() {
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = React.useState<Date>(new Date());
   const [viewMode, setViewMode] = React.useState<'month' | 'day'>('month');
-  const clickTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-  const clickCountRef = React.useRef(0);
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['calendar-events'],
@@ -164,31 +162,14 @@ export function CalendarSection() {
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return;
 
-    clickCountRef.current += 1;
-
-    if (clickTimeoutRef.current) {
-      clearTimeout(clickTimeoutRef.current);
+    if (isSameDay(date, selectedDate)) {
+      setViewMode('day');
+    } else {
+      setViewMode('month');
     }
-
-    clickTimeoutRef.current = setTimeout(() => {
-      if (clickCountRef.current === 1) {
-        setSelectedDate(date);
-        setViewMode('month');
-      } else if (clickCountRef.current === 2) {
-        setSelectedDate(date);
-        setViewMode(prev => prev === 'month' ? 'day' : 'month');
-      }
-      clickCountRef.current = 0;
-    }, 250);
+    
+    setSelectedDate(date);
   };
-
-  React.useEffect(() => {
-    return () => {
-      if (clickTimeoutRef.current) {
-        clearTimeout(clickTimeoutRef.current);
-      }
-    };
-  }, []);
 
   console.log('Selected Date:', selectedDate);
   console.log('View Mode:', viewMode);
