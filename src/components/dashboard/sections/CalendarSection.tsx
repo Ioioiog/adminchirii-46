@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Event {
   date: Date;
@@ -38,6 +39,8 @@ export function CalendarSection() {
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
   const [currentMonth, setCurrentMonth] = React.useState<Date>(new Date());
+  const [selectedEvent, setSelectedEvent] = React.useState<Event | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['calendar-events'],
@@ -170,9 +173,10 @@ export function CalendarSection() {
     setSelectedDate(null);
   };
 
-  console.log('Selected Date:', selectedDate);
-  console.log('Current Month:', currentMonth);
-  console.log('Filtered Events:', filteredEvents);
+  const handleEventClick = (event: Event) => {
+    setSelectedEvent(event);
+    setIsDialogOpen(true);
+  };
 
   return (
     <Card className="col-span-full lg:col-span-4">
@@ -217,7 +221,11 @@ export function CalendarSection() {
               <ScrollArea className="h-[300px] rounded-md border">
                 <div className="space-y-3 p-4">
                   {filteredEvents.map((event, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div 
+                      key={idx} 
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors duration-200"
+                      onClick={() => handleEventClick(event)}
+                    >
                       <div className="flex flex-col">
                         <span className="text-sm font-medium">{event.title}</span>
                         <span className="text-xs text-gray-500">
@@ -239,6 +247,34 @@ export function CalendarSection() {
           </div>
         </div>
       </CardContent>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Event Details</DialogTitle>
+          </DialogHeader>
+          {selectedEvent && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <h4 className="font-medium">Title</h4>
+                <p className="text-sm text-gray-600">{selectedEvent.title}</p>
+              </div>
+              <div className="space-y-2">
+                <h4 className="font-medium">Date</h4>
+                <p className="text-sm text-gray-600">
+                  {format(selectedEvent.date, 'MMMM d, yyyy')}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <h4 className="font-medium">Type</h4>
+                <Badge className={getBadgeColor(selectedEvent.type)}>
+                  {selectedEvent.type.charAt(0).toUpperCase() + selectedEvent.type.slice(1)}
+                </Badge>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
