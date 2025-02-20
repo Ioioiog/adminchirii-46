@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import AuthPage from "@/pages/Auth";
@@ -23,6 +24,7 @@ import Index from "@/pages/Index";
 import Info from "@/pages/Info";
 import Contracts from "@/pages/Contracts";
 import ContractDetails from "@/pages/ContractDetails";
+import GenerateContract from "@/pages/GenerateContract";
 import { useUserRole } from "@/hooks/use-user-role";
 import PropertyTenants from "@/pages/PropertyTenants";
 
@@ -131,6 +133,14 @@ export function AppRoutes({ isAuthenticated }: AppRoutesProps) {
         element={
           <ProtectedRoute isAuthenticated={isAuthenticated}>
             <ContractDetails />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/generate-contract"
+        element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <GenerateContract />
           </ProtectedRoute>
         }
       />
