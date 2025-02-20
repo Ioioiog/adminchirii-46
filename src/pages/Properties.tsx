@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, ChevronDown, Building2, MapPin, User, Calendar, DollarSign, Home } from "lucide-react";
@@ -17,35 +16,34 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
 const Properties = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | PropertyStatus>("all");
-  const { properties, isLoading } = useProperties({ userRole: "landlord" });
-
+  const {
+    properties,
+    isLoading
+  } = useProperties({
+    userRole: "landlord"
+  });
   const handleAddProperty = async (formData: any) => {
     try {
-      const { data, error } = await supabase
-        .from('properties')
-        .insert([
-          {
-            ...formData,
-            landlord_id: (await supabase.auth.getUser()).data.user?.id
-          }
-        ])
-        .select()
-        .single();
-
+      const {
+        data,
+        error
+      } = await supabase.from('properties').insert([{
+        ...formData,
+        landlord_id: (await supabase.auth.getUser()).data.user?.id
+      }]).select().single();
       if (error) throw error;
-
       toast({
         title: "Success",
-        description: "Property added successfully",
+        description: "Property added successfully"
       });
-
       setShowAddModal(false);
       return true;
     } catch (error) {
@@ -53,22 +51,18 @@ const Properties = () => {
       toast({
         title: "Error",
         description: "Failed to add property",
-        variant: "destructive",
+        variant: "destructive"
       });
       return false;
     }
   };
-
-  const filteredProperties = properties?.filter((property) => {
-    const matchesSearch = property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.address.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredProperties = properties?.filter(property => {
+    const matchesSearch = property.name.toLowerCase().includes(searchTerm.toLowerCase()) || property.address.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || property.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
-
   if (isLoading) {
-    return (
-      <div className="flex h-screen overflow-hidden">
+    return <div className="flex h-screen overflow-hidden">
         <DashboardSidebar />
         <main className="flex-1 overflow-hidden">
           <ScrollArea className="h-screen">
@@ -79,13 +73,10 @@ const Properties = () => {
             </div>
           </ScrollArea>
         </main>
-      </div>
-    );
+      </div>;
   }
-
   const getStatusColor = (status: PropertyStatus) => {
     if (!status) return 'bg-gray-100 text-gray-800';
-    
     switch (status.toLowerCase()) {
       case 'occupied':
         return 'bg-green-100 text-green-800';
@@ -97,13 +88,10 @@ const Properties = () => {
         return 'bg-gray-100 text-gray-800';
     }
   };
-
   const handlePropertyDetails = (propertyId: string) => {
     navigate(`/properties/${propertyId}`);
   };
-
-  return (
-    <div className="flex h-screen overflow-hidden">
+  return <div className="flex h-screen overflow-hidden">
       <DashboardSidebar />
       <main className="flex-1 overflow-hidden">
         <ScrollArea className="h-screen">
@@ -113,7 +101,7 @@ const Properties = () => {
                 <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
                   <div className="space-y-2">
                     <div className="flex items-center gap-4">
-                      <div className="p-3 bg-[#9b87f5] rounded-xl">
+                      <div className="p-3 rounded-xl bg-blue-800 hover:bg-blue-700">
                         <Home className="h-6 w-6 text-white" />
                       </div>
                       <h1 className="text-3xl font-bold tracking-tight text-gray-900">
@@ -124,26 +112,17 @@ const Properties = () => {
                       Manage and track your properties effectively
                     </p>
                   </div>
-                  <Button 
-                    onClick={() => setShowAddModal(true)}
-                    className="w-full sm:w-auto flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white transition-colors"
-                  >
+                  <Button onClick={() => setShowAddModal(true)} className="w-full sm:w-auto flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white transition-colors">
                     <Plus className="h-4 w-4" />
                     <span>Add Property</span>
                   </Button>
                 </div>
               </div>
 
-              <PropertyFilters
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-                statusFilter={statusFilter}
-                setStatusFilter={setStatusFilter}
-              />
+              <PropertyFilters searchTerm={searchTerm} setSearchTerm={setSearchTerm} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />
 
               <div className="grid gap-4">
-                {filteredProperties?.map((property) => (
-                  <Card key={property.id} className="overflow-hidden">
+                {filteredProperties?.map(property => <Card key={property.id} className="overflow-hidden">
                     <CardHeader className="p-6">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
@@ -190,25 +169,16 @@ const Properties = () => {
                       </div>
                       <Separator className="my-4" />
                       <div className="flex items-center justify-end gap-2 pt-2">
-                        <Button
-                          variant="outline"
-                          onClick={() => handlePropertyDetails(property.id)}
-                        >
+                        <Button variant="outline" onClick={() => handlePropertyDetails(property.id)}>
                           View Details
                         </Button>
-                        <Button
-                          variant="default"
-                          className="bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
-                          onClick={() => navigate(`/properties/${property.id}/tenants`)}
-                        >
+                        <Button variant="default" className="bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors" onClick={() => navigate(`/properties/${property.id}/tenants`)}>
                           Manage Tenants
                         </Button>
                       </div>
                     </CardContent>
-                  </Card>
-                ))}
-                {filteredProperties?.length === 0 && (
-                  <div className="text-center py-12 bg-white rounded-lg shadow">
+                  </Card>)}
+                {filteredProperties?.length === 0 && <div className="text-center py-12 bg-white rounded-lg shadow">
                     <Building2 className="mx-auto h-12 w-12 text-gray-400" />
                     <h3 className="mt-2 text-sm font-medium text-gray-900">No properties found</h3>
                     <p className="mt-1 text-sm text-gray-500">
@@ -220,22 +190,14 @@ const Properties = () => {
                         Add Property
                       </Button>
                     </div>
-                  </div>
-                )}
+                  </div>}
               </div>
             </div>
           </div>
         </ScrollArea>
       </main>
 
-      <PropertyDialog
-        open={showAddModal}
-        onOpenChange={setShowAddModal}
-        onSubmit={handleAddProperty}
-        mode="add"
-      />
-    </div>
-  );
+      <PropertyDialog open={showAddModal} onOpenChange={setShowAddModal} onSubmit={handleAddProperty} mode="add" />
+    </div>;
 };
-
 export default Properties;
