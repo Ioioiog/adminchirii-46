@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -34,9 +33,10 @@ const getBadgeColor = (type: Event['type']) => {
 
 export function CalendarSection() {
   const { toast } = useToast();
-  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(new Date());
+  const initialDate = new Date();
+  initialDate.setHours(0);
+  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(initialDate);
 
-  // Fetch payments, maintenance requests, contracts, and tenancies
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['calendar-events'],
     queryFn: async () => {
@@ -44,7 +44,6 @@ export function CalendarSection() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('No user found');
 
-        // Fetch payments
         const { data: payments, error: paymentsError } = await supabase
           .from('payments')
           .select(`
@@ -58,7 +57,6 @@ export function CalendarSection() {
 
         if (paymentsError) throw paymentsError;
 
-        // Fetch maintenance requests
         const { data: maintenance, error: maintenanceError } = await supabase
           .from('maintenance_requests')
           .select(`
@@ -70,7 +68,6 @@ export function CalendarSection() {
 
         if (maintenanceError) throw maintenanceError;
 
-        // Fetch contracts
         const { data: contracts, error: contractsError } = await supabase
           .from('contracts')
           .select(`
@@ -81,7 +78,6 @@ export function CalendarSection() {
 
         if (contractsError) throw contractsError;
 
-        // Fetch tenancies with monthly pay day
         const { data: tenancies, error: tenanciesError } = await supabase
           .from('tenancies')
           .select(`
@@ -94,16 +90,13 @@ export function CalendarSection() {
 
         if (tenanciesError) throw tenanciesError;
 
-        // Transform data into events
         const events: Event[] = [
-          // Payment events
           ...payments.map(payment => ({
             date: new Date(payment.due_date),
             title: `Rent Payment Due - ${payment.tenancy.property.name}`,
             type: 'payment' as const
           })),
 
-          // Maintenance events
           ...maintenance
             .filter(m => m.scheduled_date)
             .map(m => ({
@@ -112,7 +105,6 @@ export function CalendarSection() {
               type: 'maintenance' as const
             })),
 
-          // Contract events
           ...contracts
             .filter(c => c.valid_until)
             .map(c => ({
@@ -121,14 +113,12 @@ export function CalendarSection() {
               type: 'contract' as const
             })),
 
-          // Tenancy start dates
           ...tenancies.map(tenancy => ({
             date: new Date(tenancy.start_date),
             title: `Tenancy Starts - ${tenancy.property.name}`,
             type: 'tenancy' as const
           })),
 
-          // Tenancy end dates (if they exist)
           ...tenancies
             .filter(t => t.end_date)
             .map(tenancy => ({
@@ -137,7 +127,6 @@ export function CalendarSection() {
               type: 'tenancy' as const
             })),
 
-          // Invoice generation dates
           ...tenancies.map(tenancy => {
             const currentDate = new Date();
             const invoiceDate = setDate(currentDate, tenancy.monthly_pay_day || 1);
@@ -165,14 +154,12 @@ export function CalendarSection() {
   const filteredEvents = React.useMemo(() => {
     if (!selectedDate || !events.length) return [];
     
-    // If a specific day is selected (user clicked on a day)
     if (selectedDate.getHours() !== 0) {
       return events.filter(event => 
         isSameDay(event.date, selectedDate)
       );
     }
     
-    // If only month is selected (initial view or month changed)
     return events.filter(event => 
       isSameMonth(event.date, selectedDate)
     );
@@ -194,9 +181,12 @@ export function CalendarSection() {
               selected={selectedDate}
               onSelect={(date) => {
                 if (date) {
-                  // Set hours to distinguish between month view (0) and day view (1)
                   const newDate = new Date(date);
-                  newDate.setHours(1);
+                  if (selectedDate && isSameDay(date, selectedDate) && selectedDate.getHours() === 0) {
+                    newDate.setHours(1);
+                  } else {
+                    newDate.setHours(0);
+                  }
                   setSelectedDate(newDate);
                 }
               }}
