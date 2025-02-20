@@ -1,3 +1,10 @@
+
+export interface Property {
+  id: string;
+  name: string;
+  address: string;
+}
+
 export interface Tenant {
   id: string;
   first_name: string | null;
@@ -19,10 +26,4 @@ export interface Tenant {
     status: string;
     monthly_pay_day?: number;
   };
-}
-
-export interface Property {
-  id: string;
-  name: string;
-  address: string;
 }

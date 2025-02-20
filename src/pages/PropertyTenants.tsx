@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -28,6 +29,7 @@ const PropertyTenants = () => {
             start_date,
             end_date,
             status,
+            monthly_pay_day,
             tenant:profiles(
               id,
               first_name,
@@ -162,8 +164,10 @@ const PropertyTenants = () => {
                                 tenant={{
                                   ...tenancy.tenant,
                                   tenancy: {
+                                    id: tenancy.id,
                                     start_date: tenancy.start_date,
                                     end_date: tenancy.end_date,
+                                    status: tenancy.status,
                                     monthly_pay_day: tenancy.monthly_pay_day,
                                   },
                                   property: propertyWithTenants,
