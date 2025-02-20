@@ -37,7 +37,6 @@ interface FormData {
   vatIncluded: string;
   contractDuration: string;
   paymentDay: string;
-  // New fields
   ownerCounty: string;
   ownerCity: string;
   ownerRepresentative: string;
@@ -95,7 +94,6 @@ export default function GenerateContract() {
     vatIncluded: 'nu',
     contractDuration: '12',
     paymentDay: '2',
-    // New fields with initial values
     ownerCounty: 'București',
     ownerCity: 'București',
     ownerRepresentative: 'Administrator',
@@ -699,3 +697,6 @@ export default function GenerateContract() {
               </p>
               <p className="mb-4">
                 6.12. Chiriasul este de acord sa semneze AXENA 1 care
+              </p>
+
+              <div className="grid grid
