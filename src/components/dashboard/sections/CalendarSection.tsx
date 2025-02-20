@@ -7,6 +7,7 @@ import { format, setDate, isSameMonth, isSameDay } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Event {
   date: Date;
@@ -205,21 +206,23 @@ export function CalendarSection() {
             {isLoading ? (
               <p className="text-sm text-gray-500">Loading events...</p>
             ) : filteredEvents.length > 0 ? (
-              <div className="space-y-3">
-                {filteredEvents.map((event, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">{event.title}</span>
-                      <span className="text-xs text-gray-500">
-                        {format(event.date, 'MMM d, yyyy')}
-                      </span>
+              <ScrollArea className="h-[400px] rounded-md border">
+                <div className="space-y-3 p-4">
+                  {filteredEvents.map((event, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{event.title}</span>
+                        <span className="text-xs text-gray-500">
+                          {format(event.date, 'MMM d, yyyy')}
+                        </span>
+                      </div>
+                      <Badge className={getBadgeColor(event.type)}>
+                        {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
+                      </Badge>
                     </div>
-                    <Badge className={getBadgeColor(event.type)}>
-                      {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </ScrollArea>
             ) : (
               <p className="text-sm text-gray-500">
                 No events {selectedDate?.getHours() === 0 ? 'this month' : 'on this day'}
