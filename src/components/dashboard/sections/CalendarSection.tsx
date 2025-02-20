@@ -5,31 +5,15 @@ import { Calendar } from "@/components/ui/calendar";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface Event {
   date: Date;
   title: string;
   type: 'payment' | 'maintenance' | 'contract';
 }
-
-// In a real app, this would come from your backend
-const demoEvents: Event[] = [
-  {
-    date: new Date(2024, 3, 15),
-    title: "Rent Payment Due",
-    type: "payment"
-  },
-  {
-    date: new Date(2024, 3, 20),
-    title: "Maintenance Check",
-    type: "maintenance"
-  },
-  {
-    date: new Date(2024, 3, 25),
-    title: "Contract Renewal",
-    type: "contract"
-  }
-];
 
 const getBadgeColor = (type: Event['type']) => {
   switch (type) {
@@ -45,9 +29,96 @@ const getBadgeColor = (type: Event['type']) => {
 };
 
 export function CalendarSection() {
+  const { toast } = useToast();
   const [date, setDate] = React.useState<Date | undefined>(new Date());
 
-  const selectedDateEvents = demoEvents.filter(
+  // Fetch payments, maintenance requests, and contracts
+  const { data: events = [], isLoading } = useQuery({
+    queryKey: ['calendar-events'],
+    queryFn: async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('No user found');
+
+        // Fetch payments
+        const { data: payments, error: paymentsError } = await supabase
+          .from('payments')
+          .select(`
+            amount,
+            due_date,
+            tenancy:tenancies (
+              property:properties (name)
+            )
+          `)
+          .eq('status', 'pending');
+
+        if (paymentsError) throw paymentsError;
+
+        // Fetch maintenance requests
+        const { data: maintenance, error: maintenanceError } = await supabase
+          .from('maintenance_requests')
+          .select(`
+            title,
+            scheduled_date,
+            property:properties (name)
+          `)
+          .in('status', ['pending', 'in_progress']);
+
+        if (maintenanceError) throw maintenanceError;
+
+        // Fetch contracts
+        const { data: contracts, error: contractsError } = await supabase
+          .from('contracts')
+          .select(`
+            valid_until,
+            property:properties (name)
+          `)
+          .eq('status', 'active');
+
+        if (contractsError) throw contractsError;
+
+        // Transform data into events
+        const events: Event[] = [
+          // Payment events
+          ...payments.map(payment => ({
+            date: new Date(payment.due_date),
+            title: `Rent Payment Due - ${payment.tenancy.property.name}`,
+            type: 'payment' as const
+          })),
+
+          // Maintenance events
+          ...maintenance
+            .filter(m => m.scheduled_date) // Only include maintenance with scheduled dates
+            .map(m => ({
+              date: new Date(m.scheduled_date!),
+              title: `${m.title} - ${m.property.name}`,
+              type: 'maintenance' as const
+            })),
+
+          // Contract events
+          ...contracts
+            .filter(c => c.valid_until) // Only include contracts with end dates
+            .map(c => ({
+              date: new Date(c.valid_until!),
+              title: `Contract Renewal - ${c.property.name}`,
+              type: 'contract' as const
+            }))
+        ];
+
+        return events;
+      } catch (error) {
+        console.error('Error fetching calendar events:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not fetch calendar events"
+        });
+        return [];
+      }
+    }
+  });
+
+  const selectedDateEvents = events.filter(
     event => date && format(event.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
   );
 
@@ -73,7 +144,9 @@ export function CalendarSection() {
             <h4 className="font-medium text-sm text-gray-500">
               {date ? format(date, 'MMMM d, yyyy') : 'Select a date'}
             </h4>
-            {selectedDateEvents.length > 0 ? (
+            {isLoading ? (
+              <p className="text-sm text-gray-500">Loading events...</p>
+            ) : selectedDateEvents.length > 0 ? (
               <div className="space-y-3">
                 {selectedDateEvents.map((event, idx) => (
                   <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
