@@ -1,13 +1,14 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PropertyFilters } from "@/components/properties/PropertyFilters";
 import { useProperties } from "@/hooks/useProperties";
-import { Property } from "@/utils/propertyUtils";
+import { Property, PropertyStatus } from "@/utils/propertyUtils";
 
 export function DashboardProperties() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | PropertyStatus>("all");
   const { properties, isLoading } = useProperties({ userRole: "landlord" });
 
   const filteredProperties = properties?.filter((property) => {
