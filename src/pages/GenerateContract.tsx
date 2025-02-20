@@ -304,24 +304,44 @@ export default function GenerateContract() {
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="contract-number" className={errors.contractNumber ? "text-red-500" : ""}>
-                    Nr. contract *
+                  <Label htmlFor="contract-template" className={errors.selectedTemplate ? "text-red-500" : ""}>
+                    Șablon Contract *
                   </Label>
-                  <Input
-                    id="contract-number"
-                    value={contractNumber}
-                    onChange={(e) => setContractNumber(e.target.value)}
-                    className={inputClassName("contractNumber")}
-                  />
+                  <Select
+                    value={selectedTemplate}
+                    onValueChange={(value) => setSelectedTemplate(value)}
+                  >
+                    <SelectTrigger className={inputClassName("selectedTemplate")}>
+                      <SelectValue placeholder="Selectează șablon" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {templates?.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
-                  <Label htmlFor="contract-date">Data contract</Label>
-                  <Input
-                    type="date"
-                    id="contract-date"
-                    value={validFrom}
-                    onChange={(e) => setValidFrom(e.target.value)}
-                  />
+                  <Label htmlFor="property" className={errors.selectedProperty ? "text-red-500" : ""}>
+                    Proprietate *
+                  </Label>
+                  <Select
+                    value={selectedProperty}
+                    onValueChange={(value) => setSelectedProperty(value)}
+                  >
+                    <SelectTrigger className={inputClassName("selectedProperty")}>
+                      <SelectValue placeholder="Selectează proprietate" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {properties?.map((property) => (
+                        <SelectItem key={property.id} value={property.id}>
+                          {property.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
