@@ -27,37 +27,60 @@ interface Bill {
 
 async function scrapeEngieRomania(username: string, password: string): Promise<Bill[]> {
   console.log('Starting ENGIE Romania scraping process');
+  const startTime = Date.now();
   let browser: puppeteer.Browser | null = null;
 
   try {
     console.log('Launching browser...');
+    const browserStartTime = Date.now();
     browser = await puppeteer.launch({
       headless: true,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-extensions',
         '--disable-web-security',
         '--disable-features=IsolateOrigins,site-per-process',
-        '--disable-dev-shm-usage'
       ]
     });
+    console.log(`Browser launch took ${Date.now() - browserStartTime}ms`);
 
     const page = await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     
-    // Set default timeout and enable logging
-    page.setDefaultNavigationTimeout(60000);
-    page.setDefaultTimeout(60000);
+    // Optimize performance
+    await page.setRequestInterception(true);
+    page.on('request', (request) => {
+      const resourceType = request.resourceType();
+      if (resourceType === 'image' || resourceType === 'font' || resourceType === 'media') {
+        request.abort();
+      } else {
+        request.continue();
+      }
+    });
+    
+    // Set timeouts and logging
+    page.setDefaultNavigationTimeout(45000); // 45 seconds
+    page.setDefaultTimeout(45000);
     page.on('console', message => console.log('BROWSER:', message.text()));
 
-    // Use the correct login URL
+    // Navigation timing
     console.log('Navigating to login page...');
+    const navigationStartTime = Date.now();
     const loginUrl = 'https://my.engie.ro/autentificare';
     await page.goto(loginUrl, {
-      waitUntil: 'networkidle0'
+      waitUntil: 'networkidle0',
+      timeout: 45000
     });
+    console.log(`Navigation took ${Date.now() - navigationStartTime}ms`);
 
-    // Handle cookie consent if present
+    // Handle cookie consent with timing
+    const cookieStartTime = Date.now();
     try {
       console.log('Checking for cookie consent...');
       await page.waitForSelector('[id*="cookie"]', { timeout: 5000 });
@@ -69,17 +92,18 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
     } catch (e) {
       console.log('No cookie consent dialog found');
     }
+    console.log(`Cookie handling took ${Date.now() - cookieStartTime}ms`);
 
+    // Login timing
+    const loginStartTime = Date.now();
     console.log('Waiting for login form...');
-    await page.waitForSelector('#username', { visible: true });
-    await page.waitForSelector('#password', { visible: true });
+    await page.waitForSelector('#username', { visible: true, timeout: 10000 });
+    await page.waitForSelector('#password', { visible: true, timeout: 10000 });
 
-    // Type credentials
     console.log('Filling login form...');
-    await page.type('#username', username, { delay: 100 });
-    await page.type('#password', password, { delay: 100 });
+    await page.type('#username', username, { delay: 50 });
+    await page.type('#password', password, { delay: 50 });
 
-    // Submit form
     console.log('Submitting login form...');
     const loginButton = await page.$('button[type="submit"]');
     if (!loginButton) {
@@ -87,14 +111,13 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
     }
 
     await Promise.all([
-      page.waitForNavigation({ waitUntil: 'networkidle0' }),
+      page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 45000 }),
       loginButton.click()
     ]);
+    console.log(`Login process took ${Date.now() - loginStartTime}ms`);
 
-    // Wait for successful login
-    await page.waitForTimeout(2000);
-
-    // Navigate to bills page
+    // Bills page navigation timing
+    const billsStartTime = Date.now();
     console.log('Navigating to bills page...');
     const billsUrls = [
       'https://my.engie.ro/facturi',
@@ -105,7 +128,13 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
     for (const url of billsUrls) {
       try {
         console.log(`Trying bills URL: ${url}`);
-        await page.goto(url, { waitUntil: 'networkidle0' });
+        const urlStartTime = Date.now();
+        await page.goto(url, { 
+          waitUntil: 'networkidle0',
+          timeout: 45000
+        });
+        console.log(`Navigation to ${url} took ${Date.now() - urlStartTime}ms`);
+        
         const tableExists = await page.$('table.nj-table');
         if (tableExists) {
           billsPageLoaded = true;
@@ -119,31 +148,31 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
     if (!billsPageLoaded) {
       throw new Error('Could not load bills page');
     }
+    console.log(`Bills page navigation took ${Date.now() - billsStartTime}ms`);
 
-    // Wait for table to load
+    // Data extraction timing
+    const extractionStartTime = Date.now();
     console.log('Waiting for bills table...');
-    await page.waitForSelector('table.nj-table', { visible: true });
+    await page.waitForSelector('table.nj-table', { 
+      visible: true,
+      timeout: 45000
+    });
     
-    // Extract bills data
     console.log('Extracting bills data...');
     const bills = await page.evaluate(() => {
       const rows = Array.from(document.querySelectorAll('table.nj-table tbody tr'));
       return rows.map(row => {
         const cells = Array.from(row.querySelectorAll('td'));
         
-        // Extract invoice number from first column
         const invoiceNumber = cells[0]?.textContent?.trim().replace(/[^\d]/g, '') || '';
         
-        // Extract date from the date column (format: DD.MM.YYYY)
         const dateText = cells[2]?.textContent?.trim() || '';
         const [day, month, year] = dateText.split('.');
         const dueDate = `${year}-${month}-${day}`;
         
-        // Extract amount from amount column
         const amountText = cells[4]?.textContent?.trim().replace(/[^\d.,]/g, '') || '0';
         const amount = parseFloat(amountText.replace(',', '.'));
         
-        // Extract status from status column
         const statusText = cells[5]?.textContent?.trim().toLowerCase() || '';
         const status = statusText.includes('platit') ? 'paid' : 'pending';
         
@@ -157,7 +186,12 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
       }).filter(bill => bill.invoice_number && bill.amount > 0);
     });
 
+    console.log(`Data extraction took ${Date.now() - extractionStartTime}ms`);
     console.log(`Found ${bills.length} bills`);
+    
+    const totalTime = Date.now() - startTime;
+    console.log(`Total scraping process took ${totalTime}ms`);
+    
     return bills;
 
   } catch (error) {
@@ -165,8 +199,10 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
     throw error;
   } finally {
     if (browser) {
+      const closeStartTime = Date.now();
       console.log('Closing browser...');
       await browser.close();
+      console.log(`Browser cleanup took ${Date.now() - closeStartTime}ms`);
     }
   }
 }
