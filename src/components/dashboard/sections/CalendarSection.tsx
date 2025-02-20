@@ -1,8 +1,7 @@
-
 import React from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { Calendar as CalendarIcon, Clock, MapPin, AlertCircle, X } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, MapPin, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, setDate, isSameMonth, isSameDay, parseISO, isToday } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
@@ -10,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 
 interface Event {
@@ -292,10 +291,6 @@ export function CalendarSection() {
                 )}
                 <DialogTitle className="text-xl">Event Details</DialogTitle>
               </div>
-              <DialogClose className="rounded-full opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-                <X className="h-4 w-4" />
-                <span className="sr-only">Close</span>
-              </DialogClose>
             </div>
           </DialogHeader>
 
