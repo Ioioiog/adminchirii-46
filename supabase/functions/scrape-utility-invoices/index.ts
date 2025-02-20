@@ -1,6 +1,7 @@
+
 import { createClient } from 'npm:@supabase/supabase-js@2.39.0';
 import { corsHeaders } from '../_shared/cors.ts';
-import * as puppeteer from 'https://deno.land/x/puppeteer@16.2.0/mod.ts';
+import puppeteer from 'https://deno.land/x/puppeteer@16.2.0/mod.ts';
 
 interface ScrapingRequest {
   username: string;
@@ -21,11 +22,11 @@ interface Bill {
 
 async function scrapeEngieRomania(username: string, password: string): Promise<Bill[]> {
   console.log('Starting ENGIE Romania scraping process');
-  let browser: puppeteer.Browser | null = null;
+  let browser = null;
 
   try {
     console.log('Launching browser...');
-    browser = await puppeteer.launch({
+    browser = await puppeteer.default.launch({
       headless: true,
       args: [
         '--no-sandbox',
