@@ -1,12 +1,14 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthState } from "@/hooks/useAuthState";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FileDown } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, FileDown, Edit2, Save, X } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -50,6 +52,8 @@ export default function ContractDetails() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { currentUserId, isLoading: isLoadingAuth } = useAuthState();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState<ContractContent>({ sections: [] });
 
   useEffect(() => {
     if (!isLoadingAuth && !currentUserId) {
@@ -97,6 +101,36 @@ export default function ContractDetails() {
     },
     enabled: !!id && !!currentUserId,
   });
+
+  useEffect(() => {
+    if (contract?.content) {
+      setEditedContent(parseContractContent(contract.content as Record<string, any>));
+    }
+  }, [contract]);
+
+  const handleSave = async () => {
+    try {
+      const { error } = await supabase
+        .from("contracts")
+        .update({ content: editedContent })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Contract content has been updated",
+      });
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error updating contract:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update contract content",
+        variant: "destructive",
+      });
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -206,9 +240,6 @@ export default function ContractDetails() {
     );
   }
 
-  // Parse contract content safely
-  const contractContent = parseContractContent(contract.content as Record<string, any>);
-
   return (
     <div className="container mx-auto py-8 space-y-6">
       <div className="flex items-center justify-between">
@@ -222,12 +253,33 @@ export default function ContractDetails() {
             Generate PDF
           </Button>
         </div>
-        <Badge
-          variant="secondary"
-          className={`${getStatusColor(contract.status)} text-white`}
-        >
-          {contract.status}
-        </Badge>
+        <div className="flex items-center gap-2">
+          {contract.status === 'draft' && (
+            isEditing ? (
+              <>
+                <Button onClick={handleSave} variant="default">
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Changes
+                </Button>
+                <Button onClick={() => setIsEditing(false)} variant="outline">
+                  <X className="w-4 h-4 mr-2" />
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <Button onClick={() => setIsEditing(true)} variant="outline">
+                <Edit2 className="w-4 h-4 mr-2" />
+                Edit Contract
+              </Button>
+            )
+          )}
+          <Badge
+            variant="secondary"
+            className={`${getStatusColor(contract.status)} text-white`}
+          >
+            {contract.status}
+          </Badge>
+        </div>
       </div>
 
       <Card>
@@ -269,12 +321,43 @@ export default function ContractDetails() {
 
           <div>
             <h3 className="text-lg font-semibold mb-2">Contract Content</h3>
-            {contractContent.sections?.map((section, index) => (
+            {editedContent.sections?.map((section, index) => (
               <div key={index} className="mb-4">
-                <h4 className="font-medium mb-2">{section.title}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {section.content}
-                </p>
+                {isEditing ? (
+                  <>
+                    <Input
+                      value={section.title}
+                      onChange={(e) => {
+                        const newSections = [...editedContent.sections];
+                        newSections[index] = {
+                          ...newSections[index],
+                          title: e.target.value
+                        };
+                        setEditedContent({ sections: newSections });
+                      }}
+                      className="font-medium mb-2"
+                    />
+                    <Textarea
+                      value={section.content}
+                      onChange={(e) => {
+                        const newSections = [...editedContent.sections];
+                        newSections[index] = {
+                          ...newSections[index],
+                          content: e.target.value
+                        };
+                        setEditedContent({ sections: newSections });
+                      }}
+                      className="min-h-[100px]"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <h4 className="font-medium mb-2">{section.title}</h4>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {section.content}
+                    </p>
+                  </>
+                )}
               </div>
             ))}
           </div>
