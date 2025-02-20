@@ -1,7 +1,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2.39.0';
 import { corsHeaders } from '../_shared/cors.ts';
-import puppeteer from 'https://deno.land/x/puppeteer@16.2.0/mod.ts';
+import { launch } from 'https://deno.land/x/puppeteer@16.2.0/mod.ts';
 
 interface ScrapingRequest {
   username: string;
@@ -26,7 +26,7 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
 
   try {
     console.log('Launching browser...');
-    browser = await puppeteer.default.launch({
+    browser = await launch({
       headless: true,
       args: [
         '--no-sandbox',
