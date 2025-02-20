@@ -234,12 +234,12 @@ export function CalendarSection() {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl">
+          <div className="flex justify-center items-center bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl">
             <Calendar
               mode="single"
               selected={selectedDate || undefined}
               onSelect={handleDateSelect}
-              className="w-full"
+              className="mx-auto"
               onMonthChange={setCurrentMonth}
             />
           </div>
