@@ -34,9 +34,9 @@ const getBadgeColor = (type: Event['type']) => {
 
 export function CalendarSection() {
   const { toast } = useToast();
-  const initialDate = new Date();
-  initialDate.setHours(0);
-  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(initialDate);
+  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(new Date());
+  const [viewMode, setViewMode] = React.useState<'month' | 'day'>('month');
+  const [lastClickTime, setLastClickTime] = React.useState(0);
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['calendar-events'],
@@ -155,16 +155,27 @@ export function CalendarSection() {
   const filteredEvents = React.useMemo(() => {
     if (!selectedDate || !events.length) return [];
     
-    if (selectedDate.getHours() !== 0) {
-      return events.filter(event => 
-        isSameDay(event.date, selectedDate)
-      );
+    return viewMode === 'day'
+      ? events.filter(event => isSameDay(event.date, selectedDate))
+      : events.filter(event => isSameMonth(event.date, selectedDate));
+  }, [selectedDate, events, viewMode]);
+
+  const handleDateSelect = (date: Date | undefined) => {
+    if (!date) return;
+
+    const currentTime = Date.now();
+    const timeDiff = currentTime - lastClickTime;
+    const isSameSelection = selectedDate && isSameDay(selectedDate, date);
+
+    if (isSameSelection && timeDiff < 300) {
+      setViewMode(viewMode === 'month' ? 'day' : 'month');
+    } else {
+      setViewMode('month');
     }
-    
-    return events.filter(event => 
-      isSameMonth(event.date, selectedDate)
-    );
-  }, [selectedDate, events]);
+
+    setSelectedDate(date);
+    setLastClickTime(currentTime);
+  };
 
   return (
     <Card className="col-span-full lg:col-span-4">
@@ -180,24 +191,14 @@ export function CalendarSection() {
             <Calendar
               mode="single"
               selected={selectedDate}
-              onSelect={(date) => {
-                if (date) {
-                  const newDate = new Date(date);
-                  if (selectedDate && isSameDay(date, selectedDate) && selectedDate.getHours() === 0) {
-                    newDate.setHours(1);
-                  } else {
-                    newDate.setHours(0);
-                  }
-                  setSelectedDate(newDate);
-                }
-              }}
+              onSelect={handleDateSelect}
               className="rounded-md border"
             />
           </div>
           <div className="space-y-4">
             <h4 className="font-medium text-sm text-gray-500">
               {selectedDate 
-                ? selectedDate.getHours() === 0 
+                ? viewMode === 'month'
                   ? `Events for ${format(selectedDate, 'MMMM yyyy')}`
                   : `Events for ${format(selectedDate, 'MMMM d, yyyy')}`
                 : 'Select a date'
@@ -225,7 +226,7 @@ export function CalendarSection() {
               </ScrollArea>
             ) : (
               <p className="text-sm text-gray-500">
-                No events {selectedDate?.getHours() === 0 ? 'this month' : 'on this day'}
+                No events {viewMode === 'month' ? 'this month' : 'on this day'}
               </p>
             )}
           </div>
