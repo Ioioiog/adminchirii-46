@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Grid, List, Plus, FileText, CreditCard } from "lucide-react";
@@ -204,37 +205,38 @@ const Documents = () => {
           />
           
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center justify-between mb-8">
-              <div className="space-y-1">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-600 rounded-lg">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between mb-8">
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-[#9b87f5] rounded-xl">
                     <FileText className="h-6 w-6 text-white" />
                   </div>
-                  <h1 className="text-2xl font-semibold">
+                  <h1 className="text-3xl font-bold tracking-tight text-gray-900">
                     {activeTab === 'contracts' ? 'Contracts' : 'Documents'}
                   </h1>
                 </div>
-                <p className="text-gray-500">
+                <p className="text-gray-500 max-w-2xl">
                   Manage and track all your property-related documents and contracts.
                 </p>
               </div>
 
               {userRole === "landlord" && (
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-3 sm:flex-nowrap">
                   <Button 
-                    className="bg-blue-600 hover:bg-blue-700"
                     onClick={() => setShowAddModal(true)}
+                    variant="outline"
+                    className="w-full sm:w-auto flex items-center gap-2 hover:bg-gray-50 transition-colors"
                   >
-                    <Plus className="h-4 w-4 mr-2" />
-                    {activeTab === 'contracts' ? 'Upload Contract' : 'Upload Document'}
+                    <Plus className="h-4 w-4 text-gray-600" />
+                    <span>{activeTab === 'contracts' ? 'Upload Contract' : 'Upload Document'}</span>
                   </Button>
                   {activeTab === "contracts" && (
                     <Button 
                       onClick={() => navigate("/generate-contract")}
-                      className="bg-green-600 hover:bg-green-700"
+                      className="w-full sm:w-auto flex items-center gap-2 bg-[#9b87f5] hover:bg-[#8B5CF6] transition-colors"
                     >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Contract
+                      <Plus className="h-4 w-4" />
+                      <span>Create Contract</span>
                     </Button>
                   )}
                 </div>
