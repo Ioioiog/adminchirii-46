@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -233,17 +234,17 @@ export function CalendarSection() {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="relative p-6 rounded-xl bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.15)] transition-all duration-300">
+          <div className="relative p-4 rounded-xl bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.15)] transition-all duration-300">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-transparent to-indigo-50/50 rounded-xl" />
             <Calendar
               mode="single"
               selected={selectedDate || undefined}
               onSelect={handleDateSelect}
-              className="relative z-10 mx-auto bg-transparent"
+              className="relative z-10 mx-auto bg-transparent scale-90 transform"
               onMonthChange={setCurrentMonth}
             />
           </div>
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="font-medium text-sm text-gray-600">
                 {selectedDate 
@@ -260,12 +261,12 @@ export function CalendarSection() {
                 <p className="text-sm text-gray-500">Loading events...</p>
               </div>
             ) : filteredEvents.length > 0 ? (
-              <ScrollArea className="h-[420px] rounded-xl border border-gray-100/50 bg-white/50 backdrop-blur-sm shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
-                <div className="space-y-3 p-4">
+              <ScrollArea className="h-[300px] rounded-xl border border-gray-100/50 bg-white/50 backdrop-blur-sm shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+                <div className="space-y-2 p-3">
                   {filteredEvents.map((event, idx) => (
                     <div 
                       key={idx} 
-                      className="flex items-center justify-between p-4 bg-white rounded-lg cursor-pointer hover:bg-gray-50/80 transition-all duration-200 border border-gray-100/80 shadow-sm hover:shadow-md"
+                      className="flex items-center justify-between p-3 bg-white rounded-lg cursor-pointer hover:bg-gray-50/80 transition-all duration-200 border border-gray-100/80 shadow-sm hover:shadow-md"
                       onClick={() => handleEventClick(event)}
                     >
                       <div className="flex items-center space-x-3">
@@ -289,7 +290,7 @@ export function CalendarSection() {
                 </div>
               </ScrollArea>
             ) : (
-              <div className="flex items-center justify-center h-[420px] bg-white/50 backdrop-blur-sm rounded-xl border border-gray-100/50 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+              <div className="flex items-center justify-center h-[300px] bg-white/50 backdrop-blur-sm rounded-xl border border-gray-100/50 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
                 <p className="text-sm text-gray-500">
                   No events {selectedDate ? 'on this day' : 'this month'}
                 </p>
