@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Grid, List, Plus, FileText } from "lucide-react";
+import { Grid, List, Plus, FileText, FileContract } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { DocumentType } from "@/integrations/supabase/types/document-types";
 import { DocumentFilters } from "@/components/documents/DocumentFilters";
 import { useQuery } from "@tanstack/react-query";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 const Documents = () => {
   const navigate = useNavigate();
@@ -22,8 +24,8 @@ const Documents = () => {
   const [typeFilter, setTypeFilter] = useState<"all" | DocumentType>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [activeTab, setActiveTab] = useState<"documents" | "contracts">("documents");
 
-  // Fetch properties for the filter dropdown
   const { data: properties } = useQuery({
     queryKey: ["properties"],
     queryFn: async () => {
@@ -73,6 +75,23 @@ const Documents = () => {
     return () => subscription.unsubscribe();
   }, [navigate, toast]);
 
+  const navigationItems = [
+    {
+      id: 'documents',
+      label: 'Documents',
+      icon: FileText,
+    },
+    {
+      id: 'contracts',
+      label: 'Contracts',
+      icon: FileContract,
+    },
+  ];
+
+  const handleContractsTab = () => {
+    navigate('/contracts');
+  };
+
   if (!userId || !userRole) return null;
 
   return (
@@ -87,10 +106,10 @@ const Documents = () => {
                   <div className="p-3 bg-blue-600 rounded-xl">
                     <FileText className="h-6 w-6 text-white" />
                   </div>
-                  <h1 className="text-3xl font-semibold text-gray-900">Documents</h1>
+                  <h1 className="text-3xl font-semibold text-gray-900">Document Management</h1>
                 </div>
                 <p className="text-gray-500 max-w-2xl">
-                  Manage and view your property-related documents.
+                  Manage and view your property-related documents and contracts.
                 </p>
               </div>
               <div className="flex items-center gap-4">
@@ -114,6 +133,31 @@ const Documents = () => {
               </div>
             </header>
           </div>
+
+          <Card className="p-4 bg-white shadow-sm">
+            <div className="flex gap-4 overflow-x-auto">
+              {navigationItems.map((item) => (
+                <Button
+                  key={item.id}
+                  variant={activeTab === item.id ? 'default' : 'ghost'}
+                  className={cn(
+                    "flex-shrink-0 gap-2 transition-all duration-200",
+                    activeTab === item.id && "bg-primary text-primary-foreground shadow-sm"
+                  )}
+                  onClick={() => {
+                    if (item.id === 'contracts') {
+                      handleContractsTab();
+                    } else {
+                      setActiveTab(item.id as "documents" | "contracts");
+                    }
+                  }}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </Button>
+              ))}
+            </div>
+          </Card>
 
           <div className="bg-white rounded-lg shadow-sm p-6">
             <DocumentFilters
