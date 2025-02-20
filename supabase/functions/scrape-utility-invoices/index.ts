@@ -25,7 +25,10 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
   try {
     // First, get the CSRF token and session cookie
     const loginPageResponse = await fetch('https://my.engie.ro/login', {
-      method: 'GET'
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
     });
 
     const cookies = loginPageResponse.headers.get('set-cookie') || '';
@@ -44,17 +47,19 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Cookie': cookies,
-        'X-CSRF-TOKEN': csrfToken
+        'X-CSRF-TOKEN': csrfToken,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       },
       body: new URLSearchParams({
         username,
         password,
         '_csrf': csrfToken
-      })
+      }),
+      redirect: 'follow'
     });
 
     if (!loginResponse.ok) {
-      throw new Error('Login failed');
+      throw new Error(`Login failed with status: ${loginResponse.status}`);
     }
 
     const sessionCookies = loginResponse.headers.get('set-cookie') || '';
@@ -63,9 +68,14 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
     console.log('Fetching bills...');
     const billsResponse = await fetch('https://my.engie.ro/facturi/istoric', {
       headers: {
-        'Cookie': sessionCookies
+        'Cookie': sessionCookies,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       }
     });
+
+    if (!billsResponse.ok) {
+      throw new Error(`Failed to fetch bills page with status: ${billsResponse.status}`);
+    }
 
     const billsHtml = await billsResponse.text();
     
@@ -73,31 +83,50 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
     const bills: Bill[] = [];
     const rows = billsHtml.match(/<tr[^>]*>.*?<\/tr>/gs) || [];
 
+    console.log(`Found ${rows.length} bill rows`);
+
     for (const row of rows) {
-      const cells = row.match(/<td[^>]*>(.*?)<\/td>/gs) || [];
-      if (cells.length >= 6) {
-        const invoiceNumber = cells[0].replace(/<[^>]+>/g, '').trim();
-        const dateText = cells[2].replace(/<[^>]+>/g, '').trim();
-        const amountText = cells[4].replace(/<[^>]+>/g, '').trim()
-          .replace(/[^\d.,]/g, '')
-          .replace(',', '.');
-        const statusText = cells[5].replace(/<[^>]+>/g, '').trim();
+      try {
+        const cells = row.match(/<td[^>]*>(.*?)<\/td>/gs) || [];
+        if (cells.length >= 6) {
+          const invoiceNumber = cells[0].replace(/<[^>]+>/g, '').trim();
+          const dateText = cells[2].replace(/<[^>]+>/g, '').trim();
+          const amountText = cells[4].replace(/<[^>]+>/g, '').trim()
+            .replace(/[^\d.,]/g, '')
+            .replace(',', '.');
+          const statusText = cells[5].replace(/<[^>]+>/g, '').trim();
 
-        // Parse date (assuming format: DD.MM.YYYY)
-        const [day, month, year] = dateText.split('.');
-        const dueDate = `${year}-${month}-${day}`;
+          // Parse date (assuming format: DD.MM.YYYY)
+          const [day, month, year] = dateText.split('.');
+          if (!day || !month || !year) {
+            console.log('Invalid date format:', dateText);
+            continue;
+          }
 
-        bills.push({
-          amount: parseFloat(amountText),
-          due_date: dueDate,
-          invoice_number: invoiceNumber,
-          type: 'gas',
-          status: statusText.toLowerCase().includes('platit') ? 'paid' : 'pending'
-        });
+          const dueDate = `${year}-${month}-${day}`;
+
+          console.log('Parsed bill:', {
+            invoiceNumber,
+            dueDate,
+            amount: amountText,
+            status: statusText
+          });
+
+          bills.push({
+            amount: parseFloat(amountText),
+            due_date: dueDate,
+            invoice_number: invoiceNumber,
+            type: 'gas',
+            status: statusText.toLowerCase().includes('platit') ? 'paid' : 'pending'
+          });
+        }
+      } catch (error) {
+        console.error('Error parsing bill row:', error);
+        continue;
       }
     }
 
-    console.log(`Found ${bills.length} bills`);
+    console.log(`Successfully parsed ${bills.length} bills`);
     return bills;
 
   } catch (error) {
