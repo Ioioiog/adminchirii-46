@@ -2,20 +2,25 @@
 import React from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, MapPin, AlertCircle, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { format, setDate, isSameMonth, isSameDay, parseISO } from "date-fns";
+import { format, setDate, isSameMonth, isSameDay, parseISO, isToday } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 
 interface Event {
   date: Date;
   title: string;
   type: 'payment' | 'maintenance' | 'contract' | 'tenancy' | 'invoice';
+  property?: { name: string };
+  amount?: number;
+  status?: string;
+  description?: string;
 }
 
 const getBadgeColor = (type: Event['type']) => {
@@ -33,6 +38,33 @@ const getBadgeColor = (type: Event['type']) => {
     default:
       return 'bg-gray-100 text-gray-800';
   }
+};
+
+const getEventIcon = (type: Event['type']) => {
+  switch (type) {
+    case 'payment':
+      return '💰';
+    case 'maintenance':
+      return '🔧';
+    case 'contract':
+      return '📄';
+    case 'tenancy':
+      return '🏠';
+    case 'invoice':
+      return '📃';
+    default:
+      return '📅';
+  }
+};
+
+const getEventUrgency = (event: Event): { color: string; text: string } => {
+  if (isToday(event.date)) {
+    return { color: 'text-yellow-600', text: 'Today' };
+  }
+  if (event.date < new Date()) {
+    return { color: 'text-red-600', text: 'Overdue' };
+  }
+  return { color: 'text-green-600', text: 'Upcoming' };
 };
 
 export function CalendarSection() {
@@ -249,28 +281,102 @@ export function CalendarSection() {
       </CardContent>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Event Details</DialogTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {selectedEvent && (
+                  <span className="text-2xl" role="img" aria-label={selectedEvent.type}>
+                    {getEventIcon(selectedEvent.type)}
+                  </span>
+                )}
+                <DialogTitle className="text-xl">Event Details</DialogTitle>
+              </div>
+              <DialogClose className="rounded-full opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </DialogClose>
+            </div>
           </DialogHeader>
+
           {selectedEvent && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="space-y-2">
-                <h4 className="font-medium">Title</h4>
-                <p className="text-sm text-gray-600">{selectedEvent.title}</p>
+                <h4 className="font-medium text-sm text-gray-500">Title</h4>
+                <p className="text-base">{selectedEvent.title}</p>
               </div>
-              <div className="space-y-2">
-                <h4 className="font-medium">Date</h4>
-                <p className="text-sm text-gray-600">
-                  {format(selectedEvent.date, 'MMMM d, yyyy')}
-                </p>
+
+              <Separator />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-gray-500" />
+                    <h4 className="font-medium text-sm text-gray-500">Date</h4>
+                  </div>
+                  <p className="text-base">{format(selectedEvent.date, 'MMMM d, yyyy')}</p>
+                  <span className={`text-sm font-medium ${getEventUrgency(selectedEvent).color}`}>
+                    {getEventUrgency(selectedEvent).text}
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-gray-500" />
+                    <h4 className="font-medium text-sm text-gray-500">Type</h4>
+                  </div>
+                  <Badge className={getBadgeColor(selectedEvent.type)}>
+                    {selectedEvent.type.charAt(0).toUpperCase() + selectedEvent.type.slice(1)}
+                  </Badge>
+                </div>
               </div>
-              <div className="space-y-2">
-                <h4 className="font-medium">Type</h4>
-                <Badge className={getBadgeColor(selectedEvent.type)}>
-                  {selectedEvent.type.charAt(0).toUpperCase() + selectedEvent.type.slice(1)}
-                </Badge>
-              </div>
+
+              {selectedEvent.property && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-gray-500" />
+                      <h4 className="font-medium text-sm text-gray-500">Property</h4>
+                    </div>
+                    <p className="text-base">{selectedEvent.property.name}</p>
+                  </div>
+                </>
+              )}
+
+              {selectedEvent.amount && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-sm text-gray-500">Amount</h4>
+                    <p className="text-base font-semibold">
+                      ${selectedEvent.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {selectedEvent.status && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-sm text-gray-500">Status</h4>
+                    <Badge variant={selectedEvent.status === 'completed' ? 'default' : 'secondary'}>
+                      {selectedEvent.status.charAt(0).toUpperCase() + selectedEvent.status.slice(1)}
+                    </Badge>
+                  </div>
+                </>
+              )}
+
+              {selectedEvent.description && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-sm text-gray-500">Description</h4>
+                    <p className="text-sm text-gray-600">{selectedEvent.description}</p>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </DialogContent>
