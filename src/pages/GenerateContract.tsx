@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,8 @@ interface Asset {
 export default function GenerateContract() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [selectedProperty, setSelectedProperty] = useState<string>("");
   const [contractType, setContractType] = useState<string>("lease");
