@@ -4,7 +4,7 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { format, setDate } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 interface Event {
   date: Date;
   title: string;
-  type: 'payment' | 'maintenance' | 'contract' | 'tenancy';
+  type: 'payment' | 'maintenance' | 'contract' | 'tenancy' | 'invoice';
 }
 
 const getBadgeColor = (type: Event['type']) => {
@@ -25,6 +25,8 @@ const getBadgeColor = (type: Event['type']) => {
       return 'bg-purple-100 text-purple-800';
     case 'tenancy':
       return 'bg-orange-100 text-orange-800';
+    case 'invoice':
+      return 'bg-yellow-100 text-yellow-800';
     default:
       return 'bg-gray-100 text-gray-800';
   }
@@ -32,7 +34,7 @@ const getBadgeColor = (type: Event['type']) => {
 
 export function CalendarSection() {
   const { toast } = useToast();
-  const [date, setDate] = React.useState<Date | undefined>(new Date());
+  const [date, setSelectedDate] = React.useState<Date | undefined>(new Date());
 
   // Fetch payments, maintenance requests, contracts, and tenancies
   const { data: events = [], isLoading } = useQuery({
@@ -79,12 +81,13 @@ export function CalendarSection() {
 
         if (contractsError) throw contractsError;
 
-        // Fetch tenancies
+        // Fetch tenancies with monthly pay day
         const { data: tenancies, error: tenanciesError } = await supabase
           .from('tenancies')
           .select(`
             start_date,
             end_date,
+            monthly_pay_day,
             property:properties (name)
           `)
           .eq('status', 'active');
@@ -132,7 +135,18 @@ export function CalendarSection() {
               date: new Date(tenancy.end_date!),
               title: `Tenancy Ends - ${tenancy.property.name}`,
               type: 'tenancy' as const
-            }))
+            })),
+
+          // Invoice generation dates
+          ...tenancies.map(tenancy => {
+            const currentDate = new Date();
+            const invoiceDate = setDate(currentDate, tenancy.monthly_pay_day || 1);
+            return {
+              date: invoiceDate,
+              title: `Invoice Generation - ${tenancy.property.name}`,
+              type: 'invoice' as const
+            };
+          })
         ];
 
         return events;
@@ -166,7 +180,7 @@ export function CalendarSection() {
             <Calendar
               mode="single"
               selected={date}
-              onSelect={setDate}
+              onSelect={setSelectedDate}
               className="rounded-md border"
             />
           </div>
