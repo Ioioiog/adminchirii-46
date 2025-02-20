@@ -1,4 +1,3 @@
-
 import { createClient } from 'npm:@supabase/supabase-js@2.39.0';
 import { corsHeaders } from '../_shared/cors.ts';
 
@@ -23,9 +22,10 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
   console.log('Starting ENGIE Romania scraping process');
 
   try {
-    // First, get the CSRF token and session cookie
-    console.log('Fetching login page...');
-    const loginPageResponse = await fetch('https://my.engie.ro/login', {
+    const loginUrl = 'https://my.engie.ro/AUTENTIFICARE';
+    console.log('Fetching login page:', loginUrl);
+    
+    const loginPageResponse = await fetch(loginUrl, {
       method: 'GET',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -54,9 +54,8 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
 
     console.log('CSRF token obtained:', csrfToken.substring(0, 10) + '...');
 
-    // Login
     console.log('Attempting login...');
-    const loginResponse = await fetch('https://my.engie.ro/login', {
+    const loginResponse = await fetch(loginUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -66,7 +65,7 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
         'Origin': 'https://my.engie.ro',
-        'Referer': 'https://my.engie.ro/login'
+        'Referer': loginUrl
       },
       body: new URLSearchParams({
         username,
@@ -85,18 +84,16 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
     const sessionCookies = loginResponse.headers.get('set-cookie') || cookies;
     console.log('Login successful, got session cookies');
 
-    // Small delay to ensure session is established
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Fetch bills
     console.log('Fetching bills...');
-    const billsResponse = await fetch('https://my.engie.ro/facturi/istoric', {
+    const billsResponse = await fetch('https://my.engie.ro/FACTURI/ISTORIC', {
       headers: {
         'Cookie': sessionCookies,
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
-        'Referer': 'https://my.engie.ro/login'
+        'Referer': loginUrl
       }
     });
 
@@ -106,7 +103,6 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
       throw new Error(`Failed to fetch bills page with status: ${billsResponse.status} ${billsResponse.statusText}`);
     }
 
-    // Parse bills from HTML
     const bills: Bill[] = [];
     const rows = billsResponseText.match(/<tr[^>]*>.*?<\/tr>/gs) || [];
 
@@ -123,7 +119,6 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
             .replace(',', '.');
           const statusText = cells[5].replace(/<[^>]+>/g, '').trim();
 
-          // Parse date (assuming format: DD.MM.YYYY)
           const [day, month, year] = dateText.split('.');
           if (!day || !month || !year) {
             console.log('Invalid date format:', dateText);
@@ -168,7 +163,6 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -186,7 +180,6 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Create scraping job
     const { data: jobData, error: jobError } = await supabase
       .from('scraping_jobs')
       .insert({
@@ -209,7 +202,6 @@ Deno.serve(async (req) => {
     }
 
     try {
-      // Perform scraping based on provider
       let bills: Bill[] = [];
       if (request.provider.toLowerCase() === 'engie_romania') {
         bills = await scrapeEngieRomania(request.username, request.password);
@@ -217,7 +209,6 @@ Deno.serve(async (req) => {
         throw new Error('Unsupported provider');
       }
 
-      // Store bills in database
       if (bills.length > 0) {
         const { error: billError } = await supabase
           .from('utilities')
@@ -239,7 +230,6 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Update job status to completed
       const { error: updateError } = await supabase
         .from('scraping_jobs')
         .update({
@@ -265,7 +255,6 @@ Deno.serve(async (req) => {
       );
 
     } catch (error) {
-      // Update job status to failed
       const { error: updateError } = await supabase
         .from('scraping_jobs')
         .update({
@@ -292,7 +281,7 @@ Deno.serve(async (req) => {
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200, // Return 200 even for errors to avoid Supabase error
+        status: 200,
       }
     );
   }
