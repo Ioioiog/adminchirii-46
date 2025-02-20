@@ -1,18 +1,16 @@
 
 import React from "react";
-import { TenantSelect } from "./TenantSelect";
 import { useUserRole } from "@/hooks/use-user-role";
-import { MessageSquare, Users, Video } from "lucide-react";
+import { MessageSquare, Video } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 interface ChatHeaderProps {
-  onTenantSelect: (tenantId: string) => void;
   selectedTenantId: string | null;
   onVideoCall?: () => void;
 }
 
-export function ChatHeader({ onTenantSelect, selectedTenantId, onVideoCall }: ChatHeaderProps) {
+export function ChatHeader({ selectedTenantId, onVideoCall }: ChatHeaderProps) {
   const { userRole } = useUserRole();
 
   console.log("ChatHeader - selectedTenantId:", selectedTenantId); // Debug log
@@ -31,29 +29,17 @@ export function ChatHeader({ onTenantSelect, selectedTenantId, onVideoCall }: Ch
             {userRole === "landlord" ? "Chat with Tenants" : "Chat with Landlord"}
           </h1>
         </div>
+        {selectedTenantId && (
+          <Button
+            variant="secondary"
+            size="icon"
+            className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+            onClick={onVideoCall}
+          >
+            <Video className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+          </Button>
+        )}
       </div>
-      {userRole === "landlord" && (
-        <div className={cn(
-          "mt-3 flex items-center gap-2",
-          "animate-fade-in delay-100"
-        )}>
-          <Users className="h-4 w-4 text-slate-400" />
-          <TenantSelect
-            onTenantSelect={onTenantSelect}
-            selectedTenantId={selectedTenantId || undefined}
-          />
-          {selectedTenantId && (
-            <Button
-              variant="secondary"
-              size="icon"
-              className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
-              onClick={onVideoCall}
-            >
-              <Video className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-            </Button>
-          )}
-        </div>
-      )}
     </div>
   );
 }
