@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -155,9 +156,14 @@ export function CalendarSection() {
   const filteredEvents = React.useMemo(() => {
     if (!selectedDate || !events.length) return [];
     
+    const eventsWithParsedDates = events.map(event => ({
+      ...event,
+      date: new Date(event.date)
+    }));
+    
     return viewMode === 'day'
-      ? events.filter(event => isSameDay(event.date, selectedDate))
-      : events.filter(event => isSameMonth(event.date, selectedDate));
+      ? eventsWithParsedDates.filter(event => isSameDay(event.date, selectedDate))
+      : eventsWithParsedDates.filter(event => isSameMonth(event.date, selectedDate));
   }, [selectedDate, events, viewMode]);
 
   const handleDateSelect = (date: Date | undefined) => {
@@ -176,6 +182,10 @@ export function CalendarSection() {
     setSelectedDate(date);
     setLastClickTime(currentTime);
   };
+
+  console.log('Selected Date:', selectedDate);
+  console.log('View Mode:', viewMode);
+  console.log('Filtered Events:', filteredEvents);
 
   return (
     <Card className="col-span-full lg:col-span-4">
