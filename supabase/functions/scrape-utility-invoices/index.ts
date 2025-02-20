@@ -1,5 +1,6 @@
+
 import { createClient } from 'npm:@supabase/supabase-js@2.39.0';
-import puppeteer from "npm:puppeteer@16.2.0";
+import { chromium } from 'npm:playwright-core@1.41.2';
 import { corsHeaders } from '../_shared/cors.ts';
 
 type ScrapingStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
@@ -30,12 +31,9 @@ async function handleCookies(page: any) {
   console.log('🍪 Checking for cookie consent...');
   try {
     await page.waitForSelector('#cookieConsentBtnRight', { timeout: 5000 });
-    const acceptButton = await page.$('#cookieConsentBtnRight');
-    if (acceptButton) {
-      console.log('✅ Clicking "Acceptă toate"');
-      await acceptButton.click();
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
+    await page.click('#cookieConsentBtnRight');
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log('✅ Cookie consent handled');
   } catch {
     console.log('✅ No cookie modal detected, proceeding...');
   }
@@ -92,39 +90,35 @@ async function solveCaptcha(page: any, captchaApiKey: string): Promise<void> {
 
 async function scrapeEngie(credentials: { username: string; password: string }, captchaApiKey: string) {
   console.log('Starting ENGIE Romania scraping process');
-  const browser = await puppeteer.launch({
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-web-security'
-    ]
+  
+  // Use playwright-core with chromium
+  const browser = await chromium.launch({
+    chromiumSandbox: false,
+    args: ['--no-sandbox']
   });
   
-  const page = await browser.newPage();
+  const context = await browser.newContext();
+  const page = await context.newPage();
 
   try {
     // Login process
     console.log('🔑 Navigating to login page...');
-    await page.goto('https://my.engie.ro/autentificare', { waitUntil: 'networkidle2' });
+    await page.goto('https://my.engie.ro/autentificare');
     await handleCookies(page);
 
     console.log('📝 Entering login credentials...');
-    await page.waitForSelector('#username', { visible: true });
-    await page.waitForSelector('#password', { visible: true });
-
-    await page.type('#username', credentials.username, { delay: 100 });
-    await page.type('#password', credentials.password, { delay: 100 });
+    await page.fill('#username', credentials.username);
+    await page.fill('#password', credentials.password);
 
     await solveCaptcha(page, captchaApiKey);
 
     console.log('🔓 Submitting login form...');
     await page.click('button[type="submit"].nj-btn.nj-btn--primary');
-    await page.waitForNavigation({ waitUntil: 'networkidle2' });
+    await page.waitForNavigation();
 
     // Navigate to invoices page
     console.log('📄 Navigating to invoices page...');
-    await page.goto('https://my.engie.ro/facturi/istoric', { waitUntil: 'networkidle2' });
+    await page.goto('https://my.engie.ro/facturi/istoric');
 
     // Wait for and extract invoices
     console.log('⏳ Waiting for invoices table...');
@@ -170,12 +164,7 @@ async function scrapeEngie(credentials: { username: string; password: string }, 
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { 
-      headers: {
-        ...corsHeaders,
-        'Access-Control-Max-Age': '86400',
-      }
-    });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
@@ -254,10 +243,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!providerData.property_id) {
-      throw new Error('No property associated with provider');
-    }
-
     const { data: jobData, error: jobError } = await supabase
       .from('scraping_jobs')
       .insert({
@@ -290,6 +275,7 @@ Deno.serve(async (req) => {
       .update({ status: 'in_progress' })
       .eq('id', jobData.id);
 
+    console.log('Starting ENGIE scraping...');
     const scrapingResult = await scrapeEngie(
       { 
         username: request.username, 
