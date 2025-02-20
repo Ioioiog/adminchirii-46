@@ -184,7 +184,9 @@ const Documents = () => {
                   <div className="p-2 bg-blue-600 rounded-lg">
                     <FileText className="h-6 w-6 text-white" />
                   </div>
-                  <h1 className="text-2xl font-semibold">Documents</h1>
+                  <h1 className="text-2xl font-semibold">
+                    {activeTab === 'contracts' ? 'Contracts' : 'Documents'}
+                  </h1>
                 </div>
                 <p className="text-gray-500">
                   Manage and track all your property-related documents and contracts.
