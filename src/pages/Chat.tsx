@@ -28,7 +28,16 @@ const Chat = () => {
   const { userRole } = useUserRole();
   const { data: tenants, isLoading: isTenantsLoading } = useTenants();
 
-  const filteredTenants = tenants?.filter(tenant => {
+  // Deduplicate tenants based on email and get the latest record for each tenant
+  const uniqueTenants = tenants?.reduce((acc, current) => {
+    const existingTenant = acc.find(item => item.email === current.email);
+    if (!existingTenant) {
+      acc.push(current);
+    }
+    return acc;
+  }, [] as typeof tenants extends (infer T)[] ? T[] : never) || [];
+
+  const filteredTenants = uniqueTenants?.filter(tenant => {
     const fullName = `${tenant.first_name || ''} ${tenant.last_name || ''}`.toLowerCase();
     const email = tenant.email?.toLowerCase() || '';
     const query = searchQuery.toLowerCase();
