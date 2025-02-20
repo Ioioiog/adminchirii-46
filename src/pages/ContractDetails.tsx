@@ -17,6 +17,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Json } from "@/integrations/supabase/types/json";
 import jsPDF from 'jspdf';
 
 interface ContractSection {
@@ -110,9 +111,17 @@ export default function ContractDetails() {
 
   const handleSave = async () => {
     try {
+      // Convert ContractContent to a Json compatible object
+      const jsonContent: Json = {
+        sections: editedContent.sections.map(section => ({
+          title: section.title,
+          content: section.content
+        }))
+      };
+
       const { error } = await supabase
         .from("contracts")
-        .update({ content: editedContent })
+        .update({ content: jsonContent })
         .eq("id", id);
 
       if (error) throw error;
