@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -8,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 
 interface Event {
   date: Date;
@@ -34,7 +36,7 @@ const getBadgeColor = (type: Event['type']) => {
 
 export function CalendarSection() {
   const { toast } = useToast();
-  const [selectedDate, setSelectedDate] = React.useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
   const [currentMonth, setCurrentMonth] = React.useState<Date>(new Date());
 
   const { data: events = [], isLoading } = useQuery({
@@ -152,13 +154,20 @@ export function CalendarSection() {
   });
 
   const filteredEvents = React.useMemo(() => {
-    if (!selectedDate || !events.length) return [];
-    return events.filter(event => isSameMonth(event.date, currentMonth));
-  }, [events, currentMonth]);
+    if (!events.length) return [];
+    return events.filter(event => 
+      selectedDate 
+        ? isSameDay(event.date, selectedDate)
+        : isSameMonth(event.date, currentMonth)
+    );
+  }, [events, currentMonth, selectedDate]);
 
   const handleDateSelect = (date: Date | undefined) => {
-    if (!date) return;
-    setSelectedDate(date);
+    setSelectedDate(date || null);
+  };
+
+  const clearSelection = () => {
+    setSelectedDate(null);
   };
 
   console.log('Selected Date:', selectedDate);
@@ -168,9 +177,20 @@ export function CalendarSection() {
   return (
     <Card className="col-span-full lg:col-span-4">
       <CardHeader>
-        <div className="flex items-center space-x-2">
-          <CalendarIcon className="h-5 w-5 text-gray-500" />
-          <h3 className="text-lg font-medium">Calendar</h3>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <CalendarIcon className="h-5 w-5 text-gray-500" />
+            <h3 className="text-lg font-medium">Calendar</h3>
+          </div>
+          {selectedDate && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={clearSelection}
+            >
+              Back to Month View
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -178,7 +198,7 @@ export function CalendarSection() {
           <div>
             <Calendar
               mode="single"
-              selected={selectedDate}
+              selected={selectedDate || undefined}
               onSelect={handleDateSelect}
               className="rounded-md border"
               onMonthChange={setCurrentMonth}
@@ -186,7 +206,10 @@ export function CalendarSection() {
           </div>
           <div className="space-y-4">
             <h4 className="font-medium text-sm text-gray-500">
-              Events for {format(currentMonth, 'MMMM yyyy')}
+              {selectedDate 
+                ? `Events for ${format(selectedDate, 'MMMM d, yyyy')}`
+                : `Events for ${format(currentMonth, 'MMMM yyyy')}`
+              }
             </h4>
             {isLoading ? (
               <p className="text-sm text-gray-500">Loading events...</p>
@@ -209,7 +232,9 @@ export function CalendarSection() {
                 </div>
               </ScrollArea>
             ) : (
-              <p className="text-sm text-gray-500">No events this month</p>
+              <p className="text-sm text-gray-500">
+                No events {selectedDate ? 'on this day' : 'this month'}
+              </p>
             )}
           </div>
         </div>
