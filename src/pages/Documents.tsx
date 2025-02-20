@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Grid, List, Plus, FileText, CreditCard } from "lucide-react";
@@ -197,7 +198,7 @@ const Documents = () => {
                     onClick={() => setShowAddModal(true)}
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Upload Document
+                    Upload Contract
                   </Button>
                   {activeTab === "contracts" && (
                     <Button 
