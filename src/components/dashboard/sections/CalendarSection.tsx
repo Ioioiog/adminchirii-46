@@ -4,7 +4,7 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { format, setDate, isSameMonth, isSameDay } from "date-fns";
+import { format, setDate, isSameMonth, isSameDay, parseISO } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -35,7 +35,7 @@ const getBadgeColor = (type: Event['type']) => {
 
 export function CalendarSection() {
   const { toast } = useToast();
-  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(new Date());
+  const [selectedDate, setSelectedDate] = React.useState<Date>(new Date());
   const [viewMode, setViewMode] = React.useState<'month' | 'day'>('month');
   const [lastClickTime, setLastClickTime] = React.useState(0);
 
@@ -94,7 +94,7 @@ export function CalendarSection() {
 
         const events: Event[] = [
           ...payments.map(payment => ({
-            date: new Date(payment.due_date),
+            date: parseISO(payment.due_date),
             title: `Rent Payment Due - ${payment.tenancy.property.name}`,
             type: 'payment' as const
           })),
@@ -102,7 +102,7 @@ export function CalendarSection() {
           ...maintenance
             .filter(m => m.scheduled_date)
             .map(m => ({
-              date: new Date(m.scheduled_date!),
+              date: parseISO(m.scheduled_date!),
               title: `${m.title} - ${m.property.name}`,
               type: 'maintenance' as const
             })),
@@ -110,13 +110,13 @@ export function CalendarSection() {
           ...contracts
             .filter(c => c.valid_until)
             .map(c => ({
-              date: new Date(c.valid_until!),
+              date: parseISO(c.valid_until!),
               title: `Contract Renewal - ${c.property.name}`,
               type: 'contract' as const
             })),
 
           ...tenancies.map(tenancy => ({
-            date: new Date(tenancy.start_date),
+            date: parseISO(tenancy.start_date),
             title: `Tenancy Starts - ${tenancy.property.name}`,
             type: 'tenancy' as const
           })),
@@ -124,7 +124,7 @@ export function CalendarSection() {
           ...tenancies
             .filter(t => t.end_date)
             .map(tenancy => ({
-              date: new Date(tenancy.end_date!),
+              date: parseISO(tenancy.end_date!),
               title: `Tenancy Ends - ${tenancy.property.name}`,
               type: 'tenancy' as const
             })),
@@ -155,15 +155,10 @@ export function CalendarSection() {
 
   const filteredEvents = React.useMemo(() => {
     if (!selectedDate || !events.length) return [];
-    
-    const eventsWithParsedDates = events.map(event => ({
-      ...event,
-      date: new Date(event.date)
-    }));
-    
+
     return viewMode === 'day'
-      ? eventsWithParsedDates.filter(event => isSameDay(event.date, selectedDate))
-      : eventsWithParsedDates.filter(event => isSameMonth(event.date, selectedDate));
+      ? events.filter(event => isSameDay(event.date, selectedDate))
+      : events.filter(event => isSameMonth(event.date, selectedDate));
   }, [selectedDate, events, viewMode]);
 
   const handleDateSelect = (date: Date | undefined) => {
