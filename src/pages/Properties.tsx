@@ -1,203 +1,184 @@
 
-import { Building2 } from "lucide-react";
-import { useTranslation } from "react-i18next";
-import { DashboardProperties } from "@/components/dashboard/DashboardProperties";
-import { useUserRole } from "@/hooks/use-user-role";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Plus, ChevronDown, Building2, MapPin, User, Calendar, DollarSign } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { PropertyDialog } from "@/components/properties/PropertyDialog";
+import { PropertyFilters } from "@/components/properties/PropertyFilters";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useProperties } from "@/hooks/useProperties";
+import { PropertyListHeader } from "@/components/properties/PropertyListHeader";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
-export default function Properties() {
-  const { t } = useTranslation('properties');
-  const { userRole } = useUserRole();
+const Properties = () => {
+  const navigate = useNavigate();
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const { properties, isLoading } = useProperties();
 
-  console.log("Properties page - User Role:", userRole);
-
-  const { data: tenancies, isLoading } = useQuery({
-    queryKey: ["tenant-properties"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No authenticated user");
-
-      console.log("Fetching tenant properties for user:", user.id);
-      
-      const { data, error } = await supabase
-        .from('tenancies')
-        .select(`
-          id,
-          status,
-          start_date,
-          end_date,
-          property:properties (
-            id,
-            name,
-            address,
-            type,
-            monthly_rent,
-            description
-          )
-        `)
-        .eq('tenant_id', user.id)
-        .eq('status', 'active');
-
-      if (error) {
-        console.error("Error fetching tenant properties:", error);
-        throw error;
-      }
-
-      console.log("Fetched tenant properties:", data);
-      return data;
-    },
-    enabled: userRole === "tenant"
+  const filteredProperties = properties?.filter((property) => {
+    const matchesSearch = property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      property.address.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || property.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
-  // Early return if user is a service provider
-  if (userRole === "service_provider") {
+  if (isLoading) {
     return (
-      <div className="flex h-screen bg-gradient-to-br from-dashboard-background to-gray-50">
+      <div className="flex bg-[#F8F9FC] min-h-screen">
         <DashboardSidebar />
-        <main className="flex-1 overflow-y-auto">
-          <div className="container mx-auto px-4 py-8">
-            <div className="text-center">
-              <h1 className="text-2xl font-bold text-gray-900">
-                {t("serviceProvider.notAvailable")}
-              </h1>
-              <p className="mt-2 text-gray-600">
-                {t("serviceProvider.description")}
-              </p>
-            </div>
+        <main className="flex-1 p-8">
+          <div className="max-w-7xl mx-auto">
+            Loading...
           </div>
         </main>
       </div>
     );
   }
 
-  // For landlords, keep the existing view with management capabilities
-  if (userRole === "landlord") {
-    return (
-      <div className="flex h-screen bg-gradient-to-br from-dashboard-background to-gray-50">
-        <DashboardSidebar />
-        <main className="flex-1 overflow-y-auto">
-          <div className="container mx-auto px-4 py-8">
-            <div className="space-y-6">
-              <header className="bg-white rounded-xl shadow-lg p-8">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-600 rounded-xl">
-                    <Building2 className="h-6 w-6 text-white" />
-                  </div>
-                  <h1 className="text-3xl font-bold tracking-tight">
-                    {t("title")}
-                  </h1>
-                </div>
-                <p className="mt-4 text-gray-600">
-                  {t("description.landlord")}
-                </p>
-              </header>
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <DashboardProperties userRole="landlord" />
-              </div>
-            </div>
-          </div>
-        </main>
-      </div>
-    );
-  }
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'occupied':
+        return 'bg-green-100 text-green-800';
+      case 'vacant':
+        return 'bg-red-100 text-red-800';
+      case 'maintenance':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
-  // Tenant view
   return (
-    <div className="flex h-screen bg-gradient-to-br from-dashboard-background to-gray-50">
+    <div className="flex bg-[#F8F9FC] min-h-screen">
       <DashboardSidebar />
-      <main className="flex-1 overflow-y-auto">
-        <div className="container mx-auto px-4 py-8">
-          <div className="space-y-6">
-            <header className="bg-white rounded-xl shadow-lg p-8">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-600 rounded-xl">
-                  <Building2 className="h-6 w-6 text-white" />
-                </div>
-                <h1 className="text-3xl font-bold tracking-tight">
-                  {t("title")}
-                </h1>
-              </div>
-              <p className="mt-4 text-gray-600">
-                {t("description.tenant")}
-              </p>
-            </header>
+      <main className="flex-1 p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h1 className="text-2xl font-semibold">Properties</h1>
+              <p className="text-gray-500">Manage and track your properties</p>
+            </div>
+            <Button 
+              onClick={() => setShowAddModal(true)}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Property
+            </Button>
+          </div>
 
-            {isLoading ? (
-              <div className="grid gap-6 md:grid-cols-2">
-                {[1, 2].map((i) => (
-                  <Card key={i} className="animate-pulse">
-                    <CardHeader>
-                      <div className="h-6 bg-gray-200 rounded w-2/3"></div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="h-4 bg-gray-200 rounded"></div>
-                        <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+          <PropertyFilters
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+          />
+
+          <div className="bg-white rounded-lg shadow-sm">
+            <Accordion type="single" collapsible className="w-full">
+              {filteredProperties?.map((property) => (
+                <AccordionItem key={property.id} value={property.id}>
+                  <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-4">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                          <Building2 className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div className="text-left">
+                          <h3 className="font-medium">{property.name}</h3>
+                          <p className="text-sm text-gray-500">{property.address}</p>
+                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : !tenancies?.length ? (
-              <Card>
-                <CardContent className="p-6">
-                  <div className="text-center">
-                    <p className="text-lg text-gray-600">
-                      {t("empty.tenant")}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-6 md:grid-cols-2">
-                {tenancies.map((tenancy) => (
-                  <Card key={tenancy.id} className="hover:shadow-lg transition-all duration-300">
-                    <CardHeader>
-                      <CardTitle>{tenancy.property.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div>
-                          <p className="text-sm text-gray-500">{t("details.address")}</p>
-                          <p className="font-medium">{tenancy.property.address}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">{t("details.type")}</p>
-                          <p className="font-medium">{t(`types.${tenancy.property.type.toLowerCase()}`)}</p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
+                      <Badge className={getStatusColor(property.status)}>
+                        {property.status}
+                      </Badge>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="px-6 py-4 space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="flex items-center gap-3">
+                          <MapPin className="h-5 w-5 text-gray-400" />
                           <div>
-                            <p className="text-sm text-gray-500">{t("lease.startDate")}</p>
-                            <p className="font-medium">{format(new Date(tenancy.start_date), 'PPP')}</p>
+                            <p className="text-sm font-medium">Address</p>
+                            <p className="text-sm text-gray-500">{property.address}</p>
                           </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <User className="h-5 w-5 text-gray-400" />
                           <div>
-                            <p className="text-sm text-gray-500">{t("lease.endDate")}</p>
-                            <p className="font-medium">
-                              {tenancy.end_date 
-                                ? format(new Date(tenancy.end_date), 'PPP')
-                                : t("lease.ongoing")}
+                            <p className="text-sm font-medium">Tenants</p>
+                            <p className="text-sm text-gray-500">
+                              {property.tenant_count || 0} Active
                             </p>
                           </div>
                         </div>
-                        {tenancy.property.description && (
+                        <div className="flex items-center gap-3">
+                          <DollarSign className="h-5 w-5 text-gray-400" />
                           <div>
-                            <p className="text-sm text-gray-500">{t("details.description")}</p>
-                            <p className="text-gray-600">{tenancy.property.description}</p>
+                            <p className="text-sm font-medium">Monthly Rent</p>
+                            <p className="text-sm text-gray-500">
+                              ${property.monthly_rent || 0}
+                            </p>
                           </div>
-                        )}
+                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      <div className="flex items-center justify-end gap-2 pt-4 border-t">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/properties/${property.id}`)}
+                        >
+                          View Details
+                        </Button>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="bg-blue-600 hover:bg-blue-700"
+                          onClick={() => navigate(`/properties/${property.id}/tenants`)}
+                        >
+                          Manage Tenants
+                        </Button>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+            {filteredProperties?.length === 0 && (
+              <div className="text-center py-12">
+                <Building2 className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No properties found</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Get started by creating a new property.
+                </p>
+                <div className="mt-6">
+                  <Button onClick={() => setShowAddModal(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Property
+                  </Button>
+                </div>
               </div>
             )}
           </div>
         </div>
       </main>
+
+      <PropertyDialog
+        open={showAddModal}
+        onOpenChange={setShowAddModal}
+      />
     </div>
   );
-}
+};
+
+export default Properties;
