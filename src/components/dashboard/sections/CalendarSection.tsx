@@ -11,17 +11,17 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-
 interface Event {
   date: Date;
   title: string;
   type: 'payment' | 'maintenance' | 'contract' | 'tenancy' | 'invoice';
-  property?: { name: string };
+  property?: {
+    name: string;
+  };
   amount?: number;
   status?: string;
   description?: string;
 }
-
 const getBadgeColor = (type: Event['type']) => {
   switch (type) {
     case 'payment':
@@ -38,7 +38,6 @@ const getBadgeColor = (type: Event['type']) => {
       return 'bg-gray-100 text-gray-800';
   }
 };
-
 const getEventIcon = (type: Event['type']) => {
   switch (type) {
     case 'payment':
@@ -55,125 +54,115 @@ const getEventIcon = (type: Event['type']) => {
       return '📅';
   }
 };
-
-const getEventUrgency = (event: Event): { color: string; text: string } => {
+const getEventUrgency = (event: Event): {
+  color: string;
+  text: string;
+} => {
   if (isToday(event.date)) {
-    return { color: 'text-yellow-600', text: 'Today' };
+    return {
+      color: 'text-yellow-600',
+      text: 'Today'
+    };
   }
   if (event.date < new Date()) {
-    return { color: 'text-red-600', text: 'Overdue' };
+    return {
+      color: 'text-red-600',
+      text: 'Overdue'
+    };
   }
-  return { color: 'text-green-600', text: 'Upcoming' };
+  return {
+    color: 'text-green-600',
+    text: 'Upcoming'
+  };
 };
-
 export function CalendarSection() {
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
   const [currentMonth, setCurrentMonth] = React.useState<Date>(new Date());
   const [selectedEvent, setSelectedEvent] = React.useState<Event | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-
-  const { data: events = [], isLoading } = useQuery({
+  const {
+    data: events = [],
+    isLoading
+  } = useQuery({
     queryKey: ['calendar-events'],
     queryFn: async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: {
+            user
+          }
+        } = await supabase.auth.getUser();
         if (!user) throw new Error('No user found');
-
-        const { data: payments, error: paymentsError } = await supabase
-          .from('payments')
-          .select(`
+        const {
+          data: payments,
+          error: paymentsError
+        } = await supabase.from('payments').select(`
             amount,
             due_date,
             tenancy:tenancies (
               property:properties (name)
             )
-          `)
-          .eq('status', 'pending');
-
+          `).eq('status', 'pending');
         if (paymentsError) throw paymentsError;
-
-        const { data: maintenance, error: maintenanceError } = await supabase
-          .from('maintenance_requests')
-          .select(`
+        const {
+          data: maintenance,
+          error: maintenanceError
+        } = await supabase.from('maintenance_requests').select(`
             title,
             scheduled_date,
             property:properties (name)
-          `)
-          .in('status', ['pending', 'in_progress']);
-
+          `).in('status', ['pending', 'in_progress']);
         if (maintenanceError) throw maintenanceError;
-
-        const { data: contracts, error: contractsError } = await supabase
-          .from('contracts')
-          .select(`
+        const {
+          data: contracts,
+          error: contractsError
+        } = await supabase.from('contracts').select(`
             valid_until,
             property:properties (name)
-          `)
-          .eq('status', 'signed');
-
+          `).eq('status', 'signed');
         if (contractsError) throw contractsError;
-
-        const { data: tenancies, error: tenanciesError } = await supabase
-          .from('tenancies')
-          .select(`
+        const {
+          data: tenancies,
+          error: tenanciesError
+        } = await supabase.from('tenancies').select(`
             start_date,
             end_date,
             monthly_pay_day,
             property:properties (name)
-          `)
-          .eq('status', 'active');
-
+          `).eq('status', 'active');
         if (tenanciesError) throw tenanciesError;
-
-        const events: Event[] = [
-          ...payments.map(payment => ({
-            date: parseISO(payment.due_date),
-            title: `Rent Payment Due - ${payment.tenancy.property.name}`,
-            type: 'payment' as const
-          })),
-
-          ...maintenance
-            .filter(m => m.scheduled_date)
-            .map(m => ({
-              date: parseISO(m.scheduled_date!),
-              title: `${m.title} - ${m.property.name}`,
-              type: 'maintenance' as const
-            })),
-
-          ...contracts
-            .filter(c => c.valid_until)
-            .map(c => ({
-              date: parseISO(c.valid_until!),
-              title: `Contract Renewal - ${c.property.name}`,
-              type: 'contract' as const
-            })),
-
-          ...tenancies.map(tenancy => ({
-            date: parseISO(tenancy.start_date),
-            title: `Tenancy Starts - ${tenancy.property.name}`,
-            type: 'tenancy' as const
-          })),
-
-          ...tenancies
-            .filter(t => t.end_date)
-            .map(tenancy => ({
-              date: parseISO(tenancy.end_date!),
-              title: `Tenancy Ends - ${tenancy.property.name}`,
-              type: 'tenancy' as const
-            })),
-
-          ...tenancies.map(tenancy => {
-            const currentDate = new Date();
-            const invoiceDate = setDate(currentDate, tenancy.monthly_pay_day || 1);
-            return {
-              date: invoiceDate,
-              title: `Invoice Generation - ${tenancy.property.name}`,
-              type: 'invoice' as const
-            };
-          })
-        ];
-
+        const events: Event[] = [...payments.map(payment => ({
+          date: parseISO(payment.due_date),
+          title: `Rent Payment Due - ${payment.tenancy.property.name}`,
+          type: 'payment' as const
+        })), ...maintenance.filter(m => m.scheduled_date).map(m => ({
+          date: parseISO(m.scheduled_date!),
+          title: `${m.title} - ${m.property.name}`,
+          type: 'maintenance' as const
+        })), ...contracts.filter(c => c.valid_until).map(c => ({
+          date: parseISO(c.valid_until!),
+          title: `Contract Renewal - ${c.property.name}`,
+          type: 'contract' as const
+        })), ...tenancies.map(tenancy => ({
+          date: parseISO(tenancy.start_date),
+          title: `Tenancy Starts - ${tenancy.property.name}`,
+          type: 'tenancy' as const
+        })), ...tenancies.filter(t => t.end_date).map(tenancy => ({
+          date: parseISO(tenancy.end_date!),
+          title: `Tenancy Ends - ${tenancy.property.name}`,
+          type: 'tenancy' as const
+        })), ...tenancies.map(tenancy => {
+          const currentDate = new Date();
+          const invoiceDate = setDate(currentDate, tenancy.monthly_pay_day || 1);
+          return {
+            date: invoiceDate,
+            title: `Invoice Generation - ${tenancy.property.name}`,
+            type: 'invoice' as const
+          };
+        })];
         return events;
       } catch (error) {
         console.error('Error fetching calendar events:', error);
@@ -186,31 +175,21 @@ export function CalendarSection() {
       }
     }
   });
-
   const filteredEvents = React.useMemo(() => {
     if (!events.length) return [];
-    return events.filter(event => 
-      selectedDate 
-        ? isSameDay(event.date, selectedDate)
-        : isSameMonth(event.date, currentMonth)
-    );
+    return events.filter(event => selectedDate ? isSameDay(event.date, selectedDate) : isSameMonth(event.date, currentMonth));
   }, [events, currentMonth, selectedDate]);
-
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date || null);
   };
-
   const clearSelection = () => {
     setSelectedDate(null);
   };
-
   const handleEventClick = (event: Event) => {
     setSelectedEvent(event);
     setIsDialogOpen(true);
   };
-
-  return (
-    <Card className="col-span-full lg:col-span-4 bg-gradient-to-br from-white via-blue-50/10 to-indigo-50/10 backdrop-blur-sm border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+  return <Card className="col-span-full lg:col-span-4 bg-gradient-to-br from-white via-blue-50/10 to-indigo-50/10 backdrop-blur-sm border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -219,59 +198,32 @@ export function CalendarSection() {
             </div>
             <h3 className="text-lg font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">Calendar</h3>
           </div>
-          {selectedDate && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={clearSelection}
-              className="hover:bg-primary/5 transition-colors"
-            >
+          {selectedDate && <Button variant="outline" size="sm" onClick={clearSelection} className="hover:bg-primary/5 transition-colors">
               Back to Month View
-            </Button>
-          )}
+            </Button>}
         </div>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="relative p-4 rounded-xl bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.15)] transition-all duration-300">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-transparent to-indigo-50/50 rounded-xl" />
-            <div className="flex justify-center items-center">
-              <Calendar
-                mode="single"
-                selected={selectedDate || undefined}
-                onSelect={handleDateSelect}
-                className="relative z-10 bg-transparent scale-90 transform"
-                onMonthChange={setCurrentMonth}
-              />
-            </div>
+          <div className="bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl">
+            <Calendar mode="single" selected={selectedDate || undefined} onSelect={handleDateSelect} className="w-full" onMonthChange={setCurrentMonth} />
           </div>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h4 className="font-medium text-sm text-gray-600">
-                {selectedDate 
-                  ? `Events for ${format(selectedDate, 'MMMM d, yyyy')}`
-                  : `Events for ${format(currentMonth, 'MMMM yyyy')}`
-                }
+                {selectedDate ? `Events for ${format(selectedDate, 'MMMM d, yyyy')}` : `Events for ${format(currentMonth, 'MMMM yyyy')}`}
               </h4>
               <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
                 {filteredEvents.length} Events
               </Badge>
             </div>
-            {isLoading ? (
-              <div className="flex items-center justify-center h-[300px] bg-white/50 backdrop-blur-sm rounded-xl border border-gray-100/50 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+            {isLoading ? <div className="flex items-center justify-center h-[300px] bg-white/50 rounded-xl border border-gray-100">
                 <p className="text-sm text-gray-500">Loading events...</p>
-              </div>
-            ) : filteredEvents.length > 0 ? (
-              <ScrollArea className="h-[300px] rounded-xl border border-gray-100/50 bg-white/50 backdrop-blur-sm shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
-                <div className="space-y-2 p-3">
-                  {filteredEvents.map((event, idx) => (
-                    <div 
-                      key={idx} 
-                      className="flex items-center justify-between p-3 bg-white rounded-lg cursor-pointer hover:bg-gray-50/80 transition-all duration-200 border border-gray-100/80 shadow-sm hover:shadow-md"
-                      onClick={() => handleEventClick(event)}
-                    >
+              </div> : filteredEvents.length > 0 ? <ScrollArea className="h-[300px] rounded-xl border border-gray-100/50 bg-white/50 backdrop-blur-sm">
+                <div className="space-y-3 p-4">
+                  {filteredEvents.map((event, idx) => <div key={idx} onClick={() => handleEventClick(event)} className="flex items-center justify-between p-4 rounded-lg cursor-pointer transition-colors duration-200 border border-gray-100/80 shadow-sm hover:shadow-md bg-zinc-400 hover:bg-zinc-300">
                       <div className="flex items-center space-x-3">
-                        <div className="p-2 rounded-lg bg-gray-50/80 backdrop-blur-sm">
+                        <div className="p-2 rounded-lg bg-gray-50">
                           <span className="text-xl" role="img" aria-label={event.type}>
                             {getEventIcon(event.type)}
                           </span>
@@ -286,33 +238,27 @@ export function CalendarSection() {
                       <Badge className={`${getBadgeColor(event.type)} shadow-sm`}>
                         {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
                       </Badge>
-                    </div>
-                  ))}
+                    </div>)}
                 </div>
-              </ScrollArea>
-            ) : (
-              <div className="flex items-center justify-center h-[300px] bg-white/50 backdrop-blur-sm rounded-xl border border-gray-100/50 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+              </ScrollArea> : <div className="flex items-center justify-center h-[300px] bg-white/50 rounded-xl border border-gray-100">
                 <p className="text-sm text-gray-500">
                   No events {selectedDate ? 'on this day' : 'this month'}
                 </p>
-              </div>
-            )}
+              </div>}
           </div>
         </div>
       </CardContent>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] bg-white/95 backdrop-blur-sm border-none shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
+        <DialogContent className="sm:max-w-[500px] bg-white/95 backdrop-blur-sm border-none shadow-2xl">
           <DialogHeader>
             <div className="flex items-center justify-between pb-2">
               <div className="flex items-center gap-3">
-                {selectedEvent && (
-                  <div className="p-2 bg-gray-50 rounded-lg">
+                {selectedEvent && <div className="p-2 bg-gray-50 rounded-lg">
                     <span className="text-2xl" role="img" aria-label={selectedEvent.type}>
                       {getEventIcon(selectedEvent.type)}
                     </span>
-                  </div>
-                )}
+                  </div>}
                 <DialogTitle className="text-xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                   Event Details
                 </DialogTitle>
@@ -320,8 +266,7 @@ export function CalendarSection() {
             </div>
           </DialogHeader>
 
-          {selectedEvent && (
-            <div className="space-y-6">
+          {selectedEvent && <div className="space-y-6">
               <div className="space-y-2 bg-white/50 rounded-lg p-4">
                 <h4 className="font-medium text-sm text-gray-500">Title</h4>
                 <p className="text-base text-gray-900">{selectedEvent.title}</p>
@@ -352,8 +297,7 @@ export function CalendarSection() {
                 </div>
               </div>
 
-              {selectedEvent.property && (
-                <>
+              {selectedEvent.property && <>
                   <Separator />
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
@@ -362,23 +306,21 @@ export function CalendarSection() {
                     </div>
                     <p className="text-base">{selectedEvent.property.name}</p>
                   </div>
-                </>
-              )}
+                </>}
 
-              {selectedEvent.amount && (
-                <>
+              {selectedEvent.amount && <>
                   <Separator />
                   <div className="space-y-2">
                     <h4 className="font-medium text-sm text-gray-500">Amount</h4>
                     <p className="text-base font-semibold">
-                      ${selectedEvent.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      ${selectedEvent.amount.toLocaleString('en-US', {
+                  minimumFractionDigits: 2
+                })}
                     </p>
                   </div>
-                </>
-              )}
+                </>}
 
-              {selectedEvent.status && (
-                <>
+              {selectedEvent.status && <>
                   <Separator />
                   <div className="space-y-2">
                     <h4 className="font-medium text-sm text-gray-500">Status</h4>
@@ -386,22 +328,17 @@ export function CalendarSection() {
                       {selectedEvent.status.charAt(0).toUpperCase() + selectedEvent.status.slice(1)}
                     </Badge>
                   </div>
-                </>
-              )}
+                </>}
 
-              {selectedEvent.description && (
-                <>
+              {selectedEvent.description && <>
                   <Separator />
                   <div className="space-y-2">
                     <h4 className="font-medium text-sm text-gray-500">Description</h4>
                     <p className="text-sm text-gray-600">{selectedEvent.description}</p>
                   </div>
-                </>
-              )}
-            </div>
-          )}
+                </>}
+            </div>}
         </DialogContent>
       </Dialog>
-    </Card>
-  );
+    </Card>;
 }
