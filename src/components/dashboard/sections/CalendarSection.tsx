@@ -8,7 +8,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
 
 interface Event {
   date: Date;
@@ -36,7 +35,6 @@ const getBadgeColor = (type: Event['type']) => {
 export function CalendarSection() {
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = React.useState<Date>(new Date());
-  const [viewMode, setViewMode] = React.useState<'month' | 'day'>('month');
   const [currentMonth, setCurrentMonth] = React.useState<Date>(new Date());
 
   const { data: events = [], isLoading } = useQuery({
@@ -155,43 +153,24 @@ export function CalendarSection() {
 
   const filteredEvents = React.useMemo(() => {
     if (!selectedDate || !events.length) return [];
-
-    return events.filter(event => 
-      viewMode === 'day' 
-        ? isSameDay(event.date, selectedDate)
-        : isSameMonth(event.date, currentMonth)
-    );
-  }, [selectedDate, events, viewMode, currentMonth]);
+    return events.filter(event => isSameMonth(event.date, currentMonth));
+  }, [events, currentMonth]);
 
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return;
     setSelectedDate(date);
   };
 
-  const toggleViewMode = () => {
-    setViewMode(prev => prev === 'month' ? 'day' : 'month');
-  };
-
   console.log('Selected Date:', selectedDate);
-  console.log('View Mode:', viewMode);
   console.log('Current Month:', currentMonth);
   console.log('Filtered Events:', filteredEvents);
 
   return (
     <Card className="col-span-full lg:col-span-4">
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <CalendarIcon className="h-5 w-5 text-gray-500" />
-            <h3 className="text-lg font-medium">Calendar</h3>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleViewMode}
-          >
-            View {viewMode === 'month' ? 'Day' : 'Month'}
-          </Button>
+        <div className="flex items-center space-x-2">
+          <CalendarIcon className="h-5 w-5 text-gray-500" />
+          <h3 className="text-lg font-medium">Calendar</h3>
         </div>
       </CardHeader>
       <CardContent>
@@ -207,10 +186,7 @@ export function CalendarSection() {
           </div>
           <div className="space-y-4">
             <h4 className="font-medium text-sm text-gray-500">
-              {viewMode === 'month'
-                ? `Events for ${format(currentMonth, 'MMMM yyyy')}`
-                : `Events for ${format(selectedDate, 'MMMM d, yyyy')}`
-              }
+              Events for {format(currentMonth, 'MMMM yyyy')}
             </h4>
             {isLoading ? (
               <p className="text-sm text-gray-500">Loading events...</p>
@@ -233,9 +209,7 @@ export function CalendarSection() {
                 </div>
               </ScrollArea>
             ) : (
-              <p className="text-sm text-gray-500">
-                No events {viewMode === 'month' ? 'this month' : 'on this day'}
-              </p>
+              <p className="text-sm text-gray-500">No events this month</p>
             )}
           </div>
         </div>
