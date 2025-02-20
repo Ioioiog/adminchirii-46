@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
@@ -11,11 +10,11 @@ import { UtilityList } from "@/components/utilities/UtilityList";
 import { MeterReadingDialog } from "@/components/meter-readings/MeterReadingDialog";
 import { MeterReadingList } from "@/components/meter-readings/MeterReadingList";
 import { useProperties } from "@/hooks/useProperties";
-import { useQuery, useQueryClient } from "@tanstack/react-query"; // Added useQueryClient
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ProviderList } from "@/components/settings/utility-provider/ProviderList";
 import { ProviderForm } from "@/components/settings/utility-provider/ProviderForm";
-import { useToast } from "@/hooks/use-toast"; // Added useToast
+import { useToast } from "@/hooks/use-toast";
 import type { Utility } from "@/integrations/supabase/types/utility";
 
 type UtilitiesSection = 'bills' | 'readings' | 'providers';
@@ -25,13 +24,12 @@ const Utilities = () => {
   const [showProviderForm, setShowProviderForm] = useState(false);
   const [editingProvider, setEditingProvider] = useState(null);
   const { userRole } = useUserRole();
-  const { toast } = useToast(); // Initialize toast
-  const queryClient = useQueryClient(); // Initialize queryClient
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { properties, isLoading: propertiesLoading } = useProperties({ 
     userRole: userRole === "landlord" || userRole === "tenant" ? userRole : "tenant"
   });
 
-  // Fetch utilities data
   const { data: utilities = [], isLoading: utilitiesLoading } = useQuery({
     queryKey: ['utilities'],
     queryFn: async () => {
@@ -98,7 +96,6 @@ const Utilities = () => {
     try {
       console.log("Deleting utility provider:", id);
       
-      // First, delete related scraping jobs
       const { data: scrapingData, error: scrapingJobsError } = await supabase
         .from("scraping_jobs")
         .delete()
@@ -112,7 +109,6 @@ const Utilities = () => {
         throw scrapingJobsError;
       }
 
-      // Then delete the provider
       const { data: providerData, error: providerError } = await supabase
         .from("utility_provider_credentials")
         .delete()
@@ -131,7 +127,6 @@ const Utilities = () => {
         description: "Utility provider deleted successfully",
       });
 
-      // Force refetch the providers
       await queryClient.invalidateQueries({ queryKey: ["utility-providers"] });
       await queryClient.refetchQueries({ queryKey: ["utility-providers"] });
     } catch (error) {
@@ -149,7 +144,6 @@ const Utilities = () => {
     setShowProviderForm(true);
   };
 
-  // Only allow landlord or tenant roles to access this page
   if (!userRole || userRole === "service_provider") {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -180,24 +174,25 @@ const Utilities = () => {
   ];
 
   const renderSection = () => {
-    // Ensure we only render for landlord or tenant roles
     if (userRole !== "landlord" && userRole !== "tenant") return null;
 
     switch (activeSection) {
       case 'bills':
         return (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
+          <div className="space-y-6">
+            <div className="flex justify-between items-start">
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-600 rounded-xl">
-                    <Plug className="h-6 w-6 text-white" />
+                  <div className="p-3 bg-blue-600/10 rounded-xl">
+                    <Plug className="h-6 w-6 text-blue-600" />
                   </div>
-                  <CardTitle className="text-2xl">Utilities</CardTitle>
+                  <div>
+                    <CardTitle className="text-2xl">Utilities</CardTitle>
+                    <p className="text-gray-500 mt-1">
+                      Manage and track utility services for your properties.
+                    </p>
+                  </div>
                 </div>
-                <p className="text-gray-500 max-w-2xl">
-                  Manage and track utility services for your properties.
-                </p>
               </div>
               {userRole === "landlord" && properties && (
                 <UtilityDialog
@@ -221,18 +216,20 @@ const Utilities = () => {
         );
       case 'readings':
         return (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
+          <div className="space-y-6">
+            <div className="flex justify-between items-start">
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-600 rounded-xl">
-                    <Gauge className="h-6 w-6 text-white" />
+                  <div className="p-3 bg-blue-600/10 rounded-xl">
+                    <Gauge className="h-6 w-6 text-blue-600" />
                   </div>
-                  <CardTitle className="text-2xl">Meter Readings</CardTitle>
+                  <div>
+                    <CardTitle className="text-2xl">Meter Readings</CardTitle>
+                    <p className="text-gray-500 mt-1">
+                      Track and manage utility meter readings for your properties.
+                    </p>
+                  </div>
                 </div>
-                <p className="text-gray-500 max-w-2xl">
-                  Track and manage utility meter readings for your properties.
-                </p>
               </div>
               <MeterReadingDialog
                 properties={properties}
@@ -251,23 +248,25 @@ const Utilities = () => {
       case 'providers':
         if (userRole !== 'landlord') return null;
         return (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
+          <div className="space-y-6">
+            <div className="flex justify-between items-start">
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-600 rounded-xl">
-                    <Building2 className="h-6 w-6 text-white" />
+                  <div className="p-3 bg-blue-600/10 rounded-xl">
+                    <Building2 className="h-6 w-6 text-blue-600" />
                   </div>
-                  <CardTitle className="text-2xl">Utility Providers</CardTitle>
+                  <div>
+                    <CardTitle className="text-2xl">Utility Providers</CardTitle>
+                    <p className="text-gray-500 mt-1">
+                      Manage your utility provider connections and automated bill fetching.
+                    </p>
+                  </div>
                 </div>
-                <p className="text-gray-500 max-w-2xl">
-                  Manage your utility provider connections and automated bill fetching.
-                </p>
               </div>
               <Button 
                 onClick={() => setShowProviderForm(true)} 
                 disabled={showProviderForm}
-                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-2"
+                className="bg-blue-600 hover:bg-blue-700 text-white transition-colors"
               >
                 Add Provider
               </Button>
@@ -309,19 +308,19 @@ const Utilities = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex min-h-screen bg-[#F1F0FB]">
       <DashboardSidebar />
       <div className="flex-1 p-8">
-        <Card>
-          <CardHeader>
-            <div className="w-full flex gap-4 bg-card overflow-x-auto">
+        <Card className="shadow-sm">
+          <CardHeader className="border-b bg-white">
+            <div className="w-full flex gap-4 overflow-x-auto">
               {navigationItems.map((item) => (
                 <Button
                   key={item.id}
                   variant={activeSection === item.id ? 'default' : 'ghost'}
                   className={cn(
                     "flex-shrink-0 gap-2",
-                    activeSection === item.id && "bg-primary text-primary-foreground"
+                    activeSection === item.id && "bg-blue-600 text-white hover:bg-blue-700"
                   )}
                   onClick={() => setActiveSection(item.id)}
                 >
@@ -331,7 +330,7 @@ const Utilities = () => {
               ))}
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6 bg-white">
             {renderSection()}
           </CardContent>
         </Card>
