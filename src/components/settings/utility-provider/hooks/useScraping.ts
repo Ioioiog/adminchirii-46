@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { UtilityProvider, ScrapingJob } from "../types";
-import { Json } from "@/integrations/supabase/types/json";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000; // 2 seconds
@@ -23,8 +22,6 @@ interface ScrapingResponse {
     amount: number;
     due_date: string;
     invoice_number: string;
-    period_start: string;
-    period_end: string;
     type: string;
     status: string;
   }>;
@@ -39,6 +36,7 @@ export function useScraping(providers: UtilityProvider[]) {
 
   const checkJobStatus = useCallback(async (jobId: string, providerId: string) => {
     try {
+      console.log('Checking job status for:', jobId);
       const { data: job, error } = await supabase
         .from('scraping_jobs')
         .select('*')
@@ -55,6 +53,7 @@ export function useScraping(providers: UtilityProvider[]) {
         return;
       }
 
+      console.log('Job status:', job.status);
       setScrapingJobs(prev => ({
         ...prev,
         [providerId]: {
@@ -131,20 +130,20 @@ export function useScraping(providers: UtilityProvider[]) {
     }));
 
     try {
-      // Get credentials
+      console.log('Getting credentials for provider:', providerId);
       const { data: credentialsData, error: credentialsError } = await supabase.rpc(
         'get_decrypted_credentials',
         { property_id_input: provider.property_id }
       );
 
       if (credentialsError || !credentialsData) {
+        console.error('Failed to fetch credentials:', credentialsError);
         throw new Error('Failed to fetch credentials');
       }
 
-      // Parse credentials data
       const credentials = credentialsData as unknown as Credentials;
+      console.log('Starting scraping for provider:', provider.provider_name);
 
-      // Start scraping
       const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke<ScrapingResponse>('scrape-utility-invoices', {
         body: {
           username: credentials.username,
@@ -157,14 +156,17 @@ export function useScraping(providers: UtilityProvider[]) {
       });
 
       if (scrapeError) {
+        console.error('Scraping error:', scrapeError);
         throw scrapeError;
       }
 
       if (!scrapeData || !scrapeData.success) {
+        console.error('Scraping failed:', scrapeData?.error);
         throw new Error(scrapeData?.error || 'Scraping failed');
       }
 
-      // Poll for job completion
+      console.log('Scraping succeeded. Job ID:', scrapeData.jobId);
+
       const checkJobInterval = setInterval(async () => {
         const status = await checkJobStatus(scrapeData.jobId!, providerId);
         
