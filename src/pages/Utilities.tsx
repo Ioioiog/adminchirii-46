@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Gauge, Plug } from "lucide-react";
+import { Gauge, Plug, Building2 } from "lucide-react";
 import { useUserRole } from "@/hooks/use-user-role";
 import { UtilityDialog } from "@/components/utilities/UtilityDialog";
 import { UtilityList } from "@/components/utilities/UtilityList";
@@ -13,12 +13,16 @@ import { MeterReadingList } from "@/components/meter-readings/MeterReadingList";
 import { useProperties } from "@/hooks/useProperties";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ProviderList } from "@/components/settings/utility-provider/ProviderList";
+import { ProviderForm } from "@/components/settings/utility-provider/ProviderForm";
 import type { Utility } from "@/integrations/supabase/types/utility";
 
-type UtilitiesSection = 'bills' | 'readings';
+type UtilitiesSection = 'bills' | 'readings' | 'providers';
 
 const Utilities = () => {
   const [activeSection, setActiveSection] = useState<UtilitiesSection>('bills');
+  const [showProviderForm, setShowProviderForm] = useState(false);
+  const [editingProvider, setEditingProvider] = useState(null);
   const { userRole } = useUserRole();
   const { properties, isLoading: propertiesLoading } = useProperties({ 
     userRole: userRole === "landlord" || userRole === "tenant" ? userRole : "tenant"
@@ -50,6 +54,74 @@ const Utilities = () => {
     enabled: !!userRole
   });
 
+  const { data: providers = [], isLoading: providersLoading } = useQuery({
+    queryKey: ["utility-providers"],
+    queryFn: async () => {
+      console.log("Fetching utility providers");
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error("Error fetching user:", userError);
+        throw userError;
+      }
+
+      if (!user) {
+        console.error("No authenticated user found");
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from("utility_provider_credentials")
+        .select(`
+          *,
+          property:properties (
+            name,
+            address
+          )
+        `)
+        .eq("landlord_id", user.id);
+
+      if (error) {
+        console.error("Error fetching providers:", error);
+        throw error;
+      }
+
+      console.log("Fetched providers:", data);
+      return data;
+    }
+  });
+
+  const handleDeleteProvider = async (id: string) => {
+    try {
+      console.log("Deleting utility provider:", id);
+      const { error } = await supabase
+        .from("utility_provider_credentials")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Utility provider deleted successfully",
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["utility-providers"] });
+    } catch (error) {
+      console.error("Error deleting provider:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete utility provider",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditProvider = (provider: any) => {
+    setEditingProvider(provider);
+    setShowProviderForm(true);
+  };
+
   // Only allow landlord or tenant roles to access this page
   if (!userRole || userRole === "service_provider") {
     return (
@@ -73,6 +145,11 @@ const Utilities = () => {
       label: 'Meter Readings',
       icon: Gauge,
     },
+    ...(userRole === 'landlord' ? [{
+      id: 'providers' as UtilitiesSection,
+      label: 'Utility Providers',
+      icon: Building2,
+    }] : []),
   ];
 
   const renderSection = () => {
@@ -142,6 +219,53 @@ const Utilities = () => {
               userRole={userRole}
               onUpdate={() => {}} // Add your refresh logic here
             />
+          </div>
+        );
+      case 'providers':
+        if (userRole !== 'landlord') return null;
+        return (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-600 rounded-xl">
+                    <Building2 className="h-6 w-6 text-white" />
+                  </div>
+                  <CardTitle className="text-2xl">Utility Providers</CardTitle>
+                </div>
+                <p className="text-gray-500 max-w-2xl">
+                  Manage your utility provider connections and automated bill fetching.
+                </p>
+              </div>
+              <Button 
+                onClick={() => setShowProviderForm(true)} 
+                disabled={showProviderForm}
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-2"
+              >
+                Add Provider
+              </Button>
+            </div>
+            {showProviderForm ? (
+              <ProviderForm
+                onClose={() => {
+                  setShowProviderForm(false);
+                  setEditingProvider(null);
+                }}
+                onSuccess={() => {
+                  setShowProviderForm(false);
+                  setEditingProvider(null);
+                  queryClient.invalidateQueries({ queryKey: ["utility-providers"] });
+                }}
+                provider={editingProvider}
+              />
+            ) : (
+              <ProviderList
+                providers={providers}
+                onDelete={handleDeleteProvider}
+                onEdit={handleEditProvider}
+                isLoading={providersLoading}
+              />
+            )}
           </div>
         );
       default:

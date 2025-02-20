@@ -1,16 +1,16 @@
+
 import { useState } from "react";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { Button } from "@/components/ui/button";
 import { AccountSettings } from "@/components/settings/sections/AccountSettings";
 import { FinancialSettings } from "@/components/settings/sections/FinancialSettings";
-import { PropertyProvidersSettings } from "@/components/settings/sections/PropertyProvidersSettings";
 import { PreferencesSettings } from "@/components/settings/sections/PreferencesSettings";
 import { SubscriptionSettings } from "@/components/settings/sections/SubscriptionSettings";
-import { Settings2, Wallet, Building2, Languages, Crown } from "lucide-react";
+import { Settings2, Wallet, Languages, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUserRole } from "@/hooks/use-user-role";
 
-type SettingsSection = 'account' | 'financial' | 'providers' | 'preferences' | 'subscription';
+type SettingsSection = 'account' | 'financial' | 'preferences' | 'subscription';
 
 const Settings = () => {
   const [activeSection, setActiveSection] = useState<SettingsSection>('account');
@@ -27,12 +27,6 @@ const Settings = () => {
       label: 'Financial & Payments',
       icon: Wallet,
     },
-    // Only show Property Providers for landlords
-    ...(userRole === 'landlord' ? [{
-      id: 'providers' as SettingsSection,
-      label: 'Property Providers',
-      icon: Building2,
-    }] : []),
     {
       id: 'preferences' as SettingsSection,
       label: 'Preferences',
@@ -51,9 +45,6 @@ const Settings = () => {
         return <AccountSettings />;
       case 'financial':
         return <FinancialSettings />;
-      case 'providers':
-        // Only render PropertyProvidersSettings for landlords
-        return userRole === 'landlord' ? <PropertyProvidersSettings /> : null;
       case 'preferences':
         return <PreferencesSettings />;
       case 'subscription':
