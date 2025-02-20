@@ -91,14 +91,23 @@ const Tenants = () => {
             throw propertiesError;
           }
 
-          const transformedProperties = propertiesData?.map(property => ({
-            ...property,
-            status: property.status || 'vacant' as const,
-            tenant_count: property.tenant_count || 0
+          const transformedProperties: Property[] = (propertiesData || []).map(property => ({
+            id: property.id,
+            name: property.name,
+            address: property.address,
+            type: property.type,
+            monthly_rent: property.monthly_rent,
+            created_at: property.created_at,
+            updated_at: property.updated_at,
+            description: property.description || '',
+            available_from: property.available_from || null,
+            status: property.status || 'vacant',
+            tenant_count: property.tenant_count || 0,
+            landlord_id: property.landlord_id
           }));
 
-          console.log("Properties fetched:", transformedProperties?.length);
-          setProperties(transformedProperties || []);
+          console.log("Properties fetched:", transformedProperties.length);
+          setProperties(transformedProperties);
         }
       } catch (error: any) {
         console.error("Error in checkUser:", error);

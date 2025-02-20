@@ -40,14 +40,26 @@ interface Property {
   monthly_rent: number;
   created_at: string;
   updated_at: string;
+  description: string;
+  available_from: string | null;
   status: 'vacant' | 'occupied' | 'rented';
   tenant_count: number;
+  landlord_id: string;
 }
 
 const transformProperty = (property: any): Property => ({
-  ...property,
-  status: property.status || 'vacant' as const,
+  id: property.id,
+  name: property.name,
+  address: property.address,
+  type: property.type,
+  monthly_rent: property.monthly_rent,
+  created_at: property.created_at,
+  updated_at: property.updated_at,
+  description: property.description || '',
+  available_from: property.available_from || null,
+  status: property.status || 'vacant',
   tenant_count: property.tenant_count || 0,
+  landlord_id: property.landlord_id
 });
 
 interface MeterReading {
@@ -310,7 +322,7 @@ export function MeterReadingList({
           </DialogHeader>
           {selectedReading && (
             <MeterReadingForm
-              properties={[{
+              properties={[transformProperty({
                 id: selectedReading.property_id,
                 name: selectedReading.property.name,
                 address: selectedReading.property.address,
@@ -318,7 +330,7 @@ export function MeterReadingList({
                 monthly_rent: selectedReading.property.monthly_rent,
                 created_at: selectedReading.property.created_at,
                 updated_at: selectedReading.property.updated_at
-              }]}
+              })]}
               onSuccess={() => {
                 setEditDialogOpen(false);
                 onUpdate();
