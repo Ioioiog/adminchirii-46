@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -9,6 +8,7 @@ import { useAuthState } from "@/hooks/useAuthState";
 import { FileText, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import {
   Table,
   TableBody,
@@ -51,7 +51,6 @@ export default function ContractsPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [selectedProperty, setSelectedProperty] = useState<string>("");
 
-  // Use effect to handle authentication
   useEffect(() => {
     if (!isLoadingAuth && !currentUserId) {
       navigate("/auth");
@@ -250,175 +249,180 @@ export default function ContractsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Contracts</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage and track all your property contracts
-          </p>
-        </div>
-        {userRole === "landlord" && (
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                New Contract
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Generate New Contract</DialogTitle>
-                <DialogDescription>
-                  Select a template and property to generate a new contract
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Property</label>
-                  <Select
-                    value={selectedProperty}
-                    onValueChange={setSelectedProperty}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a property" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {properties?.map((property) => (
-                        <SelectItem key={property.id} value={property.id}>
-                          {property.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Contract Template</label>
-                  <Select
-                    value={selectedTemplate}
-                    onValueChange={setSelectedTemplate}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a template" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {templates?.map((template) => (
-                        <SelectItem key={template.id} value={template.id}>
-                          {template.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  onClick={handleGenerateContract}
-                  disabled={isGenerating || !selectedTemplate || !selectedProperty}
-                  className="w-full"
-                >
-                  {isGenerating ? "Generating..." : "Generate Contract"}
-                </Button>
+    <div className="flex h-screen bg-dashboard-background">
+      <DashboardSidebar />
+      <div className="flex-1 p-8 overflow-y-auto">
+        <div className="container mx-auto py-8 space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold">Contracts</h1>
+              <p className="text-muted-foreground mt-1">
+                Manage and track all your property contracts
+              </p>
+            </div>
+            {userRole === "landlord" && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Contract
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Generate New Contract</DialogTitle>
+                    <DialogDescription>
+                      Select a template and property to generate a new contract
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Property</label>
+                      <Select
+                        value={selectedProperty}
+                        onValueChange={setSelectedProperty}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a property" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {properties?.map((property) => (
+                            <SelectItem key={property.id} value={property.id}>
+                              {property.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Contract Template</label>
+                      <Select
+                        value={selectedTemplate}
+                        onValueChange={setSelectedTemplate}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a template" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {templates?.map((template) => (
+                            <SelectItem key={template.id} value={template.id}>
+                              {template.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      onClick={handleGenerateContract}
+                      disabled={isGenerating || !selectedTemplate || !selectedProperty}
+                      className="w-full"
+                    >
+                      {isGenerating ? "Generating..." : "Generate Contract"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Contract Overview</CardTitle>
+              <CardDescription>
+                View and manage all your property-related contracts
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-2 mb-4">
+                <Search className="w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search contracts..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="max-w-sm"
+                />
               </div>
-            </DialogContent>
-          </Dialog>
-        )}
+
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Contract Type</TableHead>
+                      <TableHead>Property</TableHead>
+                      <TableHead>Template</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Valid From</TableHead>
+                      <TableHead>Valid Until</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredContracts?.map((contract) => (
+                      <TableRow key={contract.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center">
+                            <FileText className="w-4 h-4 mr-2 text-muted-foreground" />
+                            {contract.contract_type}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">
+                              {contract.property?.name}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {contract.property?.address}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {contract.template?.name || "Custom Contract"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="secondary"
+                            className={`${getStatusColor(contract.status)} text-white`}
+                          >
+                            {contract.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {contract.valid_from
+                            ? new Date(contract.valid_from).toLocaleDateString()
+                            : "-"}
+                        </TableCell>
+                        <TableCell>
+                          {contract.valid_until
+                            ? new Date(contract.valid_until).toLocaleDateString()
+                            : "-"}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate(`/contracts/${contract.id}`)}
+                          >
+                            View
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {filteredContracts?.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8">
+                          <div className="text-muted-foreground">
+                            No contracts found
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Contract Overview</CardTitle>
-          <CardDescription>
-            View and manage all your property-related contracts
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center space-x-2 mb-4">
-            <Search className="w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search contracts..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="max-w-sm"
-            />
-          </div>
-
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Contract Type</TableHead>
-                  <TableHead>Property</TableHead>
-                  <TableHead>Template</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Valid From</TableHead>
-                  <TableHead>Valid Until</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredContracts?.map((contract) => (
-                  <TableRow key={contract.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center">
-                        <FileText className="w-4 h-4 mr-2 text-muted-foreground" />
-                        {contract.contract_type}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">
-                          {contract.property?.name}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {contract.property?.address}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {contract.template?.name || "Custom Contract"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="secondary"
-                        className={`${getStatusColor(contract.status)} text-white`}
-                      >
-                        {contract.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {contract.valid_from
-                        ? new Date(contract.valid_from).toLocaleDateString()
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      {contract.valid_until
-                        ? new Date(contract.valid_until).toLocaleDateString()
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate(`/contracts/${contract.id}`)}
-                      >
-                        View
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filteredContracts?.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
-                      <div className="text-muted-foreground">
-                        No contracts found
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
