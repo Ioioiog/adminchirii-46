@@ -15,6 +15,7 @@ import { format } from "date-fns";
 import { PropertyStatus } from "@/utils/propertyUtils";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Properties = () => {
   const navigate = useNavigate();
