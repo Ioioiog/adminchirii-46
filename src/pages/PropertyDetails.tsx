@@ -184,13 +184,6 @@ const PropertyDetails = () => {
                 )}
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate("/settings")}
-            >
-              Settings
-            </Button>
             <div className="flex items-center gap-2">
               <Badge className={getStatusColor(status)}>
                 {status}
