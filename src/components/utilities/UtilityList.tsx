@@ -1,13 +1,19 @@
 
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { PaymentActions } from "@/components/payments/PaymentActions";
 import { Button } from "@/components/ui/button";
 import { FileText, Trash2 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
-import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface Utility {
   id: string;
@@ -156,132 +162,83 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-      {utilities.map((utility) => {
-        if (!utility?.id) {
-          console.error("Invalid utility object:", utility);
-          return null;
-        }
-
-        return (
-          <Card key={utility.id} className="bg-white hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                {/* Property Info */}
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Property</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Amount</TableHead>
+            <TableHead>Due Date</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {utilities.map((utility) => (
+            <TableRow key={utility.id}>
+              <TableCell>
                 <div>
-                  <h3 className="font-semibold text-lg text-gray-900">
-                    {utility.property?.name || 'N/A'}
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    {utility.property?.address || 'N/A'}
-                  </p>
+                  <div className="font-medium">{utility.property?.name || 'N/A'}</div>
+                  <div className="text-sm text-gray-500">{utility.property?.address || 'N/A'}</div>
                 </div>
-
-                <Separator />
-
-                {/* Utility Details */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-sm font-medium text-gray-500">Type</span>
-                    <p className="font-medium capitalize">{utility.type}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-500">Amount</span>
-                    <p className="font-medium text-blue-600">
-                      {formatAmount(utility.amount, utility.currency)}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Dates */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-sm font-medium text-gray-500">Due Date</span>
-                    <p className="font-medium">
-                      {new Date(utility.due_date).toLocaleDateString()}
-                    </p>
-                  </div>
-                  {utility.issued_date && (
-                    <div>
-                      <span className="text-sm font-medium text-gray-500">Issued Date</span>
-                      <p className="font-medium">
-                        {new Date(utility.issued_date).toLocaleDateString()}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Invoice & Status */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    {utility.invoice_number && (
-                      <span className="text-sm text-gray-500">
-                        Invoice #{utility.invoice_number}
-                      </span>
-                    )}
-                  </div>
-                  <Badge
-                    variant={utility.status === "paid" ? "default" : "secondary"}
-                    className="capitalize"
+              </TableCell>
+              <TableCell className="capitalize">{utility.type}</TableCell>
+              <TableCell className="font-medium text-blue-600">
+                {formatAmount(utility.amount, utility.currency)}
+              </TableCell>
+              <TableCell>{new Date(utility.due_date).toLocaleDateString()}</TableCell>
+              <TableCell>
+                <Badge
+                  variant={utility.status === "paid" ? "default" : "secondary"}
+                  className="capitalize"
+                >
+                  {utility.status}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex items-center justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleViewInvoice(utility.id)}
+                    className="flex items-center gap-2"
                   >
-                    {utility.status}
-                  </Badge>
-                </div>
-
-                <Separator />
-
-                {/* Actions */}
-                <div className="flex items-center justify-between pt-2">
-                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    View
+                  </Button>
+                  {userRole === "landlord" && (
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleViewInvoice(utility.id)}
-                      className="flex items-center gap-2"
+                      onClick={() => handleDelete(utility.id)}
+                      className="flex items-center gap-2 text-destructive hover:text-destructive"
                     >
-                      <FileText className="h-4 w-4" />
-                      View Invoice
+                      <Trash2 className="h-4 w-4" />
+                      Delete
                     </Button>
-                    {userRole === "landlord" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(utility.id)}
-                        className="flex items-center gap-2 text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Delete
-                      </Button>
-                    )}
-                  </div>
-                  {userRole === "landlord" ? (
+                  )}
+                  {(userRole === "landlord" || utility.status !== "paid") && (
                     <PaymentActions
                       paymentId={utility.id}
                       status={utility.status}
                       userRole={userRole}
                       onStatusChange={onStatusUpdate}
                     />
-                  ) : (
-                    utility.status !== "paid" && (
-                      <PaymentActions
-                        paymentId={utility.id}
-                        status={utility.status}
-                        userRole={userRole}
-                        onStatusChange={onStatusUpdate}
-                      />
-                    )
                   )}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-      {utilities.length === 0 && (
-        <div className="col-span-full text-center py-8 text-gray-500">
-          No utility bills found.
-        </div>
-      )}
+              </TableCell>
+            </TableRow>
+          ))}
+          {utilities.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                No utility bills found.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
     </div>
   );
 }
