@@ -1,4 +1,5 @@
-import { Card, CardContent } from "@/components/ui/card";
+
+import { useToast } from "@/hooks/use-toast";
 import { Invoice } from "@/types/invoice";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { InvoiceGenerator } from "./InvoiceGenerator";
@@ -6,7 +7,17 @@ import { useState } from "react";
 import { InvoiceDetails } from "./InvoiceDetails";
 import { InvoiceActions } from "./InvoiceActions";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface InvoiceListProps {
   invoices: Invoice[];
@@ -16,6 +27,7 @@ interface InvoiceListProps {
 
 export function InvoiceList({ invoices, userRole, onStatusUpdate }: InvoiceListProps) {
   const { toast } = useToast();
+  const { formatAmount } = useCurrency();
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
   const [companyInfo, setCompanyInfo] = useState<any>(null);
@@ -66,29 +78,72 @@ export function InvoiceList({ invoices, userRole, onStatusUpdate }: InvoiceListP
 
   return (
     <>
-      <div className="grid gap-4">
-        {invoices.map((invoice) => (
-          <Card key={invoice.id}>
-            <CardContent className="p-6">
-              <InvoiceDetails invoice={invoice} userRole={userRole} />
-              <div className="mt-4 flex items-center justify-between">
-                <InvoiceActions
-                  invoiceId={invoice.id}
-                  status={invoice.status}
-                  userRole={userRole}
-                  onStatusUpdate={onStatusUpdate}
-                  onViewInvoice={() => handleViewInvoice(invoice)}
-                  isSendingEmail={isSendingEmail}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        {invoices.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            No invoices found.
-          </div>
-        )}
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Property</TableHead>
+              {userRole === "landlord" && <TableHead>Tenant</TableHead>}
+              <TableHead>Amount</TableHead>
+              <TableHead>Due Date</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {invoices.map((invoice) => (
+              <TableRow key={invoice.id}>
+                <TableCell>
+                  <div>
+                    <div className="font-medium">{invoice.property?.name}</div>
+                    <div className="text-sm text-gray-500">{invoice.property?.address}</div>
+                  </div>
+                </TableCell>
+                {userRole === "landlord" && (
+                  <TableCell>
+                    <div>
+                      <div className="font-medium">
+                        {invoice.tenant?.first_name} {invoice.tenant?.last_name}
+                      </div>
+                      <div className="text-sm text-gray-500">{invoice.tenant?.email}</div>
+                    </div>
+                  </TableCell>
+                )}
+                <TableCell className="font-medium text-blue-600">
+                  {formatAmount(invoice.amount)}
+                </TableCell>
+                <TableCell>
+                  {format(new Date(invoice.due_date), 'PPP')}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={invoice.status === "paid" ? "default" : "secondary"}>
+                    {invoice.status}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  <InvoiceActions
+                    invoiceId={invoice.id}
+                    status={invoice.status}
+                    userRole={userRole}
+                    onStatusUpdate={onStatusUpdate}
+                    onViewInvoice={() => handleViewInvoice(invoice)}
+                    isSendingEmail={isSendingEmail}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+            {invoices.length === 0 && (
+              <TableRow>
+                <TableCell 
+                  colSpan={userRole === "landlord" ? 6 : 5} 
+                  className="text-center py-8 text-gray-500"
+                >
+                  No invoices found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
 
       <Dialog open={!!selectedInvoice} onOpenChange={() => setSelectedInvoice(null)}>
