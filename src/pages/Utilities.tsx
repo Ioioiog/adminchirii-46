@@ -131,7 +131,9 @@ const Utilities = () => {
         description: "Utility provider deleted successfully",
       });
 
-      queryClient.invalidateQueries({ queryKey: ["utility-providers"] });
+      // Force refetch the providers
+      await queryClient.invalidateQueries({ queryKey: ["utility-providers"] });
+      await queryClient.refetchQueries({ queryKey: ["utility-providers"] });
     } catch (error) {
       console.error("Error in delete operation:", error);
       toast({
