@@ -14,13 +14,48 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 import { PropertyStatus } from "@/utils/propertyUtils";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
 
 const Properties = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | PropertyStatus>("all");
   const { properties, isLoading } = useProperties({ userRole: "landlord" });
+
+  const handleAddProperty = async (formData: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('properties')
+        .insert([
+          {
+            ...formData,
+            landlord_id: (await supabase.auth.getUser()).data.user?.id
+          }
+        ])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Property added successfully",
+      });
+
+      setShowAddModal(false);
+      return true;
+    } catch (error) {
+      console.error('Error adding property:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add property",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
 
   const filteredProperties = properties?.filter((property) => {
     const matchesSearch = property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
