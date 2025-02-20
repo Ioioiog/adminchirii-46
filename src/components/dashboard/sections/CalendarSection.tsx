@@ -195,7 +195,7 @@ export function CalendarSection() {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="h-[400px] flex items-center border rounded-md p-3">
+          <div className="h-[400px] flex items-center justify-center bg-white/50 backdrop-blur-sm border rounded-lg shadow-sm hover:shadow-md transition-shadow p-4">
             <Calendar
               mode="single"
               selected={selectedDate || undefined}
