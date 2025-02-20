@@ -13,6 +13,9 @@ import { DocumentFilters } from "@/components/documents/DocumentFilters";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { NavigationTabs } from "@/components/layout/NavigationTabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
 const Documents = () => {
   const navigate = useNavigate();
@@ -136,29 +139,47 @@ const Documents = () => {
         );
       case 'contracts':
         return (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {contracts?.map((contract) => (
-              <Card key={contract.id} className="p-4">
-                <h3 className="font-medium">{contract.properties?.name || 'Untitled Property'}</h3>
-                <p className="text-sm text-gray-500 capitalize">{contract.contract_type}</p>
-                <div className="mt-2 flex justify-between items-center">
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    contract.status === 'signed' ? 'bg-green-100 text-green-800' :
-                    contract.status === 'draft' ? 'bg-gray-100 text-gray-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {contract.status}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(`/contracts/${contract.id}`)}
-                  >
-                    View Details
-                  </Button>
-                </div>
-              </Card>
-            ))}
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Property</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Valid From</TableHead>
+                  <TableHead>Valid Until</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {contracts?.map((contract) => (
+                  <TableRow key={contract.id}>
+                    <TableCell>{contract.properties?.name || 'Untitled Property'}</TableCell>
+                    <TableCell className="capitalize">{contract.contract_type}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className={
+                        contract.status === 'signed' ? 'bg-green-100 text-green-800' :
+                        contract.status === 'draft' ? 'bg-gray-100 text-gray-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }>
+                        {contract.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{contract.valid_from ? format(new Date(contract.valid_from), 'MMM d, yyyy') : '-'}</TableCell>
+                    <TableCell>{contract.valid_until ? format(new Date(contract.valid_until), 'MMM d, yyyy') : '-'}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/contracts/${contract.id}`)}
+                      >
+                        View Details
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         );
       default:
