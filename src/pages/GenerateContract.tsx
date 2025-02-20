@@ -563,17 +563,29 @@ export default function GenerateContract() {
         </div>
 
         <div className="space-y-6">
-          {/* Your form content here */}
-        </div>
-
-        <Button 
-          className="w-full" 
-          onClick={handleGenerateContract}
-          disabled={Object.keys(errors).length > 0}
-        >
-          Generează Contract
-        </Button>
-      </div>
-    </PageLayout>
-  );
-}
+          <Card>
+            <CardHeader>
+              <CardTitle>Contract Information</CardTitle>
+              <CardDescription>Enter the basic contract details</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="contractNumber">Contract Number</Label>
+                  <Input
+                    id="contractNumber"
+                    value={contractNumber}
+                    onChange={(e) => setContractNumber(e.target.value)}
+                    className={inputClassName("contractNumber")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="template">Contract Template</Label>
+                  <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+                    <SelectTrigger className={inputClassName("selectedTemplate")}>
+                      <SelectValue placeholder="Select template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {templates?.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name
