@@ -60,6 +60,7 @@ interface FormData {
   ownerSignatureName: string;
   tenantSignatureDate: string;
   tenantSignatureName: string;
+  assets: Asset[];
 }
 
 export default function GenerateContract() {
@@ -116,7 +117,8 @@ export default function GenerateContract() {
     ownerSignatureDate: '2025-01-26',
     ownerSignatureName: '',
     tenantSignatureDate: '2025-01-26',
-    tenantSignatureName: ''
+    tenantSignatureName: '',
+    assets: []
   });
 
   const handleInputChange = (field: keyof FormData, value: string) => {
@@ -127,30 +129,40 @@ export default function GenerateContract() {
   };
 
   const addAssetRow = () => {
-    setAssets([...assets, { name: '', value: '', condition: '' }]);
+    const newAsset = { name: '', value: '', condition: '' };
+    setAssets(prev => [...prev, newAsset]);
+    setFormData(prev => ({
+      ...prev,
+      assets: [...prev.assets, newAsset]
+    }));
   };
 
   const deleteAssetRow = (index: number) => {
-    const newAssets = assets.filter((_, i) => i !== index);
-    setAssets(newAssets);
+    setAssets(prev => prev.filter((_, i) => i !== index));
+    setFormData(prev => ({
+      ...prev,
+      assets: prev.assets.filter((_, i) => i !== index)
+    }));
   };
 
   const handleAssetChange = (index: number, field: keyof Asset, value: string) => {
     const newAssets = [...assets];
     newAssets[index][field] = value;
     setAssets(newAssets);
+    setFormData(prev => ({
+      ...prev,
+      assets: newAssets
+    }));
   };
 
   return (
     <div className="flex bg-[#F8F9FC] min-h-screen">
-      {/* Sidebar - Only visible when not printing */}
       <div className="print:hidden">
         <DashboardSidebar />
       </div>
 
       <main className="flex-1 p-8">
         <div className="max-w-4xl mx-auto">
-          {/* Edit Form - Only visible when not printing */}
           <div className="edit-form bg-white rounded-lg shadow-sm p-6 print:hidden">
             <h1 className="text-3xl font-bold text-center mb-8">CONTRACT DE ÎNCHIRIERE A LOCUINȚEI</h1>
             
@@ -458,7 +470,6 @@ export default function GenerateContract() {
               </CardContent>
             </Card>
 
-            {/* New form fields for additional details */}
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle>Additional Details</CardTitle>
@@ -503,7 +514,6 @@ export default function GenerateContract() {
               </CardContent>
             </Card>
 
-            {/* Utility Meters Card */}
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle>Contoare Utilități</CardTitle>
@@ -556,7 +566,6 @@ export default function GenerateContract() {
             </Button>
           </div>
 
-          {/* Printable Contract - Only visible when printing */}
           <div className="hidden print:block print:p-8">
             <div className="text-black">
               <h1 className="text-3xl font-bold text-center mb-8">CONTRACT DE ÎNCHIRIERE A LOCUINȚEI</h1>
@@ -766,7 +775,7 @@ export default function GenerateContract() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(formData.assets || []).map((asset, index) => (
+                    {formData.assets.map((asset, index) => (
                       <tr key={index}>
                         <td className="border p-2">{asset.name}</td>
                         <td className="border p-2">{asset.value}</td>
