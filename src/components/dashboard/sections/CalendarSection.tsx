@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -236,13 +235,15 @@ export function CalendarSection() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="relative p-4 rounded-xl bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.15)] transition-all duration-300">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-transparent to-indigo-50/50 rounded-xl" />
-            <Calendar
-              mode="single"
-              selected={selectedDate || undefined}
-              onSelect={handleDateSelect}
-              className="relative z-10 mx-auto bg-transparent scale-90 transform"
-              onMonthChange={setCurrentMonth}
-            />
+            <div className="flex justify-center items-center">
+              <Calendar
+                mode="single"
+                selected={selectedDate || undefined}
+                onSelect={handleDateSelect}
+                className="relative z-10 bg-transparent scale-90 transform"
+                onMonthChange={setCurrentMonth}
+              />
+            </div>
           </div>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
