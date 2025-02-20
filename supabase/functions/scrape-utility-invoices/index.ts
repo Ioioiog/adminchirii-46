@@ -1,6 +1,6 @@
 
 import { createClient } from '@supabase/supabase-js';
-import * as puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer';
 
 // Define CORS headers
 const corsHeaders = {
@@ -28,11 +28,13 @@ interface Bill {
 async function scrapeEngieRomania(username: string, password: string): Promise<Bill[]> {
   console.log('Starting ENGIE Romania scraping process');
   const startTime = Date.now();
-  let browser: puppeteer.Browser | null = null;
+  let browser = null;
 
   try {
     console.log('Launching browser...');
     const browserStartTime = Date.now();
+    
+    // Use the Puppeteer.launch() method
     browser = await puppeteer.launch({
       headless: true,
       args: [
@@ -43,11 +45,10 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
         '--no-first-run',
         '--no-zygote',
         '--single-process',
-        '--disable-extensions',
-        '--disable-web-security',
-        '--disable-features=IsolateOrigins,site-per-process',
+        '--disable-extensions'
       ]
     });
+    
     console.log(`Browser launch took ${Date.now() - browserStartTime}ms`);
 
     const page = await browser.newPage();
