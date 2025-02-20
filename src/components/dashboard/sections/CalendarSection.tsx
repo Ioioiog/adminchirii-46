@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -38,6 +37,7 @@ export function CalendarSection() {
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = React.useState<Date>(new Date());
   const [viewMode, setViewMode] = React.useState<'month' | 'day'>('month');
+  const [currentMonth, setCurrentMonth] = React.useState<Date>(new Date());
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['calendar-events'],
@@ -159,9 +159,9 @@ export function CalendarSection() {
     return events.filter(event => 
       viewMode === 'day' 
         ? isSameDay(event.date, selectedDate)
-        : isSameMonth(event.date, selectedDate)
+        : isSameMonth(event.date, currentMonth)
     );
-  }, [selectedDate, events, viewMode]);
+  }, [selectedDate, events, viewMode, currentMonth]);
 
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return;
@@ -174,6 +174,7 @@ export function CalendarSection() {
 
   console.log('Selected Date:', selectedDate);
   console.log('View Mode:', viewMode);
+  console.log('Current Month:', currentMonth);
   console.log('Filtered Events:', filteredEvents);
 
   return (
@@ -201,15 +202,14 @@ export function CalendarSection() {
               selected={selectedDate}
               onSelect={handleDateSelect}
               className="rounded-md border"
+              onMonthChange={setCurrentMonth}
             />
           </div>
           <div className="space-y-4">
             <h4 className="font-medium text-sm text-gray-500">
-              {selectedDate 
-                ? viewMode === 'month'
-                  ? `Events for ${format(selectedDate, 'MMMM yyyy')}`
-                  : `Events for ${format(selectedDate, 'MMMM d, yyyy')}`
-                : 'Select a date'
+              {viewMode === 'month'
+                ? `Events for ${format(currentMonth, 'MMMM yyyy')}`
+                : `Events for ${format(selectedDate, 'MMMM d, yyyy')}`
               }
             </h4>
             {isLoading ? (
