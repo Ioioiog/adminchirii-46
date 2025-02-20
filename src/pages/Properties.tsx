@@ -180,7 +180,7 @@ const Properties = () => {
                     </Button>
                     <Button
                       variant="default"
-                      className="bg-blue-600 hover:bg-blue-700"
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
                       onClick={() => navigate(`/properties/${property.id}/tenants`)}
                     >
                       Manage Tenants
