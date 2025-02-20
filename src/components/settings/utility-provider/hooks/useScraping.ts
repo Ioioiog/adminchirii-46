@@ -3,17 +3,22 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { UtilityProvider, ScrapingJob } from "../types";
-import { Database } from "@/integrations/supabase/types/rpc";
+import { Json } from "@/integrations/supabase/types/json";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000; // 2 seconds
 const JOB_CHECK_INTERVAL = 5000; // 5 seconds
 
-type GetDecryptedCredentialsResponse = Database['public']['Functions']['get_decrypted_credentials']['Returns'];
+interface Credentials {
+  id: string;
+  username: string;
+  password: string;
+}
 
 interface ScrapingResponse {
   success: boolean;
   error?: string;
+  jobId?: string;
   bills?: Array<{
     amount: number;
     due_date: string;
@@ -127,17 +132,20 @@ export function useScraping(providers: UtilityProvider[]) {
 
     try {
       // Get credentials
-      const { data: credentials, error: credentialsError } = await supabase.rpc(
+      const { data: credentialsData, error: credentialsError } = await supabase.rpc(
         'get_decrypted_credentials',
         { property_id_input: provider.property_id }
       );
 
-      if (credentialsError || !credentials) {
+      if (credentialsError || !credentialsData) {
         throw new Error('Failed to fetch credentials');
       }
 
+      // Parse credentials data
+      const credentials = credentialsData as unknown as Credentials;
+
       // Start scraping
-      const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke('scrape-utility-invoices', {
+      const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke<ScrapingResponse>('scrape-utility-invoices', {
         body: {
           username: credentials.username,
           password: credentials.password,
@@ -158,7 +166,7 @@ export function useScraping(providers: UtilityProvider[]) {
 
       // Poll for job completion
       const checkJobInterval = setInterval(async () => {
-        const status = await checkJobStatus(scrapeData.jobId, providerId);
+        const status = await checkJobStatus(scrapeData.jobId!, providerId);
         
         if (status === 'completed' || status === 'failed') {
           clearInterval(checkJobInterval);
