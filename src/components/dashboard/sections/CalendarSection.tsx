@@ -195,12 +195,12 @@ export function CalendarSection() {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
+          <div className="h-[400px] flex items-center border rounded-md p-3">
             <Calendar
               mode="single"
               selected={selectedDate || undefined}
               onSelect={handleDateSelect}
-              className="rounded-md border"
+              className="w-full"
               onMonthChange={setCurrentMonth}
             />
           </div>
