@@ -1,3 +1,4 @@
+
 import { createClient } from 'npm:@supabase/supabase-js@2.39.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { Browser, launch } from 'https://deno.land/x/puppeteer@16.2.0/mod.ts';
@@ -44,16 +45,30 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
     page.setDefaultTimeout(60000);
     page.on('console', message => console.log('BROWSER:', message.text()));
 
-    // Navigate directly to the login page
+    // Updated login URL and navigation
     console.log('Navigating to login page...');
-    await page.goto('https://my.engie.ro/autentificare', {
+    const loginUrl = 'https://engie.ro/servicii-online/';
+    await page.goto(loginUrl, {
       waitUntil: 'networkidle0'
     });
+
+    // Click the login button to open the login form if needed
+    try {
+      console.log('Looking for login button...');
+      const loginTrigger = await page.$('a[href*="autentificare"]');
+      if (loginTrigger) {
+        await loginTrigger.click();
+        await page.waitForTimeout(2000);
+      }
+    } catch (e) {
+      console.log('No login trigger button found, proceeding...');
+    }
 
     // Handle cookie consent if present
     try {
       console.log('Checking for cookie consent...');
-      const acceptCookieButton = await page.$('button#cookieConsentBtnRight');
+      await page.waitForSelector('[id*="cookie"]', { timeout: 5000 });
+      const acceptCookieButton = await page.$('button[id*="cookie"][id*="accept"]');
       if (acceptCookieButton) {
         await acceptCookieButton.click();
         await page.waitForTimeout(1000);
@@ -63,13 +78,13 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
     }
 
     console.log('Waiting for login form...');
-    await page.waitForSelector('#username', { visible: true });
-    await page.waitForSelector('#password', { visible: true });
+    await page.waitForSelector('input[type="text"]', { visible: true });
+    await page.waitForSelector('input[type="password"]', { visible: true });
 
     // Type credentials
     console.log('Filling login form...');
-    await page.type('#username', username, { delay: 100 });
-    await page.type('#password', password, { delay: 100 });
+    await page.type('input[type="text"]', username, { delay: 100 });
+    await page.type('input[type="password"]', password, { delay: 100 });
 
     // Submit form
     console.log('Submitting login form...');
@@ -86,23 +101,12 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
     // Wait for successful login
     await page.waitForTimeout(2000);
 
-    // Handle any popups
-    try {
-      console.log('Checking for popups...');
-      const popupClose = await page.$('button.close');
-      if (popupClose) {
-        await popupClose.click();
-        await page.waitForTimeout(1000);
-      }
-    } catch (e) {
-      console.log('No popup found');
-    }
-
-    // Navigate to bills page - try multiple possible URLs
+    // Navigate to bills page with updated URLs
     console.log('Navigating to bills page...');
     const billsUrls = [
-      'https://my.engie.ro/facturi',
-      'https://my.engie.ro/facturi/istoric'
+      'https://engie.ro/servicii-online/facturi-plati/',
+      'https://engie.ro/servicii-online/facturi/',
+      'https://engie.ro/servicii-online/istoric-facturi/'
     ];
 
     let billsPageLoaded = false;
@@ -110,7 +114,8 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
       try {
         console.log(`Trying bills URL: ${url}`);
         await page.goto(url, { waitUntil: 'networkidle0' });
-        const tableExists = await page.$('table.nj-table');
+        // Updated selector for bills table
+        const tableExists = await page.$('.facturi-table, .bills-table, table');
         if (tableExists) {
           billsPageLoaded = true;
           break;
@@ -124,32 +129,45 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
       throw new Error('Could not load bills page');
     }
 
-    // Wait for table to load
+    // Wait for table to load with updated selector
     console.log('Waiting for bills table...');
-    await page.waitForSelector('table.nj-table', { visible: true });
+    await page.waitForSelector('.facturi-table, .bills-table, table', { visible: true });
     
-    // Extract bills data
+    // Extract bills data with more flexible selectors
     console.log('Extracting bills data...');
     const bills = await page.evaluate(() => {
-      const rows = Array.from(document.querySelectorAll('table.nj-table tbody tr'));
+      const rows = Array.from(document.querySelectorAll('.facturi-table tr, .bills-table tr, table tr')).slice(1);
       return rows.map(row => {
         const cells = Array.from(row.querySelectorAll('td'));
+        if (cells.length < 5) return null;
         
-        // Extract invoice number from first column
+        // More flexible data extraction
         const invoiceNumber = cells[0]?.textContent?.trim().replace(/[^\d]/g, '') || '';
         
-        // Extract date from the date column (format: DD.MM.YYYY)
+        // Handle different date formats
         const dateText = cells[2]?.textContent?.trim() || '';
-        const [day, month, year] = dateText.split('.');
-        const dueDate = `${year}-${month}-${day}`;
+        let dueDate = '';
+        if (dateText) {
+          try {
+            const dateMatch = dateText.match(/(\d{1,2})[\.\/](\d{1,2})[\.\/](\d{4})/);
+            if (dateMatch) {
+              const [_, day, month, year] = dateMatch;
+              dueDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            }
+          } catch (e) {
+            console.log('Date parsing error:', e);
+          }
+        }
         
-        // Extract amount from amount column
+        // Handle different amount formats
         const amountText = cells[4]?.textContent?.trim().replace(/[^\d.,]/g, '') || '0';
         const amount = parseFloat(amountText.replace(',', '.'));
         
-        // Extract status from status column
+        // More flexible status detection
         const statusText = cells[5]?.textContent?.trim().toLowerCase() || '';
-        const status = statusText.includes('platit') ? 'paid' : 'pending';
+        const status = /platit|achitat|paid/i.test(statusText) ? 'paid' : 'pending';
+        
+        if (!invoiceNumber || !dueDate || isNaN(amount)) return null;
         
         return {
           invoice_number: invoiceNumber,
@@ -158,7 +176,7 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
           type: 'gas',
           status: status
         };
-      }).filter(bill => bill.invoice_number && bill.amount > 0);
+      }).filter(bill => bill !== null);
     });
 
     console.log(`Found ${bills.length} bills`);
