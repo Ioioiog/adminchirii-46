@@ -99,10 +99,13 @@ const Utilities = () => {
       console.log("Deleting utility provider:", id);
       
       // First, delete related scraping jobs
-      const { error: scrapingJobsError } = await supabase
+      const { data: scrapingData, error: scrapingJobsError } = await supabase
         .from("scraping_jobs")
         .delete()
-        .eq("utility_provider_id", id);
+        .eq("utility_provider_id", id)
+        .select();
+
+      console.log("Scraping jobs deletion result:", { scrapingData, scrapingJobsError });
 
       if (scrapingJobsError) {
         console.error("Error deleting scraping jobs:", scrapingJobsError);
@@ -110,10 +113,13 @@ const Utilities = () => {
       }
 
       // Then delete the provider
-      const { error: providerError } = await supabase
+      const { data: providerData, error: providerError } = await supabase
         .from("utility_provider_credentials")
         .delete()
-        .eq("id", id);
+        .eq("id", id)
+        .select();
+
+      console.log("Provider deletion result:", { providerData, providerError });
 
       if (providerError) {
         console.error("Error deleting provider:", providerError);
@@ -130,7 +136,7 @@ const Utilities = () => {
       console.error("Error in delete operation:", error);
       toast({
         title: "Error",
-        description: "Failed to delete utility provider. Please try again.",
+        description: error.message || "Failed to delete utility provider. Please try again.",
         variant: "destructive",
       });
     }
