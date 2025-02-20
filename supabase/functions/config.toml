@@ -4,6 +4,7 @@ project_id = "wecmvyohaxizmnhuvjly"
 [[config.functions]]
 name = "scrape-utility-invoices"
 verify_jwt = true
+import_map = "./import_map.json"
 
 [[config.functions]]
 name = "scrape-engie"

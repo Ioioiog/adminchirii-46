@@ -1,7 +1,6 @@
-
-import { createClient } from 'npm:@supabase/supabase-js@2.39.0';
+import { createClient } from '@supabase/supabase-js';
 import { corsHeaders } from '../_shared/cors.ts';
-import * as puppeteer from 'https://deno.land/x/puppeteer@16.2.0/mod.ts';
+import * as puppeteer from 'puppeteer';
 
 interface ScrapingRequest {
   username: string;
@@ -166,18 +165,26 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
   }
 }
 
-// Handle the incoming request
 Deno.serve(async (req) => {
-  // Handle CORS
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
+    // Validate request body exists
+    if (!req.body) {
+      throw new Error('Request body is required');
+    }
+
     const request: ScrapingRequest = await req.json();
     console.log('Processing request for provider:', request.provider);
 
-    // Initialize Supabase client
+    if (!request.username || !request.password || !request.utilityId || !request.provider) {
+      throw new Error('Missing required fields in request');
+    }
+
+    // Initialize Supabase client with error handling
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
@@ -187,7 +194,7 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Create scraping job
+    // Create scraping job with error handling
     const { data: jobData, error: jobError } = await supabase
       .from('scraping_jobs')
       .insert({
@@ -201,16 +208,22 @@ Deno.serve(async (req) => {
       .single();
 
     if (jobError || !jobData) {
+      console.error('Failed to create scraping job:', jobError);
       throw new Error('Failed to create scraping job');
     }
 
     try {
       let bills: Bill[] = [];
+      
+      console.log('Starting scraping for provider:', request.provider);
+      
       if (request.provider.toLowerCase() === 'engie_romania') {
         bills = await scrapeEngieRomania(request.username, request.password);
       } else {
         throw new Error('Unsupported provider');
       }
+
+      console.log('Scraping completed. Found bills:', bills.length);
 
       if (bills.length > 0) {
         const { error: billError } = await supabase
@@ -229,6 +242,7 @@ Deno.serve(async (req) => {
           );
 
         if (billError) {
+          console.error('Failed to store utility bills:', billError);
           throw new Error(`Failed to store utility bills: ${billError.message}`);
         }
       }
@@ -259,6 +273,8 @@ Deno.serve(async (req) => {
       );
 
     } catch (error) {
+      console.error('Scraping error:', error);
+      
       // Update job status to failed
       const { error: updateError } = await supabase
         .from('scraping_jobs')
@@ -285,7 +301,7 @@ Deno.serve(async (req) => {
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
+        status: 400,
       }
     );
   }
