@@ -8,6 +8,7 @@ import { useUserRole } from "@/hooks/use-user-role";
 import { ServiceProviderFilters } from "./service-provider/ServiceProviderFilters";
 import { CreateProviderDialog } from "./service-provider/CreateProviderDialog";
 import { ServiceProviderListContent } from "./service-provider/ServiceProviderListContent";
+import { Plus } from "lucide-react";
 
 interface ServiceProvider {
   id: string;
@@ -102,7 +103,6 @@ export function ServiceProviderList() {
           )
         `);
 
-      // Apply filters
       if (filters.search) {
         query = query.or(`business_name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
       }
@@ -127,7 +127,6 @@ export function ServiceProviderList() {
           isPreferred: preferredIds.has(provider.id)
         }));
 
-      // Filter by service category if selected
       if (filters.category !== "all") {
         filteredProviders = filteredProviders.filter(provider => 
           provider.services?.some(service => service.category === filters.category)
@@ -158,7 +157,11 @@ export function ServiceProviderList() {
       console.log("Creating new service provider:", newProvider);
       const tempPassword = Math.random().toString(36).slice(-8) + "!1A";
 
-      // First check if the user already exists
+      if (!currentUserId) {
+        console.error("No user ID available");
+        return;
+      }
+
       const { data: existingUser, error: userCheckError } = await supabase
         .from('profiles')
         .select('id, role')
@@ -176,7 +179,6 @@ export function ServiceProviderList() {
         console.log("Existing user found:", existingUser);
         userId = existingUser.id;
         
-        // Update existing profile
         const { error: updateError } = await supabase
           .from('profiles')
           .update({
@@ -190,7 +192,6 @@ export function ServiceProviderList() {
         if (updateError) throw updateError;
       } else {
         console.log("Creating new user with temporary password");
-        // Create new user
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: newProvider.email,
           password: tempPassword,
@@ -214,13 +215,11 @@ export function ServiceProviderList() {
 
         userId = authData.user.id;
 
-        // Wait a moment for the auth trigger to create the profile
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
 
       console.log("Creating/updating service provider profile for user:", userId);
 
-      // Create or update service provider profile
       const { error: spError } = await supabase
         .from('service_provider_profiles')
         .upsert({
@@ -236,7 +235,6 @@ export function ServiceProviderList() {
         throw spError;
       }
 
-      // Send welcome email with temporary password
       console.log("Sending welcome email to new service provider");
       const { error: emailError } = await supabase.functions.invoke('send-service-provider-welcome', {
         body: {
@@ -320,16 +318,18 @@ export function ServiceProviderList() {
 
   return (
     <div className="space-y-4">
-      {userRole === "landlord" && (
-        <div className="flex justify-end items-center mb-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-semibold">Service Providers</h2>
+        {userRole === "landlord" && (
           <Button 
-            className="bg-blue-600 hover:bg-blue-700 text-white" 
+            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2" 
             onClick={() => setIsCreateDialogOpen(true)}
           >
+            <Plus className="h-4 w-4" />
             Create New Provider
           </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       <ServiceProviderFilters 
         filters={filters}
