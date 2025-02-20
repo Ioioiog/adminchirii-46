@@ -57,7 +57,12 @@ const Chat = () => {
         <div className="flex-1 flex items-center justify-center p-8 text-center bg-[#F1F0FB] dark:bg-slate-900">
           <div className="max-w-md glass-card p-8 rounded-xl">
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <MessageList className="w-8 h-8 text-blue-500" />
+              <MessageList 
+                messages={[]}
+                currentUserId={currentUserId}
+                messagesEndRef={messagesEndRef}
+                className="w-8 h-8 text-blue-500"
+              />
             </div>
             <h3 className="text-lg font-semibold mb-2 text-gray-800">Select a Tenant</h3>
             <p className="text-gray-600">
@@ -73,7 +78,12 @@ const Chat = () => {
         <div className="flex-1 flex items-center justify-center p-8 text-center bg-[#F1F0FB] dark:bg-slate-900">
           <div className="max-w-md glass-card p-8 rounded-xl">
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <MessageList className="w-8 h-8 text-red-500" />
+              <MessageList 
+                messages={[]}
+                currentUserId={currentUserId}
+                messagesEndRef={messagesEndRef}
+                className="w-8 h-8 text-red-500"
+              />
             </div>
             <h3 className="text-lg font-semibold mb-2 text-gray-800">No Conversation Found</h3>
             <p className="text-gray-600">
@@ -92,6 +102,7 @@ const Chat = () => {
           messages={messages}
           currentUserId={currentUserId}
           messagesEndRef={messagesEndRef}
+          className="flex-1 h-full"
         />
         <MessageInput
           newMessage={newMessage}

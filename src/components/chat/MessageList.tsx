@@ -24,13 +24,15 @@ interface MessageListProps {
   currentUserId: string | null;
   messagesEndRef: React.RefObject<HTMLDivElement>;
   typingUsers?: string[];
+  className?: string; // Added className prop
 }
 
 export function MessageList({ 
-  messages = [], // Provide default empty array
+  messages = [], 
   currentUserId, 
   messagesEndRef, 
-  typingUsers = [] 
+  typingUsers = [],
+  className  // Add className to destructured props
 }: MessageListProps) {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editedContent, setEditedContent] = useState("");
@@ -177,7 +179,7 @@ export function MessageList({
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <ScrollArea className="flex-1 h-full">
+      <ScrollArea className={className || "flex-1 h-full"}>
         <div className="space-y-4 p-4" onScroll={handleScroll}>
           {visibleMessages.map((message) => {
             const senderName = message.sender
