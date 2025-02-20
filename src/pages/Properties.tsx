@@ -8,20 +8,16 @@ import { PropertyFilters } from "@/components/properties/PropertyFilters";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { useProperties } from "@/hooks/useProperties";
 import { PropertyListHeader } from "@/components/properties/PropertyListHeader";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { PropertyStatus } from "@/utils/propertyUtils";
 
 const Properties = () => {
   const navigate = useNavigate();
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | PropertyStatus>("all");
   const { properties, isLoading } = useProperties({ userRole: "landlord" });
 
   const filteredProperties = properties?.filter((property) => {
@@ -44,7 +40,9 @@ const Properties = () => {
     );
   }
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: PropertyStatus) => {
+    if (!status) return 'bg-gray-100 text-gray-800';
+    
     switch (status.toLowerCase()) {
       case 'occupied':
         return 'bg-green-100 text-green-800';
@@ -104,7 +102,7 @@ const Properties = () => {
                         </div>
                       </div>
                       <Badge className={getStatusColor(property.status)}>
-                        {property.status}
+                        {property.status || 'N/A'}
                       </Badge>
                     </div>
                   </AccordionTrigger>
