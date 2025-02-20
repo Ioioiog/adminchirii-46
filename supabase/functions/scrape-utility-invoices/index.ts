@@ -1,4 +1,3 @@
-
 import { createClient } from 'npm:@supabase/supabase-js@2.39.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import * as puppeteer from 'https://deno.land/x/puppeteer@16.2.0/mod.ts';
@@ -45,9 +44,9 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
     page.setDefaultTimeout(60000);
     page.on('console', message => console.log('BROWSER:', message.text()));
 
-    // First navigate to the main page
-    console.log('Navigating to main page...');
-    await page.goto('https://my.engie.ro/', {
+    // Navigate directly to the login page
+    console.log('Navigating to login page...');
+    await page.goto('https://my.engie.ro/autentificare', {
       waitUntil: 'networkidle0'
     });
 
@@ -61,18 +60,6 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
       }
     } catch (e) {
       console.log('No cookie consent dialog found');
-    }
-
-    // Wait for and click the login button if present
-    try {
-      console.log('Looking for login button...');
-      const loginButton = await page.$('a[href*="login"], a[href*="autentificare"]');
-      if (loginButton) {
-        await loginButton.click();
-        await page.waitForNavigation({ waitUntil: 'networkidle0' });
-      }
-    } catch (e) {
-      console.log('No login button found, assuming we are on login page');
     }
 
     console.log('Waiting for login form...');
@@ -115,9 +102,7 @@ async function scrapeEngieRomania(username: string, password: string): Promise<B
     console.log('Navigating to bills page...');
     const billsUrls = [
       'https://my.engie.ro/facturi',
-      'https://my.engie.ro/FACTURI',
-      'https://my.engie.ro/facturi/istoric',
-      'https://my.engie.ro/FACTURI/ISTORIC'
+      'https://my.engie.ro/facturi/istoric'
     ];
 
     let billsPageLoaded = false;
