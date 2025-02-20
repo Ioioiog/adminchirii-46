@@ -1,20 +1,27 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Home, User, DollarSign, MapPin, Calendar } from "lucide-react";
+import { ArrowLeft, Home, User, DollarSign, MapPin, Calendar, Edit2, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { PropertyStatus } from "@/utils/propertyUtils";
+import { useToast } from "@/hooks/use-toast";
 
 const PropertyDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedData, setEditedData] = useState<any>(null);
 
   const { data: property, isLoading } = useQuery({
     queryKey: ["property", id],
@@ -41,6 +48,50 @@ const PropertyDetails = () => {
       return data;
     },
   });
+
+  const handleEdit = () => {
+    setEditedData({
+      name: property.name,
+      address: property.address,
+      type: property.type,
+      monthly_rent: property.monthly_rent,
+      description: property.description,
+      available_from: property.available_from,
+    });
+    setIsEditing(true);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditedData(null);
+  };
+
+  const handleSave = async () => {
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .update(editedData)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Property updated successfully",
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["property", id] });
+      setIsEditing(false);
+      setEditedData(null);
+    } catch (error) {
+      console.error('Error updating property:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update property",
+        variant: "destructive",
+      });
+    }
+  };
 
   const getStatusColor = (status: PropertyStatus) => {
     if (!status) return 'bg-gray-100 text-gray-800';
@@ -113,13 +164,48 @@ const PropertyDetails = () => {
                 Back
               </Button>
               <div>
-                <h1 className="text-2xl font-semibold">{property.name}</h1>
-                <p className="text-gray-500">{property.address}</p>
+                {isEditing ? (
+                  <Input
+                    value={editedData.name}
+                    onChange={(e) => setEditedData({ ...editedData, name: e.target.value })}
+                    className="text-2xl font-semibold mb-1"
+                  />
+                ) : (
+                  <h1 className="text-2xl font-semibold">{property.name}</h1>
+                )}
+                {isEditing ? (
+                  <Input
+                    value={editedData.address}
+                    onChange={(e) => setEditedData({ ...editedData, address: e.target.value })}
+                    className="text-gray-500"
+                  />
+                ) : (
+                  <p className="text-gray-500">{property.address}</p>
+                )}
               </div>
             </div>
-            <Badge className={getStatusColor(status)}>
-              {status}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge className={getStatusColor(status)}>
+                {status}
+              </Badge>
+              {isEditing ? (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleCancel}>
+                    <X className="h-4 w-4 mr-1" />
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={handleSave}>
+                    <Save className="h-4 w-4 mr-1" />
+                    Save
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="outline" size="sm" onClick={handleEdit}>
+                  <Edit2 className="h-4 w-4 mr-1" />
+                  Edit
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="grid gap-6">
@@ -131,34 +217,73 @@ const PropertyDetails = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div className="flex items-center gap-3">
                     <MapPin className="h-5 w-5 text-gray-400" />
-                    <div>
+                    <div className="flex-1">
                       <p className="text-sm font-medium">Address</p>
-                      <p className="text-sm text-gray-500">{property.address}</p>
+                      {isEditing ? (
+                        <Input
+                          value={editedData.address}
+                          onChange={(e) => setEditedData({ ...editedData, address: e.target.value })}
+                          className="mt-1"
+                        />
+                      ) : (
+                        <p className="text-sm text-gray-500">{property.address}</p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <Home className="h-5 w-5 text-gray-400" />
-                    <div>
+                    <div className="flex-1">
                       <p className="text-sm font-medium">Property Type</p>
-                      <p className="text-sm text-gray-500">{property.type}</p>
+                      {isEditing ? (
+                        <select
+                          value={editedData.type}
+                          onChange={(e) => setEditedData({ ...editedData, type: e.target.value })}
+                          className="mt-1 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                        >
+                          <option value="Apartment">Apartment</option>
+                          <option value="House">House</option>
+                          <option value="Condo">Condo</option>
+                          <option value="Commercial">Commercial</option>
+                        </select>
+                      ) : (
+                        <p className="text-sm text-gray-500">{property.type}</p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <DollarSign className="h-5 w-5 text-gray-400" />
-                    <div>
+                    <div className="flex-1">
                       <p className="text-sm font-medium">Monthly Rent</p>
-                      <p className="text-sm text-gray-500">
-                        ${property.monthly_rent?.toLocaleString() || 0}
-                      </p>
+                      {isEditing ? (
+                        <Input
+                          type="number"
+                          value={editedData.monthly_rent}
+                          onChange={(e) => setEditedData({ ...editedData, monthly_rent: parseFloat(e.target.value) })}
+                          className="mt-1"
+                        />
+                      ) : (
+                        <p className="text-sm text-gray-500">
+                          ${property.monthly_rent?.toLocaleString() || 0}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <Calendar className="h-5 w-5 text-gray-400" />
-                    <div>
+                    <div className="flex-1">
                       <p className="text-sm font-medium">Available From</p>
-                      <p className="text-sm text-gray-500">
-                        {property.available_from ? format(new Date(property.available_from), 'PPP') : 'Not specified'}
-                      </p>
+                      {isEditing ? (
+                        <Input
+                          type="date"
+                          value={editedData.available_from}
+                          onChange={(e) => setEditedData({ ...editedData, available_from: e.target.value })}
+                          className="mt-1"
+                        />
+                      ) : (
+                        <p className="text-sm text-gray-500">
+                          {property.available_from ? format(new Date(property.available_from), 'PPP') : 'Not specified'}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -170,15 +295,19 @@ const PropertyDetails = () => {
                   </div>
                 </div>
 
-                {property.description && (
-                  <>
-                    <Separator className="my-6" />
-                    <div>
-                      <h3 className="text-sm font-medium mb-2">Description</h3>
-                      <p className="text-sm text-gray-500">{property.description}</p>
-                    </div>
-                  </>
-                )}
+                <Separator className="my-6" />
+                <div>
+                  <h3 className="text-sm font-medium mb-2">Description</h3>
+                  {isEditing ? (
+                    <Textarea
+                      value={editedData.description || ''}
+                      onChange={(e) => setEditedData({ ...editedData, description: e.target.value })}
+                      className="min-h-[100px]"
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-500">{property.description || 'No description available.'}</p>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
