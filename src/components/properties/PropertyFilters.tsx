@@ -1,6 +1,6 @@
 
+import React from "react";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -8,34 +8,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PropertyStatus } from "@/utils/propertyUtils";
 
 interface PropertyFiltersProps {
   searchTerm: string;
   setSearchTerm: (value: string) => void;
-  statusFilter: string;
-  setStatusFilter: (value: string) => void;
+  statusFilter: "all" | PropertyStatus;
+  setStatusFilter: (value: "all" | PropertyStatus) => void;
 }
 
-export function PropertyFilters({
+export const PropertyFilters = ({
   searchTerm,
   setSearchTerm,
   statusFilter,
   setStatusFilter,
-}: PropertyFiltersProps) {
+}: PropertyFiltersProps) => {
   return (
     <div className="flex flex-col sm:flex-row gap-4">
-      <div className="relative flex-1">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-        <Input
-          placeholder="Search properties..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-9"
-        />
-      </div>
-      <Select value={statusFilter} onValueChange={setStatusFilter}>
+      <Input
+        placeholder="Search properties..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="max-w-sm"
+      />
+      <Select
+        value={statusFilter}
+        onValueChange={(value: "all" | PropertyStatus) => setStatusFilter(value)}
+      >
         <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder="Filter by status" />
+          <SelectValue placeholder="Status" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Status</SelectItem>
@@ -46,4 +47,4 @@ export function PropertyFilters({
       </Select>
     </div>
   );
-}
+};

@@ -83,7 +83,14 @@ const Tenants = () => {
           console.log("Fetching properties for landlord");
           const { data: propertiesData, error: propertiesError } = await supabase
             .from("properties")
-            .select("*")
+            .select(`
+              *,
+              tenancies (
+                id,
+                status,
+                tenant_id
+              )
+            `)
             .eq("landlord_id", session.user.id);
 
           if (propertiesError) {
@@ -101,8 +108,8 @@ const Tenants = () => {
             updated_at: property.updated_at,
             description: property.description || '',
             available_from: property.available_from || null,
-            status: (property.status as PropertyStatus) || 'vacant',
-            tenant_count: property.tenant_count || 0,
+            status: property.tenancies?.some(t => t.status === 'active') ? 'occupied' : 'vacant',
+            tenant_count: property.tenancies?.filter(t => t.status === 'active').length || 0,
             landlord_id: property.landlord_id
           }));
 
