@@ -272,254 +272,238 @@ const Documents = () => {
 
   if (!userId || !userRole) return null;
 
-  const renderContracts = () => (
-    <Card>
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-bold">Contract Overview</h2>
-            <p className="text-muted-foreground">
-              View and manage all your property-related contracts
-            </p>
-          </div>
-          {userRole === "landlord" && (
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Contract
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Generate New Contract</DialogTitle>
-                  <DialogDescription>
-                    Select a template and property to generate a new contract
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Property</label>
-                    <Select
-                      value={selectedProperty}
-                      onValueChange={setSelectedProperty}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a property" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {properties?.map((property) => (
-                          <SelectItem key={property.id} value={property.id}>
-                            {property.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Contract Template</label>
-                    <Select
-                      value={selectedTemplate}
-                      onValueChange={setSelectedTemplate}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a template" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {templates?.map((template) => (
-                          <SelectItem key={template.id} value={template.id}>
-                            {template.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button
-                    onClick={handleGenerateContract}
-                    disabled={isGenerating || !selectedTemplate || !selectedProperty}
-                    className="w-full"
-                  >
-                    {isGenerating ? "Generating..." : "Generate Contract"}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center space-x-2 mb-4">
-          <Search className="w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search contracts..."
-            value={contractSearchQuery}
-            onChange={(e) => setContractSearchQuery(e.target.value)}
-            className="max-w-sm"
-          />
-        </div>
-
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Contract Type</TableHead>
-                <TableHead>Property</TableHead>
-                <TableHead>Template</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Valid From</TableHead>
-                <TableHead>Valid Until</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredContracts?.map((contract) => (
-                <TableRow key={contract.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center">
-                      <FileText className="w-4 h-4 mr-2 text-muted-foreground" />
-                      {contract.contract_type}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">
-                        {contract.property?.name}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {contract.property?.address}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {contract.template?.name || "Custom Contract"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="secondary"
-                      className={`${getStatusColor(contract.status)} text-white`}
-                    >
-                      {contract.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {contract.valid_from
-                      ? new Date(contract.valid_from).toLocaleDateString()
-                      : "-"}
-                  </TableCell>
-                  <TableCell>
-                    {contract.valid_until
-                      ? new Date(contract.valid_until).toLocaleDateString()
-                      : "-"}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigate(`/contracts/${contract.id}`)}
-                    >
-                      View
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filteredContracts?.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    <div className="text-muted-foreground">
-                      No contracts found
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
   return (
-    <div className="flex bg-dashboard-background min-h-screen">
+    <div className="flex bg-[#F8F9FC] min-h-screen">
       <DashboardSidebar />
       <main className="flex-1 p-8">
-        <div className="max-w-7xl mx-auto space-y-8">
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <header className="flex justify-between items-center">
-              <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-600 rounded-xl">
-                    <FileText className="h-6 w-6 text-white" />
-                  </div>
-                  <h1 className="text-3xl font-semibold text-gray-900">Document Management</h1>
-                </div>
-                <p className="text-gray-500 max-w-2xl">
-                  Manage and view your property-related documents and contracts.
-                </p>
-              </div>
-              <div className="flex items-center gap-4">
-                <ToggleGroup type="single" value={viewMode} onValueChange={(value) => value && setViewMode(value as "grid" | "list")}>
-                  <ToggleGroupItem value="grid" aria-label="Grid view">
-                    <Grid className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="list" aria-label="List view">
-                    <List className="h-4 w-4" />
-                  </ToggleGroupItem>
-                </ToggleGroup>
-                {userRole === "landlord" && activeTab === "documents" && (
-                  <Button 
-                    className="flex items-center gap-2 bg-blue-500 hover:bg-blue-400 text-white"
-                    onClick={() => setShowAddModal(true)}
-                  >
-                    <Plus className="h-4 w-4" />
-                    Upload Document
-                  </Button>
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex items-center gap-2 bg-white rounded-lg p-2 shadow-sm">
+            {navigationItems.map((item) => (
+              <Button
+                key={item.id}
+                variant={activeTab === item.id ? 'default' : 'ghost'}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg transition-all",
+                  activeTab === item.id 
+                    ? "bg-blue-600 text-white hover:bg-blue-700" 
+                    : "text-gray-600 hover:bg-gray-100"
                 )}
-              </div>
-            </header>
+                onClick={() => setActiveTab(item.id as "documents" | "contracts")}
+              >
+                <item.icon className="h-5 w-5" />
+                {item.label}
+              </Button>
+            ))}
           </div>
 
-          <Card className="p-4 bg-white shadow-sm">
-            <div className="flex gap-4 overflow-x-auto">
-              {navigationItems.map((item) => (
-                <Button
-                  key={item.id}
-                  variant={activeTab === item.id ? 'default' : 'ghost'}
-                  className={cn(
-                    "flex-shrink-0 gap-2 transition-all duration-200",
-                    activeTab === item.id && "bg-primary text-primary-foreground shadow-sm"
-                  )}
-                  onClick={() => setActiveTab(item.id as "documents" | "contracts")}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </Button>
-              ))}
-            </div>
-          </Card>
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center justify-between mb-8">
+              <div className="space-y-1">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-600 rounded-lg">
+                    {activeTab === 'documents' ? (
+                      <FileText className="h-6 w-6 text-white" />
+                    ) : (
+                      <Files className="h-6 w-6 text-white" />
+                    )}
+                  </div>
+                  <h1 className="text-2xl font-semibold">
+                    {activeTab === 'documents' ? 'Documents' : 'Contracts'}
+                  </h1>
+                </div>
+                <p className="text-gray-500">
+                  {activeTab === 'documents' 
+                    ? 'Manage and track all your property-related documents.'
+                    : 'Manage and track all your property contracts.'}
+                </p>
+              </div>
 
-          {activeTab === "documents" ? (
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <DocumentFilters
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-                typeFilter={typeFilter}
-                setTypeFilter={setTypeFilter}
-                propertyFilter={propertyFilter}
-                setPropertyFilter={setPropertyFilter}
-                properties={properties}
-              />
-              <DocumentList 
-                userId={userId} 
-                userRole={userRole}
-                propertyFilter={propertyFilter}
-                typeFilter={typeFilter}
-                searchTerm={searchTerm}
-                viewMode={viewMode}
-              />
+              {userRole === "landlord" && (
+                activeTab === "documents" ? (
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={() => setShowAddModal(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Upload Document
+                  </Button>
+                ) : (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button className="bg-blue-600 hover:bg-blue-700">
+                        <Plus className="h-4 w-4 mr-2" />
+                        New Contract
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Generate New Contract</DialogTitle>
+                        <DialogDescription>
+                          Select a template and property to generate a new contract
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Property</label>
+                          <Select
+                            value={selectedProperty}
+                            onValueChange={setSelectedProperty}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a property" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {properties?.map((property) => (
+                                <SelectItem key={property.id} value={property.id}>
+                                  {property.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Contract Template</label>
+                          <Select
+                            value={selectedTemplate}
+                            onValueChange={setSelectedTemplate}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a template" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {templates?.map((template) => (
+                                <SelectItem key={template.id} value={template.id}>
+                                  {template.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button
+                          onClick={handleGenerateContract}
+                          disabled={isGenerating || !selectedTemplate || !selectedProperty}
+                          className="w-full"
+                        >
+                          {isGenerating ? "Generating..." : "Generate Contract"}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )
+              )}
             </div>
-          ) : (
-            renderContracts()
-          )}
+
+            {activeTab === "documents" ? (
+              <>
+                <DocumentFilters
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  typeFilter={typeFilter}
+                  setTypeFilter={setTypeFilter}
+                  propertyFilter={propertyFilter}
+                  setPropertyFilter={setPropertyFilter}
+                  properties={properties}
+                />
+                <DocumentList 
+                  userId={userId} 
+                  userRole={userRole}
+                  propertyFilter={propertyFilter}
+                  typeFilter={typeFilter}
+                  searchTerm={searchTerm}
+                  viewMode={viewMode}
+                />
+              </>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2 mb-4">
+                  <Search className="w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search contracts..."
+                    value={contractSearchQuery}
+                    onChange={(e) => setContractSearchQuery(e.target.value)}
+                    className="max-w-sm"
+                  />
+                </div>
+
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Contract Type</TableHead>
+                        <TableHead>Property</TableHead>
+                        <TableHead>Template</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Valid From</TableHead>
+                        <TableHead>Valid Until</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredContracts?.map((contract) => (
+                        <TableRow key={contract.id}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center">
+                              <FileText className="w-4 h-4 mr-2 text-muted-foreground" />
+                              {contract.contract_type}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">
+                                {contract.property?.name}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {contract.property?.address}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {contract.template?.name || "Custom Contract"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="secondary"
+                              className={`${getStatusColor(contract.status)} text-white`}
+                            >
+                              {contract.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {contract.valid_from
+                              ? new Date(contract.valid_from).toLocaleDateString()
+                              : "-"}
+                          </TableCell>
+                          <TableCell>
+                            {contract.valid_until
+                              ? new Date(contract.valid_until).toLocaleDateString()
+                              : "-"}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate(`/contracts/${contract.id}`)}
+                            >
+                              View
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {filteredContracts?.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8">
+                            <div className="text-muted-foreground">
+                              No contracts found
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </main>
 
