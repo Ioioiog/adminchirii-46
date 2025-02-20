@@ -42,11 +42,11 @@ export function useProperties({ userRole }: UsePropertiesProps): UsePropertiesRe
             .from("properties")
             .select(`
               *,
-              tenancies!inner(
+              tenancies(
                 id,
                 status,
                 tenant_id,
-                tenant:profiles!inner(
+                tenant:profiles(
                   id,
                   first_name,
                   last_name,
@@ -55,7 +55,6 @@ export function useProperties({ userRole }: UsePropertiesProps): UsePropertiesRe
               )
             `)
             .eq("landlord_id", user.id)
-            .eq("tenancies.status", "active")
             .order('created_at', { ascending: false });
 
           if (error) {
@@ -68,8 +67,8 @@ export function useProperties({ userRole }: UsePropertiesProps): UsePropertiesRe
           // Transform the data to match our Property interface
           const transformedData = data?.map(property => ({
             ...property,
-            status: property.tenancies?.length > 0 ? 'occupied' : 'vacant',
-            tenant_count: property.tenancies?.length || 0
+            status: property.tenancies?.some(t => t.status === 'active') ? 'occupied' : 'vacant',
+            tenant_count: property.tenancies?.filter(t => t.status === 'active').length || 0
           })) || [];
 
           console.log("Transformed landlord properties:", transformedData);
