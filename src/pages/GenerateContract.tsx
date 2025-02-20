@@ -1,3 +1,4 @@
+<lov-code>
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -562,9 +563,9 @@ export default function GenerateContract() {
           <div className="hidden print:block print:p-8">
             <div className="text-black">
               <h1 className="text-3xl font-bold text-center mb-8">CONTRACT DE ÎNCHIRIERE A LOCUINȚEI</h1>
-              <p>Nr. {formData.contractNumber}</p>
+              <p className="mb-4">Nr. {formData.contractNumber}</p>
               
-              <h2 className="text-xl font-bold mt-8 mb-4">Părțile,</h2>
+              <h2 className="text-xl font-bold mb-4">Părțile,</h2>
               
               <p className="mb-4">
                 {formData.ownerName}, Nr. ordine Reg. com./an: {formData.ownerReg}, Cod fiscal (C.U.I.): {formData.ownerFiscal}, 
@@ -582,27 +583,39 @@ export default function GenerateContract() {
               
               <p className="mb-8">Au convenit încheierea prezentului contract de închiriere, în termenii și condițiile care urmează:</p>
 
-              {/* Contract sections with full text */}
-              <h2 className="text-xl font-bold mt-8 mb-4">1. OBIECTUL CONTRACTULUI</h2>
+              <h2 className="text-xl font-bold mb-4">1. OBIECTUL CONTRACTULUI</h2>
               <p className="mb-4">
-                1.1. Obiectul prezentului contract este închirierea apartamentului situat în {formData.propertyAddress}, compus din {formData.propertyRooms} camere, cu destinația de locuință. Chiriașul va utiliza apartamentul incepand cu data de {formData.startDate} ca locuință pentru familia sa.
+                1.1. Obiectul prezentului contract este închirierea apartamentului situat în {formData.propertyAddress}, 
+                compus din {formData.propertyRooms} camere, cu destinația de locuință. Chiriașul va utiliza apartamentul 
+                incepand cu data de {formData.startDate} ca locuință pentru familia sa.
               </p>
 
-              <h2 className="text-xl font-bold mt-8 mb-4">2. PREȚUL CONTRACTULUI</h2>
+              <h2 className="text-xl font-bold mb-4">2. PREȚUL CONTRACTULUI</h2>
               <p className="mb-4">
-                2.1. Părțile convin un cuantum al chiriei lunare la nivelul sumei de {formData.rentAmount} euro {formData.vatIncluded === 'nu' ? '+ TVA' : 'TVA inclus'}. Plata chiriei se realizează în ziua de {formData.paymentDay} a fiecărei luni calendaristice pentru luna calendaristică următoare, în contul bancar al Proprietarului, indicat în preambulul prezentului contract. Plata se realizează în lei, la cursul de schimb euro/leu comunicat de BNR în ziua plății.
+                2.1. Părțile convin un cuantum al chiriei lunare la nivelul sumei de {formData.rentAmount} euro 
+                {formData.vatIncluded === "nu" ? " + TVA" : " TVA inclus"}. Plata chiriei se realizează în ziua de {formData.paymentDay} 
+                a fiecărei luni calendaristice pentru luna calendaristică următoare, în contul bancar al Proprietarului, 
+                indicat în preambulul prezentului contract. Plata se realizează în lei, la cursul de schimb euro/leu 
+                comunicat de BNR în ziua plății.
               </p>
               <p className="mb-4">
-                2.2. În cazul în care data plății este o zi nebancară, plata se va realiza în prima zi bancară care urmează zilei de {formData.paymentDay}.
+                2.2. În cazul în care data plății este o zi nebancară, plata se va realiza în prima zi bancară care 
+                urmează zilei de {formData.paymentDay}.
               </p>
               <p className="mb-4">
-                2.3. Părțile convin că întârzierea la plată atrage aplicarea unor penalități în cuantum de {formData.lateFee}% pentru fiecare zi de întârziere.
+                2.3. Părțile convin că întârzierea la plată atrage aplicarea unor penalități în cuantum de {formData.lateFee}% 
+                pentru fiecare zi de întârziere.
               </p>
               <p className="mb-4">
-                2.4. Prezentul contract se înregistrează, potrivit dispozițiilor legii în vigoare, la organele fiscale competente. Părțile cunosc că prezentul contract reprezintă titlu executoriu pentru plata chiriei la termenele stabilite prin prezentul contract, în conformitate cu prevederile art. 1798 Cod civil.
+                2.4. Prezentul contract se înregistrează, potrivit dispozițiilor legii în vigoare, la organele fiscale competente. 
+                Părțile cunosc că prezentul contract reprezintă titlu executoriu pentru plata chiriei la termenele stabilite 
+                prin prezentul contract, în conformitate cu prevederile art. 1798 Cod civil.
               </p>
               <p className="mb-4">
-                2.5. Părțile convin că, la expirarea perioadei inițiale de {formData.contractDuration} luni, Proprietarul are dreptul de a ajusta valoarea chiriei în funcție de condițiile pieței imobiliare, rata inflației și/sau alte criterii economice relevante. Proprietarul va notifica Chiriașul în scris cu cel puțin 30 de zile înainte de expirarea perioadei inițiale, indicând noua valoare propusă a chiriei.
+                2.5. Părțile convin că, la expirarea perioadei inițiale de {formData.contractDuration} luni, Proprietarul 
+                are dreptul de a ajusta valoarea chiriei în funcție de condițiile pieței imobiliare, rata inflației și/sau 
+                alte criterii economice relevante. Proprietarul va notifica Chiriașul în scris cu cel puțin 30 de zile înainte 
+                de expirarea perioadei inițiale, indicând noua valoare propusă a chiriei.
               </p>
               <p className="mb-4">
                 2.6. Chiriei i se va aplica anual indicele de inflație al EURO, comunicat de EUROSTAT (Statistical Office of the European Communities), calculat pentru anul precedent. Proprietarul se obligă să notifice Chiriașul în scris cu privire la valoarea ajustată a chiriei cu cel puțin 30 de zile înainte de data de aplicare, aceasta devenind efectivă de la 1 ianuarie al fiecărui an.
@@ -611,7 +624,7 @@ export default function GenerateContract() {
                 2.7. Dacă Chiriașul acceptă ajustarea, contractul se prelungește automat în noile condiții. Dacă Chiriașul nu este de acord, contractul încetează de drept la expirarea perioadei inițiale de {formData.contractDuration} luni, fără penalități pentru niciuna dintre părți.
               </p>
 
-              <h2 className="text-xl font-bold mt-8 mb-4">3. DURATA CONTRACTULUI</h2>
+              <h2 className="text-xl font-bold mb-4">3. DURATA CONTRACTULUI</h2>
               <p className="mb-4">
                 3.1. Părțile convin că încheie prezentul contract pentru o perioadă inițială minimă de {formData.contractDuration} luni. Părțile convin că perioada inițială minimă este de esența contractului.
               </p>
@@ -619,7 +632,7 @@ export default function GenerateContract() {
                 3.2. Părțile convin că la expirarea perioadei inițiale minime, operează tacita relocațiune, adică prelungirea automată a perioadei contractuale, cu perioade succesive de câte {formData.renewalPeriod} luni.
               </p>
 
-              <h2 className="text-xl font-bold mt-8 mb-4">4. ÎNCETAREA CONTRACTULUI</h2>
+              <h2 className="text-xl font-bold mb-4">4. ÎNCETAREA CONTRACTULUI</h2>
               <p className="mb-4">
                 4.1. Părțile convin că denunțarea unilaterală a contractului se va realiza printr-o notificare scrisă comunicată celeilalte părți, prin e-mail, la adresele menționate în preambul. Locațiunea încetează în termen de {formData.unilateralNotice} de zile de la data comunicării.
               </p>
@@ -636,7 +649,7 @@ export default function GenerateContract() {
                 4.5. În ceea ce privește obligațiile de plată stabilite prin prezentul contract, părțile convin că se află de drept în întârziere.
               </p>
 
-              <h2 className="text-xl font-bold mt-8 mb-4">5. OBLIGAȚIILE PROPRIETARULUI</h2>
+              <h2 className="text-xl font-bold mb-4">5. OBLIGAȚIILE PROPRIETARULUI</h2>
               <p className="mb-4">
                 5.1. Proprietarul se obligă să pună la dispoziția Chiriașului apartamentul în scopul utilizării acestuia ca locuință.
               </p>
@@ -650,7 +663,7 @@ export default function GenerateContract() {
                 5.4. Proprietarul va achita toate cheltuielile aferente întreținerii și utilităților pentru perioada anterioară predării apartamentului.
               </p>
 
-              <h2 className="text-xl font-bold mt-8 mb-4">6. OBLIGAȚIILE CHIRIAȘULUI</h2>
+              <h2 className="text-xl font-bold mb-4">6. OBLIGAȚIILE CHIRIAȘULUI</h2>
               <p className="mb-4">
                 6.1. Chiriașul este obligat să folosească apartamentul cu prudență și diligență, să se îngrijească de acesta și să se asigure că utilizează echipamentele și electrocasnicele care se regăsesc în apartament în conformitate cu manualul și instrucțiunile de utilizare puse la dispoziție de Proprietar.
               </p>
@@ -685,4 +698,4 @@ export default function GenerateContract() {
                 6.11. Chiriasul trebuie sa mentioneze la momentul semnarii contractului numarul exact de persoane care vor locui in imobil pe perioada inchirierii, acest lucru fiind necesar proprietarului pentru a-l declara la administratie.
               </p>
               <p className="mb-4">
-                6.12. Chiriasul este de acord sa semneze AXENA 1 care cuprinde un inventar al lucrurilor/electrocasnicelor/bunurilor ce sunt
+                6.12. Chiriasul este de acord sa semneze AXENA 1 care
