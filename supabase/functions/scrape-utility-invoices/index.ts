@@ -35,7 +35,6 @@ Deno.serve(async (req) => {
   try {
     console.log('Scraping function called with method:', req.method);
     
-    // Parse request body
     if (!req.body) {
       console.error('No request body provided');
       return new Response(
@@ -73,6 +72,27 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Get the utility provider details to access the correct property_id
+    const { data: providerData, error: providerError } = await supabase
+      .from('utility_provider_credentials')
+      .select('property_id')
+      .eq('id', request.utilityId)
+      .single();
+
+    if (providerError || !providerData?.property_id) {
+      console.error('Failed to fetch provider details:', providerError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Failed to fetch provider details'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
+    }
+
     // Create scraping job record
     console.log('Creating scraping job');
     const { data: jobData, error: jobError } = await supabase
@@ -80,6 +100,9 @@ Deno.serve(async (req) => {
       .insert({
         utility_provider_id: request.utilityId,
         status: 'pending' as ScrapingStatus,
+        provider: request.provider,
+        type: request.type,
+        location: request.location
       })
       .select()
       .single();
@@ -101,7 +124,10 @@ Deno.serve(async (req) => {
     // Update status to in_progress
     const { error: updateError } = await supabase
       .from('scraping_jobs')
-      .update({ status: 'in_progress' as ScrapingStatus })
+      .update({ 
+        status: 'in_progress' as ScrapingStatus,
+        last_run_at: new Date().toISOString()
+      })
       .eq('id', jobData.id);
 
     if (updateError) {
@@ -121,37 +147,36 @@ Deno.serve(async (req) => {
       }]
     };
 
-    // Update job as completed
-    const { error: completionError } = await supabase
-      .from('scraping_jobs')
-      .update({
-        status: 'completed' as ScrapingStatus,
-        last_run_at: new Date().toISOString()
-      })
-      .eq('id', jobData.id);
-
-    if (completionError) {
-      console.error('Failed to update job completion status:', completionError);
-    }
-
     // Store the mock bill
     if (scrapingResult.bills?.length) {
       const { error: billError } = await supabase
         .from('utilities')
         .insert(
           scrapingResult.bills.map(bill => ({
-            property_id: request.utilityId, // Using utilityId as property_id
+            property_id: providerData.property_id, // Using the correct property_id from the provider
+            utility_provider_id: request.utilityId,
             type: request.type,
             amount: bill.amount,
             due_date: bill.due_date,
             invoice_number: bill.invoice_number,
             status: bill.status,
-            currency: 'USD' // Default currency
+            currency: 'USD'
           }))
         );
 
       if (billError) {
         console.error('Failed to store utility bills:', billError);
+        
+        // Update job as failed
+        await supabase
+          .from('scraping_jobs')
+          .update({
+            status: 'failed' as ScrapingStatus,
+            error_message: billError.message,
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', jobData.id);
+
         return new Response(
           JSON.stringify({
             success: false,
@@ -163,6 +188,19 @@ Deno.serve(async (req) => {
           }
         );
       }
+    }
+
+    // Update job as completed
+    const { error: completionError } = await supabase
+      .from('scraping_jobs')
+      .update({
+        status: 'completed' as ScrapingStatus,
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', jobData.id);
+
+    if (completionError) {
+      console.error('Failed to update job completion status:', completionError);
     }
 
     console.log('Successfully completed scraping job');
