@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -37,7 +36,7 @@ export function CalendarSection() {
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = React.useState<Date>(new Date());
   const [viewMode, setViewMode] = React.useState<'month' | 'day'>('month');
-  const [lastClickTime, setLastClickTime] = React.useState(0);
+  const lastClickRef = React.useRef<{ time: number; date: Date | null }>({ time: 0, date: null });
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['calendar-events'],
@@ -165,17 +164,18 @@ export function CalendarSection() {
     if (!date) return;
 
     const currentTime = Date.now();
-    const timeDiff = currentTime - lastClickTime;
-    const isSameSelection = selectedDate && isSameDay(selectedDate, date);
+    const lastClick = lastClickRef.current;
+    const isSameSelection = lastClick.date && isSameDay(lastClick.date, date);
+    const isDoubleClick = currentTime - lastClick.time < 300;
 
-    if (isSameSelection && timeDiff < 300) {
-      setViewMode(viewMode === 'month' ? 'day' : 'month');
+    if (isSameSelection && isDoubleClick) {
+      setViewMode(prevMode => prevMode === 'month' ? 'day' : 'month');
     } else {
       setViewMode('month');
     }
 
+    lastClickRef.current = { time: currentTime, date };
     setSelectedDate(date);
-    setLastClickTime(currentTime);
   };
 
   console.log('Selected Date:', selectedDate);
