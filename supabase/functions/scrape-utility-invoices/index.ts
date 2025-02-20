@@ -1,4 +1,3 @@
-
 import { createClient } from 'npm:@supabase/supabase-js@2.39.0';
 import puppeteer from "npm:puppeteer@16.2.0";
 import { corsHeaders } from '../_shared/cors.ts';
@@ -171,14 +170,18 @@ async function scrapeEngie(credentials: { username: string; password: string }, 
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { 
+      headers: {
+        ...corsHeaders,
+        'Access-Control-Max-Age': '86400',
+      }
+    });
   }
 
   try {
-    console.log('Scraping function called with method:', req.method);
+    console.log('Starting scraping process...');
     
     if (!req.body) {
-      console.error('No request body provided');
       return new Response(
         JSON.stringify({
           success: false,
@@ -191,41 +194,70 @@ Deno.serve(async (req) => {
       );
     }
 
-    const request: ScrapingRequest = await req.json();
-    console.log('Processing request for provider:', request.provider);
+    let request: ScrapingRequest;
+    try {
+      request = await req.json();
+    } catch (e) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Invalid JSON in request body'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
+    }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const captchaApiKey = Deno.env.get('CAPTCHA_API_KEY');
-    
+
     if (!supabaseUrl || !supabaseKey || !captchaApiKey) {
-      throw new Error('Server configuration error - missing required environment variables');
+      console.error('Missing required environment variables');
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Server configuration error - missing required environment variables'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get the utility provider details
     const { data: providerData, error: providerError } = await supabase
       .from('utility_provider_credentials')
       .select(`
         id,
         property_id,
-        properties!inner (
-          id
-        )
+        properties!inner (id)
       `)
       .eq('id', request.utilityId)
       .single();
 
     if (providerError || !providerData) {
-      throw new Error('Failed to fetch provider details');
+      console.error('Error fetching provider:', providerError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Failed to fetch provider details'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
     }
 
     if (!providerData.property_id) {
       throw new Error('No property associated with provider');
     }
 
-    // Create scraping job record
     const { data: jobData, error: jobError } = await supabase
       .from('scraping_jobs')
       .insert({
@@ -240,68 +272,104 @@ Deno.serve(async (req) => {
       .single();
 
     if (jobError || !jobData) {
-      throw new Error('Failed to create scraping job');
+      console.error('Error creating job:', jobError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Failed to create scraping job'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
 
-    // Update status to in_progress
     await supabase
       .from('scraping_jobs')
-      .update({ 
-        status: 'in_progress' as ScrapingStatus,
-      })
+      .update({ status: 'in_progress' })
       .eq('id', jobData.id);
 
-    // Use the ENGIE scraper to fetch real bills
     const scrapingResult = await scrapeEngie(
-      { username: request.username, password: request.password },
+      { 
+        username: request.username, 
+        password: request.password 
+      },
       captchaApiKey
     );
 
-    if (!scrapingResult.success || !scrapingResult.bills?.length) {
-      throw new Error(scrapingResult.error || 'Failed to fetch bills from ENGIE');
-    }
-
-    // Store the real bills
-    const { error: billError } = await supabase
-      .from('utilities')
-      .insert(
-        scrapingResult.bills.map(bill => ({
-          property_id: providerData.property_id,
-          utility_provider_id: request.utilityId,
-          type: request.type,
-          amount: bill.amount,
-          due_date: bill.due_date,
-          invoice_number: bill.invoice_number,
-          status: bill.status,
-          currency: 'RON' // ENGIE Romania uses RON
-        }))
-      );
-
-    if (billError) {
-      console.error('Failed to store utility bills:', billError);
-      
+    if (!scrapingResult.success) {
+      console.error('Scraping failed:', scrapingResult.error);
       await supabase
         .from('scraping_jobs')
         .update({
-          status: 'failed' as ScrapingStatus,
-          error_message: billError.message,
+          status: 'failed',
+          error_message: scrapingResult.error,
           completed_at: new Date().toISOString()
         })
         .eq('id', jobData.id);
-        
-      throw new Error(`Failed to store utility bills: ${billError.message}`);
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: scrapingResult.error || 'Failed to fetch bills'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
 
-    // Update job as completed
+    if (scrapingResult.bills && scrapingResult.bills.length > 0) {
+      const { error: billError } = await supabase
+        .from('utilities')
+        .insert(
+          scrapingResult.bills.map(bill => ({
+            property_id: providerData.property_id,
+            utility_provider_id: request.utilityId,
+            type: request.type,
+            amount: bill.amount,
+            due_date: bill.due_date,
+            invoice_number: bill.invoice_number,
+            status: bill.status,
+            currency: 'RON'
+          }))
+        );
+
+      if (billError) {
+        console.error('Error storing bills:', billError);
+        await supabase
+          .from('scraping_jobs')
+          .update({
+            status: 'failed',
+            error_message: 'Failed to store bills in database',
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', jobData.id);
+
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Failed to store utility bills'
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500,
+          }
+        );
+      }
+    }
+
     await supabase
       .from('scraping_jobs')
       .update({
-        status: 'completed' as ScrapingStatus,
+        status: 'completed',
         completed_at: new Date().toISOString()
       })
       .eq('id', jobData.id);
 
-    console.log('Successfully completed scraping job with real ENGIE data');
+    console.log('Scraping completed successfully');
     return new Response(
       JSON.stringify({
         success: true,
@@ -319,7 +387,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message || 'An unexpected error occurred'
+        error: error instanceof Error ? error.message : 'An unexpected error occurred'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
