@@ -269,6 +269,93 @@ export default function GenerateContract() {
     }
   };
 
+  const createNewTemplate = async () => {
+    try {
+      const templateContent = {
+        title: "CONTRACT DE ÎNCHIRIERE A LOCUINȚEI",
+        sections: [
+          {
+            type: "header",
+            content: "CONTRACT DE ÎNCHIRIERE A LOCUINȚEI"
+          },
+          {
+            type: "contractNumber",
+            content: "Nr. ${contractNumber}"
+          },
+          {
+            type: "parties",
+            title: "Părțile,",
+            owner: "${ownerName}, Nr. ordine Reg. com./an: ${ownerReg}, Cod fiscal (C.U.I.): ${ownerFiscal}, cu sediul in ${ownerAddress}, Judetul: ${ownerCounty}, Localitatea: ${ownerCity}, cont bancar ${ownerBank}, deschis la ${ownerBankName}, reprezentat: ${ownerRepresentative}, e-mail: ${ownerEmail}, telefon: ${ownerPhone} în calitate de Proprietar",
+            tenant: "${tenantName}, Nr. ordine Reg. com./an: ${tenantReg}, Cod fiscal (C.U.I.): ${tenantFiscal} cu domiciliul în ${tenantAddress}, Judetul: ${tenantCounty}, Localitatea: ${tenantCity}, cont bancar ${tenantBank}, deschis la ${tenantBankName}, reprezentat: ${tenantRepresentative}, e-mail: ${tenantEmail}, telefon: ${tenantPhone}, în calitate de Chiriaș"
+          },
+          {
+            type: "agreement",
+            content: "Au convenit încheierea prezentului contract de închiriere, în termenii și condițiile care urmează:"
+          },
+          {
+            type: "propertyDetails",
+            content: "Detalii proprietate:"
+          },
+          {
+            type: "utilities",
+            content: "Utilități:"
+          },
+          {
+            type: "signatures",
+            content: "Semnături:"
+          }
+        ],
+        utilities: {
+          waterCold: "${waterColdMeter}",
+          waterHot: "${waterHotMeter}",
+          electricity: "${electricityMeter}",
+          gas: "${gasMeter}"
+        },
+        signatures: {
+          owner: {
+            date: "${ownerSignatureDate}",
+            name: "${ownerSignatureName}"
+          },
+          tenant: {
+            date: "${tenantSignatureDate}",
+            name: "${tenantSignatureName}"
+          }
+        }
+      };
+
+      const { data, error } = await supabase
+        .from('contract_templates')
+        .insert({
+          name: 'Contract de închiriere standard',
+          category: 'lease',
+          content: templateContent,
+          is_active: true,
+          created_by: (await supabase.auth.getUser()).data.user?.id
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Success",
+        description: "Template-ul a fost creat cu succes",
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["contractTemplates"] });
+
+    } catch (error) {
+      console.error("Error creating template:", error);
+      toast({
+        title: "Error",
+        description: "A apărut o eroare la crearea template-ului",
+        variant: "destructive",
+      });
+    }
+  };
+
   const inputClassName = (errorKey: string) =>
     `${errors[errorKey] ? "border-red-500 focus-visible:ring-red-500" : ""}`;
 
@@ -285,10 +372,15 @@ export default function GenerateContract() {
   return (
     <PageLayout>
       <div className="container mx-auto py-8 space-y-6">
-        <Button variant="ghost" onClick={() => navigate("/contracts")}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Contracts
-        </Button>
+        <div className="flex justify-between items-center">
+          <Button variant="ghost" onClick={() => navigate("/contracts")}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Contracts
+          </Button>
+          <Button onClick={createNewTemplate}>
+            Creează Template Nou
+          </Button>
+        </div>
 
         <div className="space-y-6">
           <Card>
