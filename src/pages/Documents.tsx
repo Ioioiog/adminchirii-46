@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Grid, List, Plus, FileText, Files, Search } from "lucide-react";
@@ -12,7 +11,7 @@ import { DocumentType } from "@/integrations/supabase/types/document-types";
 import { DocumentFilters } from "@/components/documents/DocumentFilters";
 import { useQuery } from "@tanstack/react-query";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import {
