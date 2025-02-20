@@ -108,6 +108,21 @@ export default function GenerateContract() {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error("User not found");
 
+      // First, create the property
+      const { data: propertyData, error: propertyError } = await supabase
+        .from("properties")
+        .insert({
+          name: propertyDetails.address, // Using address as name for simplicity
+          address: propertyDetails.address,
+          monthly_rent: propertyDetails.rentAmount,
+          landlord_id: user.id,
+          type: 'Apartment' // Default type
+        })
+        .select()
+        .single();
+
+      if (propertyError) throw propertyError;
+
       const contractContent = {
         contractNumber,
         ownerDetails,
@@ -117,10 +132,12 @@ export default function GenerateContract() {
         validUntil
       };
 
+      // Then create the contract with the property_id
       const { data, error } = await supabase
         .from("contracts")
         .insert({
           contract_type: "lease",
+          property_id: propertyData.id, // Add the property_id
           valid_from: validFrom,
           valid_until: validUntil || null,
           status: "draft",
