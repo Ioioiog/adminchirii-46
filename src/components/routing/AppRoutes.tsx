@@ -22,9 +22,6 @@ import { ResetPassword } from "@/components/auth/ResetPassword";
 import { UpdatePassword } from "@/components/auth/UpdatePassword";
 import Index from "@/pages/Index";
 import Info from "@/pages/Info";
-import Contracts from "@/pages/Contracts";
-import ContractDetails from "@/pages/ContractDetails";
-import GenerateContract from "@/pages/GenerateContract";
 import { useUserRole } from "@/hooks/use-user-role";
 import PropertyTenants from "@/pages/PropertyTenants";
 
@@ -117,30 +114,6 @@ export function AppRoutes({ isAuthenticated }: AppRoutesProps) {
         element={
           <ProtectedRoute isAuthenticated={isAuthenticated}>
             <Tenants />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/contracts"
-        element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
-            <Contracts />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/contracts/:id"
-        element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
-            <ContractDetails />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/generate-contract"
-        element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
-            <GenerateContract />
           </ProtectedRoute>
         }
       />
