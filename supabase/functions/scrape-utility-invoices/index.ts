@@ -33,7 +33,7 @@ serve(async (req) => {
       .insert({
         utility_provider_id: utilityId,
         status: 'in_progress',
-        provider: provider, // Changed from provider_name to provider
+        provider: provider,
         location: location
       })
       .select()
@@ -52,7 +52,34 @@ serve(async (req) => {
     }
 
     console.log('Making request to Browserless API...');
-    const response = await fetch('https://chrome.browserless.io/content', {
+    
+    // For Engie Romania, we need to handle the login process manually
+    const script = `
+      async () => {
+        try {
+          // Wait for the login form
+          await page.waitForSelector('#email', { timeout: 10000 });
+          await page.waitForSelector('#password', { timeout: 10000 });
+          
+          // Type credentials
+          await page.type('#email', '${username}');
+          await page.type('#password', '${password}');
+          
+          // Click login button
+          await page.click('button[type="submit"]');
+          
+          // Wait for navigation
+          await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 20000 });
+          
+          // Get the page content
+          return await page.content();
+        } catch (error) {
+          throw new Error('Failed to login: ' + error.message);
+        }
+      }
+    `;
+
+    const response = await fetch('https://chrome.browserless.io/function', {
       method: 'POST',
       headers: {
         'Cache-Control': 'no-cache',
@@ -60,23 +87,24 @@ serve(async (req) => {
         'Authorization': `Bearer ${browserlessApiKey}`,
       },
       body: JSON.stringify({
-        url: 'https://my.engie.ro/',
-        gotoOptions: {
-          waitUntil: 'networkidle0',
-          timeout: 30000,
-        },
-        authenticate: {
-          username,
-          password,
+        code: script,
+        context: {
+          url: 'https://my.engie.ro/',
+          waitForFunction: true,
+          gotoOptions: {
+            waitUntil: 'networkidle0',
+            timeout: 30000,
+          }
         }
       }),
     });
 
     if (!response.ok) {
+      console.error('Browserless API response:', await response.text());
       throw new Error(`Browserless API error: ${response.statusText}`);
     }
 
-    const html = await response.text();
+    const result = await response.json();
     console.log('Successfully fetched page content');
 
     // For testing purposes, create a sample bill
