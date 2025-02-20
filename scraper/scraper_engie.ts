@@ -521,15 +521,104 @@ class EngieInvoiceScraper {
             }
         });
         
-        // Wait for successful login
-        await Promise.race([
-            page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 120000 }),
-            page.waitForSelector('.dashboard-container', { timeout: 120000 })
-        ]);
+        // Wait for successful login with multiple retries
+        let maxRetries = 3;
+        let retryCount = 0;
         
-        // Log current URL and page state
-        console.log('Current URL after login:', await page.url());
-        console.log('Page title:', await page.title());
+        while (retryCount < maxRetries) {
+            try {
+                console.log('Submitting login form...');
+                
+                // Set up navigation promises
+                const navigationPromise = Promise.race([
+                    page.waitForNavigation({ 
+                        waitUntil: 'networkidle0',
+                        timeout: 30000
+                    }).catch(() => null),
+                    page.waitForNavigation({ 
+                        waitUntil: 'domcontentloaded',
+                        timeout: 30000
+                    }).catch(() => null)
+                ]);
+                
+                // Submit the form using JavaScript
+                await page.evaluate(() => {
+                    const form = document.querySelector('form');
+                    if (form) {
+                        const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+                        form.dispatchEvent(submitEvent);
+                    }
+                });
+                
+                // Wait for navigation
+                console.log('Waiting for navigation...');
+                await navigationPromise;
+                
+                // Add a small delay
+                await Utilities.delay(2000);
+                
+                // Check if we've navigated away from the login page
+                const url = await page.url();
+                console.log('Current URL:', url);
+                
+                if (!url.includes('autentificare')) {
+                    console.log('Successfully navigated away from login page');
+                    console.log('Page title:', await page.title());
+                    
+                    // Wait a bit longer for the dashboard to load
+                    await Utilities.delay(5000);
+                    
+                    // Final URL check
+                    const finalUrl = await page.url();
+                    if (finalUrl.includes('prima-pagina')) {
+                        console.log('Successfully logged in!');
+                        return;
+                    }
+                }
+                
+                // If we're still on the login page or got redirected back
+                console.log('Still on login page, checking state...');
+                
+                // Check for error messages
+                const hasError = await page.evaluate(() => {
+                    const errorElements = document.querySelectorAll('.error-message, .alert-danger');
+                    return errorElements.length > 0;
+                });
+                
+                if (hasError) {
+                    console.log('Found error message on page, might need to solve captcha again');
+                    await Utilities.delay(2000);
+                    
+                    try {
+                        const captchaPresent = await page.$('iframe[title="reCAPTCHA"]') !== null;
+                        if (captchaPresent) {
+                            console.log('Captcha detected, solving again...');
+                            await this.captchaService.solveCaptcha(page, url);
+                            await Utilities.delay(2000);
+                        }
+                    } catch (e) {
+                        console.log('Error checking for captcha:', e);
+                    }
+                }
+                
+            } catch (error: any) {
+                const errorMessage = error?.message || 'Unknown error';
+                console.log(`Login attempt ${retryCount + 1} failed:`, errorMessage);
+                
+                if (errorMessage.includes('frame') || errorMessage.includes('detached')) {
+                    console.log('Frame detached, waiting longer...');
+                    await Utilities.delay(5000);
+                }
+            }
+            
+            retryCount++;
+            if (retryCount < maxRetries) {
+                console.log(`Retrying login... (attempt ${retryCount + 1}/${maxRetries})`);
+                await Utilities.delay(5000);
+            }
+        }
+        
+        throw new Error('Failed to login after multiple attempts');
     }
 }
 
