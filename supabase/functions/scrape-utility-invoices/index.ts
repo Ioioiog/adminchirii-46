@@ -58,39 +58,32 @@ Deno.serve(async (req) => {
     
     if (!supabaseUrl || !supabaseKey) {
       console.error('Missing Supabase environment variables');
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Server configuration error'
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500,
-        }
-      );
+      throw new Error('Server configuration error');
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get the utility provider details to access the correct property_id
+    // Get the utility provider details with property information
     const { data: providerData, error: providerError } = await supabase
       .from('utility_provider_credentials')
-      .select('property_id')
+      .select(`
+        id,
+        property_id,
+        properties!inner (
+          id
+        )
+      `)
       .eq('id', request.utilityId)
       .single();
 
-    if (providerError || !providerData?.property_id) {
+    if (providerError || !providerData) {
       console.error('Failed to fetch provider details:', providerError);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Failed to fetch provider details'
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500,
-        }
-      );
+      throw new Error('Failed to fetch provider details');
+    }
+
+    if (!providerData.property_id) {
+      console.error('No property associated with provider');
+      throw new Error('No property associated with provider');
     }
 
     // Create scraping job record
@@ -102,37 +95,24 @@ Deno.serve(async (req) => {
         status: 'pending' as ScrapingStatus,
         provider: request.provider,
         type: request.type,
-        location: request.location
+        location: request.location,
+        last_run_at: new Date().toISOString()
       })
       .select()
       .single();
 
-    if (jobError) {
+    if (jobError || !jobData) {
       console.error('Failed to create scraping job:', jobError);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Failed to create scraping job'
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500,
-        }
-      );
+      throw new Error('Failed to create scraping job');
     }
 
     // Update status to in_progress
-    const { error: updateError } = await supabase
+    await supabase
       .from('scraping_jobs')
       .update({ 
         status: 'in_progress' as ScrapingStatus,
-        last_run_at: new Date().toISOString()
       })
       .eq('id', jobData.id);
-
-    if (updateError) {
-      console.error('Failed to update job status:', updateError);
-    }
 
     // Mock successful scraping
     const scrapingResult: ScrapingResponse = {
@@ -153,7 +133,7 @@ Deno.serve(async (req) => {
         .from('utilities')
         .insert(
           scrapingResult.bills.map(bill => ({
-            property_id: providerData.property_id, // Using the correct property_id from the provider
+            property_id: providerData.property_id,
             utility_provider_id: request.utilityId,
             type: request.type,
             amount: bill.amount,
@@ -167,7 +147,6 @@ Deno.serve(async (req) => {
       if (billError) {
         console.error('Failed to store utility bills:', billError);
         
-        // Update job as failed
         await supabase
           .from('scraping_jobs')
           .update({
@@ -176,32 +155,19 @@ Deno.serve(async (req) => {
             completed_at: new Date().toISOString()
           })
           .eq('id', jobData.id);
-
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: 'Failed to store utility bills'
-          }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 500,
-          }
-        );
+          
+        throw new Error(`Failed to store utility bills: ${billError.message}`);
       }
     }
 
     // Update job as completed
-    const { error: completionError } = await supabase
+    await supabase
       .from('scraping_jobs')
       .update({
         status: 'completed' as ScrapingStatus,
         completed_at: new Date().toISOString()
       })
       .eq('id', jobData.id);
-
-    if (completionError) {
-      console.error('Failed to update job completion status:', completionError);
-    }
 
     console.log('Successfully completed scraping job');
     return new Response(

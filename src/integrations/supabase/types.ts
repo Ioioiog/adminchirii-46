@@ -1418,29 +1418,41 @@ export type Database = {
       }
       scraping_jobs: {
         Row: {
+          completed_at: string | null
           created_at: string
           error_message: string | null
           id: string
           last_run_at: string | null
+          location: string | null
+          provider: string | null
           status: Database["public"]["Enums"]["scraping_status"]
+          type: string | null
           updated_at: string
           utility_provider_id: string
         }
         Insert: {
+          completed_at?: string | null
           created_at?: string
           error_message?: string | null
           id?: string
           last_run_at?: string | null
+          location?: string | null
+          provider?: string | null
           status?: Database["public"]["Enums"]["scraping_status"]
+          type?: string | null
           updated_at?: string
           utility_provider_id: string
         }
         Update: {
+          completed_at?: string | null
           created_at?: string
           error_message?: string | null
           id?: string
           last_run_at?: string | null
+          location?: string | null
+          provider?: string | null
           status?: Database["public"]["Enums"]["scraping_status"]
+          type?: string | null
           updated_at?: string
           utility_provider_id?: string
         }
@@ -1931,6 +1943,7 @@ export type Database = {
           status: string
           type: string
           updated_at: string
+          utility_provider_id: string | null
         }
         Insert: {
           amount: number
@@ -1944,6 +1957,7 @@ export type Database = {
           status?: string
           type: string
           updated_at?: string
+          utility_provider_id?: string | null
         }
         Update: {
           amount?: number
@@ -1957,6 +1971,7 @@ export type Database = {
           status?: string
           type?: string
           updated_at?: string
+          utility_provider_id?: string | null
         }
         Relationships: [
           {
@@ -1972,6 +1987,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenant_details"
             referencedColumns: ["property_id"]
+          },
+          {
+            foreignKeyName: "utilities_utility_provider_id_fkey"
+            columns: ["utility_provider_id"]
+            isOneToOne: false
+            referencedRelation: "utility_provider_credentials"
+            referencedColumns: ["id"]
           },
         ]
       }
