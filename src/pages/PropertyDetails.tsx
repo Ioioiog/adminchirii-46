@@ -114,7 +114,16 @@ const PropertyDetails = () => {
         <DashboardSidebar />
         <main className="flex-1 p-8">
           <div className="max-w-7xl mx-auto">
-            Loading...
+            <div className="animate-pulse flex space-x-4">
+              <div className="flex-1 space-y-6">
+                <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+                <div className="h-32 bg-gray-200 rounded"></div>
+                <div className="space-y-3">
+                  <div className="h-4 bg-gray-200 rounded"></div>
+                  <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                </div>
+              </div>
+            </div>
           </div>
         </main>
       </div>
@@ -127,12 +136,12 @@ const PropertyDetails = () => {
         <DashboardSidebar />
         <main className="flex-1 p-8">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center">
-              <h2 className="text-lg font-medium">Property not found</h2>
-              <p className="mt-1 text-gray-500">The property you're looking for doesn't exist.</p>
+            <div className="text-center bg-white rounded-xl shadow-soft-xl p-8">
+              <h2 className="text-2xl font-medium text-gray-900">Property not found</h2>
+              <p className="mt-2 text-gray-600">The property you're looking for doesn't exist.</p>
               <Button
                 onClick={() => navigate("/properties")}
-                className="mt-4"
+                className="mt-6"
                 variant="outline"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -152,14 +161,15 @@ const PropertyDetails = () => {
     <div className="flex bg-[#F8F9FC] min-h-screen">
       <DashboardSidebar />
       <main className="flex-1 p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div className="bg-white rounded-xl shadow-soft-xl p-8">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-6">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => navigate("/properties")}
+                  className="rounded-lg hover:bg-gray-50"
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back
@@ -169,40 +179,40 @@ const PropertyDetails = () => {
                     <Input
                       value={editedData.name}
                       onChange={(e) => setEditedData({ ...editedData, name: e.target.value })}
-                      className="text-2xl font-semibold mb-1"
+                      className="text-3xl font-semibold mb-2 border-none bg-gray-50 focus:ring-2 focus:ring-blue-500/20"
                     />
                   ) : (
-                    <h1 className="text-2xl font-semibold">{property.name}</h1>
+                    <h1 className="text-3xl font-semibold text-gray-900 mb-2">{property.name}</h1>
                   )}
                   {isEditing ? (
                     <Input
                       value={editedData.address}
                       onChange={(e) => setEditedData({ ...editedData, address: e.target.value })}
-                      className="text-gray-500"
+                      className="text-gray-600 border-none bg-gray-50 focus:ring-2 focus:ring-blue-500/20"
                     />
                   ) : (
-                    <p className="text-gray-500">{property.address}</p>
+                    <p className="text-gray-600">{property.address}</p>
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Badge className={getStatusColor(status)}>
+              <div className="flex items-center gap-4">
+                <Badge className={`${getStatusColor(status)} text-sm px-3 py-1 rounded-full font-medium`}>
                   {status}
                 </Badge>
                 {isEditing ? (
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={handleCancel}>
-                      <X className="h-4 w-4 mr-1" />
+                  <div className="flex gap-3">
+                    <Button variant="outline" size="sm" onClick={handleCancel} className="rounded-lg">
+                      <X className="h-4 w-4 mr-2" />
                       Cancel
                     </Button>
-                    <Button size="sm" onClick={handleSave}>
-                      <Save className="h-4 w-4 mr-1" />
+                    <Button size="sm" onClick={handleSave} className="rounded-lg bg-blue-600 hover:bg-blue-700">
+                      <Save className="h-4 w-4 mr-2" />
                       Save
                     </Button>
                   </div>
                 ) : (
-                  <Button variant="outline" size="sm" onClick={handleEdit}>
-                    <Edit2 className="h-4 w-4 mr-1" />
+                  <Button variant="outline" size="sm" onClick={handleEdit} className="rounded-lg">
+                    <Edit2 className="h-4 w-4 mr-2" />
                     Edit
                   </Button>
                 )}
@@ -210,38 +220,38 @@ const PropertyDetails = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <MapPin className="h-5 w-5 text-blue-600" />
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-xl border border-gray-100">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-100 rounded-xl">
+                    <MapPin className="h-6 w-6 text-blue-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium">Address</p>
+                    <p className="text-sm font-medium text-gray-600">Address</p>
                     {isEditing ? (
                       <Input
                         value={editedData.address}
                         onChange={(e) => setEditedData({ ...editedData, address: e.target.value })}
-                        className="mt-1"
+                        className="mt-1 bg-white border-gray-200 focus:ring-2 focus:ring-blue-500/20"
                       />
                     ) : (
-                      <p className="text-sm text-gray-500">{property.address}</p>
+                      <p className="text-base text-gray-900 mt-1">{property.address}</p>
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Home className="h-5 w-5 text-blue-600" />
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-xl border border-gray-100">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-indigo-100 rounded-xl">
+                    <Home className="h-6 w-6 text-indigo-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium">Property Type</p>
+                    <p className="text-sm font-medium text-gray-600">Property Type</p>
                     {isEditing ? (
                       <select
                         value={editedData.type}
                         onChange={(e) => setEditedData({ ...editedData, type: e.target.value })}
-                        className="mt-1 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                        className="mt-1 w-full rounded-lg border-gray-200 bg-white focus:ring-2 focus:ring-blue-500/20 text-base"
                       >
                         <option value="Apartment">Apartment</option>
                         <option value="House">House</option>
@@ -249,28 +259,28 @@ const PropertyDetails = () => {
                         <option value="Commercial">Commercial</option>
                       </select>
                     ) : (
-                      <p className="text-sm text-gray-500">{property.type}</p>
+                      <p className="text-base text-gray-900 mt-1">{property.type}</p>
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <DollarSign className="h-5 w-5 text-blue-600" />
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-xl border border-gray-100">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-green-100 rounded-xl">
+                    <DollarSign className="h-6 w-6 text-green-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium">Monthly Rent</p>
+                    <p className="text-sm font-medium text-gray-600">Monthly Rent</p>
                     {isEditing ? (
                       <Input
                         type="number"
                         value={editedData.monthly_rent}
                         onChange={(e) => setEditedData({ ...editedData, monthly_rent: parseFloat(e.target.value) })}
-                        className="mt-1"
+                        className="mt-1 bg-white border-gray-200 focus:ring-2 focus:ring-blue-500/20"
                       />
                     ) : (
-                      <p className="text-sm text-gray-500">
+                      <p className="text-base text-gray-900 mt-1">
                         ${property.monthly_rent?.toLocaleString() || 0}
                       </p>
                     )}
@@ -278,22 +288,22 @@ const PropertyDetails = () => {
                 </div>
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Calendar className="h-5 w-5 text-blue-600" />
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-xl border border-gray-100">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-purple-100 rounded-xl">
+                    <Calendar className="h-6 w-6 text-purple-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium">Available From</p>
+                    <p className="text-sm font-medium text-gray-600">Available From</p>
                     {isEditing ? (
                       <Input
                         type="date"
                         value={editedData.available_from}
                         onChange={(e) => setEditedData({ ...editedData, available_from: e.target.value })}
-                        className="mt-1"
+                        className="mt-1 bg-white border-gray-200 focus:ring-2 focus:ring-blue-500/20"
                       />
                     ) : (
-                      <p className="text-sm text-gray-500">
+                      <p className="text-base text-gray-900 mt-1">
                         {property.available_from ? format(new Date(property.available_from), 'PPP') : 'Not specified'}
                       </p>
                     )}
@@ -301,53 +311,54 @@ const PropertyDetails = () => {
                 </div>
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <User className="h-5 w-5 text-blue-600" />
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-xl border border-gray-100">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-orange-100 rounded-xl">
+                    <User className="h-6 w-6 text-orange-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">Active Tenants</p>
-                    <p className="text-sm text-gray-500">{activeTenants.length}</p>
+                    <p className="text-sm font-medium text-gray-600">Active Tenants</p>
+                    <p className="text-base text-gray-900 mt-1">{activeTenants.length}</p>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="mt-8">
-              <h3 className="text-sm font-medium mb-2">Description</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-3">Description</h3>
               {isEditing ? (
                 <Textarea
                   value={editedData.description || ''}
                   onChange={(e) => setEditedData({ ...editedData, description: e.target.value })}
-                  className="min-h-[100px]"
+                  className="min-h-[120px] bg-gray-50 border-gray-200 focus:ring-2 focus:ring-blue-500/20 rounded-xl"
                 />
               ) : (
-                <p className="text-sm text-gray-500">{property.description || 'No description available.'}</p>
+                <p className="text-gray-600 leading-relaxed">{property.description || 'No description available.'}</p>
               )}
             </div>
           </div>
 
-          <Card>
-            <CardHeader>
-              <h2 className="text-xl font-semibold">Active Tenants</h2>
+          <Card className="rounded-xl shadow-soft-xl overflow-hidden">
+            <CardHeader className="bg-gray-50 border-b border-gray-100">
+              <h2 className="text-xl font-semibold text-gray-900">Active Tenants</h2>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-6">
               {activeTenants.length > 0 ? (
-                <div className="divide-y">
+                <div className="divide-y divide-gray-100">
                   {activeTenants.map((tenancy) => (
                     <div key={tenancy.id} className="py-4 first:pt-0 last:pb-0">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-medium">
+                          <p className="font-medium text-gray-900">
                             {tenancy.tenant.first_name} {tenancy.tenant.last_name}
                           </p>
-                          <p className="text-sm text-gray-500">{tenancy.tenant.email}</p>
+                          <p className="text-sm text-gray-600 mt-1">{tenancy.tenant.email}</p>
                         </div>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => navigate(`/tenants/${tenancy.tenant.id}`)}
+                          className="rounded-lg hover:bg-gray-50"
                         >
                           View Tenant
                         </Button>
@@ -356,7 +367,7 @@ const PropertyDetails = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">No active tenants</p>
+                <p className="text-gray-600">No active tenants</p>
               )}
             </CardContent>
           </Card>
