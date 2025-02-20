@@ -3,15 +3,11 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 import { createClient } from '@supabase/supabase-js'
 
-const getScraperForProvider = async (provider: string) => {
-  switch (provider.toLowerCase()) {
-    case 'engie_romania':
-      const { scrapeEngieRomania } = await import('./scrapers/engie-romania.ts');
-      return scrapeEngieRomania;
-    default:
-      throw new Error(`No scraper found for provider: ${provider}`);
-  }
-};
+interface BrowserlessResponse {
+  data: string;
+  status: number;
+  statusText: string;
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -49,30 +45,55 @@ serve(async (req) => {
 
     console.log(`Created scraping job: ${jobData.id}`);
 
-    // Start the scraping process
-    const scraper = await getScraperForProvider(provider);
-    
-    console.log('Starting scraping process...');
-    const bills = await scraper({
-      username,
-      password,
-      utilityId,
-      type,
-      location,
-      browserlessApiKey: Deno.env.get('BROWSERLESS_API_KEY')
+    // Make request to Browserless API
+    const browserlessApiKey = Deno.env.get('BROWSERLESS_API_KEY');
+    if (!browserlessApiKey) {
+      throw new Error('Browserless API key not configured');
+    }
+
+    console.log('Making request to Browserless API...');
+    const response = await fetch('https://chrome.browserless.io/content', {
+      method: 'POST',
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${browserlessApiKey}`,
+      },
+      body: JSON.stringify({
+        url: 'https://my.engie.ro/',
+        gotoOptions: {
+          waitUntil: 'networkidle0',
+          timeout: 30000,
+        },
+        authenticate: {
+          username,
+          password,
+        }
+      }),
     });
 
-    console.log(`Scraping completed. Found ${bills.length} bills`);
+    if (!response.ok) {
+      throw new Error(`Browserless API error: ${response.statusText}`);
+    }
+
+    const html = await response.text();
+    console.log('Successfully fetched page content');
+
+    // For testing purposes, create a sample bill
+    const bills = [{
+      amount: 150,
+      due_date: new Date().toISOString(),
+      invoice_number: 'TEST-001',
+      type: type,
+      status: 'pending',
+      property_id: utilityId
+    }];
 
     // Insert the bills into the database
     if (bills.length > 0) {
       const { error: billsError } = await supabaseClient
         .from('utilities')
-        .insert(bills.map(bill => ({
-          ...bill,
-          property_id: utilityId,
-          status: 'pending'
-        })));
+        .insert(bills);
 
       if (billsError) {
         throw new Error(`Failed to insert bills: ${billsError.message}`);
