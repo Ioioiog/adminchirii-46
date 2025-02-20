@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -10,6 +9,7 @@ import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { EditTenantDialog } from "@/components/tenants/EditTenantDialog";
 
 const PropertyTenants = () => {
   const { id } = useParams();
@@ -158,6 +158,20 @@ const PropertyTenants = () => {
                             </h3>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge variant="outline">Active</Badge>
+                              <EditTenantDialog
+                                tenant={{
+                                  ...tenancy.tenant,
+                                  tenancy: {
+                                    start_date: tenancy.start_date,
+                                    end_date: tenancy.end_date,
+                                    monthly_pay_day: tenancy.monthly_pay_day,
+                                  },
+                                  property: propertyWithTenants,
+                                }}
+                                onUpdate={() => {
+                                  window.location.reload();
+                                }}
+                              />
                             </div>
                           </div>
                         </div>
