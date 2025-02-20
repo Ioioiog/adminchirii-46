@@ -1,4 +1,3 @@
-
 import { createClient } from 'npm:@supabase/supabase-js@2.39.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { Browser, launch } from 'https://deno.land/x/puppeteer@16.2.0/mod.ts';
