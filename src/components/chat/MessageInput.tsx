@@ -19,7 +19,7 @@ export function MessageInput({
   };
   return <form onSubmit={handleSendMessage} className="p-4 bg-white border-t">
       <div className="flex items-center gap-2 rounded-full p-2 border bg-blue-300 hover:bg-blue-200">
-        <Popover>
+        <Popover className="bg-blue-200 hover:bg-blue-100">
           <PopoverTrigger asChild>
             <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-gray-100">
               <Smile className="h-5 w-5 text-gray-500" />
