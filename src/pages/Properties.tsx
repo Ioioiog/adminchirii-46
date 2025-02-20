@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, ChevronDown, Building2, MapPin, User, Calendar, DollarSign } from "lucide-react";
+import { Plus, ChevronDown, Building2, MapPin, User, Calendar, DollarSign, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PropertyDialog } from "@/components/properties/PropertyDialog";
 import { PropertyFilters } from "@/components/properties/PropertyFilters";
@@ -10,8 +10,10 @@ import { useProperties } from "@/hooks/useProperties";
 import { PropertyListHeader } from "@/components/properties/PropertyListHeader";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 import { PropertyStatus } from "@/utils/propertyUtils";
+import { Separator } from "@/components/ui/separator";
 
 const Properties = () => {
   const navigate = useNavigate();
@@ -55,9 +57,8 @@ const Properties = () => {
     }
   };
 
-  const handleAddProperty = async (data: any) => {
-    // Implement property addition logic
-    return true;
+  const handlePropertyDetails = (propertyId: string) => {
+    navigate(`/properties/${propertyId}`);
   };
 
   return (
@@ -86,79 +87,74 @@ const Properties = () => {
             setStatusFilter={setStatusFilter}
           />
 
-          <div className="bg-white rounded-lg shadow-sm">
-            <Accordion type="single" collapsible className="w-full">
-              {filteredProperties?.map((property) => (
-                <AccordionItem key={property.id} value={property.id}>
-                  <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-4">
-                        <div className="p-2 bg-blue-100 rounded-lg">
-                          <Building2 className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div className="text-left">
-                          <h3 className="font-medium">{property.name}</h3>
-                          <p className="text-sm text-gray-500">{property.address}</p>
-                        </div>
+          <div className="grid gap-4">
+            {filteredProperties?.map((property) => (
+              <Card key={property.id} className="overflow-hidden">
+                <CardHeader className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <Home className="h-5 w-5 text-blue-600" />
                       </div>
-                      <Badge className={getStatusColor(property.status)}>
-                        {property.status || 'N/A'}
-                      </Badge>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="px-6 py-4 space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="flex items-center gap-3">
-                          <MapPin className="h-5 w-5 text-gray-400" />
-                          <div>
-                            <p className="text-sm font-medium">Address</p>
-                            <p className="text-sm text-gray-500">{property.address}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <User className="h-5 w-5 text-gray-400" />
-                          <div>
-                            <p className="text-sm font-medium">Tenants</p>
-                            <p className="text-sm text-gray-500">
-                              {property.tenant_count || 0} Active
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <DollarSign className="h-5 w-5 text-gray-400" />
-                          <div>
-                            <p className="text-sm font-medium">Monthly Rent</p>
-                            <p className="text-sm text-gray-500">
-                              ${property.monthly_rent || 0}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-end gap-2 pt-4 border-t">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/properties/${property.id}`)}
-                        >
-                          View Details
-                        </Button>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          className="bg-blue-600 hover:bg-blue-700"
-                          onClick={() => navigate(`/properties/${property.id}/tenants`)}
-                        >
-                          Manage Tenants
-                        </Button>
+                      <div>
+                        <h3 className="font-medium text-lg">{property.name}</h3>
+                        <p className="text-sm text-gray-500">{property.address}</p>
                       </div>
                     </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
+                    <Badge className={getStatusColor(property.status)}>
+                      {property.status || 'N/A'}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-6 pt-0">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="flex items-center gap-3">
+                      <MapPin className="h-5 w-5 text-gray-400" />
+                      <div>
+                        <p className="text-sm font-medium">Address</p>
+                        <p className="text-sm text-gray-500">{property.address}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <User className="h-5 w-5 text-gray-400" />
+                      <div>
+                        <p className="text-sm font-medium">Tenants</p>
+                        <p className="text-sm text-gray-500">
+                          {property.tenant_count || 0} Active
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <DollarSign className="h-5 w-5 text-gray-400" />
+                      <div>
+                        <p className="text-sm font-medium">Monthly Rent</p>
+                        <p className="text-sm text-gray-500">
+                          ${property.monthly_rent?.toLocaleString() || 0}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <Separator className="my-4" />
+                  <div className="flex items-center justify-end gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => handlePropertyDetails(property.id)}
+                    >
+                      View Details
+                    </Button>
+                    <Button
+                      variant="default"
+                      className="bg-blue-600 hover:bg-blue-700"
+                      onClick={() => navigate(`/properties/${property.id}/tenants`)}
+                    >
+                      Manage Tenants
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
             {filteredProperties?.length === 0 && (
-              <div className="text-center py-12">
+              <div className="text-center py-12 bg-white rounded-lg shadow">
                 <Building2 className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-medium text-gray-900">No properties found</h3>
                 <p className="mt-1 text-sm text-gray-500">
