@@ -110,6 +110,12 @@ export default function GenerateContract() {
     { name: "", value: 0, condition: "" }
   ]);
 
+  // Add new signature-related state
+  const [ownerSignatureDate, setOwnerSignatureDate] = useState(format(new Date(), "dd.MM.yyyy"));
+  const [ownerSignatureName, setOwnerSignatureName] = useState("");
+  const [tenantSignatureDate, setTenantSignatureDate] = useState(format(new Date(), "dd.MM.yyyy"));
+  const [tenantSignatureName, setTenantSignatureName] = useState("");
+
   const { data: templates, isLoading: isLoadingTemplates } = useQuery({
     queryKey: ["contractTemplates"],
     queryFn: async () => {
