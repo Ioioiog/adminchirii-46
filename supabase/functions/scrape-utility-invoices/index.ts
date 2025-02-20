@@ -1,5 +1,7 @@
+
 import { createClient } from 'npm:@supabase/supabase-js@2.39.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import * as puppeteer from 'https://deno.land/x/puppeteer@16.2.0/mod.ts';
 
 interface ScrapingRequest {
   username: string;
@@ -20,145 +22,129 @@ interface Bill {
 
 async function scrapeEngieRomania(username: string, password: string): Promise<Bill[]> {
   console.log('Starting ENGIE Romania scraping process');
+  let browser: puppeteer.Browser | null = null;
 
   try {
-    const loginUrl = 'https://my.engie.ro/AUTENTIFICARE';
-    console.log('Fetching login page:', loginUrl);
+    console.log('Launching browser...');
+    browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-web-security',
+        '--disable-features=IsolateOrigins,site-per-process',
+        '--disable-dev-shm-usage'
+      ]
+    });
+
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     
-    const loginPageResponse = await fetch(loginUrl, {
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1'
-      }
+    // Set default timeout
+    page.setDefaultNavigationTimeout(60000);
+    page.setDefaultTimeout(60000);
+
+    // Enable logging
+    page.on('console', message => console.log('BROWSER:', message.text()));
+
+    console.log('Navigating to login page...');
+    await page.goto('https://my.engie.ro/AUTENTIFICARE', {
+      waitUntil: 'networkidle0'
     });
 
-    if (!loginPageResponse.ok) {
-      throw new Error(`Failed to fetch login page: ${loginPageResponse.status} ${loginPageResponse.statusText}`);
+    // Handle cookie consent if present
+    try {
+      const acceptCookieButton = await page.$('button#cookieConsentBtnRight');
+      if (acceptCookieButton) {
+        await acceptCookieButton.click();
+        await page.waitForTimeout(1000);
+      }
+    } catch (e) {
+      console.log('No cookie consent dialog found');
     }
 
-    const cookies = loginPageResponse.headers.get('set-cookie') || '';
-    const pageText = await loginPageResponse.text();
-    console.log('Login page fetched successfully');
+    console.log('Filling login form...');
+    await page.waitForSelector('#username', { visible: true });
+    await page.waitForSelector('#password', { visible: true });
 
-    const csrfMatch = pageText.match(/<meta name="_csrf" content="([^"]+)"/);
-    const csrfToken = csrfMatch ? csrfMatch[1] : '';
+    // Type credentials
+    await page.type('#username', username, { delay: 100 });
+    await page.type('#password', password, { delay: 100 });
 
-    if (!csrfToken) {
-      console.log('Page content:', pageText.substring(0, 500)); // Log first 500 chars for debugging
-      throw new Error('Could not get CSRF token');
+    // Submit form
+    console.log('Submitting login form...');
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'networkidle0' }),
+      page.click('button[type="submit"]')
+    ]);
+
+    // Wait for successful login
+    await page.waitForTimeout(2000);
+
+    // Handle any popups
+    try {
+      const popupClose = await page.$('button.close');
+      if (popupClose) {
+        await popupClose.click();
+        await page.waitForTimeout(1000);
+      }
+    } catch (e) {
+      console.log('No popup found');
     }
 
-    console.log('CSRF token obtained:', csrfToken.substring(0, 10) + '...');
-
-    console.log('Attempting login...');
-    const loginResponse = await fetch(loginUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Cookie': cookies,
-        'X-CSRF-TOKEN': csrfToken,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Origin': 'https://my.engie.ro',
-        'Referer': loginUrl
-      },
-      body: new URLSearchParams({
-        username,
-        password,
-        '_csrf': csrfToken
-      }),
-      redirect: 'follow'
+    // Navigate to bills page
+    console.log('Navigating to bills page...');
+    await page.goto('https://my.engie.ro/FACTURI/ISTORIC', {
+      waitUntil: 'networkidle0'
     });
 
-    const responseText = await loginResponse.text();
-    if (!loginResponse.ok) {
-      console.log('Login response:', responseText.substring(0, 500));
-      throw new Error(`Login failed with status: ${loginResponse.status} ${loginResponse.statusText}`);
-    }
-
-    const sessionCookies = loginResponse.headers.get('set-cookie') || cookies;
-    console.log('Login successful, got session cookies');
-
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    console.log('Fetching bills...');
-    const billsResponse = await fetch('https://my.engie.ro/FACTURI/ISTORIC', {
-      headers: {
-        'Cookie': sessionCookies,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Referer': loginUrl
-      }
+    // Wait for table to load
+    await page.waitForSelector('table.nj-table', { visible: true });
+    
+    // Extract bills data
+    console.log('Extracting bills data...');
+    const bills = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table.nj-table tbody tr'));
+      return rows.map(row => {
+        const cells = Array.from(row.querySelectorAll('td'));
+        
+        // Extract invoice number from first column
+        const invoiceNumber = cells[0]?.textContent?.trim().replace(/[^\d]/g, '') || '';
+        
+        // Extract date from the date column (format: DD.MM.YYYY)
+        const dateText = cells[2]?.textContent?.trim() || '';
+        const [day, month, year] = dateText.split('.');
+        const dueDate = `${year}-${month}-${day}`;
+        
+        // Extract amount from amount column
+        const amountText = cells[4]?.textContent?.trim().replace(/[^\d.,]/g, '') || '0';
+        const amount = parseFloat(amountText.replace(',', '.'));
+        
+        // Extract status from status column
+        const statusText = cells[5]?.textContent?.trim().toLowerCase() || '';
+        const status = statusText.includes('platit') ? 'paid' : 'pending';
+        
+        return {
+          invoice_number: invoiceNumber,
+          due_date: dueDate,
+          amount: amount,
+          type: 'gas',
+          status: status
+        };
+      }).filter(bill => bill.invoice_number && bill.amount > 0);
     });
 
-    const billsResponseText = await billsResponse.text();
-    if (!billsResponse.ok) {
-      console.log('Bills response:', billsResponseText.substring(0, 500));
-      throw new Error(`Failed to fetch bills page with status: ${billsResponse.status} ${billsResponse.statusText}`);
-    }
-
-    const bills: Bill[] = [];
-    const rows = billsResponseText.match(/<tr[^>]*>.*?<\/tr>/gs) || [];
-
-    console.log(`Found ${rows.length} bill rows`);
-
-    for (const row of rows) {
-      try {
-        const cells = row.match(/<td[^>]*>(.*?)<\/td>/gs) || [];
-        if (cells.length >= 6) {
-          const invoiceNumber = cells[0].replace(/<[^>]+>/g, '').trim();
-          const dateText = cells[2].replace(/<[^>]+>/g, '').trim();
-          const amountText = cells[4].replace(/<[^>]+>/g, '').trim()
-            .replace(/[^\d.,]/g, '')
-            .replace(',', '.');
-          const statusText = cells[5].replace(/<[^>]+>/g, '').trim();
-
-          const [day, month, year] = dateText.split('.');
-          if (!day || !month || !year) {
-            console.log('Invalid date format:', dateText);
-            continue;
-          }
-
-          const dueDate = `${year}-${month}-${day}`;
-
-          console.log('Parsed bill:', {
-            invoiceNumber,
-            dueDate,
-            amount: amountText,
-            status: statusText
-          });
-
-          bills.push({
-            amount: parseFloat(amountText),
-            due_date: dueDate,
-            invoice_number: invoiceNumber,
-            type: 'gas',
-            status: statusText.toLowerCase().includes('platit') ? 'paid' : 'pending'
-          });
-        }
-      } catch (error) {
-        console.error('Error parsing bill row:', error);
-        continue;
-      }
-    }
-
-    if (bills.length === 0) {
-      console.log('No bills found in HTML:', billsResponseText.substring(0, 500));
-      throw new Error('No bills found in the response');
-    }
-
-    console.log(`Successfully parsed ${bills.length} bills`);
+    console.log(`Found ${bills.length} bills`);
     return bills;
 
   } catch (error) {
     console.error('Error during scraping:', error);
     throw error;
+  } finally {
+    if (browser) {
+      console.log('Closing browser...');
+      await browser.close();
+    }
   }
 }
 
@@ -192,13 +178,8 @@ Deno.serve(async (req) => {
       .select()
       .single();
 
-    if (jobError) {
-      console.error('Error creating scraping job:', jobError);
-      throw new Error(`Failed to create scraping job: ${jobError.message}`);
-    }
-
-    if (!jobData) {
-      throw new Error('No job data returned after creation');
+    if (jobError || !jobData) {
+      throw new Error('Failed to create scraping job');
     }
 
     try {
@@ -267,7 +248,6 @@ Deno.serve(async (req) => {
       if (updateError) {
         console.error('Error updating job status to failed:', updateError);
       }
-
       throw error;
     }
 
