@@ -9,6 +9,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useSidebarNotifications } from "@/hooks/use-sidebar-notifications";
+import { NotificationType } from "@/types/notifications";
 import { SidebarLogo } from "./sidebar/SidebarLogo";
 import { SidebarMenuItem } from "./sidebar/SidebarMenuItem";
 import { SignOutButton } from "./sidebar/SignOutButton";
@@ -20,7 +21,7 @@ export const DashboardSidebar = () => {
   const { data: notifications, markAsRead } = useSidebarNotifications();
   const navigate = useNavigate();
 
-  const handleNotificationClick = (type: string) => {
+  const handleNotificationClick = (type: NotificationType) => {
     console.log(`Marking ${type} notifications as read`);
     markAsRead(type);
   };

@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link } from "react-router-dom";
 import { LucideIcon, Bell } from "lucide-react";
@@ -8,19 +9,19 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Notification } from "@/hooks/use-sidebar-notifications";
+import { Notification, NotificationType } from "@/types/notifications";
 
 interface SidebarMenuItemProps {
   item: {
     title: string;
     icon: LucideIcon;
     href: string;
-    notificationType?: string;
+    notificationType?: NotificationType;
   };
   isActive: boolean;
   isExpanded: boolean;
   notifications?: Notification[];
-  onNotificationClick?: (type: string) => void;
+  onNotificationClick?: (type: NotificationType) => void;
 }
 
 export const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({

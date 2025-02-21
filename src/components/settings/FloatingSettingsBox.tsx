@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Settings, Globe, DollarSign, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { useToast } from "@/hooks/use-toast";
 import { useSidebarNotifications } from "@/hooks/use-sidebar-notifications";
 import { NotificationType } from "@/types/notifications";
+import { supabase } from "@/integrations/supabase/client";
 
 export function FloatingSettingsBox() {
   const [isOpen, setIsOpen] = useState(false);
@@ -34,10 +36,13 @@ export function FloatingSettingsBox() {
 
   const handleCurrencyChange = async (value: string) => {
     try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+
       const { error } = await supabase
         .from('profiles')
         .update({ currency_preference: value })
-        .eq('id', auth.user()?.id);
+        .eq('id', user?.id);
 
       if (error) throw error;
 
