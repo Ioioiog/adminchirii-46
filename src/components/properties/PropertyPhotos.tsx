@@ -108,12 +108,9 @@ export function PropertyPhotos({ photos = [], propertyId, isEditing, onPhotosCha
                 variant="outline"
                 className="cursor-pointer"
                 disabled={isUploading}
-                asChild
               >
-                <span>
-                  <Upload className="h-4 w-4 mr-2" />
-                  {isUploading ? "Uploading..." : "Upload Photos"}
-                </span>
+                <Upload className="h-4 w-4 mr-2" />
+                {isUploading ? "Uploading..." : "Upload Photos"}
               </Button>
             </label>
           </div>
