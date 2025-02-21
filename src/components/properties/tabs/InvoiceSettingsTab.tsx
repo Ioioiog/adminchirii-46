@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Building2, MapPin, CreditCard, Receipt, Calculator } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -117,7 +116,7 @@ export function InvoiceSettingsTab({
           <div className="space-y-4">
             <div>
               <label htmlFor="company_name" className="block text-sm font-medium text-gray-700 mb-1">
-                Company Name
+                Your Company Name
               </label>
               <div className="flex items-center gap-2">
                 <Building2 className="h-4 w-4 text-gray-400" />
@@ -125,7 +124,7 @@ export function InvoiceSettingsTab({
                   id="company_name"
                   value={invoiceSettings.company_name || ''}
                   onChange={(e) => handleInvoiceSettingChange({ company_name: e.target.value })}
-                  placeholder="Enter company name"
+                  placeholder="Enter your company name"
                   className="flex-1"
                 />
               </div>
@@ -133,7 +132,7 @@ export function InvoiceSettingsTab({
             
             <div>
               <label htmlFor="company_address" className="block text-sm font-medium text-gray-700 mb-1">
-                Company Address
+                Your Company Address
               </label>
               <div className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 text-gray-400 mt-2" />
@@ -141,17 +140,15 @@ export function InvoiceSettingsTab({
                   id="company_address"
                   value={invoiceSettings.company_address || ''}
                   onChange={(e) => handleInvoiceSettingChange({ company_address: e.target.value })}
-                  placeholder="Enter company address"
+                  placeholder="Enter your company address"
                   className="flex-1"
                 />
               </div>
             </div>
-          </div>
 
-          <div className="space-y-4">
             <div>
               <label htmlFor="bank_name" className="block text-sm font-medium text-gray-700 mb-1">
-                Bank Name
+                Your Bank Name
               </label>
               <div className="flex items-center gap-2">
                 <Building2 className="h-4 w-4 text-gray-400" />
@@ -159,7 +156,7 @@ export function InvoiceSettingsTab({
                   id="bank_name"
                   value={invoiceSettings.bank_name || ''}
                   onChange={(e) => handleInvoiceSettingChange({ bank_name: e.target.value })}
-                  placeholder="Enter bank name"
+                  placeholder="Enter your bank name"
                   className="flex-1"
                 />
               </div>
@@ -167,7 +164,7 @@ export function InvoiceSettingsTab({
 
             <div>
               <label htmlFor="bank_account_number" className="block text-sm font-medium text-gray-700 mb-1">
-                Bank Account Number
+                Your Bank Account Number
               </label>
               <div className="flex items-center gap-2">
                 <CreditCard className="h-4 w-4 text-gray-400" />
@@ -175,23 +172,78 @@ export function InvoiceSettingsTab({
                   id="bank_account_number"
                   value={invoiceSettings.bank_account_number || ''}
                   onChange={(e) => handleInvoiceSettingChange({ bank_account_number: e.target.value })}
-                  placeholder="Enter bank account number"
+                  placeholder="Enter your bank account number"
+                  className="flex-1"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4 border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-6">
+            <h4 className="text-md font-medium text-gray-900 mb-3">Tenant Company Information</h4>
+            
+            <div>
+              <label htmlFor="tenant_company_name" className="block text-sm font-medium text-gray-700 mb-1">
+                Tenant Company Name
+              </label>
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-gray-400" />
+                <Input
+                  id="tenant_company_name"
+                  value={invoiceSettings.tenant_company_name || ''}
+                  onChange={(e) => handleInvoiceSettingChange({ tenant_company_name: e.target.value })}
+                  placeholder="Enter tenant company name"
                   className="flex-1"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="additional_notes" className="block text-sm font-medium text-gray-700 mb-1">
-                Additional Notes
+              <label htmlFor="tenant_company_address" className="block text-sm font-medium text-gray-700 mb-1">
+                Tenant Company Address
               </label>
-              <Textarea
-                id="additional_notes"
-                value={invoiceSettings.additional_notes || ''}
-                onChange={(e) => handleInvoiceSettingChange({ additional_notes: e.target.value })}
-                placeholder="Enter any additional information to appear on invoices"
-                className="w-full"
-              />
+              <div className="flex items-start gap-2">
+                <MapPin className="h-4 w-4 text-gray-400 mt-2" />
+                <Textarea
+                  id="tenant_company_address"
+                  value={invoiceSettings.tenant_company_address || ''}
+                  onChange={(e) => handleInvoiceSettingChange({ tenant_company_address: e.target.value })}
+                  placeholder="Enter tenant company address"
+                  className="flex-1"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="tenant_registration_number" className="block text-sm font-medium text-gray-700 mb-1">
+                Tenant Registration Number
+              </label>
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-gray-400" />
+                <Input
+                  id="tenant_registration_number"
+                  value={invoiceSettings.tenant_registration_number || ''}
+                  onChange={(e) => handleInvoiceSettingChange({ tenant_registration_number: e.target.value })}
+                  placeholder="Enter tenant registration number"
+                  className="flex-1"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="tenant_vat_number" className="block text-sm font-medium text-gray-700 mb-1">
+                Tenant VAT Number
+              </label>
+              <div className="flex items-center gap-2">
+                <Receipt className="h-4 w-4 text-gray-400" />
+                <Input
+                  id="tenant_vat_number"
+                  value={invoiceSettings.tenant_vat_number || ''}
+                  onChange={(e) => handleInvoiceSettingChange({ tenant_vat_number: e.target.value })}
+                  placeholder="Enter tenant VAT number"
+                  className="flex-1"
+                />
+              </div>
             </div>
           </div>
         </div>

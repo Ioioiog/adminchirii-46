@@ -1,4 +1,3 @@
-
 export interface InvoiceSettings {
   apply_vat: boolean;
   auto_generate: boolean;
@@ -8,6 +7,10 @@ export interface InvoiceSettings {
   bank_name?: string;
   bank_account_number?: string;
   additional_notes?: string;
+  tenant_company_name?: string;
+  tenant_company_address?: string;
+  tenant_registration_number?: string;
+  tenant_vat_number?: string;
 }
 
 export interface ProfileInvoiceInfo {
