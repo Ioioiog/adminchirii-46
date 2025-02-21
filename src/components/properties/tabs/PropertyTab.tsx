@@ -4,7 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit2, Save, X, Home, DollarSign, MapPin } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { 
+  Edit2, Save, X, Home, DollarSign, MapPin, 
+  Droplets, Zap, Flame, Plus, Car, Bed, Bath,
+  Square, CalendarRange, Building
+} from "lucide-react";
 
 interface PropertyTabProps {
   property: any;
@@ -84,15 +89,7 @@ export function PropertyTab({
             </div>
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-600">Address</p>
-              {isEditing ? (
-                <Input
-                  value={editedData.address}
-                  onChange={(e) => setEditedData({ ...editedData, address: e.target.value })}
-                  className="mt-1 bg-white border-gray-200 focus:ring-2 focus:ring-blue-500/20"
-                />
-              ) : (
-                <p className="text-base text-gray-900 mt-1">{property.address}</p>
-              )}
+              <p className="text-base text-gray-900 mt-1">{property.address}</p>
             </div>
           </div>
         </div>
@@ -142,6 +139,184 @@ export function PropertyTab({
                 </p>
               )}
             </div>
+          </div>
+        </div>
+      </div>
+
+      <Separator />
+
+      <div className="space-y-6">
+        <h2 className="text-xl font-semibold text-gray-900">Property Details</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-600">Bedrooms</label>
+              {isEditing ? (
+                <Input
+                  type="number"
+                  value={editedData.bedrooms || 0}
+                  onChange={(e) => setEditedData({ ...editedData, bedrooms: parseInt(e.target.value) })}
+                  className="mt-1"
+                />
+              ) : (
+                <p className="flex items-center gap-2 mt-1">
+                  <Bed className="h-4 w-4 text-gray-400" />
+                  {property.bedrooms || 0}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-600">Bathrooms</label>
+              {isEditing ? (
+                <Input
+                  type="number"
+                  value={editedData.bathrooms || 0}
+                  onChange={(e) => setEditedData({ ...editedData, bathrooms: parseFloat(e.target.value) })}
+                  className="mt-1"
+                />
+              ) : (
+                <p className="flex items-center gap-2 mt-1">
+                  <Bath className="h-4 w-4 text-gray-400" />
+                  {property.bathrooms || 0}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-600">Total Area (sq ft)</label>
+              {isEditing ? (
+                <Input
+                  type="number"
+                  value={editedData.total_area || 0}
+                  onChange={(e) => setEditedData({ ...editedData, total_area: parseFloat(e.target.value) })}
+                  className="mt-1"
+                />
+              ) : (
+                <p className="flex items-center gap-2 mt-1">
+                  <Square className="h-4 w-4 text-gray-400" />
+                  {property.total_area || 0} sq ft
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-600">Parking Spots</label>
+              {isEditing ? (
+                <Input
+                  type="number"
+                  value={editedData.parking_spots || 0}
+                  onChange={(e) => setEditedData({ ...editedData, parking_spots: parseInt(e.target.value) })}
+                  className="mt-1"
+                />
+              ) : (
+                <p className="flex items-center gap-2 mt-1">
+                  <Car className="h-4 w-4 text-gray-400" />
+                  {property.parking_spots || 0}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-600">Construction Year</label>
+              {isEditing ? (
+                <Input
+                  type="number"
+                  value={editedData.construction_year || ''}
+                  onChange={(e) => setEditedData({ ...editedData, construction_year: parseInt(e.target.value) })}
+                  className="mt-1"
+                />
+              ) : (
+                <p className="flex items-center gap-2 mt-1">
+                  <Building className="h-4 w-4 text-gray-400" />
+                  {property.construction_year || 'Not specified'}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Separator />
+
+      <div className="space-y-6">
+        <h2 className="text-xl font-semibold text-gray-900">Monthly Utility Costs</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-600">Electricity</label>
+            {isEditing ? (
+              <Input
+                type="number"
+                value={editedData.monthly_electricity_cost || 0}
+                onChange={(e) => setEditedData({ ...editedData, monthly_electricity_cost: parseFloat(e.target.value) })}
+                className="mt-1"
+              />
+            ) : (
+              <p className="flex items-center gap-2 mt-1">
+                <Zap className="h-4 w-4 text-yellow-400" />
+                ${property.monthly_electricity_cost?.toLocaleString() || 0}
+              </p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-600">Water</label>
+            {isEditing ? (
+              <Input
+                type="number"
+                value={editedData.monthly_water_cost || 0}
+                onChange={(e) => setEditedData({ ...editedData, monthly_water_cost: parseFloat(e.target.value) })}
+                className="mt-1"
+              />
+            ) : (
+              <p className="flex items-center gap-2 mt-1">
+                <Droplets className="h-4 w-4 text-blue-400" />
+                ${property.monthly_water_cost?.toLocaleString() || 0}
+              </p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-600">Gas</label>
+            {isEditing ? (
+              <Input
+                type="number"
+                value={editedData.monthly_gas_cost || 0}
+                onChange={(e) => setEditedData({ ...editedData, monthly_gas_cost: parseFloat(e.target.value) })}
+                className="mt-1"
+              />
+            ) : (
+              <p className="flex items-center gap-2 mt-1">
+                <Flame className="h-4 w-4 text-orange-400" />
+                ${property.monthly_gas_cost?.toLocaleString() || 0}
+              </p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-600">Other Utilities</label>
+            {isEditing ? (
+              <>
+                <Input
+                  type="number"
+                  value={editedData.monthly_other_utilities_cost || 0}
+                  onChange={(e) => setEditedData({ ...editedData, monthly_other_utilities_cost: parseFloat(e.target.value) })}
+                  className="mt-1"
+                />
+                <Input
+                  type="text"
+                  value={editedData.other_utilities_description || ''}
+                  onChange={(e) => setEditedData({ ...editedData, other_utilities_description: e.target.value })}
+                  placeholder="Description"
+                  className="mt-2"
+                />
+              </>
+            ) : (
+              <div className="mt-1">
+                <p className="flex items-center gap-2">
+                  <Plus className="h-4 w-4 text-gray-400" />
+                  ${property.monthly_other_utilities_cost?.toLocaleString() || 0}
+                </p>
+                {property.other_utilities_description && (
+                  <p className="text-sm text-gray-500 mt-1">{property.other_utilities_description}</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

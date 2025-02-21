@@ -1380,37 +1380,73 @@ export type Database = {
       properties: {
         Row: {
           address: string
+          amenities: string[] | null
           available_from: string | null
+          bathrooms: number | null
+          bedrooms: number | null
+          construction_year: number | null
           created_at: string
           description: string | null
           id: string
           landlord_id: string
+          monthly_electricity_cost: number | null
+          monthly_gas_cost: number | null
+          monthly_other_utilities_cost: number | null
           monthly_rent: number
+          monthly_water_cost: number | null
           name: string
+          other_utilities_description: string | null
+          parking_spots: number | null
+          photos: string[] | null
+          total_area: number | null
           type: Database["public"]["Enums"]["property_type"]
           updated_at: string
         }
         Insert: {
           address: string
+          amenities?: string[] | null
           available_from?: string | null
+          bathrooms?: number | null
+          bedrooms?: number | null
+          construction_year?: number | null
           created_at?: string
           description?: string | null
           id?: string
           landlord_id: string
+          monthly_electricity_cost?: number | null
+          monthly_gas_cost?: number | null
+          monthly_other_utilities_cost?: number | null
           monthly_rent: number
+          monthly_water_cost?: number | null
           name: string
+          other_utilities_description?: string | null
+          parking_spots?: number | null
+          photos?: string[] | null
+          total_area?: number | null
           type?: Database["public"]["Enums"]["property_type"]
           updated_at?: string
         }
         Update: {
           address?: string
+          amenities?: string[] | null
           available_from?: string | null
+          bathrooms?: number | null
+          bedrooms?: number | null
+          construction_year?: number | null
           created_at?: string
           description?: string | null
           id?: string
           landlord_id?: string
+          monthly_electricity_cost?: number | null
+          monthly_gas_cost?: number | null
+          monthly_other_utilities_cost?: number | null
           monthly_rent?: number
+          monthly_water_cost?: number | null
           name?: string
+          other_utilities_description?: string | null
+          parking_spots?: number | null
+          photos?: string[] | null
+          total_area?: number | null
           type?: Database["public"]["Enums"]["property_type"]
           updated_at?: string
         }
