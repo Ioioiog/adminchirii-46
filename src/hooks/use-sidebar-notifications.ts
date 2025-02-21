@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -31,12 +30,7 @@ export function useSidebarNotifications() {
         // Fetch last 5 unread messages
         const { data: messages, error: messagesError } = await supabase
           .from('messages')
-          .select(`
-            id,
-            content,
-            created_at,
-            read
-          `)
+          .select('id, content, created_at, read')
           .eq('receiver_id', user.id)
           .eq('read', false)
           .order('created_at', { ascending: false })
@@ -49,13 +43,7 @@ export function useSidebarNotifications() {
         // Fetch last 5 maintenance requests
         const { data: maintenance, error: maintenanceError } = await supabase
           .from('maintenance_requests')
-          .select(`
-            id,
-            title,
-            created_at,
-            read_by_landlord,
-            read_by_tenant
-          `)
+          .select('id, title, created_at, read_by_landlord, read_by_tenant')
           .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false)
           .order('created_at', { ascending: false })
           .limit(5);
@@ -67,13 +55,7 @@ export function useSidebarNotifications() {
         // Fetch last 5 payments
         const { data: payments, error: paymentsError } = await supabase
           .from('payments')
-          .select(`
-            id,
-            amount,
-            created_at,
-            read_by_landlord,
-            read_by_tenant
-          `)
+          .select('id, amount, created_at, read_by_landlord, read_by_tenant')
           .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false)
           .order('created_at', { ascending: false })
           .limit(5);
@@ -88,7 +70,7 @@ export function useSidebarNotifications() {
             count: messages?.length || 0,
             items: messages?.map(m => ({
               id: m.id,
-              message: m.content, // Changed from message to content
+              message: m.content,
               created_at: m.created_at,
               read: m.read
             }))
@@ -98,7 +80,7 @@ export function useSidebarNotifications() {
             count: maintenance?.length || 0,
             items: maintenance?.map(m => ({
               id: m.id,
-              message: m.title, // Changed from message to title
+              message: m.title,
               created_at: m.created_at,
               read: userRole === 'landlord' ? m.read_by_landlord : m.read_by_tenant
             }))
