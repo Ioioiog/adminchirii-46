@@ -155,15 +155,31 @@ export function useSidebarNotifications() {
     let retryCount = 0;
     const maxRetries = 3;
     let channel: any = null;
+    let retryTimeout: NodeJS.Timeout | null = null;
 
     const setupChannel = () => {
+      // Clear any existing retry timeout
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+        retryTimeout = null;
+      }
+
       // Remove existing channel if any
       if (channel) {
+        console.log('Removing existing channel before setup');
         supabase.removeChannel(channel);
       }
 
+      const channelName = `notifications:${userId}`;
+      console.log(`Setting up channel: ${channelName}`);
+
       // Create new channel with all subscriptions
-      channel = supabase.channel('notifications' + new Date().getTime())
+      channel = supabase.channel(channelName, {
+        config: {
+          broadcast: { self: true },
+          presence: { key: userId },
+        }
+      })
         .on('postgres_changes', 
           { 
             event: '*', 
@@ -189,20 +205,33 @@ export function useSidebarNotifications() {
           },
           () => fetchNotifications()
         )
-        .subscribe((status: string) => {
-          console.log('Notifications channel status:', status);
+        .subscribe(async (status: string) => {
+          console.log(`Channel ${channelName} status:`, status);
           
           if (status === 'SUBSCRIBED') {
-            console.log('Successfully connected to notifications channel');
+            console.log(`Successfully connected to channel: ${channelName}`);
             retryCount = 0;
           } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-            console.log('Channel closed or error occurred, attempting reconnect...');
+            console.log(`Channel ${channelName} closed or error occurred`);
+            
+            // Only attempt reconnect if we haven't exceeded retry limit
             if (retryCount < maxRetries) {
               retryCount++;
-              console.log(`Retry attempt ${retryCount} of ${maxRetries}`);
-              setTimeout(() => {
+              const delay = 1000 * Math.pow(2, retryCount);
+              console.log(`Scheduling retry ${retryCount}/${maxRetries} in ${delay}ms`);
+              
+              // Clear any existing retry timeout
+              if (retryTimeout) {
+                clearTimeout(retryTimeout);
+              }
+              
+              // Schedule new retry
+              retryTimeout = setTimeout(() => {
+                console.log(`Attempting retry ${retryCount}`);
                 setupChannel();
-              }, 1000 * Math.pow(2, retryCount)); // Exponential backoff
+              }, delay);
+            } else {
+              console.log('Max retries exceeded, giving up');
             }
           }
         });
@@ -210,6 +239,7 @@ export function useSidebarNotifications() {
       return channel;
     };
 
+    console.log('Initial channel setup');
     // Initial fetch
     fetchNotifications();
 
@@ -218,8 +248,12 @@ export function useSidebarNotifications() {
 
     // Cleanup function
     return () => {
+      console.log('Running cleanup');
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+      }
       if (channel) {
-        console.log('Cleaning up notifications channel');
+        console.log('Removing channel during cleanup');
         supabase.removeChannel(channel);
       }
     };
