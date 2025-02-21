@@ -15,7 +15,7 @@ export function ContractContent({ formData }: ContractContentProps) {
         <ContractHeader formData={formData} />
         <ContractParties formData={formData} />
         
-        <p className="mb-8">Au convenit încheierea prezentului contract de închiriere, în termenii și condițiile care urmează:</p>
+        <p className="mb-8">Au convenit încheierea prezentului contract de închiriere, în termenii și condițiile care urmează :</p>
 
         {/* Contract Sections */}
         <div className="contract-sections">
