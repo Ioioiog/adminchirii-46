@@ -29,6 +29,21 @@ type MessageWithProfile = {
   } | null;
 };
 
+type SupabaseMessage = {
+  id: string;
+  content: string;
+  created_at: string;
+  read: boolean;
+  receiver_id: string;
+  sender_id: string;
+  conversation_id: string | null;
+  profile_id: string;
+  profiles: {
+    first_name: string | null;
+    last_name: string | null;
+  } | null;
+};
+
 export function useSidebarNotifications() {
   const [data, setData] = useState<Notification[]>([]);
   const { userRole, userId } = useUserRole();
@@ -96,11 +111,23 @@ export function useSidebarNotifications() {
         console.log('Fetched maintenance:', maintenance);
         console.log('Fetched payments:', payments);
 
+        // Transform the raw messages into the correct type
+        const messages: MessageWithProfile[] = (rawMessages as SupabaseMessage[] || []).map(msg => ({
+          id: msg.id,
+          content: msg.content,
+          created_at: msg.created_at,
+          read: msg.read,
+          receiver_id: msg.receiver_id,
+          sender_id: msg.sender_id,
+          conversation_id: msg.conversation_id,
+          profile_id: msg.profile_id,
+          profiles: msg.profiles
+        }));
+
         // Filter unread messages where user is receiver
-        const messages = rawMessages as MessageWithProfile[] | null;
-        const unreadMessages = messages?.filter(message => 
+        const unreadMessages = messages.filter(message => 
           message.receiver_id === userId && !message.read
-        ) || [];
+        );
 
         console.log('Filtered unread messages:', unreadMessages);
 
