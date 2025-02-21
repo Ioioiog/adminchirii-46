@@ -30,8 +30,8 @@ export function useSidebarNotifications() {
         // Fetch last 5 unread messages
         const { data: messages, error: messagesError } = await supabase
           .from('messages')
-          .select('id, content, created_at, read, receiver_id')
-          .eq('receiver_id', userId)
+          .select('id, content, created_at, read')
+          .or(`receiver_id.eq.${userId},profile_id.eq.${userId}`)
           .eq('read', false)
           .order('created_at', { ascending: false })
           .limit(5);
@@ -116,12 +116,7 @@ export function useSidebarNotifications() {
     // Set up real-time subscriptions
     const messagesChannel = supabase.channel('messages_changes')
       .on('postgres_changes', 
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'messages',
-          filter: `receiver_id=eq.${userId}`
-        },
+        { event: '*', schema: 'public', table: 'messages' },
         (payload) => {
           console.log('Message change detected:', payload);
           fetchNotifications();
@@ -167,7 +162,7 @@ export function useSidebarNotifications() {
         const { error } = await supabase
           .from('messages')
           .update({ read: true })
-          .eq('receiver_id', userId)
+          .or(`receiver_id.eq.${userId},profile_id.eq.${userId}`)
           .eq('read', false);
 
         if (error) throw error;
