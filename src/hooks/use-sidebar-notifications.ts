@@ -27,14 +27,25 @@ export function useSidebarNotifications() {
       console.log("Fetching notifications for user:", userId);
 
       try {
-        // Query for unread messages where the user is the receiver
+        // Query for unread messages with extended fields
         const { data: messages, error: messagesError } = await supabase
           .from('messages')
-          .select('id, content, created_at, read')
-          .or(`receiver_id.eq.${userId}`)
+          .select(`
+            id, 
+            content, 
+            created_at, 
+            read,
+            receiver_id,
+            sender_id,
+            conversation_id,
+            profiles!messages_profile_id_fkey (
+              first_name,
+              last_name
+            )
+          `)
+          .eq('receiver_id', userId)
           .eq('read', false)
-          .order('created_at', { ascending: false })
-          .limit(5);
+          .order('created_at', { ascending: false });
 
         if (messagesError) {
           console.error('Error fetching messages:', messagesError);
@@ -65,15 +76,22 @@ export function useSidebarNotifications() {
           console.error('Error fetching payments:', paymentsError);
         }
 
-        console.log('Fetched messages:', messages);
+        console.log('Raw messages from query:', messages);
         console.log('Fetched maintenance:', maintenance);
         console.log('Fetched payments:', payments);
+
+        // Filter unread messages where user is receiver
+        const unreadMessages = messages?.filter(message => 
+          message.receiver_id === userId && !message.read
+        ) || [];
+
+        console.log('Filtered unread messages:', unreadMessages);
 
         const newNotifications = [
           { 
             type: 'messages', 
-            count: messages?.length || 0,
-            items: messages?.map(m => ({
+            count: unreadMessages.length,
+            items: unreadMessages.map(m => ({
               id: m.id,
               message: m.content,
               created_at: m.created_at,
@@ -124,9 +142,10 @@ export function useSidebarNotifications() {
         },
         (payload) => {
           console.log('Message change detected:', payload);
-          // Only fetch if the current user is the receiver
           const newMessage = payload.new as any;
-          if (newMessage && newMessage.receiver_id === userId) {
+          // Check if the message is relevant for the current user
+          if (newMessage && (newMessage.receiver_id === userId || newMessage.sender_id === userId)) {
+            console.log('Relevant message change detected, fetching notifications...');
             fetchNotifications();
           }
         }
