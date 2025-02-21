@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Building2, MapPin, CreditCard } from "lucide-react";
+import { Building2, MapPin, CreditCard, Receipt, Calculator } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
