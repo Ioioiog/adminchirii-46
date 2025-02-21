@@ -30,17 +30,20 @@ export function TenantRow({
       const { count, error } = await supabase
         .from('messages')
         .select('*', { count: 'exact', head: true })
-        .eq('sender_id', tenant.id)
-        .eq('read', false);
+        .eq('profile_id', tenant.id)  // Check messages from this tenant's profile
+        .eq('read', false);           // That are unread
 
       if (error) {
         console.error('Error checking unread messages:', error);
         return false;
       }
 
+      console.log(`Unread messages for tenant ${tenant.id}:`, count);
       return count ? count > 0 : false;
     },
     enabled: isLandlord,
+    // Refresh every 10 seconds to check for new messages
+    refetchInterval: 10000,
   });
 
   if (!tenant || !tenant.property) return null;
