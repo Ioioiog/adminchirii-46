@@ -24,22 +24,24 @@ export function PropertyPhotos({ photos = [], propertyId, isEditing, onPhotosCha
 
     try {
       for (const file of files) {
-        const fileExt = file.name.split('.').pop();
+        const fileExt = file.name.split('.').pop() || 'jpg';
         const fileName = `${propertyId}/${Date.now()}.${fileExt}`;
 
-        const { error: uploadError, data } = await supabase.storage
+        const uploadResult = await supabase.storage
           .from('property-photos')
           .upload(fileName, file);
 
-        if (uploadError) {
-          throw uploadError;
+        if (uploadResult.error) {
+          throw uploadResult.error;
         }
 
-        const { data: { publicUrl } } = supabase.storage
+        const urlResult = supabase.storage
           .from('property-photos')
           .getPublicUrl(fileName);
 
-        newPhotos.push(publicUrl);
+        if (urlResult.data?.publicUrl) {
+          newPhotos.push(urlResult.data.publicUrl);
+        }
       }
 
       onPhotosChange(newPhotos);
@@ -61,7 +63,8 @@ export function PropertyPhotos({ photos = [], propertyId, isEditing, onPhotosCha
 
   const handleRemovePhoto = async (photoUrl: string) => {
     try {
-      const fileName = photoUrl.split('/').pop();
+      const pathParts = photoUrl.split('/');
+      const fileName = pathParts[pathParts.length - 1];
       if (!fileName) return;
 
       const filePath = `${propertyId}/${fileName}`;
@@ -105,6 +108,7 @@ export function PropertyPhotos({ photos = [], propertyId, isEditing, onPhotosCha
             />
             <label htmlFor="photo-upload">
               <Button
+                type="button"
                 variant="outline"
                 className="cursor-pointer"
                 disabled={isUploading}
@@ -117,7 +121,7 @@ export function PropertyPhotos({ photos = [], propertyId, isEditing, onPhotosCha
         )}
       </div>
 
-      {photos.length > 0 ? (
+      {photos && photos.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {photos.map((photo, index) => (
             <div key={index} className="relative group">
@@ -127,12 +131,15 @@ export function PropertyPhotos({ photos = [], propertyId, isEditing, onPhotosCha
                 className="w-full h-48 object-cover rounded-lg"
               />
               {isEditing && (
-                <button
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
                   onClick={() => handleRemovePhoto(photo)}
-                  className="absolute top-2 right-2 p-1 bg-red-500 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <X className="h-4 w-4" />
-                </button>
+                </Button>
               )}
             </div>
           ))}
