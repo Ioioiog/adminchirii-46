@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -15,21 +14,6 @@ export type Notification = {
 };
 
 type MessageWithProfile = {
-  id: string;
-  content: string;
-  created_at: string;
-  read: boolean;
-  receiver_id: string;
-  sender_id: string;
-  conversation_id: string | null;
-  profile_id: string;
-  profiles: {
-    first_name: string | null;
-    last_name: string | null;
-  } | null;
-};
-
-type SupabaseMessage = {
   id: string;
   content: string;
   created_at: string;
@@ -111,18 +95,21 @@ export function useSidebarNotifications() {
         console.log('Fetched maintenance:', maintenance);
         console.log('Fetched payments:', payments);
 
-        // Transform the raw messages into the correct type
-        const messages: MessageWithProfile[] = (rawMessages as SupabaseMessage[] || []).map(msg => ({
-          id: msg.id,
-          content: msg.content,
-          created_at: msg.created_at,
-          read: msg.read,
-          receiver_id: msg.receiver_id,
-          sender_id: msg.sender_id,
-          conversation_id: msg.conversation_id,
-          profile_id: msg.profile_id,
-          profiles: msg.profiles
-        }));
+        // First convert to unknown, then to our expected type
+        const messages = ((rawMessages || []) as unknown[]).map(msg => {
+          const rawMsg = msg as any;
+          return {
+            id: rawMsg.id,
+            content: rawMsg.content,
+            created_at: rawMsg.created_at,
+            read: rawMsg.read,
+            receiver_id: rawMsg.receiver_id,
+            sender_id: rawMsg.sender_id,
+            conversation_id: rawMsg.conversation_id,
+            profile_id: rawMsg.profile_id,
+            profiles: rawMsg.profiles
+          } as MessageWithProfile;
+        });
 
         // Filter unread messages where user is receiver
         const unreadMessages = messages.filter(message => 
