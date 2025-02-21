@@ -3,10 +3,12 @@ import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/use-user-role';
 import { Notification, NotificationType } from '@/types/notifications';
+import { useToast } from '@/hooks/use-toast';
 
 export function useSidebarNotifications() {
   const [data, setData] = useState<Notification[]>([]);
   const { userRole, userId } = useUserRole();
+  const { toast } = useToast();
 
   const fetchNotifications = useCallback(async () => {
     if (!userId) return;
@@ -21,7 +23,12 @@ export function useSidebarNotifications() {
         .eq('receiver_id', userId)
         .eq('read', false);
 
-      if (messagesError) throw messagesError;
+      if (messagesError) {
+        console.error('Error fetching messages:', messagesError);
+        throw messagesError;
+      }
+
+      console.log('Unread messages:', messages);
 
       // Fetch maintenance requests
       const { data: maintenance, error: maintenanceError } = await supabase
@@ -72,11 +79,17 @@ export function useSidebarNotifications() {
         }
       ];
 
+      console.log('Setting notifications:', notifications);
       setData(notifications);
     } catch (error) {
       console.error('Error fetching notifications:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch notifications",
+        variant: "destructive",
+      });
     }
-  }, [userId, userRole]);
+  }, [userId, userRole, toast]);
 
   useEffect(() => {
     fetchNotifications();
@@ -89,7 +102,10 @@ export function useSidebarNotifications() {
           table: 'messages',
           filter: userId ? `receiver_id=eq.${userId}` : undefined
         },
-        () => fetchNotifications()
+        (payload) => {
+          console.log('Messages change detected:', payload);
+          fetchNotifications();
+        }
       )
       .on('postgres_changes',
         { 
@@ -154,6 +170,11 @@ export function useSidebarNotifications() {
       );
     } catch (error) {
       console.error(`Error marking ${type} as read:`, error);
+      toast({
+        title: "Error",
+        description: `Failed to mark ${type} as read`,
+        variant: "destructive",
+      });
       throw error;
     }
   };
