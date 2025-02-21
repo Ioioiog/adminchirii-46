@@ -14,6 +14,21 @@ export type Notification = {
   }>;
 };
 
+type MessageWithProfile = {
+  id: string;
+  content: string;
+  created_at: string;
+  read: boolean;
+  receiver_id: string;
+  sender_id: string;
+  conversation_id: string;
+  profile_id: string;
+  profiles: {
+    first_name: string | null;
+    last_name: string | null;
+  };
+};
+
 export function useSidebarNotifications() {
   const [data, setData] = useState<Notification[]>([]);
   const { userRole, userId } = useUserRole();
@@ -82,7 +97,7 @@ export function useSidebarNotifications() {
         console.log('Fetched payments:', payments);
 
         // Filter unread messages where user is receiver
-        const unreadMessages = messages?.filter(message => 
+        const unreadMessages = (messages as MessageWithProfile[] | null)?.filter(message => 
           message.receiver_id === userId && !message.read
         ) || [];
 
@@ -94,7 +109,7 @@ export function useSidebarNotifications() {
             count: unreadMessages.length,
             items: unreadMessages.map(m => ({
               id: m.id,
-              message: `${m.profiles?.first_name || 'Someone'} sent: ${m.content}`,
+              message: `${m.profiles.first_name || 'Someone'} sent: ${m.content}`,
               created_at: m.created_at,
               read: m.read
             }))
@@ -132,12 +147,6 @@ export function useSidebarNotifications() {
 
     // Initial fetch
     fetchNotifications();
-
-    // Enable FULL replication for realtime
-    const enableRealtimeForMessages = async () => {
-      await supabase.rpc('enable_realtime_for_messages');
-    };
-    enableRealtimeForMessages();
 
     // Set up real-time subscriptions with correct channel keys
     const messagesChannel = supabase.channel('messages_channel')
