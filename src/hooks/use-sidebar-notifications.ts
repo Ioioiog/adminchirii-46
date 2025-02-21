@@ -27,27 +27,18 @@ export function useSidebarNotifications() {
       console.log("Fetching notifications for user:", userId);
 
       try {
-        // Fetch unread messages where user is receiver
+        // Fetch last 5 unread messages
         const { data: messages, error: messagesError } = await supabase
           .from('messages')
-          .select(`
-            id,
-            content,
-            created_at,
-            read,
-            sender_id,
-            receiver_id,
-            conversation_id
-          `)
-          .eq('receiver_id', userId)
+          .select('id, content, created_at, read')
+          .or(`receiver_id.eq.${userId},profile_id.eq.${userId}`)
           .eq('read', false)
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .limit(5);
 
         if (messagesError) {
           console.error('Error fetching messages:', messagesError);
         }
-
-        console.log('Raw messages from query:', messages);
 
         // Fetch last 5 maintenance requests
         const { data: maintenance, error: maintenanceError } = await supabase
@@ -77,17 +68,11 @@ export function useSidebarNotifications() {
         console.log('Fetched maintenance:', maintenance);
         console.log('Fetched payments:', payments);
 
-        const filteredMessages = messages?.filter(m => 
-          m.receiver_id === userId && !m.read
-        ) || [];
-
-        console.log('Filtered messages:', filteredMessages);
-
         const newNotifications = [
           { 
             type: 'messages', 
-            count: filteredMessages.length,
-            items: filteredMessages.map(m => ({
+            count: messages?.length || 0,
+            items: messages?.map(m => ({
               id: m.id,
               message: m.content,
               created_at: m.created_at,
@@ -128,17 +113,12 @@ export function useSidebarNotifications() {
     // Initial fetch
     fetchNotifications();
 
-    // Set up real-time subscriptions for messages
+    // Set up real-time subscriptions
     const messagesChannel = supabase.channel('messages_changes')
       .on('postgres_changes', 
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'messages',
-          filter: `receiver_id=eq.${userId}`
-        },
+        { event: '*', schema: 'public', table: 'messages' },
         (payload) => {
-          console.log('New message detected:', payload);
+          console.log('Message change detected:', payload);
           fetchNotifications();
         }
       )
@@ -182,7 +162,7 @@ export function useSidebarNotifications() {
         const { error } = await supabase
           .from('messages')
           .update({ read: true })
-          .eq('receiver_id', userId)
+          .or(`receiver_id.eq.${userId},profile_id.eq.${userId}`)
           .eq('read', false);
 
         if (error) throw error;
