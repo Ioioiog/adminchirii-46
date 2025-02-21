@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -5,6 +6,12 @@ import { useUserRole } from '@/hooks/use-user-role';
 export type Notification = {
   type: string;
   count: number;
+  items?: Array<{
+    id: string;
+    message: string;
+    created_at: string;
+    read: boolean;
+  }>;
 };
 
 export function useSidebarNotifications() {
@@ -21,44 +28,74 @@ export function useSidebarNotifications() {
       console.log("Fetching notifications for user:", user.id);
 
       try {
-        // Fetch unread messages count
-        const { count: messagesCount, error: messagesError } = await supabase
+        // Fetch last 5 unread messages
+        const { data: messages, error: messagesError } = await supabase
           .from('messages')
-          .select('*', { count: 'exact', head: true })
+          .select('id, content as message, created_at, read')
           .eq('receiver_id', user.id)
-          .eq('read', false);
+          .eq('read', false)
+          .order('created_at', { ascending: false })
+          .limit(5);
 
         if (messagesError) {
           console.error('Error fetching messages:', messagesError);
         }
-        console.log('Unread messages count:', messagesCount);
 
-        // Fetch maintenance requests count
-        const { count: maintenanceCount, error: maintenanceError } = await supabase
+        // Fetch last 5 maintenance requests
+        const { data: maintenance, error: maintenanceError } = await supabase
           .from('maintenance_requests')
-          .select('*', { count: 'exact', head: true })
-          .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false);
+          .select('id, title as message, created_at, read_by_landlord, read_by_tenant')
+          .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false)
+          .order('created_at', { ascending: false })
+          .limit(5);
 
         if (maintenanceError) {
           console.error('Error fetching maintenance requests:', maintenanceError);
         }
-        console.log('Unread maintenance requests count:', maintenanceCount);
 
-        // Fetch payments count
-        const { count: paymentsCount, error: paymentsError } = await supabase
+        // Fetch last 5 payments
+        const { data: payments, error: paymentsError } = await supabase
           .from('payments')
-          .select('*', { count: 'exact', head: true })
-          .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false);
+          .select('id, amount, created_at, read_by_landlord, read_by_tenant')
+          .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false)
+          .order('created_at', { ascending: false })
+          .limit(5);
 
         if (paymentsError) {
           console.error('Error fetching payments:', paymentsError);
         }
-        console.log('Unread payments count:', paymentsCount);
 
         const newNotifications = [
-          { type: 'messages', count: messagesCount || 0 },
-          { type: 'maintenance', count: maintenanceCount || 0 },
-          { type: 'payments', count: paymentsCount || 0 }
+          { 
+            type: 'messages', 
+            count: messages?.length || 0,
+            items: messages?.map(m => ({
+              id: m.id,
+              message: m.message,
+              created_at: m.created_at,
+              read: m.read
+            }))
+          },
+          { 
+            type: 'maintenance', 
+            count: maintenance?.length || 0,
+            items: maintenance?.map(m => ({
+              id: m.id,
+              message: m.message,
+              created_at: m.created_at,
+              read: userRole === 'landlord' ? m.read_by_landlord : m.read_by_tenant
+            }))
+          },
+          { 
+            type: 'payments', 
+            count: payments?.length || 0,
+            items: payments?.map(p => ({
+              id: p.id,
+              message: `New payment: $${p.amount}`,
+              created_at: p.created_at,
+              read: userRole === 'landlord' ? p.read_by_landlord : p.read_by_tenant
+            }))
+          }
         ];
 
         if (mounted) {
@@ -77,30 +114,21 @@ export function useSidebarNotifications() {
     const messagesChannel = supabase.channel('messages_changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'messages' },
-        (payload) => {
-          console.log('Messages change detected:', payload);
-          fetchNotifications();
-        }
+        () => fetchNotifications()
       )
       .subscribe();
 
     const maintenanceChannel = supabase.channel('maintenance_changes')
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'maintenance_requests' },
-        (payload) => {
-          console.log('Maintenance change detected:', payload);
-          fetchNotifications();
-        }
+        () => fetchNotifications()
       )
       .subscribe();
 
     const paymentsChannel = supabase.channel('payments_changes')
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'payments' },
-        (payload) => {
-          console.log('Payments change detected:', payload);
-          fetchNotifications();
-        }
+        () => fetchNotifications()
       )
       .subscribe();
 
@@ -147,14 +175,14 @@ export function useSidebarNotifications() {
         if (error) throw error;
       }
 
-      // Update local state
       setData(prevData => 
         prevData.map(item => 
-          item.type === type ? { ...item, count: 0 } : item
+          item.type === type ? { ...item, count: 0, items: [] } : item
         )
       );
     } catch (error) {
       console.error(`Error marking ${type} as read:`, error);
+      throw error;
     }
   };
 
