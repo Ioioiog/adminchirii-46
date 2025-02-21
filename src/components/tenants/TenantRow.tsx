@@ -1,9 +1,13 @@
+
 import React from "react";
 import { Tenant } from "@/types/tenant";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { TenancyStatus } from "./TenancyStatus";
 import { TenantActions } from "./TenantActions";
 import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TenantRowProps {
   tenant: Tenant;
@@ -20,11 +24,37 @@ export function TenantRow({
   getTenantDisplayName,
   isLandlord = false,
 }: TenantRowProps) {
+  const { data: hasUnreadMessages } = useQuery({
+    queryKey: ['unreadMessages', tenant.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('sender_id', tenant.id)
+        .eq('read', false);
+
+      if (error) {
+        console.error('Error checking unread messages:', error);
+        return false;
+      }
+
+      return count ? count > 0 : false;
+    },
+    enabled: isLandlord,
+  });
+
   if (!tenant || !tenant.property) return null;
 
   return (
     <TableRow>
-      <TableCell>{getTenantDisplayName(tenant)}</TableCell>
+      <TableCell className="flex items-center gap-2">
+        {getTenantDisplayName(tenant)}
+        {hasUnreadMessages && (
+          <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+            New message
+          </Badge>
+        )}
+      </TableCell>
       <TableCell>{tenant.email || "N/A"}</TableCell>
       <TableCell>{tenant.phone || "N/A"}</TableCell>
       <TableCell>
