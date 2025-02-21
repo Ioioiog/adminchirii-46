@@ -58,19 +58,41 @@ export function ChatBackground() {
         void main() {
           vColor = color;
           vec3 pos = position;
+          // Add bouncing animation
           pos.y += sin(time + position.x) * 0.3;
           pos.x += cos(time + position.y) * 0.3;
+          // Add "breathing" effect
+          float scale = 1.0 + sin(time * 2.0) * 0.1;
+          
           vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-          gl_PointSize = size * (300.0 / -mvPosition.z);
+          gl_PointSize = size * (300.0 / -mvPosition.z) * scale;
           gl_Position = projectionMatrix * mvPosition;
         }
       `,
       fragmentShader: `
         varying vec3 vColor;
         void main() {
-          float r = distance(gl_PointCoord, vec2(0.5));
-          if (r > 0.5) discard;
-          gl_FragColor = vec4(vColor, 1.0);
+          vec2 uv = gl_PointCoord * 2.0 - 1.0;
+          float r = length(uv);
+          
+          // Basic emoji face shape
+          if (r > 1.0) discard;
+          
+          // Eyes
+          vec2 leftEye = vec2(-0.3, 0.2);
+          vec2 rightEye = vec2(0.3, 0.2);
+          float eyes = smoothstep(0.1, 0.05, length(uv - leftEye)) +
+                      smoothstep(0.1, 0.05, length(uv - rightEye));
+          
+          // Smile
+          float smile = smoothstep(0.5, 0.45, length(vec2(uv.x, uv.y + 0.2) * vec2(1.0, 0.5)));
+          smile *= step(0.0, uv.y + 0.2);
+          
+          // Combine face elements
+          vec3 color = vColor;
+          color = mix(color, vec3(0.0), eyes + smile);
+          
+          gl_FragColor = vec4(color, 1.0);
         }
       `,
       transparent: true,
