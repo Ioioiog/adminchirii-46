@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
@@ -59,20 +60,6 @@ const Utilities = () => {
     enabled: !!userRole
   });
 
-  // Filter utilities based on search term and filters
-  const filteredUtilities = utilities.filter((utility: Utility) => {
-    const matchesSearch = 
-      searchTerm === "" || 
-      utility.property?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      utility.property?.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      utility.type.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus = statusFilter === "all" || utility.status === statusFilter;
-    const matchesType = typeFilter === "all" || utility.type === typeFilter;
-
-    return matchesSearch && matchesStatus && matchesType;
-  });
-
   const { data: providers = [], isLoading: providersLoading } = useQuery({
     queryKey: ["utility-providers"],
     queryFn: async () => {
@@ -100,6 +87,20 @@ const Utilities = () => {
       console.log("Fetched providers:", data);
       return data;
     }
+  });
+
+  // Filter utilities based on search term and filters
+  const filteredUtilities = utilities.filter((utility: Utility) => {
+    const matchesSearch = 
+      searchTerm === "" || 
+      utility.property?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      utility.property?.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      utility.type.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = statusFilter === "all" || utility.status === statusFilter;
+    const matchesType = typeFilter === "all" || utility.type === typeFilter;
+
+    return matchesSearch && matchesStatus && matchesType;
   });
 
   const handleDeleteProvider = async (id: string) => {
@@ -204,7 +205,8 @@ const Utilities = () => {
               userRole={userRole}
               onStatusUpdate={() => {}}
             />
-          </div>;
+          </div>
+        );
       case 'readings':
         return <div className="space-y-6">
             <div className="flex justify-between items-start">
