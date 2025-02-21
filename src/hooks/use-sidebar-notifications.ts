@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -12,8 +11,9 @@ type Message = {
   content: string;
   created_at: string;
   read: boolean;
-  receiver_id: string | null;  // Updated to allow null
+  receiver_id: string | null;
   sender_id: string;
+  profile_id: string;
 };
 
 // Helper function to safely process receiver ID
@@ -48,14 +48,17 @@ function isMessage(value: unknown): value is Message {
   
   const isValid = 
     typeof msg.id === 'string' &&
-    'receiver_id' in msg; // We only check if the property exists, as it can be null
+    'receiver_id' in msg &&
+    'sender_id' in msg;
 
   console.log('Message validation:', {
     value,
     isValid,
     hasId: 'id' in msg,
     hasReceiverId: 'receiver_id' in msg,
+    hasSenderId: 'sender_id' in msg,
     receiverIdRaw: msg.receiver_id,
+    senderIdRaw: msg.sender_id,
     receiverIdProcessed: getReceiverId(msg),
     receiverIdType: msg.receiver_id === null ? 'null' : typeof msg.receiver_id
   });
@@ -180,14 +183,15 @@ export function useSidebarNotifications() {
           schema: 'public', 
           table: 'messages'
         },
-        (payload: RealtimePostgresChangesPayload<Message>) => {
+        async (payload: RealtimePostgresChangesPayload<Message>) => {
           console.log('Raw message payload:', payload);
           
           const newMessage = payload.new;
           console.log('New message detected:', {
             event: payload.eventType,
             messageData: newMessage,
-            userId
+            userId,
+            userRole
           });
 
           // Process receiver ID safely
@@ -197,7 +201,8 @@ export function useSidebarNotifications() {
           console.log('Processing message:', {
             messageData: newMessage,
             processedReceiverId: receiverId,
-            currentUserId: userId
+            currentUserId: userId,
+            userRole
           });
 
           // First validate the message
@@ -209,10 +214,25 @@ export function useSidebarNotifications() {
             return;
           }
 
-          // For messages with null receiver_id, treat as broadcast messages
-          // or skip if we want to ignore them
+          // If the message has a null receiver_id and user is a landlord
+          if (receiverId === null && userRole === 'landlord') {
+            // Check if the sender is a tenant
+            const { data: senderProfile } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', newMessage.sender_id)
+              .single();
+
+            if (senderProfile?.role === 'tenant') {
+              console.log('Message from tenant to landlord, fetching notifications');
+              fetchNotifications();
+              return;
+            }
+          }
+
+          // For other messages with null receiver_id, skip
           if (receiverId === null) {
-            console.log('Message has null receiver_id, skipping');
+            console.log('Message has null receiver_id and is not from tenant to landlord, skipping');
             return;
           }
 
@@ -255,7 +275,7 @@ export function useSidebarNotifications() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, fetchNotifications]);
+  }, [userId, userRole, fetchNotifications]);
 
   const markAsRead = async (type: NotificationType) => {
     if (!userId || !userRole) return;
