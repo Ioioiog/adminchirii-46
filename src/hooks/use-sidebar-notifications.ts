@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -46,7 +45,7 @@ export function useSidebarNotifications() {
             content,
             created_at,
             read,
-            profiles:profiles!messages_sender_id_fkey (
+            profiles:sender_id (
               first_name,
               last_name
             )
@@ -96,7 +95,14 @@ export function useSidebarNotifications() {
           console.error('Error fetching payments:', paymentsError);
         }
 
-        const typedMessages = messages as MessageWithProfile[] || [];
+        // Type assertion with proper structure
+        const typedMessages = (messages || []).map(msg => ({
+          id: msg.id,
+          content: msg.content,
+          created_at: msg.created_at,
+          read: msg.read,
+          profiles: msg.profiles
+        })) as MessageWithProfile[];
         
         const newNotifications = [
           { 
