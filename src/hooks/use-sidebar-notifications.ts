@@ -16,6 +16,14 @@ type Message = {
   sender_id: string;
 };
 
+// Type guard to check if a value is a Message
+function isMessage(value: any): value is Message {
+  return value && 
+    typeof value === 'object' && 
+    'receiver_id' in value &&
+    'id' in value;
+}
+
 export function useSidebarNotifications() {
   const [data, setData] = useState<Notification[]>([]);
   const { userRole, userId } = useUserRole();
@@ -136,7 +144,7 @@ export function useSidebarNotifications() {
     const channel = supabase.channel('db-changes')
       .on('postgres_changes', 
         { 
-          event: 'INSERT', // Change from '*' to specifically listen for new messages
+          event: 'INSERT',
           schema: 'public', 
           table: 'messages'
         },
@@ -146,11 +154,11 @@ export function useSidebarNotifications() {
             event: payload.eventType,
             message: newMessage,
             userId,
-            receiverId: newMessage?.receiver_id
+            receiverId: isMessage(newMessage) ? newMessage.receiver_id : undefined
           });
 
           // Only fetch if the message is for this user
-          if (newMessage && newMessage.receiver_id === userId) {
+          if (isMessage(newMessage) && newMessage.receiver_id === userId) {
             console.log('Fetching notifications due to new message for current user');
             fetchNotifications();
           }
