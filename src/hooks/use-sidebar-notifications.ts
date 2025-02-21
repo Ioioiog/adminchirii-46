@@ -27,7 +27,7 @@ export function useSidebarNotifications() {
       console.log("Fetching notifications for user:", userId);
 
       try {
-        // Query for unread messages with extended fields
+        // Query for unread messages with extended fields and proper profile join
         const { data: messages, error: messagesError } = await supabase
           .from('messages')
           .select(`
@@ -38,7 +38,8 @@ export function useSidebarNotifications() {
             receiver_id,
             sender_id,
             conversation_id,
-            profiles!messages_profile_id_fkey (
+            profile_id,
+            profiles!messages_sender_id_fkey (
               first_name,
               last_name
             )
@@ -93,7 +94,7 @@ export function useSidebarNotifications() {
             count: unreadMessages.length,
             items: unreadMessages.map(m => ({
               id: m.id,
-              message: m.content,
+              message: `${m.profiles?.first_name || 'Someone'} sent: ${m.content}`,
               created_at: m.created_at,
               read: m.read
             }))
@@ -132,45 +133,61 @@ export function useSidebarNotifications() {
     // Initial fetch
     fetchNotifications();
 
-    // Set up real-time subscriptions
-    const messagesChannel = supabase.channel('messages_changes')
+    // Enable FULL replication for realtime
+    const enableRealtimeForMessages = async () => {
+      await supabase.rpc('enable_realtime_for_messages');
+    };
+    enableRealtimeForMessages();
+
+    // Set up real-time subscriptions with correct channel keys
+    const messagesChannel = supabase.channel('messages_channel')
       .on('postgres_changes', 
         { 
           event: '*', 
           schema: 'public', 
-          table: 'messages'
+          table: 'messages',
+          filter: `receiver_id=eq.${userId}`
         },
         (payload) => {
           console.log('Message change detected:', payload);
-          const newMessage = payload.new as any;
-          // Check if the message is relevant for the current user
-          if (newMessage && (newMessage.receiver_id === userId || newMessage.sender_id === userId)) {
-            console.log('Relevant message change detected, fetching notifications...');
-            fetchNotifications();
-          }
+          fetchNotifications();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Messages channel status:', status);
+      });
 
-    const maintenanceChannel = supabase.channel('maintenance_changes')
+    const maintenanceChannel = supabase.channel('maintenance_channel')
       .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'maintenance_requests' },
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'maintenance_requests'
+        },
         (payload) => {
           console.log('Maintenance change detected:', payload);
           fetchNotifications();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Maintenance channel status:', status);
+      });
 
-    const paymentsChannel = supabase.channel('payments_changes')
+    const paymentsChannel = supabase.channel('payments_channel')
       .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'payments' },
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'payments'
+        },
         (payload) => {
           console.log('Payment change detected:', payload);
           fetchNotifications();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Payments channel status:', status);
+      });
 
     return () => {
       mounted = false;
