@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -6,7 +5,6 @@ import { Notification, NotificationType } from '@/types/notifications';
 import { useToast } from '@/hooks/use-toast';
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
-// Define the message type
 type Message = {
   id: string;
   content: string;
@@ -17,7 +15,6 @@ type Message = {
   profile_id: string;
 };
 
-// Helper function to safely process receiver ID
 function getReceiverId(message: any): string | null {
   if (!message || typeof message !== 'object') {
     return null;
@@ -39,7 +36,6 @@ function getReceiverId(message: any): string | null {
   return typeof receiverId === 'string' ? receiverId : null;
 }
 
-// Type guard to check if a value is a Message
 function isMessage(value: unknown): value is Message {
   if (!value || typeof value !== 'object') {
     return false;
@@ -81,11 +77,15 @@ export function useSidebarNotifications() {
     console.log("Fetching notifications for user:", userId);
 
     try {
-      // Fetch unread messages
       const { data: messages, error: messagesError } = await supabase
         .from('messages')
-        .select('*')
-        .eq('receiver_id', userId)
+        .select(`
+          *,
+          profiles:profiles!messages_profile_id_fkey (
+            role
+          )
+        `)
+        .or(`receiver_id.eq.${userId},and(receiver_id.is.null,profiles.role.eq.tenant)`)
         .eq('read', false)
         .order('created_at', { ascending: false });
 
@@ -98,10 +98,8 @@ export function useSidebarNotifications() {
         total: messages?.length || 0,
         messages,
         userId,
-        receiverFilter: `receiver_id=${userId}`
       });
 
-      // Fetch maintenance requests
       const { data: maintenance, error: maintenanceError } = await supabase
         .from('maintenance_requests')
         .select('*')
@@ -112,7 +110,6 @@ export function useSidebarNotifications() {
         throw maintenanceError;
       }
 
-      // Fetch payments
       const { data: payments, error: paymentsError } = await supabase
         .from('payments')
         .select('*')
@@ -176,7 +173,6 @@ export function useSidebarNotifications() {
   useEffect(() => {
     fetchNotifications();
 
-    // Set up real-time subscription
     const channel = supabase.channel('db-changes')
       .on('postgres_changes', 
         { 
@@ -195,7 +191,6 @@ export function useSidebarNotifications() {
             userRole
           });
 
-          // First validate the message
           if (!isMessage(newMessage)) {
             console.log('Message validation failed:', {
               message: newMessage
@@ -203,50 +198,17 @@ export function useSidebarNotifications() {
             return;
           }
 
-          // Process receiver ID safely
-          const receiverId = getReceiverId(newMessage);
-          
-          // Log the attempt
-          console.log('Processing message:', {
-            messageData: newMessage,
-            processedReceiverId: receiverId,
-            currentUserId: userId,
-            userRole,
-            senderRole: newMessage.sender_id
-          });
-
-          // First check if this is a tenant message when user is landlord
           if (userRole === 'landlord') {
-            const { data: senderProfile } = await supabase
-              .from('profiles')
-              .select('role')
-              .eq('id', newMessage.sender_id)
-              .single();
-
-            if (senderProfile?.role === 'tenant') {
-              console.log('Message from tenant detected, fetching notifications for landlord');
-              fetchNotifications();
-              return;
-            }
-          }
-
-          // Then handle direct messages (with specific receiver_id)
-          if (receiverId === userId) {
-            console.log('Direct message matches current user, fetching notifications');
+            console.log('Landlord detected, fetching notifications');
             fetchNotifications();
             return;
           }
 
-          // Skip other messages with null receiver_id
-          if (receiverId === null) {
-            console.log('Message has null receiver_id and is not from tenant to landlord, skipping');
-            return;
+          const receiverId = getReceiverId(newMessage);
+          if (receiverId === userId) {
+            console.log('Direct message matches current user, fetching notifications');
+            fetchNotifications();
           }
-
-          console.log('Message not for current user:', {
-            messageReceiverId: receiverId,
-            currentUserId: userId
-          });
         }
       )
       .on('postgres_changes',
@@ -310,7 +272,6 @@ export function useSidebarNotifications() {
         if (error) throw error;
       }
 
-      // Update local state
       setData(prevData => 
         prevData.map(item => 
           item.type === type ? { ...item, count: 0, items: [] } : item
