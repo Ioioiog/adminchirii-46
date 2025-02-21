@@ -20,7 +20,7 @@ export function FloatingSettingsBox() {
   const { i18n } = useTranslation();
   const { availableCurrencies } = useCurrency();
   const { toast } = useToast();
-  const { data: notifications } = useSidebarNotifications();
+  const { data: notifications, markAsRead } = useSidebarNotifications();
 
   const totalNotifications = notifications?.reduce((acc, curr) => acc + curr.count, 0) || 0;
 
@@ -59,12 +59,34 @@ export function FloatingSettingsBox() {
     }
   };
 
+  const handleNotificationClick = async (type: string) => {
+    try {
+      await markAsRead(type);
+      toast({
+        title: "Notifications Cleared",
+        description: `${type.charAt(0).toUpperCase() + type.slice(1)} notifications have been marked as read.`,
+      });
+    } catch (error) {
+      console.error('Error marking notifications as read:', error);
+      toast({
+        title: "Error",
+        description: "Failed to mark notifications as read",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="fixed top-8 right-8 z-40 flex items-center gap-2">
       {/* Notifications Button */}
       <DropdownMenu open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon" className="h-10 w-10 bg-white relative">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="h-10 w-10 bg-white relative"
+            aria-label={`Notifications ${totalNotifications > 0 ? `(${totalNotifications} unread)` : ''}`}
+          >
             <Bell className="h-5 w-5" />
             {totalNotifications > 0 && (
               <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center animate-pulse">
@@ -77,7 +99,11 @@ export function FloatingSettingsBox() {
           <h3 className="font-semibold mb-2">Notifications</h3>
           {notifications?.map((notification) => (
             notification.count > 0 && (
-              <DropdownMenuItem key={notification.type} className="flex justify-between items-center">
+              <DropdownMenuItem 
+                key={notification.type} 
+                className="flex justify-between items-center cursor-pointer"
+                onClick={() => handleNotificationClick(notification.type)}
+              >
                 <span className="capitalize">{notification.type}</span>
                 <span className="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs">
                   {notification.count}
