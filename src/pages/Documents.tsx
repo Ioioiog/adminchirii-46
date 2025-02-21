@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Grid, List, Plus, FileText, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { DocumentList } from "@/components/documents/DocumentList";
@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { ContractDetailsDialog } from "@/components/contracts/ContractDetailsDialog";
+
 const Documents = () => {
   const navigate = useNavigate();
   const {
@@ -31,6 +32,7 @@ const Documents = () => {
   const [activeTab, setActiveTab] = useState("documents");
   const [selectedContract, setSelectedContract] = useState(null);
   const [showContractDetails, setShowContractDetails] = useState(false);
+
   const {
     data: properties
   } = useQuery({
@@ -45,6 +47,7 @@ const Documents = () => {
     },
     enabled: userRole === "landlord"
   });
+
   const {
     data: contracts
   } = useQuery({
@@ -66,6 +69,7 @@ const Documents = () => {
     },
     enabled: userRole === "landlord"
   });
+
   useEffect(() => {
     const checkUser = async () => {
       const {
@@ -99,7 +103,9 @@ const Documents = () => {
     });
     return () => subscription.unsubscribe();
   }, [navigate, toast]);
+
   if (!userId || !userRole) return null;
+
   const navigationItems = [{
     id: 'documents',
     label: 'Documents',
@@ -109,6 +115,7 @@ const Documents = () => {
     label: 'Contracts',
     icon: CreditCard
   }];
+
   const renderSection = () => {
     switch (activeTab) {
       case 'documents':
@@ -156,6 +163,7 @@ const Documents = () => {
         return null;
     }
   };
+
   return <div className="flex bg-[#F8F9FC] min-h-screen">
       <DashboardSidebar />
       <main className="flex-1 p-8">
@@ -202,4 +210,5 @@ const Documents = () => {
       <ContractDetailsDialog open={showContractDetails} onOpenChange={setShowContractDetails} contract={selectedContract} />
     </div>;
 };
+
 export default Documents;

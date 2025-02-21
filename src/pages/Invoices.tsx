@@ -1,201 +1,184 @@
-import { useEffect, useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import { Plus, FileText, Download, CheckCircle, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Receipt } from "lucide-react";
-import { Loader2 } from "lucide-react";
 import { InvoiceList } from "@/components/invoices/InvoiceList";
 import { InvoiceDialog } from "@/components/invoices/InvoiceDialog";
 import { InvoiceFilters } from "@/components/invoices/InvoiceFilters";
-import { DateRange } from "react-day-picker";
-import { isWithinInterval, parseISO } from "date-fns";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { format } from "date-fns";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { generateInvoicePDF } from "@/utils/invoiceUtils";
+import { saveAs } from 'file-saver';
 
 const Invoices = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [invoices, setInvoices] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<"landlord" | "tenant" | null>(null);
-  const isMobile = useIsMobile();
-  
-  // Filter states
-  const [searchTerm, setSearchTerm] = useState("");
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [propertyFilter, setPropertyFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const fetchInvoices = async () => {
-    try {
-      console.log("Fetching invoices...");
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error("No user found");
-      }
+  const { data: properties } = useQuery({
+    queryKey: ["properties"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("properties").select("id, name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: userRole === "landlord",
+  });
 
-      const query = supabase
-        .from("invoices")
-        .select(`
+  const { data: invoices, isLoading } = useQuery({
+    queryKey: ["invoices"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("invoices").select(`
           *,
           property:properties (
-            name,
-            address
-          ),
-          tenant:profiles!invoices_tenant_id_fkey (
-            first_name,
-            last_name,
-            email
+            name
           )
-        `)
-        .order("due_date", { ascending: false });
-
-      const { data: invoicesData, error: invoicesError } = await query;
-
-      if (invoicesError) throw invoicesError;
-
-      console.log("Fetched invoices:", invoicesData);
-      setInvoices(invoicesData);
-    } catch (error) {
-      console.error("Error fetching invoices:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Could not fetch invoices",
-      });
-    }
-  };
-
-  const filteredInvoices = useMemo(() => {
-    return invoices.filter((invoice) => {
-      // Search filter
-      const searchContent = `
-        ${invoice.property?.name || ""} 
-        ${invoice.property?.address || ""} 
-        ${invoice.tenant?.first_name || ""} 
-        ${invoice.tenant?.last_name || ""} 
-        ${invoice.tenant?.email || ""}
-      `.toLowerCase();
-      
-      const matchesSearch = searchTerm === "" || searchContent.includes(searchTerm.toLowerCase());
-
-      // Status filter
-      const matchesStatus = statusFilter === "all" || invoice.status === statusFilter;
-
-      // Date range filter
-      let matchesDateRange = true;
-      if (dateRange?.from && dateRange?.to) {
-        const invoiceDate = parseISO(invoice.due_date);
-        matchesDateRange = isWithinInterval(invoiceDate, {
-          start: dateRange.from,
-          end: dateRange.to,
-        });
-      }
-
-      return matchesSearch && matchesStatus && matchesDateRange;
-    });
-  }, [invoices, searchTerm, statusFilter, dateRange]);
+        `);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId,
+  });
 
   useEffect(() => {
     const checkUser = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          navigate("/auth");
-          return;
-        }
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", session.user.id)
-          .single();
+      if (!session) {
+        console.log("No active session found, redirecting to auth");
+        navigate("/auth");
+        return;
+      }
 
-        if (profileError) {
-          console.error("Error fetching profile:", profileError);
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Could not fetch user profile",
-          });
-          return;
-        }
+      setUserId(session.user.id);
 
-        if (profile.role !== "landlord" && profile.role !== "tenant") {
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Invalid user role",
-          });
-          return;
-        }
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .maybeSingle();
 
+      if (profile?.role) {
         setUserRole(profile.role as "landlord" | "tenant");
-        await fetchInvoices();
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error in checkUser:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "An unexpected error occurred",
-        });
       }
     };
 
     checkUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Invoices page auth state changed:", event);
+      if (!session) {
+        navigate("/auth");
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [navigate, toast]);
 
-  if (isLoading || !userRole) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
+  if (!userId || !userRole) return null;
+
+  const filteredInvoices = invoices?.filter((invoice) => {
+    const matchesSearch =
+      searchTerm === "" ||
+      invoice.property?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invoice.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = statusFilter === "all" || invoice.status === statusFilter;
+    const matchesProperty = propertyFilter === "all" || invoice.property_id === propertyFilter;
+
+    return matchesSearch && matchesStatus && matchesProperty;
+  });
+
+  const handleDownloadInvoice = async (invoice) => {
+    try {
+      const pdfBlob = await generateInvoicePDF(invoice);
+      saveAs(pdfBlob, `invoice-${invoice.invoice_number}.pdf`);
+      toast({
+        title: "Success",
+        description: "Invoice downloaded successfully",
+      });
+    } catch (error) {
+      console.error("Error generating or downloading PDF:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate or download invoice",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
-    <div className="flex min-h-screen flex-col md:flex-row bg-gray-100">
+    <div className="flex bg-[#F8F9FC] min-h-screen">
       <DashboardSidebar />
-      <div className="flex-1 p-4 md:p-8 w-full">
-        <Card>
-          <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
-            <div className="space-y-2 md:space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-600 rounded-xl">
-                  <Receipt className="h-5 w-5 md:h-6 md:w-6 text-white" />
+      <main className="flex-1 p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center justify-between mb-8">
+              <div className="space-y-1">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-600 rounded-lg">
+                    <FileText className="h-6 w-6 text-white" />
+                  </div>
+                  <h1 className="text-2xl font-semibold">Invoices</h1>
                 </div>
-                <CardTitle className="text-xl md:text-2xl">Invoices</CardTitle>
+                <p className="text-gray-500">
+                  Manage and track all your property invoices.
+                </p>
               </div>
-              <p className="text-sm md:text-base text-gray-500 max-w-2xl">
-                Manage and track all your property-related invoices.
-              </p>
-            </div>
-            <div className="flex items-center gap-4 w-full md:w-auto">
+
               {userRole === "landlord" && (
-                <InvoiceDialog onInvoiceCreated={fetchInvoices} />
+                <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowAddModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Invoice
+                </Button>
               )}
             </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
+
             <InvoiceFilters
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
               statusFilter={statusFilter}
               setStatusFilter={setStatusFilter}
-              dateRange={dateRange}
-              setDateRange={setDateRange}
+              propertyFilter={propertyFilter}
+              setPropertyFilter={setPropertyFilter}
+              properties={properties}
             />
-            <InvoiceList 
-              invoices={filteredInvoices} 
-              userRole={userRole} 
-              onStatusUpdate={fetchInvoices}
+
+            <InvoiceList
+              invoices={filteredInvoices}
+              isLoading={isLoading}
+              userRole={userRole}
+              onDownloadInvoice={handleDownloadInvoice}
             />
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </div>
+      </main>
+
+      <InvoiceDialog open={showAddModal} onOpenChange={setShowAddModal} userId={userId} userRole={userRole} />
     </div>
   );
 };

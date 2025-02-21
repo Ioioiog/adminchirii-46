@@ -5,7 +5,7 @@ import { ArrowLeft, User, Calendar, Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";

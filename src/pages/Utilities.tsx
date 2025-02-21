@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Gauge, Plug, Building2 } from "lucide-react";

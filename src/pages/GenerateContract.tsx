@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { FormData, Asset } from '@/types/contract';
 import { ContractForm } from '@/components/contract/ContractForm';
 import { ContractContent } from '@/components/contract/ContractContent';
-import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
+import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 
 export default function GenerateContract() {
   const [assets, setAssets] = useState<Asset[]>([{

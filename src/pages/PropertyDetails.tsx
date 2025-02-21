@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Home, User, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PropertyStatus } from "@/utils/propertyUtils";

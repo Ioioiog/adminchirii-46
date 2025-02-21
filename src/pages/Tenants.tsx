@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useToast } from "@/hooks/use-toast";
 import { TenantList } from "@/components/tenants/TenantList";
 import { useTenants } from "@/hooks/useTenants";

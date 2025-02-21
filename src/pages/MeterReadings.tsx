@@ -1,13 +1,14 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React from "react";
+import { Button } from "@/components/ui/button";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { Gauge, Loader2 } from "lucide-react";
 import { MeterReadingDialog } from "@/components/meter-readings/MeterReadingDialog";
 import { MeterReadingList } from "@/components/meter-readings/MeterReadingList";
 import { useProperties } from "@/hooks/useProperties";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const MeterReadings = () => {
   const navigate = useNavigate();
@@ -133,7 +134,6 @@ const MeterReadings = () => {
     checkUser();
   }, [navigate, toast]);
 
-  // Add a separate useEffect for fetching readings after user role is set
   useEffect(() => {
     if (userRole && userId) {
       console.log("User role and ID set, fetching readings...");

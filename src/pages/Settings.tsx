@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { Button } from "@/components/ui/button";
 import { AccountSettings } from "@/components/settings/sections/AccountSettings";
 import { FinancialSettings } from "@/components/settings/sections/FinancialSettings";

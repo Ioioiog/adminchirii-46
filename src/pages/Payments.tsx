@@ -1,232 +1,182 @@
-import { useEffect, useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { supabase } from "@/integrations/supabase/client";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useToast } from "@/hooks/use-toast";
-import { DollarSign, Loader2 } from "lucide-react";
 import { PaymentList } from "@/components/payments/PaymentList";
 import { PaymentDialog } from "@/components/payments/PaymentDialog";
 import { PaymentFilters } from "@/components/payments/PaymentFilters";
-import { subDays, startOfYear } from "date-fns";
-import { PaymentWithRelations } from "@/integrations/supabase/types/payment";
+import { useProperties } from "@/hooks/useProperties";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useTranslation } from "react-i18next";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DollarSign, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const Payments = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [payments, setPayments] = useState<PaymentWithRelations[]>([]);
-  const [tenancies, setTenancies] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { t } = useTranslation();
+  const [userId, setUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<"landlord" | "tenant" | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [propertyFilter, setPropertyFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [dateRange, setDateRange] = useState("all");
-
-  const fetchPayments = async () => {
-    try {
-      const { data: paymentsData, error: paymentsError } = await supabase
-        .from("payments")
-        .select(`
-          *,
-          tenancy:tenancies (
-            property:properties (
-              name,
-              address
-            ),
-            tenant:profiles (
-              first_name,
-              last_name,
-              email
-            )
-          )
-        `)
-        .order("due_date", { ascending: false });
-
-      if (paymentsError) throw paymentsError;
-
-      setPayments(paymentsData || []);
-    } catch (error) {
-      console.error("Error fetching payments:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Could not fetch payments",
-      });
-    }
-  };
-
-  const fetchTenancies = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("tenancies")
-        .select(`
-          id,
-          property:properties (
-            name,
-            address
-          ),
-          tenant:profiles (
-            first_name,
-            last_name
-          )
-        `)
-        .eq("status", "active");
-
-      if (error) throw error;
-      setTenancies(data || []);
-    } catch (error) {
-      console.error("Error fetching tenancies:", error);
-    }
-  };
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isCheckingProfile, setIsCheckingProfile] = useState(true);
+  const { properties, isLoading: propertiesLoading } = useProperties({
+    userRole: userRole === "landlord" || userRole === "tenant" ? userRole : "tenant",
+  });
 
   useEffect(() => {
     const checkUser = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
+        console.log("Checking user session...");
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          throw sessionError;
+        }
+
         if (!session) {
+          console.log("No active session found, redirecting to auth");
           navigate("/auth");
           return;
         }
+
+        setUserId(session.user.id);
+        console.log("User ID set:", session.user.id);
 
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("role")
           .eq("id", session.user.id)
-          .single();
+          .maybeSingle();
 
         if (profileError) {
-          console.error("Error fetching profile:", profileError);
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Could not fetch user profile",
-          });
+          console.error("Profile fetch error:", profileError);
+          throw profileError;
+        }
+
+        if (!profile) {
+          console.log("No profile found");
           return;
         }
 
-        if (profile.role !== "landlord" && profile.role !== "tenant") {
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Invalid user role",
-          });
-          return;
-        }
-
+        console.log("Profile role:", profile.role);
         setUserRole(profile.role as "landlord" | "tenant");
-
-        await Promise.all([fetchPayments(), fetchTenancies()]);
-        setIsLoading(false);
-      } catch (error) {
+        setIsCheckingProfile(false);
+      } catch (error: any) {
         console.error("Error in checkUser:", error);
         toast({
+          title: t("common.error"),
+          description: error.message || t("common.unexpectedError"),
           variant: "destructive",
-          title: "Error",
-          description: "An unexpected error occurred",
         });
       }
     };
 
     checkUser();
-  }, [navigate, toast]);
 
-  const filteredPayments = useMemo(() => {
-    let filtered = payments;
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth state changed:", event);
+      if (!session) {
+        navigate("/auth");
+      }
+    });
 
-    // Status filter
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(payment => payment.status === statusFilter);
-    }
+    return () => subscription.unsubscribe();
+  }, [navigate, toast, t]);
 
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(payment => 
-        payment.tenancy.property.name.toLowerCase().includes(query) ||
-        payment.tenancy.property.address.toLowerCase().includes(query) ||
-        `${payment.tenancy.tenant.first_name} ${payment.tenancy.tenant.last_name}`.toLowerCase().includes(query) ||
-        payment.tenancy.tenant.email.toLowerCase().includes(query)
-      );
-    }
-
-    // Date range filter
-    const now = new Date();
-    switch (dateRange) {
-      case "last7days":
-        filtered = filtered.filter(payment => 
-          new Date(payment.due_date) >= subDays(now, 7)
-        );
-        break;
-      case "last30days":
-        filtered = filtered.filter(payment => 
-          new Date(payment.due_date) >= subDays(now, 30)
-        );
-        break;
-      case "last90days":
-        filtered = filtered.filter(payment => 
-          new Date(payment.due_date) >= subDays(now, 90)
-        );
-        break;
-      case "thisYear":
-        filtered = filtered.filter(payment => 
-          new Date(payment.due_date) >= startOfYear(now)
-        );
-        break;
-      default:
-        break;
-    }
-
-    return filtered;
-  }, [payments, statusFilter, searchQuery, dateRange]);
-
-  if (isLoading || !userRole) {
+  if (isCheckingProfile) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex bg-dashboard-background min-h-screen">
+        <DashboardSidebar />
+        <main className="flex-1 p-8">
+          <div className="max-w-7xl mx-auto space-y-6">
+            <Skeleton className="h-12 w-1/3" />
+            <Skeleton className="h-4 w-1/2" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-48" />
+              ))}
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
 
+  if (!userId || !userRole) return null;
+
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex bg-dashboard-background min-h-screen">
       <DashboardSidebar />
-      <div className="flex-1 p-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-600 rounded-xl">
-                  <DollarSign className="h-6 w-6 text-white" />
+      <main className="flex-1 p-8">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div className="bg-white p-8 rounded-lg shadow-sm mb-6 animate-fade-in">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-green-600 rounded-xl">
+                    <DollarSign className="h-6 w-6 text-white" />
+                  </div>
+                  <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+                    {t("payments.title")}
+                  </h1>
                 </div>
-                <CardTitle className="text-2xl">Payments</CardTitle>
+                <p className="text-gray-500 max-w-2xl">
+                  {t("payments.description")}
+                </p>
               </div>
-              <p className="text-gray-500 max-w-2xl">
-                Track and manage all property-related payments.
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
               {userRole === "landlord" && (
-                <PaymentDialog
-                  tenancies={tenancies}
-                  onPaymentCreated={fetchPayments}
-                />
+                <Button
+                  onClick={() => setShowAddModal(true)}
+                  className="w-full sm:w-auto flex items-center gap-2 bg-green-600 hover:bg-green-700 transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>{t("payments.addPayment")}</span>
+                </Button>
               )}
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          </div>
+
+          <div className="space-y-6">
             <PaymentFilters
-              status={statusFilter}
-              onStatusChange={setStatusFilter}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              dateRange={dateRange}
-              onDateRangeChange={setDateRange}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              propertyFilter={propertyFilter}
+              setPropertyFilter={setPropertyFilter}
+              properties={properties}
             />
-            <PaymentList payments={filteredPayments} userRole={userRole} />
-          </CardContent>
-        </Card>
-      </div>
+
+            <PaymentList
+              userId={userId}
+              userRole={userRole}
+              propertyFilter={propertyFilter}
+              statusFilter={statusFilter}
+              searchTerm={searchTerm}
+            />
+          </div>
+        </div>
+      </main>
+
+      <PaymentDialog
+        open={showAddModal}
+        onOpenChange={setShowAddModal}
+        userId={userId}
+        userRole={userRole}
+        properties={properties}
+      />
     </div>
   );
 };
