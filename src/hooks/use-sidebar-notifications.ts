@@ -27,10 +27,10 @@ export function useSidebarNotifications() {
       console.log("Fetching notifications for user:", userId);
 
       try {
-        // Fetch last 5 unread messages
+        // Fetch last 5 unread messages using proper query parameters
         const { data: messages, error: messagesError } = await supabase
           .from('messages')
-          .select('id, content, created_at, read')
+          .select('*')
           .or(`receiver_id.eq.${userId},profile_id.eq.${userId}`)
           .eq('read', false)
           .order('created_at', { ascending: false })
@@ -40,10 +40,10 @@ export function useSidebarNotifications() {
           console.error('Error fetching messages:', messagesError);
         }
 
-        // Fetch last 5 maintenance requests
+        // Fetch last 5 maintenance requests with proper filters
         const { data: maintenance, error: maintenanceError } = await supabase
           .from('maintenance_requests')
-          .select('id, title, created_at, read_by_landlord, read_by_tenant')
+          .select('*')
           .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false)
           .order('created_at', { ascending: false })
           .limit(5);
@@ -52,10 +52,10 @@ export function useSidebarNotifications() {
           console.error('Error fetching maintenance requests:', maintenanceError);
         }
 
-        // Fetch last 5 payments
+        // Fetch last 5 payments with proper filters
         const { data: payments, error: paymentsError } = await supabase
           .from('payments')
-          .select('id, amount, created_at, read_by_landlord, read_by_tenant')
+          .select('*')
           .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false)
           .order('created_at', { ascending: false })
           .limit(5);
