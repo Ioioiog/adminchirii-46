@@ -1,3 +1,4 @@
+
 import React, { useRef, useState } from "react";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { ChatHeader } from "@/components/chat/ChatHeader";
@@ -13,6 +14,7 @@ import { useTenants } from "@/hooks/useTenants";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ChatBackground } from "@/components/chat/ChatBackground";
 
 const Chat = () => {
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
@@ -79,14 +81,15 @@ const Chat = () => {
   const renderChatContent = () => {
     if (isConversationLoading) {
       return <div className="flex-1 flex items-center justify-center bg-gray-50">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+          <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
         </div>;
     }
     if (!conversationId) {
-      return <div className="flex-1 flex items-center justify-center p-8 text-center bg-primary-800 hover:bg-primary-700">
-          <div className="max-w-md glass-card p-8 rounded-xl">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <MessageList messages={[]} currentUserId={currentUserId} messagesEndRef={messagesEndRef} className="w-8 h-8 text-blue-500" />
+      return <div className="relative flex-1 flex items-center justify-center p-8 text-center bg-gradient-to-br from-gray-800/5 to-gray-900/5">
+          <ChatBackground />
+          <div className="relative z-10 max-w-md glass-card p-8 rounded-xl backdrop-blur-sm bg-white/80">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <MessageList messages={[]} currentUserId={currentUserId} messagesEndRef={messagesEndRef} className="w-8 h-8 text-gray-500" />
             </div>
             <h3 className="text-lg font-semibold mb-2 text-gray-800">Select a Conversation</h3>
             <p className="text-gray-600">
