@@ -24,7 +24,6 @@ const Financial = () => {
   const [activeSection, setActiveSection] = useState<FinancialSection>('invoices');
   const { userRole, userId } = useUserRole();
   const { properties } = useProperties({ userRole: userRole || 'tenant' });
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   const {
     payments,
@@ -62,9 +61,10 @@ const Financial = () => {
 
   // Filter out service providers from accessing financial features
   const filteredUserRole = userRole === 'service_provider' ? null : userRole;
+  const isLandlordOrTenant = userRole === 'landlord' || userRole === 'tenant';
 
   const renderSection = () => {
-    if (userRole === 'service_provider') {
+    if (!isLandlordOrTenant) {
       return (
         <div className="text-center p-8">
           <h3 className="text-lg font-semibold text-gray-900">Access Denied</h3>
@@ -130,7 +130,7 @@ const Financial = () => {
                 />
               }
             />
-            {userRole && userId && (
+            {userRole && userId && isLandlordOrTenant && (
               <PaymentList 
                 payments={payments}
                 isLoading={isPaymentsLoading}
