@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Home, User, DollarSign, MapPin, Calendar, Edit2, Save, X, CreditCard, Receipt, Calculator, Building, Bank } from "lucide-react";
+import { ArrowLeft, Home, User, DollarSign, MapPin, Calendar, Edit2, Save, X, CreditCard, Receipt, Calculator, Building, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -591,7 +591,7 @@ const PropertyDetails = () => {
                       Company Name
                     </label>
                     <div className="flex items-center gap-2">
-                      <Building className="h-4 w-4 text-gray-400" />
+                      <Building2 className="h-4 w-4 text-gray-400" />
                       <Input
                         id="company_name"
                         value={invoiceSettings.company_name || ''}
@@ -625,7 +625,7 @@ const PropertyDetails = () => {
                       Bank Name
                     </label>
                     <div className="flex items-center gap-2">
-                      <Bank className="h-4 w-4 text-gray-400" />
+                      <Building2 className="h-4 w-4 text-gray-400" />
                       <Input
                         id="bank_name"
                         value={invoiceSettings.bank_name || ''}
