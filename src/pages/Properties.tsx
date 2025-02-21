@@ -1,10 +1,11 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, ChevronDown, Building2, MapPin, User, Calendar, DollarSign, Home, LayoutGrid, Table as TableIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PropertyDialog } from "@/components/properties/PropertyDialog";
 import { PropertyFilters } from "@/components/properties/PropertyFilters";
-import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useProperties } from "@/hooks/useProperties";
 import { PropertyListHeader } from "@/components/properties/PropertyListHeader";
 import { Badge } from "@/components/ui/badge";

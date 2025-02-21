@@ -1,3 +1,4 @@
+
 import React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -82,5 +83,3 @@ export const DashboardSidebar = () => {
     </Collapsible>
   );
 };
-
-export default DashboardSidebar;
