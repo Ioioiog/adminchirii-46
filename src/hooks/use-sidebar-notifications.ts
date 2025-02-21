@@ -27,17 +27,18 @@ export function useSidebarNotifications() {
       console.log("Fetching notifications for user:", userId);
 
       try {
-        // Fetch last 5 unread messages
+        // Query for unread messages where the user is the receiver
         const { data: messages, error: messagesError } = await supabase
           .from('messages')
           .select('id, content, created_at, read')
-          .or(`receiver_id.eq.${userId},profile_id.eq.${userId}`)
+          .or(`receiver_id.eq.${userId}`)
           .eq('read', false)
           .order('created_at', { ascending: false })
           .limit(5);
 
         if (messagesError) {
           console.error('Error fetching messages:', messagesError);
+          return;
         }
 
         // Fetch last 5 maintenance requests
@@ -116,10 +117,18 @@ export function useSidebarNotifications() {
     // Set up real-time subscriptions
     const messagesChannel = supabase.channel('messages_changes')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'messages' },
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'messages'
+        },
         (payload) => {
           console.log('Message change detected:', payload);
-          fetchNotifications();
+          // Only fetch if the current user is the receiver
+          const newMessage = payload.new as any;
+          if (newMessage && newMessage.receiver_id === userId) {
+            fetchNotifications();
+          }
         }
       )
       .subscribe();
@@ -162,7 +171,7 @@ export function useSidebarNotifications() {
         const { error } = await supabase
           .from('messages')
           .update({ read: true })
-          .or(`receiver_id.eq.${userId},profile_id.eq.${userId}`)
+          .eq('receiver_id', userId)
           .eq('read', false);
 
         if (error) throw error;
