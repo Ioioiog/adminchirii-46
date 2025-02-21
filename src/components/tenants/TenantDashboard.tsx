@@ -1,17 +1,18 @@
+
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Home, Calendar, DollarSign } from "lucide-react";
 
 interface TenantDashboardProps {
-  tenantInfo: {
-    property: {
+  tenantInfo?: {
+    property?: {
       name: string;
       address: string;
       monthly_rent: number;
       type: string;
     };
-    start_date: string;
+    start_date?: string;
     end_date?: string;
   };
 }
@@ -20,12 +21,12 @@ export const TenantDashboard = ({ tenantInfo }: TenantDashboardProps) => {
   const { t } = useTranslation();
 
   // Add safety check for undefined tenantInfo
-  if (!tenantInfo || !tenantInfo.property) {
+  if (!tenantInfo?.property) {
     return (
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="bg-white shadow-md">
           <CardContent>
-            <p className="text-muted-foreground">Loading tenant information...</p>
+            <p className="text-muted-foreground mt-4">Loading tenant information...</p>
           </CardContent>
         </Card>
       </div>
@@ -58,7 +59,7 @@ export const TenantDashboard = ({ tenantInfo }: TenantDashboardProps) => {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {new Date(tenantInfo.start_date).toLocaleDateString()}
+            {tenantInfo.start_date ? new Date(tenantInfo.start_date).toLocaleDateString() : '-'}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {tenantInfo.end_date
@@ -77,7 +78,7 @@ export const TenantDashboard = ({ tenantInfo }: TenantDashboardProps) => {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            ${tenantInfo.property.monthly_rent}
+            ${tenantInfo.property.monthly_rent.toLocaleString()}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {tenantInfo.property.type}
