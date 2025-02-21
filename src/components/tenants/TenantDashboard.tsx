@@ -5,19 +5,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Home, Calendar, DollarSign } from "lucide-react";
 
 interface TenantDashboardProps {
-  tenantInfo?: {
-    property?: {
+  userId: string;
+  userName: string;
+  tenantInfo: {
+    property: {
       name: string;
       address: string;
       monthly_rent: number;
       type: string;
     };
-    start_date?: string;
+    start_date: string;
     end_date?: string;
   };
 }
 
-export const TenantDashboard = ({ tenantInfo }: TenantDashboardProps) => {
+export const TenantDashboard = ({ userId, userName, tenantInfo }: TenantDashboardProps) => {
   const { t } = useTranslation();
 
   // Add safety check for undefined tenantInfo
