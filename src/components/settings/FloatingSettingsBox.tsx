@@ -1,5 +1,6 @@
+
 import { useState } from "react";
-import { Settings, Globe, DollarSign } from "lucide-react";
+import { Settings, Globe, DollarSign, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,12 +12,17 @@ import { useTranslation } from "react-i18next";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useSidebarNotifications } from "@/hooks/use-sidebar-notifications";
 
 export function FloatingSettingsBox() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const { i18n } = useTranslation();
   const { availableCurrencies } = useCurrency();
   const { toast } = useToast();
+  const { data: notifications } = useSidebarNotifications();
+
+  const totalNotifications = notifications?.reduce((acc, curr) => acc + curr.count, 0) || 0;
 
   const handleLanguageChange = (value: string) => {
     localStorage.setItem('language', value);
@@ -54,7 +60,38 @@ export function FloatingSettingsBox() {
   };
 
   return (
-    <div className="fixed top-8 right-8 z-40">
+    <div className="fixed top-8 right-8 z-40 flex items-center gap-2">
+      {/* Notifications Button */}
+      <DropdownMenu open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="icon" className="h-10 w-10 bg-white relative">
+            <Bell className="h-5 w-5" />
+            {totalNotifications > 0 && (
+              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center animate-pulse">
+                {totalNotifications}
+              </span>
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-64 bg-white p-4">
+          <h3 className="font-semibold mb-2">Notifications</h3>
+          {notifications?.map((notification) => (
+            notification.count > 0 && (
+              <DropdownMenuItem key={notification.type} className="flex justify-between items-center">
+                <span className="capitalize">{notification.type}</span>
+                <span className="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs">
+                  {notification.count}
+                </span>
+              </DropdownMenuItem>
+            )
+          ))}
+          {(!notifications || notifications.every(n => n.count === 0)) && (
+            <p className="text-sm text-gray-500">No new notifications</p>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Settings Button */}
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="icon" className="h-10 w-10 bg-white">
