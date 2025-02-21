@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -194,6 +195,14 @@ export function useSidebarNotifications() {
             userRole
           });
 
+          // First validate the message
+          if (!isMessage(newMessage)) {
+            console.log('Message validation failed:', {
+              message: newMessage
+            });
+            return;
+          }
+
           // Process receiver ID safely
           const receiverId = getReceiverId(newMessage);
           
@@ -202,21 +211,12 @@ export function useSidebarNotifications() {
             messageData: newMessage,
             processedReceiverId: receiverId,
             currentUserId: userId,
-            userRole
+            userRole,
+            senderRole: newMessage.sender_id
           });
 
-          // First validate the message
-          if (!isMessage(newMessage)) {
-            console.log('Message validation failed:', {
-              message: newMessage,
-              processedReceiverId: receiverId
-            });
-            return;
-          }
-
-          // If the message has a null receiver_id and user is a landlord
-          if (receiverId === null && userRole === 'landlord') {
-            // Check if the sender is a tenant
+          // First check if this is a tenant message when user is landlord
+          if (userRole === 'landlord') {
             const { data: senderProfile } = await supabase
               .from('profiles')
               .select('role')
@@ -224,28 +224,29 @@ export function useSidebarNotifications() {
               .single();
 
             if (senderProfile?.role === 'tenant') {
-              console.log('Message from tenant to landlord, fetching notifications');
+              console.log('Message from tenant detected, fetching notifications for landlord');
               fetchNotifications();
               return;
             }
           }
 
-          // For other messages with null receiver_id, skip
+          // Then handle direct messages (with specific receiver_id)
+          if (receiverId === userId) {
+            console.log('Direct message matches current user, fetching notifications');
+            fetchNotifications();
+            return;
+          }
+
+          // Skip other messages with null receiver_id
           if (receiverId === null) {
             console.log('Message has null receiver_id and is not from tenant to landlord, skipping');
             return;
           }
 
-          // Now we can safely compare
-          if (receiverId === userId) {
-            console.log('Message matches current user, fetching notifications');
-            fetchNotifications();
-          } else {
-            console.log('Message not for current user:', {
-              messageReceiverId: receiverId,
-              currentUserId: userId
-            });
-          }
+          console.log('Message not for current user:', {
+            messageReceiverId: receiverId,
+            currentUserId: userId
+          });
         }
       )
       .on('postgres_changes',
