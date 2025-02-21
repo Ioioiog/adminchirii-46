@@ -1,5 +1,4 @@
-
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/use-user-role';
 
@@ -28,9 +27,12 @@ type MessageWithProfile = {
 export function useSidebarNotifications() {
   const [data, setData] = useState<Notification[]>([]);
   const { userRole, userId } = useUserRole();
+  const reconnectAttempts = useRef(0);
+  const maxReconnectAttempts = 5;
 
   useEffect(() => {
     let mounted = true;
+    let reconnectTimeout: NodeJS.Timeout;
 
     const fetchNotifications = async () => {
       if (!userId) return;
@@ -146,11 +148,14 @@ export function useSidebarNotifications() {
       }
     };
 
-    // Initial fetch
-    fetchNotifications();
-
-    // Set up realtime subscriptions with automatic reconnection
     const setupRealtimeSubscription = () => {
+      if (reconnectAttempts.current >= maxReconnectAttempts) {
+        console.log('Max reconnection attempts reached, stopping reconnection attempts');
+        return null;
+      }
+
+      console.log(`Setting up realtime subscription (attempt ${reconnectAttempts.current + 1}/${maxReconnectAttempts})`);
+
       const channel = supabase.channel('db-changes')
         .on('postgres_changes', 
           { 
@@ -186,14 +191,34 @@ export function useSidebarNotifications() {
             fetchNotifications();
           }
         )
-        .subscribe(async (status) => {
+        .subscribe((status) => {
           console.log('Realtime subscription status:', status);
           
-          if (status === 'CLOSED') {
-            console.log('Channel closed, attempting to reconnect...');
-            // Wait a bit before reconnecting to avoid rapid reconnection attempts
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            setupRealtimeSubscription();
+          if (status === 'SUBSCRIBED') {
+            // Reset reconnect attempts on successful connection
+            reconnectAttempts.current = 0;
+          }
+          
+          if (status === 'CLOSED' && mounted) {
+            reconnectAttempts.current += 1;
+            const backoffTime = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000); // Max 30 seconds
+
+            console.log(`Channel closed (attempt ${reconnectAttempts.current}/${maxReconnectAttempts}), reconnecting in ${backoffTime}ms...`);
+            
+            // Clear any existing timeout
+            if (reconnectTimeout) {
+              clearTimeout(reconnectTimeout);
+            }
+
+            // Set up new reconnection attempt with exponential backoff
+            reconnectTimeout = setTimeout(() => {
+              if (mounted) {
+                const newChannel = setupRealtimeSubscription();
+                if (newChannel) {
+                  channel.unsubscribe();
+                }
+              }
+            }, backoffTime);
           }
         });
 
@@ -204,9 +229,12 @@ export function useSidebarNotifications() {
 
     return () => {
       mounted = false;
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
       if (channel) {
         console.log('Cleaning up realtime subscription...');
-        supabase.removeChannel(channel);
+        channel.unsubscribe();
       }
     };
   }, [userId, userRole]);
