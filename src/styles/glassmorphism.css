@@ -1,0 +1,24 @@
+
+.glass {
+  @apply bg-glass backdrop-blur-xl border border-glass-border shadow-xl;
+}
+
+.glass-card {
+  @apply glass rounded-2xl transition-transform duration-300 hover:-translate-y-2;
+}
+
+.glass-button {
+  @apply glass rounded-lg px-8 py-6 text-lg transition-all duration-300 hover:bg-white/20;
+}
+
+.glass-input {
+  @apply glass rounded-lg px-4 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/20;
+}
+
+.gradient-border {
+  @apply relative before:absolute before:-inset-1 before:bg-gradient-to-r before:from-blue-500 before:to-indigo-500 before:rounded-[inherit] before:blur before:opacity-75 before:hover:opacity-100 before:transition before:duration-1000;
+}
+
+.gradient-text {
+  @apply bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent;
+}
