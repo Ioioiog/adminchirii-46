@@ -12,7 +12,7 @@ type Message = {
   content: string;
   created_at: string;
   read: boolean;
-  receiver_id: string;
+  receiver_id: string | null;  // Updated to allow null
   sender_id: string;
 };
 
@@ -27,7 +27,11 @@ function getReceiverId(message: any): string | null {
   }
 
   const receiverId = message.receiver_id;
-  if (typeof receiverId === 'object' && receiverId !== null) {
+  if (receiverId === null) {
+    return null;
+  }
+
+  if (typeof receiverId === 'object') {
     return receiverId.toString();
   }
 
@@ -41,11 +45,10 @@ function isMessage(value: unknown): value is Message {
   }
 
   const msg = value as any;
-  const receiverId = getReceiverId(msg);
   
   const isValid = 
     typeof msg.id === 'string' &&
-    typeof receiverId === 'string';
+    'receiver_id' in msg; // We only check if the property exists, as it can be null
 
   console.log('Message validation:', {
     value,
@@ -53,8 +56,8 @@ function isMessage(value: unknown): value is Message {
     hasId: 'id' in msg,
     hasReceiverId: 'receiver_id' in msg,
     receiverIdRaw: msg.receiver_id,
-    receiverIdProcessed: receiverId,
-    receiverIdType: typeof receiverId
+    receiverIdProcessed: getReceiverId(msg),
+    receiverIdType: msg.receiver_id === null ? 'null' : typeof msg.receiver_id
   });
 
   return isValid;
@@ -203,6 +206,13 @@ export function useSidebarNotifications() {
               message: newMessage,
               processedReceiverId: receiverId
             });
+            return;
+          }
+
+          // For messages with null receiver_id, treat as broadcast messages
+          // or skip if we want to ignore them
+          if (receiverId === null) {
+            console.log('Message has null receiver_id, skipping');
             return;
           }
 
