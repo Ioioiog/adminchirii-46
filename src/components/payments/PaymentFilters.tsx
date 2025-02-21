@@ -3,24 +3,25 @@ import React from 'react';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 
 export interface PaymentFiltersProps {
-  searchTerm: string;
-  setSearchTerm: (value: string) => void;
-  statusFilter: string;
-  setStatusFilter: (value: string) => void;
-  propertyFilter: string;
-  setPropertyFilter: (value: string) => void;
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  status: string;
+  onStatusChange: (value: string) => void;
+  dateRange: string;
+  onDateRangeChange: (value: string) => void;
   properties: Array<{ id: string; name: string }>;
 }
 
 export function PaymentFilters({
-  searchTerm,
-  setSearchTerm,
-  statusFilter,
-  setStatusFilter,
-  propertyFilter,
-  setPropertyFilter,
+  searchQuery,
+  onSearchChange,
+  status,
+  onStatusChange,
+  dateRange,
+  onDateRangeChange,
   properties
 }: PaymentFiltersProps) {
   return (
@@ -29,13 +30,13 @@ export function PaymentFilters({
         <Label>Search</Label>
         <Input
           placeholder="Search payments..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
         />
       </div>
       <div>
         <Label>Status</Label>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={status} onValueChange={onStatusChange}>
           <SelectTrigger>
             <SelectValue placeholder="Select status" />
           </SelectTrigger>
@@ -48,20 +49,8 @@ export function PaymentFilters({
         </Select>
       </div>
       <div>
-        <Label>Property</Label>
-        <Select value={propertyFilter} onValueChange={setPropertyFilter}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select property" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Properties</SelectItem>
-            {properties.map((property) => (
-              <SelectItem key={property.id} value={property.id}>
-                {property.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Label>Date Range</Label>
+        <DatePickerWithRange date={dateRange} setDate={onDateRangeChange} />
       </div>
     </div>
   );

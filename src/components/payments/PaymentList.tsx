@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -6,8 +7,9 @@ import { Payment } from "@/integrations/supabase/types/payment";
 
 export interface PaymentListProps {
   payments: Payment[];
-  isLoading: boolean;
+  isLoading?: boolean;
   userRole: "landlord" | "tenant";
+  userId: string;
   propertyFilter: string;
   statusFilter: string;
   searchTerm: string;
@@ -17,6 +19,7 @@ export function PaymentList({
   payments,
   isLoading,
   userRole,
+  userId,
   propertyFilter,
   statusFilter,
   searchTerm
