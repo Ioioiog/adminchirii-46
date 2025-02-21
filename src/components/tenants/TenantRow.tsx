@@ -32,6 +32,7 @@ export function TenantRow({
         .from('messages')
         .select('*')
         .eq('sender_id', tenant.id)  // Messages from this specific tenant
+        .eq('profile_id', tenant.id) // Also check profile_id
         .eq('read', false)           // That are unread
         .is('receiver_id', null);    // And are broadcast messages
 
@@ -40,7 +41,12 @@ export function TenantRow({
         return false;
       }
 
-      console.log(`Unread messages check for tenant ${tenant.id}:`, data);
+      console.log(`Unread messages check for tenant ${tenant.id}:`, {
+        tenantId: tenant.id,
+        messages: data,
+        count: data?.length || 0
+      });
+      
       return data && data.length > 0;
     },
     enabled: isLandlord,
