@@ -146,7 +146,7 @@ export function useSidebarNotifications() {
             event: payload.eventType,
             data: payload.new,
             userId,
-            receiverId: payload.new?.receiver_id
+            receiverId: payload.new && 'receiver_id' in payload.new ? payload.new.receiver_id : undefined
           });
           fetchNotifications();
         }
