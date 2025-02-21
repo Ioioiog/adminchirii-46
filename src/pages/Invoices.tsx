@@ -72,6 +72,7 @@ const Invoices = () => {
       </main>
 
       <InvoiceDialog
+        open={showAddModal}
         onOpenChange={setShowAddModal}
         userId={userId}
         userRole={userRole}
