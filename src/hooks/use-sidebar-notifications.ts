@@ -16,6 +16,24 @@ type Message = {
   sender_id: string;
 };
 
+// Helper function to safely process receiver ID
+function getReceiverId(message: any): string | null {
+  if (!message || typeof message !== 'object') {
+    return null;
+  }
+
+  if (!('receiver_id' in message)) {
+    return null;
+  }
+
+  const receiverId = message.receiver_id;
+  if (typeof receiverId === 'object' && receiverId !== null) {
+    return receiverId.toString();
+  }
+
+  return typeof receiverId === 'string' ? receiverId : null;
+}
+
 // Type guard to check if a value is a Message
 function isMessage(value: unknown): value is Message {
   if (!value || typeof value !== 'object') {
@@ -23,12 +41,8 @@ function isMessage(value: unknown): value is Message {
   }
 
   const msg = value as any;
+  const receiverId = getReceiverId(msg);
   
-  // Handle UUID objects from Supabase by converting them to strings
-  const receiverId = typeof msg.receiver_id === 'object' && msg.receiver_id !== null 
-    ? msg.receiver_id.toString()
-    : msg.receiver_id;
-
   const isValid = 
     typeof msg.id === 'string' &&
     typeof receiverId === 'string';
@@ -173,10 +187,15 @@ export function useSidebarNotifications() {
             userId
           });
 
-          // Convert receiver_id to string if it's an object
-          const receiverId = typeof newMessage?.receiver_id === 'object' && newMessage?.receiver_id !== null
-            ? newMessage.receiver_id.toString()
-            : newMessage?.receiver_id;
+          // Process receiver ID safely
+          const receiverId = getReceiverId(newMessage);
+          
+          // Log the attempt
+          console.log('Processing message:', {
+            messageData: newMessage,
+            processedReceiverId: receiverId,
+            currentUserId: userId
+          });
 
           // First validate the message
           if (!isMessage(newMessage)) {
@@ -187,7 +206,7 @@ export function useSidebarNotifications() {
             return;
           }
 
-          // Now TypeScript knows newMessage is of type Message
+          // Now we can safely compare
           if (receiverId === userId) {
             console.log('Message matches current user, fetching notifications');
             fetchNotifications();
