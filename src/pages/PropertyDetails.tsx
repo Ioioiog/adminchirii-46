@@ -128,6 +128,35 @@ const PropertyDetails = () => {
     }
   };
 
+  const handleInvoiceSettingChange = async (updates: Partial<InvoiceSettings>) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const newSettings = { ...invoiceSettings, ...updates };
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ invoice_info: newSettings })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setInvoiceSettings(newSettings);
+      toast({
+        title: "Success",
+        description: "Invoice settings updated successfully",
+      });
+    } catch (error) {
+      console.error("Error updating invoice settings:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update invoice settings",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getStatusColor = (status: PropertyStatus) => {
     if (!status) return 'bg-gray-100 text-gray-800';
     
@@ -507,8 +536,7 @@ const PropertyDetails = () => {
                       <h3 className="font-medium">Apply VAT (19%)</h3>
                       <Switch
                         checked={invoiceSettings.apply_vat}
-                        onCheckedChange={(checked) => 
-                          setInvoiceSettings(prev => ({ ...prev, apply_vat: checked }))}
+                        onCheckedChange={(checked) => handleInvoiceSettingChange({ apply_vat: checked })}
                       />
                     </div>
                     <p className="text-sm text-gray-500 mt-1">
@@ -528,8 +556,7 @@ const PropertyDetails = () => {
                       <h3 className="font-medium">Auto-Generate</h3>
                       <Switch
                         checked={invoiceSettings.auto_generate}
-                        onCheckedChange={(checked) => 
-                          setInvoiceSettings(prev => ({ ...prev, auto_generate: checked }))}
+                        onCheckedChange={(checked) => handleInvoiceSettingChange({ auto_generate: checked })}
                       />
                     </div>
                     <p className="text-sm text-gray-500 mt-1">
@@ -540,9 +567,40 @@ const PropertyDetails = () => {
               </Card>
             </div>
 
+            {invoiceSettings.auto_generate && (
+              <div className="mt-6 space-y-4">
+                <div className="max-w-xs">
+                  <label htmlFor="generate_day" className="block text-sm font-medium text-gray-700 mb-1">
+                    Generation Day
+                  </label>
+                  <Input
+                    id="generate_day"
+                    type="number"
+                    min={1}
+                    max={28}
+                    value={invoiceSettings.generate_day}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      if (value >= 1 && value <= 28) {
+                        handleInvoiceSettingChange({ generate_day: value });
+                      }
+                    }}
+                    className="w-full"
+                    placeholder="Enter day (1-28)"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Select the day of the month when invoices should be generated (1-28)
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="mt-6 text-sm text-gray-500">
               <p>
-                Invoices are generated on day {invoiceSettings.generate_day} of each month.
+                {invoiceSettings.auto_generate 
+                  ? `Invoices are generated on day ${invoiceSettings.generate_day} of each month.`
+                  : "Automatic invoice generation is disabled."
+                }
                 VAT is {invoiceSettings.apply_vat ? "applied at 19%" : "not applied"} to the rent amount.
               </p>
             </div>
