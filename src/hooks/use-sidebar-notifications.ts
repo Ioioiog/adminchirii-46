@@ -16,28 +16,31 @@ export type Notification = {
 
 export function useSidebarNotifications() {
   const [data, setData] = useState<Notification[]>([]);
-  const { userRole } = useUserRole();
+  const { userRole, userId } = useUserRole();
 
   useEffect(() => {
     let mounted = true;
 
     const fetchNotifications = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!userId) return;
 
-      console.log("Fetching notifications for user:", user.id);
+      console.log("Fetching notifications for user:", userId);
 
       try {
-        // Fetch last 5 unread messages
+        // Fetch unread messages
         const { data: messages, error: messagesError } = await supabase
           .from('messages')
           .select(`
             id,
             content,
             created_at,
-            read
+            read,
+            profiles!messages_sender_id_fkey (
+              first_name,
+              last_name
+            )
           `)
-          .eq('receiver_id', user.id)
+          .eq('receiver_id', userId)
           .eq('read', false)
           .order('created_at', { ascending: false })
           .limit(5);
@@ -46,7 +49,7 @@ export function useSidebarNotifications() {
           console.error('Error fetching messages:', messagesError);
         }
 
-        // Fetch last 5 maintenance requests
+        // Fetch maintenance requests
         const { data: maintenance, error: maintenanceError } = await supabase
           .from('maintenance_requests')
           .select(`
@@ -64,7 +67,7 @@ export function useSidebarNotifications() {
           console.error('Error fetching maintenance requests:', maintenanceError);
         }
 
-        // Fetch last 5 payments
+        // Fetch payments
         const { data: payments, error: paymentsError } = await supabase
           .from('payments')
           .select(`
@@ -88,7 +91,7 @@ export function useSidebarNotifications() {
             count: messages?.length || 0,
             items: messages?.map(m => ({
               id: m.id,
-              message: m.content, // Changed from message to content
+              message: `${m.profiles?.first_name || 'Someone'} sent: ${m.content}`,
               created_at: m.created_at,
               read: m.read
             }))
@@ -98,7 +101,7 @@ export function useSidebarNotifications() {
             count: maintenance?.length || 0,
             items: maintenance?.map(m => ({
               id: m.id,
-              message: m.title, // Changed from message to title
+              message: m.title,
               created_at: m.created_at,
               read: userRole === 'landlord' ? m.read_by_landlord : m.read_by_tenant
             }))
@@ -116,7 +119,6 @@ export function useSidebarNotifications() {
         ];
 
         if (mounted) {
-          console.log('Setting new notifications:', newNotifications);
           setData(newNotifications);
         }
       } catch (error) {
@@ -127,48 +129,66 @@ export function useSidebarNotifications() {
     // Initial fetch
     fetchNotifications();
 
-    // Set up real-time subscriptions
-    const messagesChannel = supabase.channel('messages_changes')
+    // Set up realtime subscriptions for all three tables in a single channel
+    const channel = supabase.channel('db-changes')
+      // Messages subscription
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'messages' },
-        () => fetchNotifications()
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'messages',
+          filter: userId ? `receiver_id=eq.${userId}` : undefined
+        },
+        (payload) => {
+          console.log('Messages change received:', payload);
+          fetchNotifications();
+        }
       )
-      .subscribe();
-
-    const maintenanceChannel = supabase.channel('maintenance_changes')
+      // Maintenance requests subscription
       .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'maintenance_requests' },
-        () => fetchNotifications()
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'maintenance_requests' 
+        },
+        (payload) => {
+          console.log('Maintenance change received:', payload);
+          fetchNotifications();
+        }
       )
-      .subscribe();
-
-    const paymentsChannel = supabase.channel('payments_changes')
+      // Payments subscription
       .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'payments' },
-        () => fetchNotifications()
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'payments'
+        },
+        (payload) => {
+          console.log('Payment change received:', payload);
+          fetchNotifications();
+        }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+      });
 
     return () => {
       mounted = false;
-      supabase.removeChannel(messagesChannel);
-      supabase.removeChannel(maintenanceChannel);
-      supabase.removeChannel(paymentsChannel);
+      supabase.removeChannel(channel);
     };
-  }, [userRole]);
+  }, [userId, userRole]);
 
   const markAsRead = async (type: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!userId) return;
 
-    console.log(`Marking ${type} as read for user:`, user.id);
+    console.log(`Marking ${type} as read for user:`, userId);
 
     try {
       if (type === 'messages') {
         const { error } = await supabase
           .from('messages')
           .update({ read: true })
-          .eq('receiver_id', user.id)
+          .eq('receiver_id', userId)
           .eq('read', false);
 
         if (error) throw error;
@@ -192,6 +212,7 @@ export function useSidebarNotifications() {
         if (error) throw error;
       }
 
+      // Update local state
       setData(prevData => 
         prevData.map(item => 
           item.type === type ? { ...item, count: 0, items: [] } : item
