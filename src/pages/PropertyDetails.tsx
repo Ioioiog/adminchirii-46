@@ -270,3 +270,29 @@ const PropertyDetails = () => {
                   setEditedData={setEditedData}
                   handleEdit={handleEdit}
                   handleCancel={handleCancel}
+                  handleSave={handleSave}
+                  getStatusColor={getStatusColor}
+                />
+              )}
+              {activeTab === "tenants" && (
+                <TenantsTab
+                  property={property}
+                  activeTenants={activeTenants}
+                />
+              )}
+              {activeTab === "invoice" && (
+                <InvoiceSettingsTab
+                  property={property}
+                  invoiceSettings={invoiceSettings}
+                  handleInvoiceSettingChange={handleInvoiceSettingChange}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default PropertyDetails;
