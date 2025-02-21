@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
+
 const Properties = () => {
   const navigate = useNavigate();
   const {
@@ -30,6 +31,7 @@ const Properties = () => {
   } = useProperties({
     userRole: "landlord"
   });
+
   const handleAddProperty = async (formData: any) => {
     try {
       const {
@@ -56,11 +58,13 @@ const Properties = () => {
       return false;
     }
   };
+
   const filteredProperties = properties?.filter(property => {
     const matchesSearch = property.name.toLowerCase().includes(searchTerm.toLowerCase()) || property.address.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || property.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
   if (isLoading) {
     return <div className="flex h-screen overflow-hidden">
         <DashboardSidebar />
@@ -75,6 +79,7 @@ const Properties = () => {
         </main>
       </div>;
   }
+
   const getStatusColor = (status: PropertyStatus) => {
     if (!status) return 'bg-gray-100 text-gray-800';
     switch (status.toLowerCase()) {
@@ -88,9 +93,11 @@ const Properties = () => {
         return 'bg-gray-100 text-gray-800';
     }
   };
+
   const handlePropertyDetails = (propertyId: string) => {
     navigate(`/properties/${propertyId}`);
   };
+
   return <div className="flex h-screen overflow-hidden">
       <DashboardSidebar />
       <main className="flex-1 overflow-hidden">
@@ -172,9 +179,6 @@ const Properties = () => {
                         <Button variant="outline" onClick={() => handlePropertyDetails(property.id)}>
                           View Details
                         </Button>
-                        <Button variant="default" className="bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors" onClick={() => navigate(`/properties/${property.id}/tenants`)}>
-                          Manage Tenants
-                        </Button>
                       </div>
                     </CardContent>
                   </Card>)}
@@ -200,4 +204,5 @@ const Properties = () => {
       <PropertyDialog open={showAddModal} onOpenChange={setShowAddModal} onSubmit={handleAddProperty} mode="add" />
     </div>;
 };
+
 export default Properties;
