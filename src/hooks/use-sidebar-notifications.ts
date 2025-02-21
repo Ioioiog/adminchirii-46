@@ -18,10 +18,20 @@ type Message = {
 
 // Type guard to check if a value is a Message
 function isMessage(value: any): value is Message {
-  return value && 
+  const isValid = value && 
     typeof value === 'object' && 
-    'receiver_id' in value &&
-    'id' in value;
+    typeof value.id === 'string' &&
+    typeof value.receiver_id === 'string';
+
+  console.log('Message validation:', {
+    value,
+    isValid,
+    hasId: value?.id,
+    hasReceiverId: value?.receiver_id,
+    receiverIdType: typeof value?.receiver_id
+  });
+
+  return isValid;
 }
 
 export function useSidebarNotifications() {
@@ -38,17 +48,10 @@ export function useSidebarNotifications() {
     console.log("Fetching notifications for user:", userId);
 
     try {
-      // Fetch unread messages with more detailed query
+      // Fetch unread messages
       const { data: messages, error: messagesError } = await supabase
         .from('messages')
-        .select(`
-          id,
-          content,
-          created_at,
-          read,
-          receiver_id,
-          sender_id
-        `)
+        .select('*')
         .eq('receiver_id', userId)
         .eq('read', false)
         .order('created_at', { ascending: false });
@@ -68,7 +71,7 @@ export function useSidebarNotifications() {
       // Fetch maintenance requests
       const { data: maintenance, error: maintenanceError } = await supabase
         .from('maintenance_requests')
-        .select('id, title, created_at')
+        .select('*')
         .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false);
 
       if (maintenanceError) {
@@ -79,7 +82,7 @@ export function useSidebarNotifications() {
       // Fetch payments
       const { data: payments, error: paymentsError } = await supabase
         .from('payments')
-        .select('id, amount, created_at')
+        .select('*')
         .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false);
 
       if (paymentsError) {
@@ -149,18 +152,26 @@ export function useSidebarNotifications() {
           table: 'messages'
         },
         (payload: RealtimePostgresChangesPayload<Message>) => {
+          console.log('Raw message payload:', payload);
+          
           const newMessage = payload.new;
           console.log('New message detected:', {
             event: payload.eventType,
-            message: newMessage,
+            messageData: newMessage,
             userId,
-            receiverId: isMessage(newMessage) ? newMessage.receiver_id : undefined
+            receiverId: newMessage?.receiver_id
           });
 
           // Only fetch if the message is for this user
           if (isMessage(newMessage) && newMessage.receiver_id === userId) {
-            console.log('Fetching notifications due to new message for current user');
+            console.log('Message matches current user, fetching notifications');
             fetchNotifications();
+          } else {
+            console.log('Message validation failed or not for current user:', {
+              isValidMessage: isMessage(newMessage),
+              messageReceiverId: newMessage?.receiver_id,
+              currentUserId: userId
+            });
           }
         }
       )
