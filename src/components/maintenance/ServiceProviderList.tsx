@@ -39,6 +39,7 @@ interface Filters {
   search: string;
   category: string;
   rating: string;
+  createdByMe: boolean;
 }
 
 export function ServiceProviderList() {
@@ -49,10 +50,16 @@ export function ServiceProviderList() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<ServiceProvider | null>(null);
-  const [filters, setFilters] = useState<Filters>({
+  const [filters, setFilters] = useState<{
+    search: string;
+    category: string;
+    rating: string;
+    createdByMe: boolean;
+  }>({
     search: "",
     category: "all",
-    rating: "all"
+    rating: "all",
+    createdByMe: false
   });
 
   if (userRole === "service_provider") {
@@ -109,6 +116,10 @@ export function ServiceProviderList() {
 
       if (filters.rating !== "all") {
         query = query.gte("rating", parseInt(filters.rating));
+      }
+
+      if (filters.createdByMe) {
+        query = query.eq('id', currentUserId);
       }
 
       const { data: providers, error: providersError } = await query;

@@ -1,12 +1,16 @@
+
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface Filters {
   search: string;
   category: string;
   rating: string;
+  createdByMe: boolean;
 }
 
 interface ServiceProviderFiltersProps {
@@ -17,7 +21,7 @@ interface ServiceProviderFiltersProps {
 export function ServiceProviderFilters({ filters, onFiltersChange }: ServiceProviderFiltersProps) {
   return (
     <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
         <div className="relative">
           <Input
             placeholder="Search providers..."
@@ -56,6 +60,15 @@ export function ServiceProviderFilters({ filters, onFiltersChange }: ServiceProv
             <SelectItem value="2">2+ Stars</SelectItem>
           </SelectContent>
         </Select>
+
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="created-by-me"
+            checked={filters.createdByMe}
+            onCheckedChange={(checked) => onFiltersChange({ ...filters, createdByMe: checked })}
+          />
+          <Label htmlFor="created-by-me">Created by me</Label>
+        </div>
       </div>
     </div>
   );
