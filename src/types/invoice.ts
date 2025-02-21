@@ -1,3 +1,4 @@
+
 export interface InvoiceSettings {
   apply_vat: boolean;
   auto_generate: boolean;
@@ -28,6 +29,8 @@ export interface Invoice {
   landlord_id: string;
   currency: string;
   vat_rate?: number;
+  paid_at?: string | null;
+  updated_at: string;
   property?: {
     name: string;
     address: string;
@@ -37,4 +40,17 @@ export interface Invoice {
     last_name: string;
     email: string;
   };
+}
+
+export interface InvoiceFilterProps {
+  searchTerm: string;
+  setSearchTerm: (value: string) => void;
+  statusFilter: string;
+  setStatusFilter: (value: string) => void;
+  dateRange?: DateRange | undefined;
+  setDateRange: (range: DateRange | undefined) => void;
+}
+
+export interface InvoiceDialogProps {
+  onInvoiceCreated?: () => Promise<void>;
 }
