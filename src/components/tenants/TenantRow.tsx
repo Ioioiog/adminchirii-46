@@ -27,19 +27,21 @@ export function TenantRow({
   const { data: hasUnreadMessages } = useQuery({
     queryKey: ['unreadMessages', tenant.id],
     queryFn: async () => {
-      const { count, error } = await supabase
+      // Query for messages from this tenant that are unread
+      const { data, error } = await supabase
         .from('messages')
         .select('*', { count: 'exact', head: true })
-        .eq('profile_id', tenant.id)  // Check messages from this tenant's profile
-        .eq('read', false);           // That are unread
+        .eq('profile_id', tenant.id)  // Messages from this tenant
+        .eq('read', false)            // That are unread
+        .or('receiver_id.is.null,receiver_id.eq.null'); // And are broadcast messages
 
       if (error) {
-        console.error('Error checking unread messages:', error);
+        console.error('Error checking unread messages for tenant:', tenant.id, error);
         return false;
       }
 
-      console.log(`Unread messages for tenant ${tenant.id}:`, count);
-      return count ? count > 0 : false;
+      console.log(`Unread messages check for tenant ${tenant.id}:`, data);
+      return data && data.length > 0;
     },
     enabled: isLandlord,
     // Refresh every 10 seconds to check for new messages
@@ -84,8 +86,8 @@ export function TenantRow({
           tenantId={tenant.id}
           tenantName={getTenantDisplayName(tenant)}
           tenant={tenant}
-          onDelete={onDelete}
           onUpdate={onUpdate}
+          onDelete={onDelete}
         />
       </TableCell>
     </TableRow>
