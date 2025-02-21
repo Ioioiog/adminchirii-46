@@ -27,13 +27,13 @@ export function TenantRow({
   const { data: hasUnreadMessages } = useQuery({
     queryKey: ['unreadMessages', tenant.id],
     queryFn: async () => {
-      // Query for messages from this tenant that are unread and are broadcast messages
+      // Query for messages from this specific tenant that are unread and are broadcast messages
       const { data, error } = await supabase
         .from('messages')
         .select('*')
-        .eq('profile_id', tenant.id)  // Messages from this tenant
-        .eq('read', false)            // That are unread
-        .is('receiver_id', null);     // And are broadcast messages
+        .eq('sender_id', tenant.id)  // Messages from this specific tenant
+        .eq('read', false)           // That are unread
+        .is('receiver_id', null);    // And are broadcast messages
 
       if (error) {
         console.error('Error checking unread messages for tenant:', tenant.id, error);
