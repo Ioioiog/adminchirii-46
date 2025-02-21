@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Home, User, DollarSign, MapPin, Calendar, Edit2, Save, X } from "lucide-react";
+import { ArrowLeft, Home, User, DollarSign, MapPin, Calendar, Edit2, Save, X, CreditCard, Receipt, Calculator } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { PropertyStatus } from "@/utils/propertyUtils";
 import { useToast } from "@/hooks/use-toast";
+import { Switch } from "@/components/ui/switch";
 
 const PropertyDetails = () => {
   const { id } = useParams();
@@ -21,6 +22,39 @@ const PropertyDetails = () => {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState<any>(null);
+  const [invoiceSettings, setInvoiceSettings] = useState({
+    applyVat: false,
+    autoGenerate: true,
+    generateDay: 1
+  });
+
+  useEffect(() => {
+    const fetchInvoiceSettings = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('invoice_info')
+          .eq('id', user.id)
+          .single();
+
+        if (error) throw error;
+        if (data?.invoice_info) {
+          setInvoiceSettings({
+            applyVat: data.invoice_info.apply_vat || false,
+            autoGenerate: data.invoice_info.auto_generate || true,
+            generateDay: data.invoice_info.generate_day || 1
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching invoice settings:", error);
+      }
+    };
+
+    fetchInvoiceSettings();
+  }, []);
 
   const { data: property, isLoading } = useQuery({
     queryKey: ["property", id],
@@ -435,6 +469,80 @@ const PropertyDetails = () => {
                   </Button>
                 </div>
               )}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-soft-xl p-8">
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">Invoice Settings</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Configure how invoices are handled for this property
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-100">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-100 rounded-xl">
+                    <Receipt className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Monthly Rent</h3>
+                    <p className="text-2xl font-semibold mt-1">
+                      ${property?.monthly_rent?.toLocaleString() || 0}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-100">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-green-100 rounded-xl">
+                    <Calculator className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium">Apply VAT (19%)</h3>
+                      <Switch
+                        checked={invoiceSettings.applyVat}
+                        onCheckedChange={(checked) => 
+                          setInvoiceSettings(prev => ({ ...prev, applyVat: checked }))}
+                      />
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {invoiceSettings.applyVat ? "VAT will be added" : "No VAT applied"}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-100">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-purple-100 rounded-xl">
+                    <CreditCard className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium">Auto-Generate</h3>
+                      <Switch
+                        checked={invoiceSettings.autoGenerate}
+                        onCheckedChange={(checked) => 
+                          setInvoiceSettings(prev => ({ ...prev, autoGenerate: checked }))}
+                      />
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {invoiceSettings.autoGenerate ? "Invoices generate automatically" : "Manual generation"}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            <div className="mt-6 text-sm text-gray-500">
+              <p>
+                Invoices are generated on day {invoiceSettings.generateDay} of each month.
+                VAT is {invoiceSettings.applyVat ? "applied at 19%" : "not applied"} to the rent amount.
+              </p>
             </div>
           </div>
         </div>
