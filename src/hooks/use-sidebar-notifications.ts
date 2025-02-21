@@ -14,6 +14,17 @@ export type Notification = {
   }>;
 };
 
+type MessageWithProfile = {
+  id: string;
+  content: string;
+  created_at: string;
+  read: boolean;
+  profiles?: {
+    first_name: string | null;
+    last_name: string | null;
+  };
+};
+
 export function useSidebarNotifications() {
   const [data, setData] = useState<Notification[]>([]);
   const { userRole, userId } = useUserRole();
@@ -35,7 +46,7 @@ export function useSidebarNotifications() {
             content,
             created_at,
             read,
-            profiles!messages_sender_id_fkey (
+            profiles:profiles!messages_sender_id_fkey (
               first_name,
               last_name
             )
@@ -85,11 +96,13 @@ export function useSidebarNotifications() {
           console.error('Error fetching payments:', paymentsError);
         }
 
+        const typedMessages = messages as MessageWithProfile[] || [];
+        
         const newNotifications = [
           { 
             type: 'messages', 
-            count: messages?.length || 0,
-            items: messages?.map(m => ({
+            count: typedMessages.length,
+            items: typedMessages.map(m => ({
               id: m.id,
               message: `${m.profiles?.first_name || 'Someone'} sent: ${m.content}`,
               created_at: m.created_at,
