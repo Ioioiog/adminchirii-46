@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -77,29 +78,59 @@ export function useSidebarNotifications() {
     console.log("Fetching notifications for user:", userId);
 
     try {
-      const { data: messages, error: messagesError } = await supabase
+      // First query: Direct messages to the user
+      const { data: directMessages, error: directMessagesError } = await supabase
         .from('messages')
         .select(`
           *,
-          profiles:profiles!messages_profile_id_fkey (
+          profiles:profile_id (
             role
           )
         `)
-        .or(`receiver_id.eq.${userId},and(receiver_id.is.null,profiles.role.eq.tenant)`)
+        .eq('receiver_id', userId)
         .eq('read', false)
         .order('created_at', { ascending: false });
 
-      if (messagesError) {
-        console.error('Error fetching messages:', messagesError);
-        throw messagesError;
+      if (directMessagesError) {
+        console.error('Error fetching direct messages:', directMessagesError);
+        throw directMessagesError;
       }
 
+      // Second query: Messages from tenants with null receiver_id (if user is landlord)
+      let broadcastMessages = [];
+      if (userRole === 'landlord') {
+        const { data: tenantMessages, error: tenantMessagesError } = await supabase
+          .from('messages')
+          .select(`
+            *,
+            profiles:profile_id (
+              role
+            )
+          `)
+          .is('receiver_id', null)
+          .eq('read', false)
+          .eq('profiles.role', 'tenant')
+          .order('created_at', { ascending: false });
+
+        if (tenantMessagesError) {
+          console.error('Error fetching tenant messages:', tenantMessagesError);
+        } else {
+          broadcastMessages = tenantMessages || [];
+        }
+      }
+
+      // Combine both message types
+      const allMessages = [...(directMessages || []), ...broadcastMessages];
+
       console.log('Messages query result:', {
-        total: messages?.length || 0,
-        messages,
+        total: allMessages.length,
+        directMessages: directMessages?.length || 0,
+        broadcastMessages: broadcastMessages.length,
+        messages: allMessages,
         userId,
       });
 
+      // Fetch maintenance requests
       const { data: maintenance, error: maintenanceError } = await supabase
         .from('maintenance_requests')
         .select('*')
@@ -110,6 +141,7 @@ export function useSidebarNotifications() {
         throw maintenanceError;
       }
 
+      // Fetch payments
       const { data: payments, error: paymentsError } = await supabase
         .from('payments')
         .select('*')
@@ -123,8 +155,8 @@ export function useSidebarNotifications() {
       const notifications: Notification[] = [
         {
           type: 'messages',
-          count: messages?.length || 0,
-          items: messages?.map(m => ({
+          count: allMessages.length,
+          items: allMessages.map(m => ({
             id: m.id,
             message: m.content,
             created_at: m.created_at,
