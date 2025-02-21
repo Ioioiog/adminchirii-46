@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Property } from "@/utils/propertyUtils";
 
 interface UtilityFiltersProps {
   searchTerm: string;
@@ -16,6 +17,9 @@ interface UtilityFiltersProps {
   onStatusChange: (value: string) => void;
   typeFilter: string;
   onTypeChange: (value: string) => void;
+  propertyFilter: string;
+  onPropertyChange: (value: string) => void;
+  properties: Property[];
 }
 
 export function UtilityFilters({
@@ -25,6 +29,9 @@ export function UtilityFilters({
   onStatusChange,
   typeFilter,
   onTypeChange,
+  propertyFilter,
+  onPropertyChange,
+  properties,
 }: UtilityFiltersProps) {
   return (
     <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -34,6 +41,19 @@ export function UtilityFilters({
         onChange={(e) => onSearchChange(e.target.value)}
         className="max-w-sm"
       />
+      <Select value={propertyFilter} onValueChange={onPropertyChange}>
+        <SelectTrigger className="w-[200px]">
+          <SelectValue placeholder="Filter by property" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Properties</SelectItem>
+          {properties.map((property) => (
+            <SelectItem key={property.id} value={property.id}>
+              {property.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <Select value={statusFilter} onValueChange={onStatusChange}>
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="Filter by status" />

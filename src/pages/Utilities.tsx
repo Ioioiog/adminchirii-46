@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
@@ -17,9 +16,27 @@ import { ProviderList } from "@/components/settings/utility-provider/ProviderLis
 import { ProviderForm } from "@/components/settings/utility-provider/ProviderForm";
 import { useToast } from "@/hooks/use-toast";
 import { UtilityFilters } from "@/components/utilities/UtilityFilters";
-import type { Utility } from "@/integrations/supabase/types/utility";
 
 type UtilitiesSection = 'bills' | 'readings' | 'providers';
+
+interface UtilityWithProperty {
+  id: string;
+  property_id: string;
+  type: string;
+  amount: number;
+  due_date: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  currency: string;
+  issued_date: string | null;
+  invoice_number: string | null;
+  utility_provider_id: string | null;
+  property?: {
+    name: string;
+    address: string;
+  };
+}
 
 const Utilities = () => {
   const [activeSection, setActiveSection] = useState<UtilitiesSection>('bills');
@@ -28,6 +45,7 @@ const Utilities = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [propertyFilter, setPropertyFilter] = useState("all");
 
   const { userRole } = useUserRole();
   const { toast } = useToast();
@@ -55,7 +73,7 @@ const Utilities = () => {
         throw error;
       }
       console.log('Fetched utilities:', data);
-      return data || [];
+      return data as UtilityWithProperty[];
     },
     enabled: !!userRole
   });
@@ -89,8 +107,7 @@ const Utilities = () => {
     }
   });
 
-  // Filter utilities based on search term and filters
-  const filteredUtilities = utilities.filter((utility: Utility) => {
+  const filteredUtilities = utilities.filter((utility) => {
     const matchesSearch = 
       searchTerm === "" || 
       utility.property?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -99,8 +116,9 @@ const Utilities = () => {
 
     const matchesStatus = statusFilter === "all" || utility.status === statusFilter;
     const matchesType = typeFilter === "all" || utility.type === typeFilter;
+    const matchesProperty = propertyFilter === "all" || utility.property_id === propertyFilter;
 
-    return matchesSearch && matchesStatus && matchesType;
+    return matchesSearch && matchesStatus && matchesType && matchesProperty;
   });
 
   const handleDeleteProvider = async (id: string) => {
@@ -198,6 +216,9 @@ const Utilities = () => {
               onStatusChange={setStatusFilter}
               typeFilter={typeFilter}
               onTypeChange={setTypeFilter}
+              propertyFilter={propertyFilter}
+              onPropertyChange={setPropertyFilter}
+              properties={properties || []}
             />
 
             <UtilityList 
