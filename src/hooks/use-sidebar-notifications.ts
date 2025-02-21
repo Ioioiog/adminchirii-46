@@ -11,24 +11,40 @@ export function useSidebarNotifications() {
   const { toast } = useToast();
 
   const fetchNotifications = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) {
+      console.log("No user ID available");
+      return;
+    }
 
     console.log("Fetching notifications for user:", userId);
 
     try {
-      // Fetch unread messages
+      // Fetch unread messages with more detailed query
       const { data: messages, error: messagesError } = await supabase
         .from('messages')
-        .select('id, content, created_at, read')
+        .select(`
+          id,
+          content,
+          created_at,
+          read,
+          receiver_id,
+          sender_id
+        `)
         .eq('receiver_id', userId)
-        .eq('read', false);
+        .eq('read', false)
+        .order('created_at', { ascending: false });
 
       if (messagesError) {
         console.error('Error fetching messages:', messagesError);
         throw messagesError;
       }
 
-      console.log('Unread messages:', messages);
+      console.log('Messages query result:', {
+        total: messages?.length || 0,
+        messages,
+        userId,
+        receiverFilter: `receiver_id=${userId}`
+      });
 
       // Fetch maintenance requests
       const { data: maintenance, error: maintenanceError } = await supabase
@@ -36,7 +52,10 @@ export function useSidebarNotifications() {
         .select('id, title, created_at')
         .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false);
 
-      if (maintenanceError) throw maintenanceError;
+      if (maintenanceError) {
+        console.error('Error fetching maintenance:', maintenanceError);
+        throw maintenanceError;
+      }
 
       // Fetch payments
       const { data: payments, error: paymentsError } = await supabase
@@ -44,7 +63,10 @@ export function useSidebarNotifications() {
         .select('id, amount, created_at')
         .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false);
 
-      if (paymentsError) throw paymentsError;
+      if (paymentsError) {
+        console.error('Error fetching payments:', paymentsError);
+        throw paymentsError;
+      }
 
       const notifications: Notification[] = [
         {
@@ -79,7 +101,12 @@ export function useSidebarNotifications() {
         }
       ];
 
-      console.log('Setting notifications:', notifications);
+      console.log('Setting notifications:', {
+        messages: notifications[0],
+        maintenance: notifications[1],
+        payments: notifications[2]
+      });
+      
       setData(notifications);
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -94,6 +121,7 @@ export function useSidebarNotifications() {
   useEffect(() => {
     fetchNotifications();
 
+    // Set up real-time subscription
     const channel = supabase.channel('db-changes')
       .on('postgres_changes', 
         { 
@@ -103,7 +131,12 @@ export function useSidebarNotifications() {
           filter: userId ? `receiver_id=eq.${userId}` : undefined
         },
         (payload) => {
-          console.log('Messages change detected:', payload);
+          console.log('Messages change detected:', {
+            event: payload.eventType,
+            data: payload.new,
+            userId,
+            receiverId: payload.new?.receiver_id
+          });
           fetchNotifications();
         }
       )
@@ -113,7 +146,10 @@ export function useSidebarNotifications() {
           schema: 'public', 
           table: 'maintenance_requests' 
         },
-        () => fetchNotifications()
+        (payload) => {
+          console.log('Maintenance change detected:', payload);
+          fetchNotifications();
+        }
       )
       .on('postgres_changes',
         { 
@@ -121,7 +157,10 @@ export function useSidebarNotifications() {
           schema: 'public', 
           table: 'payments'
         },
-        () => fetchNotifications()
+        (payload) => {
+          console.log('Payment change detected:', payload);
+          fetchNotifications();
+        }
       )
       .subscribe();
 
