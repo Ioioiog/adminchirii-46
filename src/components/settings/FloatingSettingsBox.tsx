@@ -96,16 +96,14 @@ export function FloatingSettingsBox() {
             )}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-80 bg-white p-4" sideOffset={5}>
+        <DropdownMenuContent align="end" className="w-80 bg-white p-4">
           <div className="flex justify-between items-center mb-2">
             <h3 className="font-semibold">Notifications</h3>
             <span className="text-sm text-gray-500">Last 5 notifications per type</span>
           </div>
           
-          {notifications?.map((notification) => {
-            if (!notification.items || notification.items.length === 0) return null;
-            
-            return (
+          {notifications?.map((notification) => (
+            notification.count > 0 && (
               <div key={notification.type} className="mb-4">
                 <div className="flex justify-between items-center mb-2">
                   <span className="capitalize font-medium">{notification.type}</span>
@@ -118,25 +116,23 @@ export function FloatingSettingsBox() {
                     Mark all as read
                   </Button>
                 </div>
-                <div className="space-y-2">
-                  {notification.items.map((item) => (
-                    <div 
-                      key={item.id}
-                      className="p-2 hover:bg-gray-50 rounded-md transition-colors"
-                    >
-                      <p className="text-sm">{item.message}</p>
-                      <p className="text-xs text-gray-500">
-                        {format(new Date(item.created_at), 'MMM d, yyyy HH:mm')}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                {notification.items?.map((item) => (
+                  <DropdownMenuItem 
+                    key={item.id}
+                    className="flex flex-col items-start gap-1 cursor-pointer py-2"
+                  >
+                    <span className="text-sm">{item.message}</span>
+                    <span className="text-xs text-gray-500">
+                      {format(new Date(item.created_at), 'MMM d, yyyy HH:mm')}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
               </div>
-            );
-          })}
+            )
+          ))}
           
-          {(!notifications || notifications.every(n => !n.items || n.items.length === 0)) && (
-            <p className="text-sm text-gray-500 text-center py-4">No new notifications</p>
+          {(!notifications || notifications.every(n => n.count === 0)) && (
+            <p className="text-sm text-gray-500">No new notifications</p>
           )}
         </DropdownMenuContent>
       </DropdownMenu>

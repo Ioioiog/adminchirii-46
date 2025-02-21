@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -65,7 +64,6 @@ async function fetchLandlordMetrics(userId: string): Promise<Metrics> {
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
   const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
-  // First get properties with tenancies
   const { data: properties, error } = await supabase
     .from("properties")
     .select(`
@@ -98,68 +96,52 @@ async function fetchLandlordMetrics(userId: string): Promise<Metrics> {
     };
   }
 
-  console.log("Found properties:", properties);
-
   const revenueDetails: Array<{ property_name: string; amount: number; due_date: string; status: string }> = [];
   let totalMonthlyRevenue = 0;
   let activeTenanciesCount = 0;
 
-  // Process each property
   for (const property of properties) {
-    // Check for active tenancy
     const hasActiveTenancy = property.tenancies?.some(tenancy => 
       tenancy.status === 'active' && 
-      new Date(tenancy.start_date) <= currentDate &&
-      (!tenancy.end_date || new Date(tenancy.end_date) > currentDate)
+      tenancy.start_date <= currentDate.toISOString() &&
+      (!tenancy.end_date || tenancy.end_date > currentDate.toISOString())
     );
     
     if (hasActiveTenancy) {
       totalMonthlyRevenue += Number(property.monthly_rent);
       activeTenanciesCount++;
 
-      // Get payment status for this month
-      const activeTenancy = property.tenancies.find(t => t.status === 'active');
-      if (activeTenancy) {
-        const { data: payment } = await supabase
-          .from("payments")
-          .select("status")
-          .eq("tenancy_id", activeTenancy.id)
-          .gte("due_date", firstDayOfMonth.toISOString())
-          .lte("due_date", lastDayOfMonth.toISOString())
-          .maybeSingle();
+      const { data: payments } = await supabase
+        .from("payments")
+        .select("status")
+        .eq("tenancy_id", property.tenancies[0].id)
+        .gte("due_date", firstDayOfMonth.toISOString())
+        .lte("due_date", lastDayOfMonth.toISOString())
+        .maybeSingle();
 
-        console.log(`Payment status for property ${property.name}:`, payment);
-
-        revenueDetails.push({
-          property_name: property.name,
-          amount: Number(property.monthly_rent),
-          due_date: firstDayOfMonth.toISOString(),
-          status: payment?.status || "pending"
-        });
-      }
+      revenueDetails.push({
+        property_name: property.name,
+        amount: Number(property.monthly_rent),
+        due_date: firstDayOfMonth.toISOString(),
+        status: payments?.status || "pending"
+      });
     }
   }
 
-  console.log("Calculated metrics:", {
-    totalProperties: properties.length,
-    monthlyRevenue: totalMonthlyRevenue,
-    activeTenants: activeTenanciesCount,
-    revenueDetails: revenueDetails
-  });
-
-  // Get pending maintenance count
   const propertyIds = properties.map(p => p.id);
-  const { count: maintenanceCount } = await supabase
-    .from("maintenance_requests")
-    .select("id", { count: "exact" })
-    .eq("status", "pending")
-    .in("property_id", propertyIds);
+  const [maintenanceCount] = await Promise.all([
+    supabase
+      .from("maintenance_requests")
+      .select("id", { count: "exact" })
+      .eq("status", "pending")
+      .in("property_id", propertyIds),
+  ]);
 
   return {
     totalProperties: properties.length,
     monthlyRevenue: totalMonthlyRevenue,
     activeTenants: activeTenanciesCount,
-    pendingMaintenance: maintenanceCount || 0,
+    pendingMaintenance: maintenanceCount.count || 0,
     revenueDetails: revenueDetails
   };
 }
