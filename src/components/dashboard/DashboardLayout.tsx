@@ -1,4 +1,3 @@
-
 import { ReactNode } from "react";
 import { DashboardSidebar } from "./DashboardSidebar";
 
@@ -8,12 +7,10 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
-    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-blue-900">
+    <div className="flex h-screen overflow-hidden">
       <DashboardSidebar />
-      <main className="flex-1 overflow-y-auto">
-        <div className="animate-fade-in">
-          {children}
-        </div>
+      <main className="flex-1 overflow-y-auto bg-background">
+        {children}
       </main>
     </div>
   );
