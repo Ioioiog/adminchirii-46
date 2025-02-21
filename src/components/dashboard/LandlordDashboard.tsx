@@ -1,10 +1,5 @@
 
-import { DashboardHeader } from "./sections/DashboardHeader";
-import { DashboardMetrics } from "./DashboardMetrics";
-import { RevenueSection } from "./sections/RevenueSection";
-import { UpcomingIncomeSection } from "./sections/UpcomingIncomeSection";
-import { CalendarSection } from "./sections/CalendarSection";
-import { useTranslation } from "react-i18next";
+import { Card } from "@/components/ui/card";
 
 interface LandlordDashboardProps {
   userId: string;
@@ -12,40 +7,36 @@ interface LandlordDashboardProps {
 }
 
 export function LandlordDashboard({ userId, userName }: LandlordDashboardProps) {
-  const { t } = useTranslation('dashboard');
-  
   return (
-    <div className="h-screen overflow-y-auto p-6 space-y-4 max-w-7xl mx-auto bg-gradient-to-br from-white via-blue-50/10 to-indigo-50/10">
-      {/* Header Section */}
-      <section className="bg-white rounded-xl shadow-sm p-4 transition-all duration-200 hover:shadow-md animate-fade-in">
-        <DashboardHeader userName={userName} />
-      </section>
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <h1 className="page-title">Welcome back, {userName}</h1>
+        <p className="page-description">
+          Manage your properties and tenants from your personalized dashboard.
+        </p>
+      </div>
 
-      {/* Metrics Section */}
-      <section className="bg-white rounded-xl shadow-sm p-6 animate-fade-in" style={{ animationDelay: '0.1s' }}>
-        <DashboardMetrics userId={userId} userRole="landlord" />
-      </section>
+      <div className="card-grid">
+        <Card className="glass-card p-6">
+          <h3 className="text-xl font-semibold mb-2 gradient-text">Properties</h3>
+          <p className="text-gray-300">View and manage your property portfolio</p>
+        </Card>
 
-      {/* Calendar Section */}
-      <section className="animate-fade-in" style={{ animationDelay: '0.2s' }}>
-        <CalendarSection />
-      </section>
+        <Card className="glass-card p-6">
+          <h3 className="text-xl font-semibold mb-2 gradient-text">Tenants</h3>
+          <p className="text-gray-300">Monitor tenant activities and contracts</p>
+        </Card>
 
-      {/* Revenue Section */}
-      <section className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 transition-all duration-200 hover:shadow-xl animate-fade-in" style={{ animationDelay: '0.3s' }}>
-        <div className="space-y-6">
-          <div className="border-b border-gray-100 pb-5">
-            <div className="mt-4 flex flex-wrap gap-3">
-              <RevenueSection userId={userId} />
-            </div>
-          </div>
-        </div>
-      </section>
+        <Card className="glass-card p-6">
+          <h3 className="text-xl font-semibold mb-2 gradient-text">Payments</h3>
+          <p className="text-gray-300">Track rent payments and financial records</p>
+        </Card>
 
-      {/* Upcoming Income Section */}
-      <section className="bg-white rounded-xl shadow-sm p-6 animate-fade-in" style={{ animationDelay: '0.4s' }}>
-        <UpcomingIncomeSection userId={userId} />
-      </section>
+        <Card className="glass-card p-6">
+          <h3 className="text-xl font-semibold mb-2 gradient-text">Maintenance</h3>
+          <p className="text-gray-300">Handle maintenance requests and repairs</p>
+        </Card>
+      </div>
     </div>
   );
 }
