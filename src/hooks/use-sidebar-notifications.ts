@@ -27,18 +27,27 @@ export function useSidebarNotifications() {
       console.log("Fetching notifications for user:", userId);
 
       try {
-        // Fetch last 5 unread messages - check sender_id instead of profile_id
+        // Fetch unread messages where user is receiver
         const { data: messages, error: messagesError } = await supabase
           .from('messages')
-          .select('id, content, created_at, read, sender_id')
+          .select(`
+            id,
+            content,
+            created_at,
+            read,
+            sender_id,
+            receiver_id,
+            conversation_id
+          `)
           .eq('receiver_id', userId)
           .eq('read', false)
-          .order('created_at', { ascending: false })
-          .limit(5);
+          .order('created_at', { ascending: false });
 
         if (messagesError) {
           console.error('Error fetching messages:', messagesError);
         }
+
+        console.log('Raw messages from query:', messages);
 
         // Fetch last 5 maintenance requests
         const { data: maintenance, error: maintenanceError } = await supabase
@@ -68,11 +77,17 @@ export function useSidebarNotifications() {
         console.log('Fetched maintenance:', maintenance);
         console.log('Fetched payments:', payments);
 
+        const filteredMessages = messages?.filter(m => 
+          m.receiver_id === userId && !m.read
+        ) || [];
+
+        console.log('Filtered messages:', filteredMessages);
+
         const newNotifications = [
           { 
             type: 'messages', 
-            count: messages?.length || 0,
-            items: messages?.map(m => ({
+            count: filteredMessages.length,
+            items: filteredMessages.map(m => ({
               id: m.id,
               message: m.content,
               created_at: m.created_at,
@@ -113,17 +128,17 @@ export function useSidebarNotifications() {
     // Initial fetch
     fetchNotifications();
 
-    // Set up real-time subscriptions
+    // Set up real-time subscriptions for messages
     const messagesChannel = supabase.channel('messages_changes')
       .on('postgres_changes', 
         { 
-          event: '*', 
+          event: 'INSERT', 
           schema: 'public', 
           table: 'messages',
           filter: `receiver_id=eq.${userId}`
         },
         (payload) => {
-          console.log('Message change detected:', payload);
+          console.log('New message detected:', payload);
           fetchNotifications();
         }
       )
