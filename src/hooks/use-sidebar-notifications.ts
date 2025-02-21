@@ -18,20 +18,29 @@ type Message = {
 
 // Type guard to check if a value is a Message
 function isMessage(value: unknown): value is Message {
-  const isValid = value !== null && 
-    typeof value === 'object' && 
-    value !== undefined &&
-    'id' in value &&
-    'receiver_id' in value &&
-    typeof (value as any).id === 'string' &&
-    typeof (value as any).receiver_id === 'string';
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const msg = value as any;
+  
+  // Handle UUID objects from Supabase by converting them to strings
+  const receiverId = typeof msg.receiver_id === 'object' && msg.receiver_id !== null 
+    ? msg.receiver_id.toString()
+    : msg.receiver_id;
+
+  const isValid = 
+    typeof msg.id === 'string' &&
+    typeof receiverId === 'string';
 
   console.log('Message validation:', {
     value,
     isValid,
-    hasId: value && typeof value === 'object' && 'id' in value,
-    hasReceiverId: value && typeof value === 'object' && 'receiver_id' in value,
-    receiverIdType: value && typeof value === 'object' && 'receiver_id' in value ? typeof (value as any).receiver_id : 'undefined'
+    hasId: 'id' in msg,
+    hasReceiverId: 'receiver_id' in msg,
+    receiverIdRaw: msg.receiver_id,
+    receiverIdProcessed: receiverId,
+    receiverIdType: typeof receiverId
   });
 
   return isValid;
@@ -164,19 +173,27 @@ export function useSidebarNotifications() {
             userId
           });
 
+          // Convert receiver_id to string if it's an object
+          const receiverId = typeof newMessage?.receiver_id === 'object' && newMessage?.receiver_id !== null
+            ? newMessage.receiver_id.toString()
+            : newMessage?.receiver_id;
+
           // First validate the message
           if (!isMessage(newMessage)) {
-            console.log('Message validation failed:', newMessage);
+            console.log('Message validation failed:', {
+              message: newMessage,
+              processedReceiverId: receiverId
+            });
             return;
           }
 
           // Now TypeScript knows newMessage is of type Message
-          if (newMessage.receiver_id === userId) {
+          if (receiverId === userId) {
             console.log('Message matches current user, fetching notifications');
             fetchNotifications();
           } else {
             console.log('Message not for current user:', {
-              messageReceiverId: newMessage.receiver_id,
+              messageReceiverId: receiverId,
               currentUserId: userId
             });
           }
