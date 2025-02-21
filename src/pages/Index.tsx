@@ -148,7 +148,7 @@ const Index = () => {
         return <ServiceProviderDashboard userId={userId} userName={userName} />;
       case "tenant":
         return tenantInfo ? (
-          <TenantDashboard tenantInfo={tenantInfo} />
+          <TenantDashboard userId={userId} userName={userName} tenantInfo={tenantInfo} />
         ) : (
           <div className="p-4">Loading tenant information...</div>
         );
