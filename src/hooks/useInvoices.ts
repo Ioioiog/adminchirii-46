@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,7 +24,7 @@ export const useInvoices = () => {
         throw new Error("No user found");
       }
 
-      const query = supabase
+      const { data: invoicesData, error: invoicesError } = await supabase
         .from("invoices")
         .select(`
           *,
@@ -39,12 +40,10 @@ export const useInvoices = () => {
         `)
         .order("due_date", { ascending: false });
 
-      const { data: invoicesData, error: invoicesError } = await query;
-
       if (invoicesError) throw invoicesError;
 
       console.log("Fetched invoices:", invoicesData);
-      setInvoices(invoicesData);
+      setInvoices(invoicesData as Invoice[]);
       setIsLoading(false);
     } catch (error) {
       console.error("Error fetching invoices:", error);

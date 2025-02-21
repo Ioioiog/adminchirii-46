@@ -21,9 +21,13 @@ const Payments = () => {
     setSearchQuery,
   } = usePayments();
 
-  if (!userRole || !userId) {
+  // Early return if user is not authenticated or is a service provider
+  if (!userRole || !userId || userRole === 'service_provider') {
     return null;
   }
+
+  // Cast userRole to "landlord" | "tenant" since we've already filtered out service_provider
+  const filteredUserRole = userRole as "landlord" | "tenant";
 
   return (
     <PageLayout>
@@ -47,7 +51,7 @@ const Payments = () => {
         <PaymentList
           payments={payments}
           isLoading={isLoading}
-          userRole={userRole}
+          userRole={filteredUserRole}
           userId={userId}
           propertyFilter=""
           statusFilter={statusFilter}
