@@ -27,31 +27,45 @@ export function TenantRow({
   const { data: hasUnreadMessages } = useQuery({
     queryKey: ['unreadMessages', tenant.id],
     queryFn: async () => {
-      // Query for unread messages from this specific tenant
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('sender_id', tenant.id)  // Messages from this specific tenant
-        .eq('read', false)           // That are unread
-        .is('receiver_id', null);    // And are broadcast messages
+      // First, check if the user has a conversation
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('tenant_id', tenant.id)
+        .single();
 
-      if (error) {
-        console.error('Error checking unread messages for tenant:', tenant.id, error);
+      if (convError && convError.code !== 'PGRST116') {
+        console.error('Error checking conversation:', convError);
         return false;
       }
 
-      // Add more detailed logging
+      if (!conversation) {
+        return false;
+      }
+
+      // Then check for unread messages in that conversation
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversation.id)
+        .eq('read', false)
+        .eq('profile_id', tenant.id);
+
+      if (error) {
+        console.error('Error checking unread messages:', error);
+        return false;
+      }
+
       console.log(`Unread messages check for tenant ${tenant.id}:`, {
         tenantId: tenant.id,
-        messages: data,
-        count: data?.length || 0,
-        tenant: tenant
+        conversationId: conversation.id,
+        messages: messages,
+        count: messages?.length || 0
       });
       
-      return data && data.length > 0;
+      return messages && messages.length > 0;
     },
     enabled: isLandlord,
-    // Refresh every 10 seconds to check for new messages
     refetchInterval: 10000,
   });
 
