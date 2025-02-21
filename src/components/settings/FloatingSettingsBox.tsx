@@ -13,6 +13,7 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useSidebarNotifications } from "@/hooks/use-sidebar-notifications";
+import { NotificationType } from "@/types/notifications";
 import { format } from "date-fns";
 
 export function FloatingSettingsBox() {
@@ -60,7 +61,7 @@ export function FloatingSettingsBox() {
     }
   };
 
-  const handleNotificationClick = async (type: string) => {
+  const handleNotificationClick = async (type: NotificationType) => {
     try {
       await markAsRead(type);
       toast({
