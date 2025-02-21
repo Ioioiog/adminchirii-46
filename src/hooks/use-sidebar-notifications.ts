@@ -204,9 +204,8 @@ export function useSidebarNotifications() {
           if (status === 'SUBSCRIBED') {
             // Reset reconnect attempts on successful connection
             reconnectAttempts.current = 0;
-          }
-          
-          if (status === 'CLOSED' && mounted) {
+          } else if (status === 'CLOSED' && mounted) {
+            // Increment reconnect attempts only if we're not already in the process
             reconnectAttempts.current += 1;
             const backoffTime = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
 
@@ -217,15 +216,12 @@ export function useSidebarNotifications() {
               clearTimeout(reconnectTimeout);
             }
 
-            // Clean up the current channel before attempting to reconnect
-            if (channelRef.current) {
-              channelRef.current.unsubscribe();
-              channelRef.current = null;
-            }
+            // Clean up channel reference before attempting to reconnect
+            channelRef.current = null;
 
             // Set up new reconnection attempt with exponential backoff
             reconnectTimeout = setTimeout(() => {
-              if (mounted) {
+              if (mounted && !channelRef.current) {
                 setupRealtimeSubscription();
               }
             }, backoffTime);
