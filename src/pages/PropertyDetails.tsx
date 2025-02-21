@@ -2,9 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Home, User, DollarSign, MapPin, Calendar, Edit2, Save, X, CreditCard, Receipt, Calculator } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
@@ -14,6 +13,7 @@ import { format } from "date-fns";
 import { PropertyStatus } from "@/utils/propertyUtils";
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
+import { InvoiceSettings } from "@/types/invoice";
 
 const PropertyDetails = () => {
   const { id } = useParams();
@@ -22,10 +22,10 @@ const PropertyDetails = () => {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState<any>(null);
-  const [invoiceSettings, setInvoiceSettings] = useState({
-    applyVat: false,
-    autoGenerate: true,
-    generateDay: 1
+  const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>({
+    apply_vat: false,
+    auto_generate: true,
+    generate_day: 1
   });
 
   useEffect(() => {
@@ -41,11 +41,13 @@ const PropertyDetails = () => {
           .single();
 
         if (error) throw error;
-        if (data?.invoice_info) {
+        
+        if (data?.invoice_info && typeof data.invoice_info === 'object') {
+          const info = data.invoice_info as Record<string, any>;
           setInvoiceSettings({
-            applyVat: data.invoice_info.apply_vat || false,
-            autoGenerate: data.invoice_info.auto_generate || true,
-            generateDay: data.invoice_info.generate_day || 1
+            apply_vat: info.apply_vat || false,
+            auto_generate: info.auto_generate || true,
+            generate_day: info.generate_day || 1
           });
         }
       } catch (error) {
@@ -504,13 +506,13 @@ const PropertyDetails = () => {
                     <div className="flex items-center justify-between">
                       <h3 className="font-medium">Apply VAT (19%)</h3>
                       <Switch
-                        checked={invoiceSettings.applyVat}
+                        checked={invoiceSettings.apply_vat}
                         onCheckedChange={(checked) => 
-                          setInvoiceSettings(prev => ({ ...prev, applyVat: checked }))}
+                          setInvoiceSettings(prev => ({ ...prev, apply_vat: checked }))}
                       />
                     </div>
                     <p className="text-sm text-gray-500 mt-1">
-                      {invoiceSettings.applyVat ? "VAT will be added" : "No VAT applied"}
+                      {invoiceSettings.apply_vat ? "VAT will be added" : "No VAT applied"}
                     </p>
                   </div>
                 </div>
@@ -525,13 +527,13 @@ const PropertyDetails = () => {
                     <div className="flex items-center justify-between">
                       <h3 className="font-medium">Auto-Generate</h3>
                       <Switch
-                        checked={invoiceSettings.autoGenerate}
+                        checked={invoiceSettings.auto_generate}
                         onCheckedChange={(checked) => 
-                          setInvoiceSettings(prev => ({ ...prev, autoGenerate: checked }))}
+                          setInvoiceSettings(prev => ({ ...prev, auto_generate: checked }))}
                       />
                     </div>
                     <p className="text-sm text-gray-500 mt-1">
-                      {invoiceSettings.autoGenerate ? "Invoices generate automatically" : "Manual generation"}
+                      {invoiceSettings.auto_generate ? "Invoices generate automatically" : "Manual generation"}
                     </p>
                   </div>
                 </div>
@@ -540,8 +542,8 @@ const PropertyDetails = () => {
 
             <div className="mt-6 text-sm text-gray-500">
               <p>
-                Invoices are generated on day {invoiceSettings.generateDay} of each month.
-                VAT is {invoiceSettings.applyVat ? "applied at 19%" : "not applied"} to the rent amount.
+                Invoices are generated on day {invoiceSettings.generate_day} of each month.
+                VAT is {invoiceSettings.apply_vat ? "applied at 19%" : "not applied"} to the rent amount.
               </p>
             </div>
           </div>
