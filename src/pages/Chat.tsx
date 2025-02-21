@@ -85,15 +85,15 @@ const Chat = () => {
         </div>;
     }
     if (!conversationId) {
-      return <div className="relative flex-1 flex items-center justify-center p-8 text-center bg-gradient-to-br from-gray-800/5 to-gray-900/5">
+      return <div className="relative flex-1 flex items-center justify-center p-8 text-center bg-gradient-to-br from-blue-500/5 to-blue-600/5">
           <ChatBackground />
           <div className="relative z-10 max-w-md glass-card p-8 rounded-xl backdrop-blur-sm bg-white/80">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <MessageList messages={[]} currentUserId={currentUserId} messagesEndRef={messagesEndRef} className="w-8 h-8 text-gray-500" />
+            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-2xl" role="img" aria-label="chat">💬</span>
             </div>
             <h3 className="text-lg font-semibold mb-2 text-gray-800">Select a Conversation</h3>
             <p className="text-gray-600">
-              Choose a tenant from the list to start chatting.
+              Choose a tenant from the list to start chatting ✨
             </p>
           </div>
         </div>;
