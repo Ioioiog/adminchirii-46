@@ -2299,10 +2299,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      enable_realtime_for_messages: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
       generate_monthly_invoices: {
         Args: Record<PropertyKey, never>
         Returns: undefined

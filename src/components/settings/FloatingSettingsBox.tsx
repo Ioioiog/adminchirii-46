@@ -13,8 +13,6 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useSidebarNotifications } from "@/hooks/use-sidebar-notifications";
-import { NotificationType } from "@/types/notifications";
-import { format } from "date-fns";
 
 export function FloatingSettingsBox() {
   const [isOpen, setIsOpen] = useState(false);
@@ -61,7 +59,7 @@ export function FloatingSettingsBox() {
     }
   };
 
-  const handleNotificationClick = async (type: NotificationType) => {
+  const handleNotificationClick = async (type: string) => {
     try {
       await markAsRead(type);
       toast({
@@ -97,41 +95,22 @@ export function FloatingSettingsBox() {
             )}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-80 bg-white p-4">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="font-semibold">Notifications</h3>
-            <span className="text-sm text-gray-500">Last 5 notifications per type</span>
-          </div>
-          
+        <DropdownMenuContent align="end" className="w-64 bg-white p-4">
+          <h3 className="font-semibold mb-2">Notifications</h3>
           {notifications?.map((notification) => (
             notification.count > 0 && (
-              <div key={notification.type} className="mb-4">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="capitalize font-medium">{notification.type}</span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => handleNotificationClick(notification.type)}
-                    className="text-xs hover:text-blue-600"
-                  >
-                    Mark all as read
-                  </Button>
-                </div>
-                {notification.items?.map((item) => (
-                  <DropdownMenuItem 
-                    key={item.id}
-                    className="flex flex-col items-start gap-1 cursor-pointer py-2"
-                  >
-                    <span className="text-sm">{item.message}</span>
-                    <span className="text-xs text-gray-500">
-                      {format(new Date(item.created_at), 'MMM d, yyyy HH:mm')}
-                    </span>
-                  </DropdownMenuItem>
-                ))}
-              </div>
+              <DropdownMenuItem 
+                key={notification.type} 
+                className="flex justify-between items-center cursor-pointer"
+                onClick={() => handleNotificationClick(notification.type)}
+              >
+                <span className="capitalize">{notification.type}</span>
+                <span className="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs">
+                  {notification.count}
+                </span>
+              </DropdownMenuItem>
             )
           ))}
-          
           {(!notifications || notifications.every(n => n.count === 0)) && (
             <p className="text-sm text-gray-500">No new notifications</p>
           )}

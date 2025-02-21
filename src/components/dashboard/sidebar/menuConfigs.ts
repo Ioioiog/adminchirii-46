@@ -1,3 +1,4 @@
+
 import {
   LayoutDashboard,
   Home,
@@ -13,7 +14,6 @@ import {
   Building2,
   Wallet,
 } from "lucide-react";
-import { NotificationType } from "@/types/notifications";
 
 export const serviceProviderMenuItems = [
   {
@@ -21,7 +21,7 @@ export const serviceProviderMenuItems = [
     icon: LayoutDashboard,
     href: "/dashboard",
     roles: ["service_provider"],
-    notificationType: "maintenance" as NotificationType
+    notificationType: "maintenance"
   },
   {
     title: "Profile",
@@ -34,14 +34,14 @@ export const serviceProviderMenuItems = [
     icon: Clipboard,
     href: "/maintenance",
     roles: ["service_provider"],
-    notificationType: "maintenance" as NotificationType
+    notificationType: "maintenance"
   },
   {
     title: "Earnings",
     icon: Wallet,
     href: "/earnings",
     roles: ["service_provider"],
-    notificationType: "payments" as NotificationType
+    notificationType: "payments"
   },
   {
     title: "Settings",
@@ -75,7 +75,7 @@ export const standardMenuItems = [
     icon: Wrench,
     href: "/maintenance",
     roles: ["landlord", "tenant"],
-    notificationType: "maintenance" as NotificationType
+    notificationType: "maintenance"
   },
   {
     title: "Documents",
@@ -88,7 +88,7 @@ export const standardMenuItems = [
     icon: Wallet,
     href: "/financial",
     roles: ["landlord", "tenant"],
-    notificationType: "payments" as NotificationType
+    notificationType: "payments"
   },
   {
     title: "Utilities",
@@ -101,7 +101,7 @@ export const standardMenuItems = [
     icon: MessageCircle,
     href: "/chat",
     roles: ["landlord", "tenant"],
-    notificationType: "messages" as NotificationType
+    notificationType: "messages"
   },
   {
     title: "Settings",
