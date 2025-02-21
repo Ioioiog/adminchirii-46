@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -15,23 +16,22 @@ export type Notification = {
 
 export function useSidebarNotifications() {
   const [data, setData] = useState<Notification[]>([]);
-  const { userRole } = useUserRole();
+  const { userRole, userId } = useUserRole();
 
   useEffect(() => {
     let mounted = true;
 
     const fetchNotifications = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!userId) return;
 
-      console.log("Fetching notifications for user:", user.id);
+      console.log("Fetching notifications for user:", userId);
 
       try {
         // Fetch last 5 unread messages
         const { data: messages, error: messagesError } = await supabase
           .from('messages')
           .select('id, content, created_at, read')
-          .eq('receiver_id', user.id)
+          .or(`receiver_id.eq.${userId},profile_id.eq.${userId}`)
           .eq('read', false)
           .order('created_at', { ascending: false })
           .limit(5);
@@ -63,6 +63,10 @@ export function useSidebarNotifications() {
         if (paymentsError) {
           console.error('Error fetching payments:', paymentsError);
         }
+
+        console.log('Fetched messages:', messages);
+        console.log('Fetched maintenance:', maintenance);
+        console.log('Fetched payments:', payments);
 
         const newNotifications = [
           { 
@@ -113,21 +117,30 @@ export function useSidebarNotifications() {
     const messagesChannel = supabase.channel('messages_changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'messages' },
-        () => fetchNotifications()
+        (payload) => {
+          console.log('Message change detected:', payload);
+          fetchNotifications();
+        }
       )
       .subscribe();
 
     const maintenanceChannel = supabase.channel('maintenance_changes')
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'maintenance_requests' },
-        () => fetchNotifications()
+        (payload) => {
+          console.log('Maintenance change detected:', payload);
+          fetchNotifications();
+        }
       )
       .subscribe();
 
     const paymentsChannel = supabase.channel('payments_changes')
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'payments' },
-        () => fetchNotifications()
+        (payload) => {
+          console.log('Payment change detected:', payload);
+          fetchNotifications();
+        }
       )
       .subscribe();
 
@@ -137,20 +150,19 @@ export function useSidebarNotifications() {
       supabase.removeChannel(maintenanceChannel);
       supabase.removeChannel(paymentsChannel);
     };
-  }, [userRole]);
+  }, [userRole, userId]);
 
   const markAsRead = async (type: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!userId) return;
 
-    console.log(`Marking ${type} as read for user:`, user.id);
+    console.log(`Marking ${type} as read for user:`, userId);
 
     try {
       if (type === 'messages') {
         const { error } = await supabase
           .from('messages')
           .update({ read: true })
-          .eq('receiver_id', user.id)
+          .or(`receiver_id.eq.${userId},profile_id.eq.${userId}`)
           .eq('read', false);
 
         if (error) throw error;
