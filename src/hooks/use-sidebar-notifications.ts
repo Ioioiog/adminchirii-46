@@ -4,6 +4,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/use-user-role';
 import { Notification, NotificationType } from '@/types/notifications';
 import { useToast } from '@/hooks/use-toast';
+import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+
+// Define the message type
+type Message = {
+  id: string;
+  content: string;
+  created_at: string;
+  read: boolean;
+  receiver_id: string;
+  sender_id: string;
+};
 
 export function useSidebarNotifications() {
   const [data, setData] = useState<Notification[]>([]);
@@ -130,7 +141,7 @@ export function useSidebarNotifications() {
           table: 'messages',
           filter: userId ? `receiver_id=eq.${userId}` : undefined
         },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<Message>) => {
           console.log('Messages change detected:', {
             event: payload.eventType,
             data: payload.new,
