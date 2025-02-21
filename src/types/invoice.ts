@@ -3,6 +3,11 @@ export interface InvoiceSettings {
   apply_vat: boolean;
   auto_generate: boolean;
   generate_day: number;
+  company_name?: string;
+  company_address?: string;
+  bank_name?: string;
+  bank_account_number?: string;
+  additional_notes?: string;
 }
 
 export interface ProfileInvoiceInfo {

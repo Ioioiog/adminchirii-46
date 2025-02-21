@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Home, User, DollarSign, MapPin, Calendar, Edit2, Save, X, CreditCard, Receipt, Calculator } from "lucide-react";
+import { ArrowLeft, Home, User, DollarSign, MapPin, Calendar, Edit2, Save, X, CreditCard, Receipt, Calculator, Building, Bank } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,12 @@ const PropertyDetails = () => {
   const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>({
     apply_vat: false,
     auto_generate: true,
-    generate_day: 1
+    generate_day: 1,
+    company_name: '',
+    company_address: '',
+    bank_name: '',
+    bank_account_number: '',
+    additional_notes: ''
   });
 
   useEffect(() => {
@@ -47,7 +52,12 @@ const PropertyDetails = () => {
           setInvoiceSettings({
             apply_vat: info.apply_vat || false,
             auto_generate: info.auto_generate || true,
-            generate_day: info.generate_day || 1
+            generate_day: info.generate_day || 1,
+            company_name: info.company_name || '',
+            company_address: info.company_address || '',
+            bank_name: info.bank_name || '',
+            bank_account_number: info.bank_account_number || '',
+            additional_notes: info.additional_notes || ''
           });
         }
       } catch (error) {
@@ -410,29 +420,6 @@ const PropertyDetails = () => {
 
               <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-xl border border-gray-100">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-purple-100 rounded-xl">
-                    <Calendar className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-600">Available From</p>
-                    {isEditing ? (
-                      <Input
-                        type="date"
-                        value={editedData.available_from}
-                        onChange={(e) => setEditedData({ ...editedData, available_from: e.target.value })}
-                        className="mt-1 bg-white border-gray-200 focus:ring-2 focus:ring-blue-500/20"
-                      />
-                    ) : (
-                      <p className="text-base text-gray-900 mt-1">
-                        {property.available_from ? format(new Date(property.available_from), 'PPP') : 'Not specified'}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-xl border border-gray-100">
-                <div className="flex items-center gap-4">
                   <div className="p-3 bg-orange-100 rounded-xl">
                     <User className="h-6 w-6 text-orange-600" />
                   </div>
@@ -594,6 +581,92 @@ const PropertyDetails = () => {
                 </div>
               </div>
             )}
+
+            <div className="mt-8 border-t pt-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Company Information for Invoices</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="company_name" className="block text-sm font-medium text-gray-700 mb-1">
+                      Company Name
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Building className="h-4 w-4 text-gray-400" />
+                      <Input
+                        id="company_name"
+                        value={invoiceSettings.company_name || ''}
+                        onChange={(e) => handleInvoiceSettingChange({ company_name: e.target.value })}
+                        placeholder="Enter company name"
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="company_address" className="block text-sm font-medium text-gray-700 mb-1">
+                      Company Address
+                    </label>
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-4 w-4 text-gray-400 mt-2" />
+                      <Textarea
+                        id="company_address"
+                        value={invoiceSettings.company_address || ''}
+                        onChange={(e) => handleInvoiceSettingChange({ company_address: e.target.value })}
+                        placeholder="Enter company address"
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="bank_name" className="block text-sm font-medium text-gray-700 mb-1">
+                      Bank Name
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Bank className="h-4 w-4 text-gray-400" />
+                      <Input
+                        id="bank_name"
+                        value={invoiceSettings.bank_name || ''}
+                        onChange={(e) => handleInvoiceSettingChange({ bank_name: e.target.value })}
+                        placeholder="Enter bank name"
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="bank_account_number" className="block text-sm font-medium text-gray-700 mb-1">
+                      Bank Account Number
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4 text-gray-400" />
+                      <Input
+                        id="bank_account_number"
+                        value={invoiceSettings.bank_account_number || ''}
+                        onChange={(e) => handleInvoiceSettingChange({ bank_account_number: e.target.value })}
+                        placeholder="Enter bank account number"
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="additional_notes" className="block text-sm font-medium text-gray-700 mb-1">
+                      Additional Notes
+                    </label>
+                    <Textarea
+                      id="additional_notes"
+                      value={invoiceSettings.additional_notes || ''}
+                      onChange={(e) => handleInvoiceSettingChange({ additional_notes: e.target.value })}
+                      placeholder="Enter any additional information to appear on invoices"
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <div className="mt-6 text-sm text-gray-500">
               <p>
