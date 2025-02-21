@@ -1,26 +1,170 @@
 
-import { BookOpen, HelpCircle, Building2, Users, Key, MessageSquare } from "lucide-react";
 import { useAuthState } from "@/hooks/useAuthState";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import * as THREE from "three";
+import { Building2, Network, Key, Shield, ArrowRight } from "lucide-react";
 
 export default function InfoPage() {
   const { isLoading, isAuthenticated } = useAuthState();
   const navigate = useNavigate();
+  const containerRef = useRef<HTMLDivElement>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
+    if (!containerRef.current) return;
+
+    // Scene setup
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    containerRef.current.appendChild(renderer.domElement);
+
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0x404040, 2);
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0x4f46e5, 2);
+    directionalLight.position.set(1, 1, 1);
+    scene.add(directionalLight);
+
+    // Create platform base
+    const platformGeometry = new THREE.CylinderGeometry(5, 5, 0.2, 32, 1, false);
+    const platformMaterial = new THREE.MeshPhongMaterial({
+      color: 0x3b82f6,
+      transparent: true,
+      opacity: 0.3,
+      shininess: 100,
+    });
+    const platform = new THREE.Mesh(platformGeometry, platformMaterial);
+    scene.add(platform);
+
+    // Create connection lines
+    const connectionMaterial = new THREE.LineBasicMaterial({ 
+      color: 0x60a5fa,
+      transparent: true,
+      opacity: 0.5 
+    });
+
+    // Create floating cubes representing different user types
+    const createFloatingCube = (color: number, position: THREE.Vector3) => {
+      const geometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+      const material = new THREE.MeshPhongMaterial({
+        color,
+        transparent: true,
+        opacity: 0.9,
+        shininess: 100,
+      });
+      const cube = new THREE.Mesh(geometry, material);
+      cube.position.copy(position);
+      scene.add(cube);
+      return cube;
+    };
+
+    // Create data particles
+    const particleCount = 100;
+    const particleGeometry = new THREE.BufferGeometry();
+    const particlePositions = new Float32Array(particleCount * 3);
+    const particleSizes = new Float32Array(particleCount);
+
+    for (let i = 0; i < particleCount * 3; i += 3) {
+      const radius = Math.random() * 5;
+      const angle = Math.random() * Math.PI * 2;
+      particlePositions[i] = Math.cos(angle) * radius;
+      particlePositions[i + 1] = (Math.random() - 0.5) * 4;
+      particlePositions[i + 2] = Math.sin(angle) * radius;
+      particleSizes[i / 3] = Math.random() * 0.1;
+    }
+
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+    particleGeometry.setAttribute('size', new THREE.BufferAttribute(particleSizes, 1));
+
+    const particleMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        time: { value: 0 },
+        color: { value: new THREE.Color(0x60a5fa) },
+      },
+      vertexShader: `
+        attribute float size;
+        uniform float time;
+        varying vec3 vColor;
+        void main() {
+          vec3 pos = position;
+          pos.y += sin(time + position.x) * 0.2;
+          pos.x += cos(time + position.z) * 0.2;
+          vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+          gl_PointSize = size * (300.0 / -mvPosition.z);
+          gl_Position = projectionMatrix * mvPosition;
+          vColor = vec3(0.4, 0.6, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vColor;
+        void main() {
+          float r = distance(gl_PointCoord, vec2(0.5));
+          if (r > 0.5) discard;
+          gl_FragColor = vec4(vColor, 1.0 - r * 2.0);
+        }
+      `,
+      transparent: true,
+    });
+
+    const particles = new THREE.Points(particleGeometry, particleMaterial);
+    scene.add(particles);
+
+    // Position camera
+    camera.position.set(0, 4, 8);
+    camera.lookAt(0, 0, 0);
+
+    // Animation loop
+    let time = 0;
+    const animate = () => {
+      requestAnimationFrame(animate);
+      time += 0.005;
+
+      // Update particle animation
+      particleMaterial.uniforms.time.value = time;
+
+      // Rotate platform
+      platform.rotation.y += 0.002;
+
+      // Update camera position based on mouse
+      camera.position.x += (mousePosition.x * 8 - camera.position.x) * 0.05;
+      camera.position.y += (mousePosition.y * 4 + 4 - camera.position.y) * 0.05;
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+    };
+
+    // Handle mouse movement
     const handleMouseMove = (e: MouseEvent) => {
       setMousePosition({
-        x: (e.clientX / window.innerWidth) * 20,
-        y: (e.clientY / window.innerHeight) * 20
+        x: (e.clientX / window.innerWidth - 0.5) * 2,
+        y: -(e.clientY / window.innerHeight - 0.5) * 2
       });
     };
 
+    // Handle window resize
+    const handleResize = () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+
     window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+    window.addEventListener('resize', handleResize);
+    animate();
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('resize', handleResize);
+      if (containerRef.current) {
+        containerRef.current.removeChild(renderer.domElement);
+      }
+    };
+  }, [mousePosition]);
 
   if (isLoading) {
     return (
@@ -30,92 +174,18 @@ export default function InfoPage() {
     );
   }
 
-  const buildingConfigs = [
-    { height: 400, width: 80, color: 'from-blue-50 to-indigo-50', windows: 20 },
-    { height: 300, width: 70, color: 'from-purple-50 to-pink-50', windows: 15 },
-    { height: 500, width: 90, color: 'from-indigo-50 to-blue-50', windows: 25 },
-    { height: 350, width: 75, color: 'from-sky-50 to-blue-50', windows: 18 },
-    { height: 450, width: 85, color: 'from-blue-50 to-indigo-50', windows: 22 },
-    { height: 280, width: 65, color: 'from-violet-50 to-purple-50', windows: 14 },
-    { height: 420, width: 78, color: 'from-purple-50 to-indigo-50', windows: 21 },
-    { height: 380, width: 72, color: 'from-blue-50 to-sky-50', windows: 19 }
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-blue-50 relative overflow-hidden perspective-1000">
-      {/* Animated 3D Buildings */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div 
-          className="absolute inset-0 transition-transform duration-300 ease-out"
-          style={{
-            transform: `translate3d(${mousePosition.x}px, ${mousePosition.y}px, 0) rotateX(${mousePosition.y / 50}deg) rotateY(${mousePosition.x / 50}deg)`
-          }}
-        >
-          {buildingConfigs.map((building, i) => (
-            <div 
-              key={i}
-              className={`absolute bottom-0 bg-gradient-to-t ${building.color} rounded-t-lg transform transition-all duration-500 ease-out`}
-              style={{
-                height: `${building.height}px`,
-                width: `${building.width}px`,
-                left: `${(i * 12) + 2}%`,
-                transform: `translateZ(${i * 10}px) skewX(-12deg) scale(${1 + mousePosition.y / 1000})`,
-                boxShadow: `
-                  0 0 40px ${i % 2 ? 'rgba(59, 130, 246, 0.05)' : 'rgba(139, 92, 246, 0.05)'},
-                  inset 0 0 20px ${i % 2 ? 'rgba(59, 130, 246, 0.025)' : 'rgba(139, 92, 246, 0.025)'}
-                `
-              }}
-            >
-              {/* Windows */}
-              <div className="absolute inset-x-2 top-2 bottom-0 grid grid-cols-4 gap-2 p-2">
-                {Array.from({ length: building.windows }).map((_, j) => (
-                  <div 
-                    key={j} 
-                    className={`bg-white/40 rounded-sm transition-all duration-1000 ${
-                      Math.random() > 0.5 ? 'animate-pulse' : ''
-                    }`}
-                    style={{
-                      opacity: Math.random() > 0.3 ? 0.8 : 0.2,
-                      boxShadow: `0 0 10px ${Math.random() > 0.7 ? 'rgba(255, 255, 255, 0.3)' : 'transparent'}`
-                    }}
-                  />
-                ))}
-              </div>
-              
-              {/* Light Beam Effect */}
-              <div 
-                className="absolute top-0 left-1/2 w-20 h-60 bg-gradient-to-b from-blue-100/10 to-transparent -translate-x-1/2 transform-gpu"
-                style={{
-                  filter: 'blur(20px)',
-                  animation: `pulse ${3 + i}s infinite`
-                }}
-              />
-              
-              {/* Holographic Scan Line */}
-              <div 
-                className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-blue-200/20 to-transparent"
-                style={{
-                  animation: `scanline ${2 + i}s infinite linear`,
-                  top: `${(mousePosition.y / 20)}%`
-                }}
-              />
-            </div>
-          ))}
-          
-          {/* Atmospheric Layer */}
-          <div className="absolute inset-0 bg-gradient-to-t from-white/60 via-white/30 to-transparent backdrop-blur-[2px]">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(59,130,246,0.05),transparent)]" />
-          </div>
-        </div>
-      </div>
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-blue-900">
+      {/* 3D Animation Container */}
+      <div ref={containerRef} className="absolute inset-0 pointer-events-none" />
 
-      {/* Hero Section */}
-      <div className="relative">
+      {/* Content Overlay */}
+      <div className="relative z-10">
         <div className="container mx-auto px-6 pt-32 pb-20">
           <div className="flex flex-col items-center text-center space-y-8">
             <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-blue-200 to-indigo-200 rounded-full blur opacity-40 group-hover:opacity-75 transition duration-1000"></div>
-              <div className="relative p-6 bg-white/80 rounded-full backdrop-blur-xl border border-gray-100 shadow-xl">
+              <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-1000"></div>
+              <div className="relative p-6 bg-white/10 rounded-full backdrop-blur-xl border border-white/20 shadow-xl">
                 <img 
                   src="/lovable-uploads/9c23bc1b-4e8c-433e-a961-df606dc6a2c6.png" 
                   alt="AdminChirii.ro Logo" 
@@ -123,102 +193,67 @@ export default function InfoPage() {
                 />
               </div>
             </div>
-            <h1 className="text-6xl font-bold text-gray-800 tracking-tight">
+            <h1 className="text-6xl font-bold text-white tracking-tight">
               Welcome to the Future of<br />Property Management
             </h1>
-            <p className="text-xl text-gray-600 max-w-2xl">
+            <p className="text-xl text-gray-300 max-w-2xl">
               Experience a revolutionary platform that brings together landlords, tenants, and service providers 
               in one seamless, intelligent ecosystem.
             </p>
             {!isAuthenticated && (
               <Button 
                 onClick={() => navigate('/auth')}
-                className="relative group px-8 py-6 text-lg bg-white hover:bg-gray-50 text-gray-800 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
+                className="relative group px-8 py-6 text-lg bg-blue-600 hover:bg-blue-700 text-white transition-all duration-300"
               >
-                <span className="absolute inset-0 bg-gradient-to-r from-blue-50 to-indigo-50 opacity-0 group-hover:opacity-100 blur transition-opacity duration-300" />
-                <span className="relative">Get Started Now</span>
+                <span className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-500 opacity-0 group-hover:opacity-20 blur transition-opacity duration-300" />
+                <span className="relative flex items-center gap-2">
+                  Get Started Now
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </span>
               </Button>
             )}
           </div>
         </div>
-      </div>
 
-      {/* Features Section */}
-      <div className="relative z-10 container mx-auto px-6 py-20">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {[
-            {
-              title: "Smart Property Management",
-              description: "Automate and streamline your property operations with AI-driven insights and real-time analytics.",
-              icon: Building2,
-              gradient: "from-blue-50 to-indigo-50"
-            },
-            {
-              title: "Seamless Communication",
-              description: "Connect instantly with tenants and service providers through our secure messaging platform.",
-              icon: MessageSquare,
-              gradient: "from-purple-50 to-pink-50"
-            },
-            {
-              title: "Secure Access Control",
-              description: "Manage digital keys and access permissions with our advanced security system.",
-              icon: Key,
-              gradient: "from-emerald-50 to-teal-50"
-            }
-          ].map((feature, index) => (
-            <div 
-              key={index}
-              className="group relative"
-            >
-              <div className="absolute -inset-1 bg-gradient-to-r from-blue-100/20 to-indigo-100/20 rounded-2xl blur opacity-50 group-hover:opacity-100 transition duration-500" />
-              <div className="relative h-full p-8 bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-100 shadow-lg transition-transform duration-300 group-hover:-translate-y-2">
-                <div className={`inline-flex p-4 rounded-xl bg-gradient-to-r ${feature.gradient} mb-6`}>
-                  <feature.icon className="w-8 h-8 text-gray-700" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">{feature.title}</h3>
-                <p className="text-gray-600">{feature.description}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Updates Section */}
-      <div className="relative z-10 container mx-auto px-6 pb-20">
-        <div className="relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-blue-100/20 to-indigo-100/20 rounded-2xl blur opacity-50" />
-          <div className="relative p-8 bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-100 shadow-lg">
-            <h2 className="text-3xl font-bold text-gray-800 mb-8">Latest Updates</h2>
-            <div className="space-y-6">
-              {[
-                {
-                  type: "New Feature",
-                  title: "AI-Powered Property Insights",
-                  description: "Get intelligent recommendations and market analysis for your properties.",
-                  gradient: "from-blue-50 to-indigo-50"
-                },
-                {
-                  type: "Enhancement",
-                  title: "Smart Contract Integration",
-                  description: "Automated contract generation and digital signing capabilities added.",
-                  gradient: "from-purple-50 to-pink-50"
-                }
-              ].map((update, index) => (
-                <div 
-                  key={index}
-                  className="relative group"
-                >
-                  <div className="absolute -inset-1 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 rounded-xl blur opacity-30 group-hover:opacity-50 transition duration-300" />
-                  <div className="relative p-6 bg-white/90 backdrop-blur-xl rounded-xl border border-gray-100 shadow-md group-hover:shadow-lg transition-all duration-300">
-                    <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r ${update.gradient} text-gray-700 mb-2`}>
-                      {update.type}
-                    </div>
-                    <h3 className="text-xl font-semibold text-gray-800 mb-2">{update.title}</h3>
-                    <p className="text-gray-600">{update.description}</p>
+        {/* Features Grid */}
+        <div className="container mx-auto px-6 py-20">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {[
+              {
+                icon: Building2,
+                title: "Smart Property Management",
+                description: "AI-driven insights and automated property operations"
+              },
+              {
+                icon: Network,
+                title: "Unified Platform",
+                description: "Seamlessly connect all stakeholders in one ecosystem"
+              },
+              {
+                icon: Key,
+                title: "Digital Access Control",
+                description: "Secure and smart access management system"
+              },
+              {
+                icon: Shield,
+                title: "Enhanced Security",
+                description: "Enterprise-grade security for your property data"
+              }
+            ].map((feature, index) => (
+              <div 
+                key={index}
+                className="group relative"
+              >
+                <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-500" />
+                <div className="relative p-8 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 transition-transform duration-300 group-hover:-translate-y-2">
+                  <div className="inline-flex p-4 rounded-xl bg-gradient-to-r from-blue-500/20 to-indigo-500/20 mb-6">
+                    <feature.icon className="w-8 h-8 text-blue-400" />
                   </div>
+                  <h3 className="text-xl font-semibold text-white mb-4">{feature.title}</h3>
+                  <p className="text-gray-300">{feature.description}</p>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
