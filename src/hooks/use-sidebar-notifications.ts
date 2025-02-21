@@ -27,6 +27,7 @@ type MessageWithProfile = {
 export function useSidebarNotifications() {
   const [data, setData] = useState<Notification[]>([]);
   const { userRole, userId } = useUserRole();
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
 
@@ -151,12 +152,18 @@ export function useSidebarNotifications() {
     const setupRealtimeSubscription = () => {
       if (reconnectAttempts.current >= maxReconnectAttempts) {
         console.log('Max reconnection attempts reached, stopping reconnection attempts');
-        return null;
+        return;
+      }
+
+      // If we already have a channel, don't create a new one
+      if (channelRef.current) {
+        console.log('Channel already exists, skipping creation');
+        return;
       }
 
       console.log(`Setting up realtime subscription (attempt ${reconnectAttempts.current + 1}/${maxReconnectAttempts})`);
 
-      const channel = supabase.channel('db-changes')
+      channelRef.current = supabase.channel('db-changes')
         .on('postgres_changes', 
           { 
             event: '*', 
@@ -201,7 +208,7 @@ export function useSidebarNotifications() {
           
           if (status === 'CLOSED' && mounted) {
             reconnectAttempts.current += 1;
-            const backoffTime = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000); // Max 30 seconds
+            const backoffTime = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
 
             console.log(`Channel closed (attempt ${reconnectAttempts.current}/${maxReconnectAttempts}), reconnecting in ${backoffTime}ms...`);
             
@@ -210,31 +217,38 @@ export function useSidebarNotifications() {
               clearTimeout(reconnectTimeout);
             }
 
+            // Clean up the current channel before attempting to reconnect
+            if (channelRef.current) {
+              channelRef.current.unsubscribe();
+              channelRef.current = null;
+            }
+
             // Set up new reconnection attempt with exponential backoff
             reconnectTimeout = setTimeout(() => {
               if (mounted) {
-                const newChannel = setupRealtimeSubscription();
-                if (newChannel) {
-                  channel.unsubscribe();
-                }
+                setupRealtimeSubscription();
               }
             }, backoffTime);
           }
         });
 
-      return channel;
+      // Initial fetch when subscription is set up
+      fetchNotifications();
     };
 
-    const channel = setupRealtimeSubscription();
+    // Initial subscription setup
+    setupRealtimeSubscription();
 
+    // Cleanup function
     return () => {
       mounted = false;
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
       }
-      if (channel) {
+      if (channelRef.current) {
         console.log('Cleaning up realtime subscription...');
-        channel.unsubscribe();
+        channelRef.current.unsubscribe();
+        channelRef.current = null;
       }
     };
   }, [userId, userRole]);
