@@ -1,4 +1,6 @@
-import { Button } from "@/components/ui/button";
+
+import React from "react";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -8,21 +10,31 @@ import {
 } from "@/components/ui/select";
 
 interface UtilityFiltersProps {
-  status: string;
+  searchTerm: string;
+  onSearchChange: (value: string) => void;
+  statusFilter: string;
   onStatusChange: (value: string) => void;
-  type: string;
+  typeFilter: string;
   onTypeChange: (value: string) => void;
 }
 
 export function UtilityFilters({
-  status,
+  searchTerm,
+  onSearchChange,
+  statusFilter,
   onStatusChange,
-  type,
+  typeFilter,
   onTypeChange,
 }: UtilityFiltersProps) {
   return (
-    <div className="flex flex-col sm:flex-row gap-4">
-      <Select value={status} onValueChange={onStatusChange}>
+    <div className="flex flex-col sm:flex-row gap-4 mb-6">
+      <Input
+        placeholder="Search utilities..."
+        value={searchTerm}
+        onChange={(e) => onSearchChange(e.target.value)}
+        className="max-w-sm"
+      />
+      <Select value={statusFilter} onValueChange={onStatusChange}>
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="Filter by status" />
         </SelectTrigger>
@@ -30,20 +42,19 @@ export function UtilityFilters({
           <SelectItem value="all">All Status</SelectItem>
           <SelectItem value="pending">Pending</SelectItem>
           <SelectItem value="paid">Paid</SelectItem>
+          <SelectItem value="overdue">Overdue</SelectItem>
         </SelectContent>
       </Select>
-
-      <Select value={type} onValueChange={onTypeChange}>
+      <Select value={typeFilter} onValueChange={onTypeChange}>
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="Filter by type" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Types</SelectItem>
-          <SelectItem value="Electricity">Electricity</SelectItem>
-          <SelectItem value="Water">Water</SelectItem>
-          <SelectItem value="Gas">Gas</SelectItem>
-          <SelectItem value="Internet">Internet</SelectItem>
-          <SelectItem value="Other">Other</SelectItem>
+          <SelectItem value="electricity">Electricity</SelectItem>
+          <SelectItem value="water">Water</SelectItem>
+          <SelectItem value="gas">Gas</SelectItem>
+          <SelectItem value="internet">Internet</SelectItem>
         </SelectContent>
       </Select>
     </div>
