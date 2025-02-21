@@ -18,6 +18,8 @@ export interface Invoice {
   property_id: string;
   tenant_id: string;
   landlord_id: string;
+  currency: string;
+  vat_rate?: number;
   property?: {
     name: string;
     address: string;
