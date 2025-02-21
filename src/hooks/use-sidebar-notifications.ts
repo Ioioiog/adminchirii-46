@@ -21,12 +21,12 @@ type MessageWithProfile = {
   read: boolean;
   receiver_id: string;
   sender_id: string;
-  conversation_id: string;
+  conversation_id: string | null;
   profile_id: string;
   profiles: {
     first_name: string | null;
     last_name: string | null;
-  };
+  } | null;
 };
 
 export function useSidebarNotifications() {
@@ -43,7 +43,7 @@ export function useSidebarNotifications() {
 
       try {
         // Query for unread messages with extended fields and proper profile join
-        const { data: messages, error: messagesError } = await supabase
+        const { data: rawMessages, error: messagesError } = await supabase
           .from('messages')
           .select(`
             id, 
@@ -92,12 +92,13 @@ export function useSidebarNotifications() {
           console.error('Error fetching payments:', paymentsError);
         }
 
-        console.log('Raw messages from query:', messages);
+        console.log('Raw messages from query:', rawMessages);
         console.log('Fetched maintenance:', maintenance);
         console.log('Fetched payments:', payments);
 
         // Filter unread messages where user is receiver
-        const unreadMessages = (messages as MessageWithProfile[] | null)?.filter(message => 
+        const messages = rawMessages as MessageWithProfile[] | null;
+        const unreadMessages = messages?.filter(message => 
           message.receiver_id === userId && !message.read
         ) || [];
 
@@ -109,7 +110,7 @@ export function useSidebarNotifications() {
             count: unreadMessages.length,
             items: unreadMessages.map(m => ({
               id: m.id,
-              message: `${m.profiles.first_name || 'Someone'} sent: ${m.content}`,
+              message: `${m.profiles?.first_name || 'Someone'} sent: ${m.content}`,
               created_at: m.created_at,
               read: m.read
             }))
