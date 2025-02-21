@@ -1,3 +1,4 @@
+
 import { DateRange } from "react-day-picker";
 
 export interface InvoiceSettings {
@@ -21,7 +22,6 @@ export interface ProfileInvoiceInfo {
 
 export interface Invoice {
   id: string;
-  invoice_number: string;
   amount: number;
   status: 'paid' | 'pending' | 'overdue';
   due_date: string;
@@ -54,7 +54,6 @@ export interface InvoiceFiltersProps {
 }
 
 export interface InvoiceDialogProps {
-  open?: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
   userRole: "landlord" | "tenant";

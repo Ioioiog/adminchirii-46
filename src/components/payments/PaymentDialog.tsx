@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,13 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Property } from "@/utils/propertyUtils";
 
 interface PaymentDialogProps {
   open?: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
   userRole: "landlord" | "tenant";
-  properties: Array<{ id: string; name: string }>;
+  properties: Property[];
 }
 
 export function PaymentDialog({
@@ -32,18 +34,27 @@ export function PaymentDialog({
     setIsSubmitting(true);
 
     try {
-      const { data, error } = await supabase
-        .from('payments')
-        .insert([
-          {
-            amount: parseFloat(amount),
-            property_id: selectedProperty,
-            user_id: userId,
-            status: 'pending'
-          }
-        ]);
+      // First get the active tenancy for this property
+      const { data: tenancyData, error: tenancyError } = await supabase
+        .from('tenancies')
+        .select('id')
+        .eq('property_id', selectedProperty)
+        .eq('status', 'active')
+        .single();
 
-      if (error) throw error;
+      if (tenancyError) throw tenancyError;
+
+      const { error: paymentError } = await supabase
+        .from('payments')
+        .insert({
+          amount: parseFloat(amount),
+          tenancy_id: tenancyData.id,
+          status: 'pending',
+          due_date: new Date().toISOString().split('T')[0], // Today's date
+          currency: 'USD'
+        });
+
+      if (paymentError) throw paymentError;
 
       toast({
         title: "Success",
