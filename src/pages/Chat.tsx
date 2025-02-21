@@ -1,3 +1,4 @@
+
 import React, { useRef, useState } from "react";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { ChatHeader } from "@/components/chat/ChatHeader";
@@ -14,6 +15,9 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ChatBackground } from "@/components/chat/ChatBackground";
+import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const Chat = () => {
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
@@ -47,20 +51,53 @@ const Chat = () => {
     }
     return acc;
   }, [] as typeof tenants extends (infer T)[] ? T[] : never) || [];
+
+  const { data: unreadMessagesByTenant } = useQuery({
+    queryKey: ['unreadMessagesByTenant'],
+    queryFn: async () => {
+      const unreadMessages = {} as Record<string, number>;
+      
+      // Get all conversations for the current landlord
+      const { data: conversations, error: convError } = await supabase
+        .from('conversations')
+        .select('id, tenant_id');
+
+      if (convError) {
+        console.error('Error fetching conversations:', convError);
+        return unreadMessages;
+      }
+
+      // For each conversation, count unread messages
+      for (const conv of conversations || []) {
+        const { data: messages, error: msgError } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('conversation_id', conv.id)
+          .eq('read', false)
+          .eq('profile_id', conv.tenant_id);
+
+        if (msgError) {
+          console.error('Error fetching messages:', msgError);
+          continue;
+        }
+
+        if (messages && messages.length > 0) {
+          unreadMessages[conv.tenant_id] = messages.length;
+        }
+      }
+
+      return unreadMessages;
+    },
+    enabled: userRole === 'landlord',
+    refetchInterval: 10000
+  });
+
   const filteredTenants = uniqueTenants?.filter(tenant => {
     const fullName = `${tenant.first_name || ''} ${tenant.last_name || ''}`.toLowerCase();
     const email = tenant.email?.toLowerCase() || '';
     const query = searchQuery.toLowerCase();
     return fullName.includes(query) || email.includes(query);
   });
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newMessage.trim()) {
-      await sendMessage(newMessage, currentUserId);
-      setNewMessage("");
-    }
-  };
 
   const handleTenantSelect = (tenantId: string) => {
     console.log("Selected tenant:", tenantId);
@@ -75,6 +112,14 @@ const Chat = () => {
 
   const handleEndVideoCall = () => {
     setIsVideoCallActive(false);
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newMessage.trim()) {
+      await sendMessage(newMessage, currentUserId);
+      setNewMessage("");
+    }
   };
 
   const renderChatContent = () => {
@@ -144,10 +189,15 @@ const Chat = () => {
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 text-left">
-                          <div className="font-medium text-sm text-gray-800">
+                          <div className="font-medium text-sm text-gray-800 flex items-center gap-2">
                             {tenant.first_name && tenant.last_name
                               ? `${tenant.first_name} ${tenant.last_name}`
                               : tenant.email}
+                            {unreadMessagesByTenant?.[tenant.id] && (
+                              <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                                {unreadMessagesByTenant[tenant.id]} new
+                              </Badge>
+                            )}
                           </div>
                           {tenant.property?.name && (
                             <div className="text-xs text-gray-500 truncate">
