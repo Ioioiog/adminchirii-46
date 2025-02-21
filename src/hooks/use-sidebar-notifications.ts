@@ -17,18 +17,21 @@ type Message = {
 };
 
 // Type guard to check if a value is a Message
-function isMessage(value: any): value is Message {
-  const isValid = value && 
+function isMessage(value: unknown): value is Message {
+  const isValid = value !== null && 
     typeof value === 'object' && 
-    typeof value.id === 'string' &&
-    typeof value.receiver_id === 'string';
+    value !== undefined &&
+    'id' in value &&
+    'receiver_id' in value &&
+    typeof (value as any).id === 'string' &&
+    typeof (value as any).receiver_id === 'string';
 
   console.log('Message validation:', {
     value,
     isValid,
-    hasId: value?.id,
-    hasReceiverId: value?.receiver_id,
-    receiverIdType: typeof value?.receiver_id
+    hasId: value && typeof value === 'object' && 'id' in value,
+    hasReceiverId: value && typeof value === 'object' && 'receiver_id' in value,
+    receiverIdType: value && typeof value === 'object' && 'receiver_id' in value ? typeof (value as any).receiver_id : 'undefined'
   });
 
   return isValid;
@@ -158,18 +161,22 @@ export function useSidebarNotifications() {
           console.log('New message detected:', {
             event: payload.eventType,
             messageData: newMessage,
-            userId,
-            receiverId: newMessage?.receiver_id
+            userId
           });
 
-          // Only fetch if the message is for this user
-          if (isMessage(newMessage) && newMessage.receiver_id === userId) {
+          // First validate the message
+          if (!isMessage(newMessage)) {
+            console.log('Message validation failed:', newMessage);
+            return;
+          }
+
+          // Now TypeScript knows newMessage is of type Message
+          if (newMessage.receiver_id === userId) {
             console.log('Message matches current user, fetching notifications');
             fetchNotifications();
           } else {
-            console.log('Message validation failed or not for current user:', {
-              isValidMessage: isMessage(newMessage),
-              messageReceiverId: newMessage?.receiver_id,
+            console.log('Message not for current user:', {
+              messageReceiverId: newMessage.receiver_id,
               currentUserId: userId
             });
           }
