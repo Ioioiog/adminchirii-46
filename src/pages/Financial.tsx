@@ -15,12 +15,17 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { NavigationTabs } from "@/components/layout/NavigationTabs";
 import { ContentCard } from "@/components/layout/ContentCard";
 import { SearchAndFilterBar } from "@/components/layout/SearchAndFilterBar";
+import { DateRange } from "react-day-picker";
+import { useProperties } from "@/hooks/useProperties";
 
 type FinancialSection = 'invoices' | 'payments';
 
 const Financial = () => {
   const [activeSection, setActiveSection] = useState<FinancialSection>('invoices');
-  const { userRole } = useUserRole();
+  const { userRole, userId } = useUserRole();
+  const { properties } = useProperties({ userRole: userRole || 'tenant' });
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
   const {
     payments,
     isLoading: isPaymentsLoading,
@@ -28,9 +33,6 @@ const Financial = () => {
     setStatusFilter: setPaymentStatusFilter,
     searchQuery: paymentSearchQuery,
     setSearchQuery: setPaymentSearchQuery,
-    dateRange: paymentDateRange,
-    setDateRange: setPaymentDateRange,
-    fetchPayments
   } = usePayments();
 
   const {
@@ -62,7 +64,6 @@ const Financial = () => {
   const filteredUserRole = userRole === 'service_provider' ? null : userRole;
 
   const renderSection = () => {
-    // If user is a service provider, show access denied message
     if (userRole === 'service_provider') {
       return (
         <div className="text-center p-8">
@@ -123,15 +124,21 @@ const Financial = () => {
                   onSearchChange={setPaymentSearchQuery}
                   status={paymentStatusFilter}
                   onStatusChange={setPaymentStatusFilter}
-                  dateRange={paymentDateRange}
-                  onDateRangeChange={setPaymentDateRange}
+                  dateRange={dateRange}
+                  onDateRangeChange={setDateRange}
+                  properties={properties}
                 />
               }
             />
-            {filteredUserRole && (
+            {userRole && userId && (
               <PaymentList 
-                payments={payments} 
-                userRole={filteredUserRole}
+                payments={payments}
+                isLoading={isPaymentsLoading}
+                userRole={userRole}
+                userId={userId}
+                propertyFilter=""
+                statusFilter={paymentStatusFilter}
+                searchTerm={paymentSearchQuery}
               />
             )}
           </div>

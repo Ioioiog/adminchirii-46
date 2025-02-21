@@ -20,3 +20,5 @@ export interface Payment {
     };
   };
 }
+
+export type PaymentWithRelations = Payment;
