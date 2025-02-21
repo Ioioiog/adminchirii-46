@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/use-user-role';
 
@@ -32,139 +33,128 @@ export function useSidebarNotifications() {
   const [data, setData] = useState<Notification[]>([]);
   const { userRole, userId } = useUserRole();
 
-  useEffect(() => {
-    let mounted = true;
+  const fetchNotifications = useCallback(async () => {
+    if (!userId) return;
 
-    const fetchNotifications = async () => {
-      if (!userId) return;
+    console.log("Fetching notifications for user:", userId);
 
-      console.log("Fetching notifications for user:", userId);
+    try {
+      // Query for unread messages with extended fields and proper profile join
+      const { data: rawMessages, error: messagesError } = await supabase
+        .from('messages')
+        .select(`
+          id, 
+          content, 
+          created_at, 
+          read,
+          receiver_id,
+          sender_id,
+          conversation_id,
+          profile_id,
+          profiles!messages_sender_id_fkey (
+            first_name,
+            last_name
+          )
+        `)
+        .eq('receiver_id', userId)
+        .eq('read', false)
+        .order('created_at', { ascending: false });
 
-      try {
-        // Query for unread messages with extended fields and proper profile join
-        const { data: rawMessages, error: messagesError } = await supabase
-          .from('messages')
-          .select(`
-            id, 
-            content, 
-            created_at, 
-            read,
-            receiver_id,
-            sender_id,
-            conversation_id,
-            profile_id,
-            profiles!messages_sender_id_fkey (
-              first_name,
-              last_name
-            )
-          `)
-          .eq('receiver_id', userId)
-          .eq('read', false)
-          .order('created_at', { ascending: false });
-
-        if (messagesError) {
-          console.error('Error fetching messages:', messagesError);
-          return;
-        }
-
-        // Fetch last 5 maintenance requests
-        const { data: maintenance, error: maintenanceError } = await supabase
-          .from('maintenance_requests')
-          .select('id, title, created_at, read_by_landlord, read_by_tenant')
-          .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false)
-          .order('created_at', { ascending: false })
-          .limit(5);
-
-        if (maintenanceError) {
-          console.error('Error fetching maintenance requests:', maintenanceError);
-        }
-
-        // Fetch last 5 payments
-        const { data: payments, error: paymentsError } = await supabase
-          .from('payments')
-          .select('id, amount, created_at, read_by_landlord, read_by_tenant')
-          .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false)
-          .order('created_at', { ascending: false })
-          .limit(5);
-
-        if (paymentsError) {
-          console.error('Error fetching payments:', paymentsError);
-        }
-
-        console.log('Raw messages from query:', rawMessages);
-        console.log('Fetched maintenance:', maintenance);
-        console.log('Fetched payments:', payments);
-
-        // First convert to unknown, then to our expected type
-        const messages = ((rawMessages || []) as unknown[]).map(msg => {
-          const rawMsg = msg as any;
-          return {
-            id: rawMsg.id,
-            content: rawMsg.content,
-            created_at: rawMsg.created_at,
-            read: rawMsg.read,
-            receiver_id: rawMsg.receiver_id,
-            sender_id: rawMsg.sender_id,
-            conversation_id: rawMsg.conversation_id,
-            profile_id: rawMsg.profile_id,
-            profiles: rawMsg.profiles
-          } as MessageWithProfile;
-        });
-
-        // Filter unread messages where user is receiver
-        const unreadMessages = messages.filter(message => 
-          message.receiver_id === userId && !message.read
-        );
-
-        console.log('Filtered unread messages:', unreadMessages);
-
-        const newNotifications = [
-          { 
-            type: 'messages', 
-            count: unreadMessages.length,
-            items: unreadMessages.map(m => ({
-              id: m.id,
-              message: `${m.profiles?.first_name || 'Someone'} sent: ${m.content}`,
-              created_at: m.created_at,
-              read: m.read
-            }))
-          },
-          { 
-            type: 'maintenance', 
-            count: maintenance?.length || 0,
-            items: maintenance?.map(m => ({
-              id: m.id,
-              message: m.title,
-              created_at: m.created_at,
-              read: userRole === 'landlord' ? m.read_by_landlord : m.read_by_tenant
-            }))
-          },
-          { 
-            type: 'payments', 
-            count: payments?.length || 0,
-            items: payments?.map(p => ({
-              id: p.id,
-              message: `New payment: $${p.amount}`,
-              created_at: p.created_at,
-              read: userRole === 'landlord' ? p.read_by_landlord : p.read_by_tenant
-            }))
-          }
-        ];
-
-        if (mounted) {
-          console.log('Setting new notifications:', newNotifications);
-          setData(newNotifications);
-        }
-      } catch (error) {
-        console.error('Error fetching notifications:', error);
+      if (messagesError) {
+        console.error('Error fetching messages:', messagesError);
+        return;
       }
-    };
 
+      // Fetch last 5 maintenance requests
+      const { data: maintenance, error: maintenanceError } = await supabase
+        .from('maintenance_requests')
+        .select('id, title, created_at, read_by_landlord, read_by_tenant')
+        .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (maintenanceError) {
+        console.error('Error fetching maintenance requests:', maintenanceError);
+      }
+
+      // Fetch last 5 payments
+      const { data: payments, error: paymentsError } = await supabase
+        .from('payments')
+        .select('id, amount, created_at, read_by_landlord, read_by_tenant')
+        .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (paymentsError) {
+        console.error('Error fetching payments:', paymentsError);
+      }
+
+      // First convert to unknown, then to our expected type
+      const messages = ((rawMessages || []) as unknown[]).map(msg => {
+        const rawMsg = msg as any;
+        return {
+          id: rawMsg.id,
+          content: rawMsg.content,
+          created_at: rawMsg.created_at,
+          read: rawMsg.read,
+          receiver_id: rawMsg.receiver_id,
+          sender_id: rawMsg.sender_id,
+          conversation_id: rawMsg.conversation_id,
+          profile_id: rawMsg.profile_id,
+          profiles: rawMsg.profiles
+        } as MessageWithProfile;
+      });
+
+      // Filter unread messages where user is receiver
+      const unreadMessages = messages.filter(message => 
+        message.receiver_id === userId && !message.read
+      );
+
+      const newNotifications = [
+        { 
+          type: 'messages', 
+          count: unreadMessages.length,
+          items: unreadMessages.map(m => ({
+            id: m.id,
+            message: `${m.profiles?.first_name || 'Someone'} sent: ${m.content}`,
+            created_at: m.created_at,
+            read: m.read
+          }))
+        },
+        { 
+          type: 'maintenance', 
+          count: maintenance?.length || 0,
+          items: maintenance?.map(m => ({
+            id: m.id,
+            message: m.title,
+            created_at: m.created_at,
+            read: userRole === 'landlord' ? m.read_by_landlord : m.read_by_tenant
+          }))
+        },
+        { 
+          type: 'payments', 
+          count: payments?.length || 0,
+          items: payments?.map(p => ({
+            id: p.id,
+            message: `New payment: $${p.amount}`,
+            created_at: p.created_at,
+            read: userRole === 'landlord' ? p.read_by_landlord : p.read_by_tenant
+          }))
+        }
+      ];
+
+      setData(newNotifications);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  }, [userId, userRole]);
+
+  useEffect(() => {
     // Initial fetch
     fetchNotifications();
 
-    // Set up real-time subscriptions with correct channel keys
-    const messagesChannel = supabase.channel('messages_channel')
+    // Set up all real-time subscriptions in one channel
+    const channel = supabase.channel('notifications')
       .on('postgres_changes', 
         { 
           event: '*', 
@@ -172,54 +162,32 @@ export function useSidebarNotifications() {
           table: 'messages',
           filter: `receiver_id=eq.${userId}`
         },
-        (payload) => {
-          console.log('Message change detected:', payload);
-          fetchNotifications();
-        }
+        () => fetchNotifications()
       )
-      .subscribe((status) => {
-        console.log('Messages channel status:', status);
-      });
-
-    const maintenanceChannel = supabase.channel('maintenance_channel')
       .on('postgres_changes',
         { 
           event: '*', 
           schema: 'public', 
           table: 'maintenance_requests'
         },
-        (payload) => {
-          console.log('Maintenance change detected:', payload);
-          fetchNotifications();
-        }
+        () => fetchNotifications()
       )
-      .subscribe((status) => {
-        console.log('Maintenance channel status:', status);
-      });
-
-    const paymentsChannel = supabase.channel('payments_channel')
       .on('postgres_changes',
         { 
           event: '*', 
           schema: 'public', 
           table: 'payments'
         },
-        (payload) => {
-          console.log('Payment change detected:', payload);
-          fetchNotifications();
-        }
+        () => fetchNotifications()
       )
       .subscribe((status) => {
-        console.log('Payments channel status:', status);
+        console.log('Notifications channel status:', status);
       });
 
     return () => {
-      mounted = false;
-      supabase.removeChannel(messagesChannel);
-      supabase.removeChannel(maintenanceChannel);
-      supabase.removeChannel(paymentsChannel);
+      supabase.removeChannel(channel);
     };
-  }, [userRole, userId]);
+  }, [fetchNotifications, userId]);
 
   const markAsRead = async (type: string) => {
     if (!userId) return;
