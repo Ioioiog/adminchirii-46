@@ -56,7 +56,7 @@ export function MaintenanceSection({
       case 'in_progress':
         return <Badge variant="default">In Progress</Badge>;
       case 'completed':
-        return <Badge variant="success">Completed</Badge>;
+        return <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200">Completed</Badge>;
       default:
         return null;
     }
