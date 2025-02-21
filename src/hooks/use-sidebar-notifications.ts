@@ -136,19 +136,24 @@ export function useSidebarNotifications() {
     const channel = supabase.channel('db-changes')
       .on('postgres_changes', 
         { 
-          event: '*', 
+          event: 'INSERT', // Change from '*' to specifically listen for new messages
           schema: 'public', 
-          table: 'messages',
-          filter: userId ? `receiver_id=eq.${userId}` : undefined
+          table: 'messages'
         },
         (payload: RealtimePostgresChangesPayload<Message>) => {
-          console.log('Messages change detected:', {
+          const newMessage = payload.new;
+          console.log('New message detected:', {
             event: payload.eventType,
-            data: payload.new,
+            message: newMessage,
             userId,
-            receiverId: payload.new && 'receiver_id' in payload.new ? payload.new.receiver_id : undefined
+            receiverId: newMessage?.receiver_id
           });
-          fetchNotifications();
+
+          // Only fetch if the message is for this user
+          if (newMessage && newMessage.receiver_id === userId) {
+            console.log('Fetching notifications due to new message for current user');
+            fetchNotifications();
+          }
         }
       )
       .on('postgres_changes',
