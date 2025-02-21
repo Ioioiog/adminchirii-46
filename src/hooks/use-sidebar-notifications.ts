@@ -150,42 +150,78 @@ export function useSidebarNotifications() {
   }, [userId, userRole]);
 
   useEffect(() => {
+    if (!userId) return;
+
+    let retryCount = 0;
+    const maxRetries = 3;
+    let channel: any = null;
+
+    const setupChannel = () => {
+      // Remove existing channel if any
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+
+      // Create new channel with all subscriptions
+      channel = supabase.channel('notifications' + new Date().getTime())
+        .on('postgres_changes', 
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'messages',
+            filter: `receiver_id=eq.${userId}`
+          },
+          () => fetchNotifications()
+        )
+        .on('postgres_changes',
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'maintenance_requests'
+          },
+          () => fetchNotifications()
+        )
+        .on('postgres_changes',
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'payments'
+          },
+          () => fetchNotifications()
+        )
+        .subscribe((status: string) => {
+          console.log('Notifications channel status:', status);
+          
+          if (status === 'SUBSCRIBED') {
+            console.log('Successfully connected to notifications channel');
+            retryCount = 0;
+          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            console.log('Channel closed or error occurred, attempting reconnect...');
+            if (retryCount < maxRetries) {
+              retryCount++;
+              console.log(`Retry attempt ${retryCount} of ${maxRetries}`);
+              setTimeout(() => {
+                setupChannel();
+              }, 1000 * Math.pow(2, retryCount)); // Exponential backoff
+            }
+          }
+        });
+
+      return channel;
+    };
+
     // Initial fetch
     fetchNotifications();
 
-    // Set up all real-time subscriptions in one channel
-    const channel = supabase.channel('notifications')
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'messages',
-          filter: `receiver_id=eq.${userId}`
-        },
-        () => fetchNotifications()
-      )
-      .on('postgres_changes',
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'maintenance_requests'
-        },
-        () => fetchNotifications()
-      )
-      .on('postgres_changes',
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'payments'
-        },
-        () => fetchNotifications()
-      )
-      .subscribe((status) => {
-        console.log('Notifications channel status:', status);
-      });
+    // Setup initial channel
+    channel = setupChannel();
 
+    // Cleanup function
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        console.log('Cleaning up notifications channel');
+        supabase.removeChannel(channel);
+      }
     };
   }, [fetchNotifications, userId]);
 
