@@ -16,7 +16,6 @@ import { Users, UserPlus, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TenantInviteDialog } from "@/components/tenants/TenantInviteDialog";
 import { TenantAssignDialog } from "@/components/tenants/TenantAssignDialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 const Tenants = () => {
   const navigate = useNavigate();
@@ -182,14 +181,14 @@ const Tenants = () => {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex bg-dashboard-background min-h-screen">
       <DashboardSidebar />
-      <ScrollArea className="flex-1">
-        <div className="p-8">
-          <div className="max-w-7xl mx-auto space-y-8">
-            <div className="bg-white p-8 rounded-lg shadow-sm mb-6 animate-fade-in">
-              <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-                <div className="space-y-4">
+      <main className="flex-1 p-8">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div className="bg-white p-8 rounded-lg shadow-sm mb-6 animate-fade-in">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
                   <div className="p-3 bg-blue-600 rounded-xl">
                     <Users className="h-6 w-6 text-white" />
                   </div>
@@ -250,7 +249,7 @@ const Tenants = () => {
             )}
           </div>
         </div>
-      </ScrollArea>
+      </main>
     </div>
   );
 };
