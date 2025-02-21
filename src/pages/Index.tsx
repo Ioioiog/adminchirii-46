@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -147,7 +148,7 @@ const Index = () => {
         return <ServiceProviderDashboard userId={userId} userName={userName} />;
       case "tenant":
         return tenantInfo ? (
-          <TenantDashboard userId={userId} userName={userName} tenantInfo={tenantInfo} />
+          <TenantDashboard tenantInfo={tenantInfo} />
         ) : (
           <div className="p-4">Loading tenant information...</div>
         );
