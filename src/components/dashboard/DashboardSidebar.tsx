@@ -36,11 +36,11 @@ export const DashboardSidebar = () => {
       open={isExpanded}
       onOpenChange={setIsExpanded}
       className={cn(
-        "relative h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300 shadow-sm",
+        "relative h-screen glass border-r border-glass-border flex flex-col transition-all duration-300",
         isExpanded ? "w-64" : "w-16"
       )}
     >
-      <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+      <div className="p-4 border-b border-glass-border">
         <SidebarLogo isExpanded={isExpanded} />
       </div>
       
@@ -48,12 +48,12 @@ export const DashboardSidebar = () => {
         <Button
           variant="ghost"
           size="icon"
-          className="absolute -right-3 top-6 h-7 w-7 rounded-full border bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/80 shadow-lg hover:shadow-md hover:bg-white/90 transition-all duration-200 dark:bg-gray-950/80 dark:hover:bg-gray-950/90 dark:border-gray-800"
+          className="absolute -right-3 top-6 h-7 w-7 rounded-full glass-button"
         >
           {isExpanded ? (
-            <ChevronLeft className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+            <ChevronLeft className="h-4 w-4 text-white" />
           ) : (
-            <ChevronRight className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+            <ChevronRight className="h-4 w-4 text-white" />
           )}
           <span className="sr-only">Toggle sidebar</span>
         </Button>
@@ -77,9 +77,9 @@ export const DashboardSidebar = () => {
         </nav>
       </CollapsibleContent>
 
-      <div className="p-4 border-t border-gray-200 dark:border-gray-800">
+      <div className="p-4 border-t border-glass-border">
         <SignOutButton isExpanded={isExpanded} />
       </div>
     </Collapsible>
   );
-};
+}
