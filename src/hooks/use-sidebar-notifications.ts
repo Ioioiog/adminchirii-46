@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -45,7 +46,7 @@ export function useSidebarNotifications() {
             content,
             created_at,
             read,
-            profiles:sender_id (
+            profiles:profile_id (
               first_name,
               last_name
             )
