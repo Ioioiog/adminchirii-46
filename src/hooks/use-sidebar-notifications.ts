@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -148,52 +149,65 @@ export function useSidebarNotifications() {
     // Initial fetch
     fetchNotifications();
 
-    // Set up realtime subscriptions for all three tables in a single channel
-    const channel = supabase.channel('db-changes')
-      // Messages subscription
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'messages',
-          filter: userId ? `receiver_id=eq.${userId}` : undefined
-        },
-        (payload) => {
-          console.log('Messages change received:', payload);
-          fetchNotifications();
-        }
-      )
-      // Maintenance requests subscription
-      .on('postgres_changes',
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'maintenance_requests' 
-        },
-        (payload) => {
-          console.log('Maintenance change received:', payload);
-          fetchNotifications();
-        }
-      )
-      // Payments subscription
-      .on('postgres_changes',
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'payments'
-        },
-        (payload) => {
-          console.log('Payment change received:', payload);
-          fetchNotifications();
-        }
-      )
-      .subscribe((status) => {
-        console.log('Realtime subscription status:', status);
-      });
+    // Set up realtime subscriptions with automatic reconnection
+    const setupRealtimeSubscription = () => {
+      const channel = supabase.channel('db-changes')
+        .on('postgres_changes', 
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'messages',
+            filter: userId ? `receiver_id=eq.${userId}` : undefined
+          },
+          (payload) => {
+            console.log('Messages change received:', payload);
+            fetchNotifications();
+          }
+        )
+        .on('postgres_changes',
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'maintenance_requests' 
+          },
+          (payload) => {
+            console.log('Maintenance change received:', payload);
+            fetchNotifications();
+          }
+        )
+        .on('postgres_changes',
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'payments'
+          },
+          (payload) => {
+            console.log('Payment change received:', payload);
+            fetchNotifications();
+          }
+        )
+        .subscribe(async (status) => {
+          console.log('Realtime subscription status:', status);
+          
+          if (status === 'CLOSED') {
+            console.log('Channel closed, attempting to reconnect...');
+            // Wait a bit before reconnecting to avoid rapid reconnection attempts
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            setupRealtimeSubscription();
+          }
+        });
+
+      return channel;
+    };
+
+    const channel = setupRealtimeSubscription();
 
     return () => {
       mounted = false;
-      supabase.removeChannel(channel);
+      if (channel) {
+        console.log('Cleaning up realtime subscription...');
+        supabase.removeChannel(channel);
+      }
     };
   }, [userId, userRole]);
 
