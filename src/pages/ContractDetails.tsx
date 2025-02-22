@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Eye, Printer, Send, Save, Mail } from "lucide-react";
+import { ArrowLeft, Eye, Printer, Send, Save, Mail, Settings } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
@@ -479,21 +479,24 @@ export default function ContractDetails() {
       </div>
       <main className="flex-1 p-8">
         <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex items-center gap-4 mb-6 print:hidden">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => navigate('/documents')}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <h1 className="text-2xl font-bold">Contract Details</h1>
+          <div className="flex items-center justify-between print:hidden">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate('/documents')}
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <h1 className="text-xl font-semibold">Contract Details</h1>
+            </div>
             
-            <div className="flex items-center gap-2 ml-auto">
+            <div className="flex items-center gap-2">
               {renderInviteButton()}
               <Button
                 variant="outline"
                 onClick={handleViewContract}
+                size="sm"
                 className="flex items-center gap-2"
               >
                 <Eye className="h-4 w-4" />
@@ -502,266 +505,156 @@ export default function ContractDetails() {
               <Button
                 variant="outline"
                 onClick={handlePrintContract}
+                size="sm"
                 className="flex items-center gap-2"
               >
                 <Printer className="h-4 w-4" />
                 Print
               </Button>
-              {editedData && (
-                <Button
-                  onClick={handleUpdateContract}
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-                >
-                  <Save className="h-4 w-4" />
-                  Save Modifications
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
             </div>
           </div>
 
-          <ScrollArea className="h-[calc(100vh-12rem)] print:hidden">
-            <div className="space-y-6 pr-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Contract Information</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Contract Number</Label>
-                    <Input 
-                      value={metadata.contractNumber || ''} 
-                      onChange={(e) => handleInputChange('contractNumber', e.target.value)}
-                    />
+          <Card className="border-0 shadow-none bg-white rounded-lg">
+            <CardHeader>
+              <CardTitle>Contract Information</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Contract Number</Label>
+                  <Input 
+                    value={metadata.contractNumber || ''} 
+                    onChange={(e) => handleInputChange('contractNumber', e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Status</Label>
+                  <div className="mt-2">
+                    <Badge variant="secondary" className={
+                      contract.status === 'signed' ? 'bg-green-100 text-green-800' :
+                      contract.status === 'draft' ? 'bg-gray-100 text-gray-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }>
+                      {contract.status}
+                    </Badge>
                   </div>
-                  <div>
-                    <Label>Status</Label>
-                    <div className="mt-2">
-                      <Badge variant="secondary" className={
-                        contract.status === 'signed' ? 'bg-green-100 text-green-800' :
-                        contract.status === 'draft' ? 'bg-gray-100 text-gray-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }>
-                        {contract.status}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Valid From</Label>
-                    <Input value={contract.valid_from ? format(new Date(contract.valid_from), 'PPP') : 'Not specified'} readOnly />
-                  </div>
-                  <div>
-                    <Label>Valid Until</Label>
-                    <Input value={contract.valid_until ? format(new Date(contract.valid_until), 'PPP') : 'Not specified'} readOnly />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Landlord Information</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-2 gap-4">
-                  {Object.entries(metadata)
-                    .filter(([key]) => key.startsWith('owner'))
-                    .map(([key, value]) => (
-                      <div key={key}>
-                        <Label>{key.replace('owner', '').replace(/([A-Z])/g, ' $1').trim()}</Label>
-                        <Input 
-                          value={value || ''} 
-                          onChange={(e) => handleInputChange(key as keyof FormData, e.target.value)}
-                        />
-                      </div>
-                    ))}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Tenant Information</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-2 gap-4">
-                  {Object.entries(metadata)
-                    .filter(([key]) => key.startsWith('tenant'))
-                    .map(([key, value]) => (
-                      <div key={key}>
-                        <Label>{key.replace('tenant', '').replace(/([A-Z])/g, ' $1').trim()}</Label>
-                        <Input 
-                          value={value || ''} 
-                          onChange={(e) => handleInputChange(key as keyof FormData, e.target.value)}
-                        />
-                      </div>
-                    ))}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Contract Terms</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Property</Label>
-                    <Input value={contract.properties?.name || 'Untitled Property'} readOnly />
-                  </div>
-                  <div>
-                    <Label>Contract Type</Label>
-                    <Input value={contract.contract_type} className="capitalize" readOnly />
-                  </div>
-                  <div>
-                    <Label>Rent Amount</Label>
-                    <Input 
-                      value={metadata.rentAmount || ''} 
-                      onChange={(e) => handleInputChange('rentAmount', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Contract Duration (months)</Label>
-                    <Input 
-                      value={metadata.contractDuration || ''} 
-                      onChange={(e) => handleInputChange('contractDuration', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Payment Day</Label>
-                    <Input 
-                      value={metadata.paymentDay || ''} 
-                      onChange={(e) => handleInputChange('paymentDay', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Late Fee</Label>
-                    <Input 
-                      value={metadata.lateFee || ''} 
-                      onChange={(e) => handleInputChange('lateFee', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Security Deposit</Label>
-                    <Input 
-                      value={metadata.securityDeposit || ''} 
-                      onChange={(e) => handleInputChange('securityDeposit', e.target.value)}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </ScrollArea>
-
-          <div className="hidden print:block">
-            <ContractContent formData={metadata} />
-            <ContractSignatures formData={metadata} contractId={id || ''} />
-          </div>
-
-          <Dialog open={isEmailModalOpen} onOpenChange={setIsEmailModalOpen}>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Send Contract</DialogTitle>
-                <DialogDescription>
-                  Choose where to send the contract
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <RadioGroup
-                  value={selectedEmailOption}
-                  onValueChange={(value) => {
-                    setSelectedEmailOption(value);
-                    if (value !== 'tenant-list') {
-                      setSelectedTenantEmail('');
-                    }
-                  }}
-                  className="space-y-2"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="tenant" id="tenant" />
-                    <Label htmlFor="tenant">
-                      Contract Tenant ({metadata.tenantEmail || 'Not provided'})
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="tenant-list" id="tenant-list" />
-                    <Label htmlFor="tenant-list">Select from Tenant List</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="custom" id="custom" />
-                    <Label htmlFor="custom">Custom Email</Label>
-                  </div>
-                </RadioGroup>
-
-                {selectedEmailOption === 'tenant-list' && (
-                  <div className="space-y-2">
-                    <Label>Select Tenant</Label>
-                    <Select
-                      value={selectedTenantEmail}
-                      onValueChange={setSelectedTenantEmail}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a tenant" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {tenants.map((tenant) => (
-                          <SelectItem 
-                            key={tenant.id} 
-                            value={tenant.email || ''}
-                          >
-                            {tenant.first_name} {tenant.last_name} ({tenant.email})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {selectedEmailOption === 'custom' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="customEmail">Custom Email Address</Label>
-                    <Input
-                      id="customEmail"
-                      type="email"
-                      placeholder="Enter email address"
-                      value={customEmail}
-                      onChange={(e) => setCustomEmail(e.target.value)}
-                    />
-                  </div>
-                )}
-
-                <div className="flex justify-end space-x-2">
-                  <Button variant="outline" onClick={() => setIsEmailModalOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleEmailSubmit}>
-                    Send Contract
-                  </Button>
                 </div>
               </div>
-            </DialogContent>
-          </Dialog>
 
-          <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
-            <DialogContent className="max-w-4xl max-h-[90vh]">
-              <DialogHeader>
-                <DialogTitle>Contract Preview</DialogTitle>
-                <DialogDescription>
-                  Preview the contract content
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <ScrollArea className="h-[calc(90vh-16rem)]">
-                  <div className="mt-4 px-4">
-                    <ContractContent formData={metadata} />
-                    <ContractSignatures formData={metadata} contractId={id || ''} />
-                  </div>
-                </ScrollArea>
-
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsPreviewModalOpen(false)}>
-                    Close
-                  </Button>
-                </DialogFooter>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Valid From</Label>
+                  <Input value={contract.valid_from ? format(new Date(contract.valid_from), 'PPP') : 'Not specified'} readOnly className="mt-1" />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Valid Until</Label>
+                  <Input value={contract.valid_until ? format(new Date(contract.valid_until), 'PPP') : 'Not specified'} readOnly className="mt-1" />
+                </div>
               </div>
-            </DialogContent>
-          </Dialog>
+            </CardContent>
+          </Card>
 
-          {renderInviteModal()}
+          <Card className="border-0 shadow-none bg-white rounded-lg">
+            <CardHeader>
+              <CardTitle>Landlord Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-6">
+                {Object.entries(metadata)
+                  .filter(([key]) => key.startsWith('owner'))
+                  .map(([key, value]) => (
+                    <div key={key}>
+                      <Label className="text-sm font-medium text-gray-500">
+                        {key.replace('owner', '').replace(/([A-Z])/g, ' $1').trim()}
+                      </Label>
+                      <Input 
+                        value={value || ''} 
+                        onChange={(e) => handleInputChange(key as keyof FormData, e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                  ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Tenant Information</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4">
+              {Object.entries(metadata)
+                .filter(([key]) => key.startsWith('tenant'))
+                .map(([key, value]) => (
+                  <div key={key}>
+                    <Label>{key.replace('tenant', '').replace(/([A-Z])/g, ' $1').trim()}</Label>
+                    <Input 
+                      value={value || ''} 
+                      onChange={(e) => handleInputChange(key as keyof FormData, e.target.value)}
+                    />
+                  </div>
+                ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Contract Terms</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Property</Label>
+                <Input value={contract.properties?.name || 'Untitled Property'} readOnly />
+              </div>
+              <div>
+                <Label>Contract Type</Label>
+                <Input value={contract.contract_type} className="capitalize" readOnly />
+              </div>
+              <div>
+                <Label>Rent Amount</Label>
+                <Input 
+                  value={metadata.rentAmount || ''} 
+                  onChange={(e) => handleInputChange('rentAmount', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Contract Duration (months)</Label>
+                <Input 
+                  value={metadata.contractDuration || ''} 
+                  onChange={(e) => handleInputChange('contractDuration', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Payment Day</Label>
+                <Input 
+                  value={metadata.paymentDay || ''} 
+                  onChange={(e) => handleInputChange('paymentDay', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Late Fee</Label>
+                <Input 
+                  value={metadata.lateFee || ''} 
+                  onChange={(e) => handleInputChange('lateFee', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Security Deposit</Label>
+                <Input 
+                  value={metadata.securityDeposit || ''} 
+                  onChange={(e) => handleInputChange('securityDeposit', e.target.value)}
+                />
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
     </div>
