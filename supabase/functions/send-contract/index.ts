@@ -27,13 +27,17 @@ serve(async (req) => {
   }
 
   try {
-    const { recipientEmail, contractData } = await req.json() as EmailRequest
+    const { recipientEmail, contractData } = await req.json() as EmailRequest;
 
-    console.log('Received request to send contract to:', recipientEmail);
-    console.log('Contract data:', JSON.stringify(contractData, null, 2));
+    console.log('Received email request:', { recipientEmail });
+    console.log('Contract data:', contractData);
 
     if (!recipientEmail || !contractData) {
       throw new Error('Missing required data');
+    }
+
+    if (!Deno.env.get("RESEND_API_KEY")) {
+      throw new Error("Missing RESEND_API_KEY environment variable");
     }
 
     const { data: emailResponse, error: emailError } = await resend.emails.send({
@@ -45,23 +49,41 @@ serve(async (req) => {
         <html>
           <head>
             <meta charset="utf-8">
-            <title>Contract for Review</title>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+              .header { margin-bottom: 30px; }
+              .details { margin: 20px 0; padding: 20px; background: #f5f5f5; border-radius: 5px; }
+              .contract-content { margin-top: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+              .footer { margin-top: 30px; color: #666; }
+            </style>
           </head>
           <body>
-            <h1>Contract for Review</h1>
-            <p>Dear recipient,</p>
-            <p>Please find below the contract for your review.</p>
-            <p><strong>Contract Details:</strong></p>
-            <ul>
-              <li>Contract Number: ${contractData.contractNumber}</li>
-              <li>Owner: ${contractData.ownerName}</li>
-              <li>Tenant: ${contractData.tenantName}</li>
-              <li>Property Address: ${contractData.propertyAddress}</li>
-            </ul>
-            <div style="margin-top: 20px; padding: 20px; border: 1px solid #ccc;">
-              ${contractData.contractContent}
+            <div class="container">
+              <div class="header">
+                <h1>Contract for Review</h1>
+                <p>Dear recipient,</p>
+                <p>Please find below the contract for your review.</p>
+              </div>
+
+              <div class="details">
+                <h2>Contract Details</h2>
+                <ul>
+                  <li><strong>Contract Number:</strong> ${contractData.contractNumber}</li>
+                  <li><strong>Owner:</strong> ${contractData.ownerName}</li>
+                  <li><strong>Tenant:</strong> ${contractData.tenantName}</li>
+                  <li><strong>Property Address:</strong> ${contractData.propertyAddress}</li>
+                </ul>
+              </div>
+
+              <div class="contract-content">
+                ${contractData.contractContent}
+              </div>
+
+              <div class="footer">
+                <p>Best regards,<br/>Your Property Management Team</p>
+              </div>
             </div>
-            <p style="margin-top: 20px;">Best regards,<br/>Your Property Management Team</p>
           </body>
         </html>
       `,
@@ -84,7 +106,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in send-contract function:', error);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: false, 
         error: error instanceof Error ? error.message : 'An unknown error occurred'
       }),
