@@ -586,6 +586,7 @@ function ContractDetailsContent() {
       userRole,
       contractStatus: contract?.status,
       tenantSignature: contract?.metadata.tenantSignatureName,
+      landlordSignature: contract?.metadata.ownerSignatureName,
       contract: contract
     });
 
@@ -598,13 +599,13 @@ function ContractDetailsContent() {
       console.log('Button hidden: Contract not loaded');
       return null;
     }
-    
-    if (contract?.metadata.tenantSignatureName) {
+
+    if (contract.metadata.tenantSignatureName) {
       console.log('Button hidden: Contract already has tenant signature');
       return null;
     }
 
-    if (contract?.status !== 'draft' && contract?.status !== 'pending') {
+    if (contract.status !== 'draft' && contract.status !== 'pending') {
       console.log('Button hidden: Contract status is not draft or pending');
       return null;
     }
