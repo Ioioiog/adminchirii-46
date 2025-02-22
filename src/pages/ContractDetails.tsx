@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Eye, Printer, Save, Mail, Settings } from "lucide-react";
+import { ArrowLeft, Eye, Printer, Send, Save, Mail } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
@@ -491,10 +491,6 @@ export default function ContractDetails() {
             
             <div className="flex items-center gap-2 ml-auto">
               {renderInviteButton()}
-              <Button variant="outline" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Settings
-              </Button>
               <Button
                 variant="outline"
                 onClick={handleViewContract}
