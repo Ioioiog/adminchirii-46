@@ -21,109 +21,98 @@ export function ChatBackground() {
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     containerRef.current.appendChild(renderer.domElement);
 
-    // Create message-like objects
-    const messages: THREE.Mesh[] = [];
-    const messageCount = 15;
+    // Create shapes array
+    const shapes: THREE.Mesh[] = [];
+    const shapeCount = 12;
 
-    // Create gradient texture for messages
-    const canvas = document.createElement('canvas');
-    canvas.width = 512; // Increased resolution
-    canvas.height = 512;
-    const context = canvas.getContext('2d');
-    if (context) {
-      // Create a more sophisticated gradient
-      const gradient = context.createLinearGradient(0, 0, 512, 512);
-      gradient.addColorStop(0, '#1D4ED8'); // blue-700
-      gradient.addColorStop(0.5, '#2563EB'); // blue-600
-      gradient.addColorStop(1, '#1E40AF'); // darker blue-700
-
-      // Add some noise/texture
-      context.fillStyle = gradient;
-      context.fillRect(0, 0, 512, 512);
-
-      // Add subtle pattern
-      context.globalAlpha = 0.05;
-      for (let i = 0; i < 100; i++) {
-        const x = Math.random() * 512;
-        const y = Math.random() * 512;
-        context.fillStyle = '#ffffff';
-        context.fillRect(x, y, 2, 2);
-      }
+    // Function to create curved path for phone shape
+    function createPhoneShape() {
+      const shape = new THREE.Shape();
+      shape.moveTo(0, 0);
+      shape.bezierCurveTo(0.5, 0, 1, 0.5, 1, 1);
+      shape.bezierCurveTo(1, 1.5, 0.5, 2, 0, 2);
+      shape.bezierCurveTo(-0.5, 2, -1, 1.5, -1, 1);
+      shape.bezierCurveTo(-1, 0.5, -0.5, 0, 0, 0);
+      return shape;
     }
-    const messageTexture = new THREE.CanvasTexture(canvas);
-    messageTexture.needsUpdate = true;
 
-    // Create message objects with more realistic shapes
-    for (let i = 0; i < messageCount; i++) {
-      const width = Math.random() * 2 + 1.5; // Slightly larger
-      const height = Math.random() * 0.8 + 0.6;
-      const roundedRectShape = new THREE.Shape();
-      const radius = 0.3; // Increased corner radius
-      
-      // Create rounded rectangle with smooth corners
-      roundedRectShape.moveTo(-width/2 + radius, -height/2);
-      roundedRectShape.lineTo(width/2 - radius, -height/2);
-      roundedRectShape.quadraticCurveTo(width/2, -height/2, width/2, -height/2 + radius);
-      roundedRectShape.lineTo(width/2, height/2 - radius);
-      roundedRectShape.quadraticCurveTo(width/2, height/2, width/2 - radius, height/2);
-      roundedRectShape.lineTo(-width/2 + radius, height/2);
-      roundedRectShape.quadraticCurveTo(-width/2, height/2, -width/2, height/2 - radius);
-      roundedRectShape.lineTo(-width/2, -height/2 + radius);
-      roundedRectShape.quadraticCurveTo(-width/2, -height/2, -width/2 + radius, -height/2);
+    // Function to create speech bubble shape
+    function createBubbleShape() {
+      const shape = new THREE.Shape();
+      // Main bubble
+      shape.moveTo(0, 0);
+      shape.bezierCurveTo(1.5, 0, 2, 0.5, 2, 1);
+      shape.bezierCurveTo(2, 1.5, 1.5, 2, 0, 2);
+      shape.bezierCurveTo(-1.5, 2, -2, 1.5, -2, 1);
+      shape.bezierCurveTo(-2, 0.5, -1.5, 0, 0, 0);
+      // Add tail
+      shape.moveTo(-0.5, 0);
+      shape.quadraticCurveTo(-0.8, -0.5, -1, -1);
+      return shape;
+    }
 
-      const geometry = new THREE.ExtrudeGeometry(roundedRectShape, {
-        depth: 0.05, // Add depth for 3D effect
+    // Create different shape variations
+    const shapeTypes = [createPhoneShape(), createBubbleShape()];
+
+    for (let i = 0; i < shapeCount; i++) {
+      const shapeType = shapeTypes[Math.floor(Math.random() * shapeTypes.length)];
+      const scale = Math.random() * 0.5 + 0.5;
+
+      const geometry = new THREE.ExtrudeGeometry(shapeType, {
+        depth: 0.1,
         bevelEnabled: true,
-        bevelThickness: 0.02,
-        bevelSize: 0.02,
-        bevelSegments: 3
+        bevelThickness: 0.05,
+        bevelSize: 0.05,
+        bevelSegments: 4
       });
 
-      // Create more sophisticated material with a lighter blue for the overlay effect
+      // Create main shape with darker blue
       const mainMaterial = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color('#2563EB'), // blue-600
+        color: new THREE.Color('#1D4ED8'), // blue-700
         transparent: true,
         opacity: 0.9,
         side: THREE.DoubleSide,
         metalness: 0.1,
         roughness: 0.2,
-        clearcoat: 0.3,
+        clearcoat: 0.4,
         clearcoatRoughness: 0.2,
       });
 
+      // Create overlay with lighter blue
       const overlayMaterial = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color('#60A5FA'), // blue-400
+        color: new THREE.Color('#93C5FD'), // blue-300
         transparent: true,
         opacity: 0.4,
         side: THREE.DoubleSide,
         metalness: 0.1,
         roughness: 0.2,
-        clearcoat: 0.3,
+        clearcoat: 0.4,
         clearcoatRoughness: 0.2,
       });
 
-      // Create main message shape
-      const message = new THREE.Mesh(geometry, mainMaterial);
-      
-      // Create overlay shape
+      const mainShape = new THREE.Mesh(geometry, mainMaterial);
+      mainShape.scale.set(scale, scale, scale);
+
+      // Create and position overlay
       const overlayShape = new THREE.Mesh(geometry, overlayMaterial);
-      overlayShape.position.set(0.1, -0.1, 0.02); // Slightly offset
-      message.add(overlayShape);
-      
-      // Random position and rotation with better distribution
-      message.position.x = (Math.random() - 0.5) * 12;
-      message.position.y = (Math.random() - 0.5) * 12;
-      message.position.z = (Math.random() - 0.5) * 8;
-      message.rotation.x = Math.random() * Math.PI * 0.25;
-      message.rotation.y = Math.random() * Math.PI * 0.25;
-      
+      overlayShape.scale.set(scale, scale, scale);
+      overlayShape.position.set(0.15, -0.15, 0.02);
+      mainShape.add(overlayShape);
+
+      // Random position and gentle rotation
+      mainShape.position.x = (Math.random() - 0.5) * 12;
+      mainShape.position.y = (Math.random() - 0.5) * 12;
+      mainShape.position.z = (Math.random() - 0.5) * 8;
+      mainShape.rotation.x = Math.random() * Math.PI * 0.15;
+      mainShape.rotation.y = Math.random() * Math.PI * 0.15;
+
       // Enable shadows
-      message.castShadow = true;
-      message.receiveShadow = true;
+      mainShape.castShadow = true;
+      mainShape.receiveShadow = true;
       overlayShape.castShadow = true;
-      
-      messages.push(message);
-      scene.add(message);
+
+      shapes.push(mainShape);
+      scene.add(mainShape);
     }
 
     // Enhanced lighting setup
@@ -148,16 +137,16 @@ export function ChatBackground() {
     let time = 0;
     function animate() {
       requestAnimationFrame(animate);
-      time += 0.003; // Slower animation
+      time += 0.003;
 
-      messages.forEach((message, index) => {
+      shapes.forEach((shape, index) => {
         // Smooth floating animation
-        message.position.y += Math.sin(time + index * 0.5) * 0.003;
-        message.rotation.x += 0.0005;
-        message.rotation.y += 0.0008;
+        shape.position.y += Math.sin(time + index * 0.5) * 0.003;
+        shape.rotation.x += 0.0005;
+        shape.rotation.y += 0.0008;
         
         // Subtle wobble
-        message.rotation.z = Math.sin(time + index * 0.5) * 0.05;
+        shape.rotation.z = Math.sin(time + index * 0.5) * 0.05;
       });
 
       renderer.render(scene, camera);
