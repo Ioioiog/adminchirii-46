@@ -27,13 +27,13 @@ export function ContractContent({ formData, contractId }: ContractContentProps) 
         </Button>
       </div>
       
-      <div className="space-y-6 print:space-y-4">
-        <header className="text-center mb-6">
-          <h1 className="text-2xl font-bold mb-2">CONTRACT DE ÎNCHIRIERE</h1>
+      <div className="space-y-6 print:space-y-4 print:overflow-visible">
+        <header className="text-center mb-6 print:mb-8">
+          <h1 className="text-2xl font-bold mb-2 print:text-xl">CONTRACT DE ÎNCHIRIERE</h1>
           <p>Nr. {formData.contractNumber} din {formData.contractDate}</p>
         </header>
 
-        <section className="print:break-inside-avoid">
+        <section className="print:break-inside-avoid-page">
           <h2 className="text-lg font-semibold mb-4">I. PĂRȚILE CONTRACTANTE</h2>
           <div className="space-y-4">
             <div>
@@ -64,7 +64,7 @@ export function ContractContent({ formData, contractId }: ContractContentProps) 
           </div>
         </section>
 
-        <section className="print:break-inside-avoid">
+        <section className="print:break-inside-avoid-page">
           <h2 className="text-lg font-semibold mb-4">II. OBIECTUL CONTRACTULUI</h2>
           <p>
             2.1. Obiectul contractului îl constituie închirierea spațiului situat la adresa: {formData.propertyAddress}
@@ -72,7 +72,7 @@ export function ContractContent({ formData, contractId }: ContractContentProps) 
           <p>2.2. Spațiul închiriat are {formData.roomCount} camere.</p>
         </section>
 
-        <section className="print:break-inside-avoid">
+        <section className="print:break-inside-avoid-page">
           <h2 className="text-lg font-semibold mb-4">III. DURATA CONTRACTULUI</h2>
           <p>
             3.1. Durata închirierii este de {formData.contractDuration} luni, începând cu data de {formData.startDate}.
@@ -83,7 +83,7 @@ export function ContractContent({ formData, contractId }: ContractContentProps) 
           </p>
         </section>
 
-        <section className="print:break-inside-avoid">
+        <section className="print:break-inside-avoid-page">
           <h2 className="text-lg font-semibold mb-4">IV. PREȚUL ÎNCHIRIERII</h2>
           <p>
             4.1. Chiria lunară este de {formData.rentAmount} lei{formData.vatIncluded === 'da' ? ', TVA inclus' : ''}.
@@ -96,7 +96,7 @@ export function ContractContent({ formData, contractId }: ContractContentProps) 
           </p>
         </section>
 
-        <section className="print:break-inside-avoid">
+        <section className="print:break-inside-avoid-page">
           <h2 className="text-lg font-semibold mb-4">V. GARANȚIA</h2>
           <p>
             5.1. La semnarea contractului, chiriașul va plăti o garanție în valoare de {formData.securityDeposit} lei.
@@ -106,7 +106,7 @@ export function ContractContent({ formData, contractId }: ContractContentProps) 
           </p>
         </section>
 
-        <section className="print:break-inside-avoid">
+        <section className="print:break-inside-avoid-page">
           <h2 className="text-lg font-semibold mb-4">VI. REZILIEREA CONTRACTULUI</h2>
           <p>
             6.1. Oricare dintre părți poate denunța unilateral contractul cu un preaviz de {formData.unilateralNotice} zile.
@@ -120,7 +120,7 @@ export function ContractContent({ formData, contractId }: ContractContentProps) 
           </p>
         </section>
 
-        <section className="print:break-inside-avoid">
+        <section className="print:break-inside-avoid-page">
           <h2 className="text-lg font-semibold mb-4">VII. INDEXURILE UTILITĂȚILOR LA PREDARE</h2>
           <div className="space-y-2">
             <p>Apă rece: {formData.waterColdMeter}</p>
@@ -131,7 +131,7 @@ export function ContractContent({ formData, contractId }: ContractContentProps) 
         </section>
 
         {formData.assets && formData.assets.length > 0 && (
-          <section className="print:break-inside-avoid">
+          <section className="print:break-inside-avoid-page">
             <h2 className="text-lg font-semibold mb-4">VIII. INVENTARUL BUNURILOR</h2>
             <table className="w-full border-collapse">
               <thead>
@@ -154,7 +154,7 @@ export function ContractContent({ formData, contractId }: ContractContentProps) 
           </section>
         )}
 
-        <section className="print:break-inside-avoid mt-8">
+        <section className="print:break-inside-avoid-page mt-8">
           {contractId ? (
             <ContractSignatures formData={formData} contractId={contractId} />
           ) : (
