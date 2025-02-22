@@ -600,13 +600,11 @@ function ContractDetailsContent() {
       return null;
     }
 
-    if (contract.metadata.tenantSignatureName) {
-      console.log('Button hidden: Contract already has tenant signature');
-      return null;
-    }
+    const hasLandlordSignature = !!contract.metadata.ownerSignatureName;
+    const hasTenantSignature = !!contract.metadata.tenantSignatureName;
 
-    if (contract.status !== 'draft' && contract.status !== 'pending') {
-      console.log('Button hidden: Contract status is not draft or pending');
+    if (!hasLandlordSignature || hasTenantSignature) {
+      console.log('Button hidden: Contract either missing landlord signature or already has tenant signature');
       return null;
     }
     
