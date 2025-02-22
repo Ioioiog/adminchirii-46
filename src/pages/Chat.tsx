@@ -16,8 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ChatBackground } from "@/components/chat/ChatBackground";
 import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useSidebarNotifications } from "@/hooks/use-sidebar-notifications";
 
 const Chat = () => {
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
@@ -25,24 +24,15 @@ const Chat = () => {
   const [isVideoCallActive, setIsVideoCallActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const {
-    currentUserId
-  } = useAuthState();
-  const {
-    conversationId,
-    isLoading: isConversationLoading
-  } = useConversation(currentUserId, selectedTenantId);
-  const {
-    messages,
-    sendMessage
-  } = useMessages(conversationId);
-  const {
-    userRole
-  } = useUserRole();
-  const {
-    data: tenants,
-    isLoading: isTenantsLoading
-  } = useTenants();
+  const { currentUserId } = useAuthState();
+  const { conversationId, isLoading: isConversationLoading } = useConversation(currentUserId, selectedTenantId);
+  const { messages, sendMessage } = useMessages(conversationId);
+  const { userRole } = useUserRole();
+  const { data: tenants, isLoading: isTenantsLoading } = useTenants();
+  const { data: notifications } = useSidebarNotifications();
+
+  // Find the messages notification from sidebar notifications
+  const messageNotification = notifications?.find(n => n.type === 'messages');
 
   const uniqueTenants = tenants?.reduce((acc, current) => {
     const existingTenant = acc.find(item => item.email === current.email);
@@ -52,45 +42,12 @@ const Chat = () => {
     return acc;
   }, [] as typeof tenants extends (infer T)[] ? T[] : never) || [];
 
-  const { data: unreadMessagesByTenant } = useQuery({
-    queryKey: ['unreadMessagesByTenant'],
-    queryFn: async () => {
-      const unreadMessages = {} as Record<string, number>;
-      
-      // Get all conversations for the current landlord
-      const { data: conversations, error: convError } = await supabase
-        .from('conversations')
-        .select('id, tenant_id');
-
-      if (convError) {
-        console.error('Error fetching conversations:', convError);
-        return unreadMessages;
-      }
-
-      // For each conversation, count unread messages
-      for (const conv of conversations || []) {
-        const { data: messages, error: msgError } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('conversation_id', conv.id)
-          .eq('read', false)
-          .eq('profile_id', conv.tenant_id);
-
-        if (msgError) {
-          console.error('Error fetching messages:', msgError);
-          continue;
-        }
-
-        if (messages && messages.length > 0) {
-          unreadMessages[conv.tenant_id] = messages.length;
-        }
-      }
-
-      return unreadMessages;
-    },
-    enabled: userRole === 'landlord',
-    refetchInterval: 10000
-  });
+  const unreadMessagesByTenant = messageNotification?.items.reduce((acc, message) => {
+    if (message.sender_id) {
+      acc[message.sender_id] = (acc[message.sender_id] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>) || {};
 
   const filteredTenants = uniqueTenants?.filter(tenant => {
     const fullName = `${tenant.first_name || ''} ${tenant.last_name || ''}`.toLowerCase();
@@ -193,7 +150,7 @@ const Chat = () => {
                             {tenant.first_name && tenant.last_name
                               ? `${tenant.first_name} ${tenant.last_name}`
                               : tenant.email}
-                            {unreadMessagesByTenant?.[tenant.id] && (
+                            {unreadMessagesByTenant[tenant.id] > 0 && (
                               <Badge variant="secondary" className="bg-blue-100 text-blue-700">
                                 {unreadMessagesByTenant[tenant.id]} new
                               </Badge>
