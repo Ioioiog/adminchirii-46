@@ -664,8 +664,9 @@ export default function ContractDetails() {
             <DialogTitle>Contract Preview</DialogTitle>
           </DialogHeader>
           <ScrollArea className="max-h-[80vh]">
-            <div className="p-6">
+            <div className="p-6 space-y-8">
               <ContractContent formData={metadata} />
+              <ContractSignatures formData={metadata} contractId={id!} />
             </div>
           </ScrollArea>
         </DialogContent>
