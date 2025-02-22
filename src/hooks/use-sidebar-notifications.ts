@@ -203,88 +203,45 @@ export function useSidebarNotifications() {
     }
   }, [userId, userRole, toast]);
 
-  useEffect(() => {
-    fetchNotifications();
-
-    const channel = supabase.channel('db-changes')
-      .on('postgres_changes', 
-        { 
-          event: 'INSERT',
-          schema: 'public', 
-          table: 'messages'
-        },
-        async (payload: RealtimePostgresChangesPayload<Message>) => {
-          console.log('Raw message payload:', payload);
-          
-          const newMessage = payload.new;
-          console.log('New message detected:', {
-            event: payload.eventType,
-            messageData: newMessage,
-            userId,
-            userRole
-          });
-
-          if (!isMessage(newMessage)) {
-            console.log('Message validation failed:', {
-              message: newMessage
-            });
-            return;
-          }
-
-          if (userRole === 'landlord') {
-            console.log('Landlord detected, fetching notifications');
-            fetchNotifications();
-            return;
-          }
-
-          const receiverId = getReceiverId(newMessage);
-          if (receiverId === userId) {
-            console.log('Direct message matches current user, fetching notifications');
-            fetchNotifications();
-          }
-        }
-      )
-      .on('postgres_changes',
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'maintenance_requests' 
-        },
-        (payload) => {
-          console.log('Maintenance change detected:', payload);
-          fetchNotifications();
-        }
-      )
-      .on('postgres_changes',
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'payments'
-        },
-        (payload) => {
-          console.log('Payment change detected:', payload);
-          fetchNotifications();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId, userRole, fetchNotifications]);
-
-  const markAsRead = useCallback(async (type: NotificationType) => {
+  const markAsRead = useCallback(async (type: NotificationType, messageId?: string) => {
     if (!userId || !userRole) return;
 
     try {
       if (type === 'messages') {
-        const { error } = await supabase
+        const query = supabase
           .from('messages')
-          .update({ read: true })
-          .eq('receiver_id', userId)
-          .eq('read', false);
+          .update({ 
+            read: true,
+            updated_at: new Date().toISOString()
+          });
 
-        if (error) throw error;
+        if (messageId) {
+          // If messageId is provided, only mark that specific message as read
+          await query.eq('id', messageId);
+        } else {
+          // Otherwise mark all unread messages as read
+          await query.eq('receiver_id', userId).eq('read', false);
+        }
+
+        // Immediately update local state
+        setData(prevData => 
+          prevData.map(item => {
+            if (item.type === 'messages') {
+              if (messageId) {
+                // Update only specific message
+                return {
+                  ...item,
+                  count: item.count - 1,
+                  items: item.items?.filter(msg => msg.id !== messageId) || []
+                };
+              } else {
+                // Clear all messages
+                return { ...item, count: 0, items: [] };
+              }
+            }
+            return item;
+          })
+        );
       } else if (type === 'maintenance') {
         const { error } = await supabase
           .from('maintenance_requests')
@@ -320,6 +277,50 @@ export function useSidebarNotifications() {
       throw error;
     }
   }, [userId, userRole, toast]);
+
+  useEffect(() => {
+    fetchNotifications();
+
+    const channel = supabase.channel('db-changes')
+      .on('postgres_changes', 
+        { 
+          event: 'INSERT',
+          schema: 'public', 
+          table: 'messages'
+        },
+        (payload: RealtimePostgresChangesPayload<any>) => {
+          console.log('Message change detected:', payload);
+          fetchNotifications();
+        }
+      )
+      .on('postgres_changes',
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'maintenance_requests' 
+        },
+        (payload) => {
+          console.log('Maintenance change detected:', payload);
+          fetchNotifications();
+        }
+      )
+      .on('postgres_changes',
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'payments'
+        },
+        (payload) => {
+          console.log('Payment change detected:', payload);
+          fetchNotifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, userRole, fetchNotifications]);
 
   return { data, markAsRead };
 }
