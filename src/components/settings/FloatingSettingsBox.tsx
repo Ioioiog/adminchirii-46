@@ -60,9 +60,10 @@ export function FloatingSettingsBox() {
     }
   };
 
-  const handleNotificationClick = async (type: NotificationType) => {
+  const handleNotificationClick = async (type: NotificationType, messageId?: string) => {
     try {
-      await markAsRead(type);
+      console.log('Handling notification click:', { type, messageId });
+      await markAsRead(type, messageId);
       toast({
         title: "Notifications Cleared",
         description: `${type.charAt(0).toUpperCase() + type.slice(1)} notifications have been marked as read.`,
@@ -100,18 +101,15 @@ export function FloatingSettingsBox() {
           <h3 className="font-semibold mb-2">Notifications</h3>
           {notifications?.some(n => n.count > 0) ? (
             notifications.map((notification) => (
-              notification.count > 0 && (
+              notification.count > 0 && notification.items && notification.items.map((item) => (
                 <DropdownMenuItem 
-                  key={notification.type} 
+                  key={item.id} 
                   className="flex justify-between items-center cursor-pointer"
-                  onClick={() => handleNotificationClick(notification.type)}
+                  onClick={() => handleNotificationClick(notification.type, item.id)}
                 >
-                  <span className="capitalize">{notification.type}</span>
-                  <span className="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs">
-                    {notification.count}
-                  </span>
+                  <span>{item.message}</span>
                 </DropdownMenuItem>
-              )
+              ))
             ))
           ) : (
             <p className="text-sm text-gray-500">No new notifications</p>
