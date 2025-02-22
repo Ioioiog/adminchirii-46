@@ -2,3 +2,5 @@
 project_id = "wecmvyohaxizmnhuvjly"
 [functions.send-contract]
 verify_jwt = true
+[functions.scrape-utility-invoices]
+verify_jwt = true
