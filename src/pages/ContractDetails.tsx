@@ -140,7 +140,7 @@ export default function ContractDetails() {
 
       switch (selectedEmailOption) {
         case 'tenant':
-          emailToSend = contract?.metadata.tenantEmail || '';
+          emailToSend = metadata.tenantEmail || '';
           break;
         case 'tenant-list':
           emailToSend = selectedTenantEmail;
@@ -156,6 +156,13 @@ export default function ContractDetails() {
         throw new Error('No email address provided');
       }
 
+      const contractElement = document.querySelector('.print\\:block');
+      if (!contractElement) {
+        throw new Error('Could not find contract content');
+      }
+
+      console.log('Sending contract to:', emailToSend);
+      
       const { error: emailError } = await supabase.functions.invoke('send-contract', {
         body: {
           recipientEmail: emailToSend,
@@ -163,13 +170,18 @@ export default function ContractDetails() {
             contractNumber: metadata.contractNumber,
             tenantName: metadata.tenantName,
             ownerName: metadata.ownerName,
-            propertyAddress: metadata.propertyAddress,
-            contractContent: document.querySelector('.print\\:block')?.innerHTML || '',
+            propertyAddress: String(metadata.propertyAddress || ''),
+            contractContent: contractElement.innerHTML,
           },
         },
       });
 
-      if (emailError) throw emailError;
+      if (emailError) {
+        console.error('Email sending error:', emailError);
+        throw new Error(emailError.message || 'Failed to send email');
+      }
+
+      console.log('Contract sent successfully');
 
       toast({
         title: "Success",
@@ -183,7 +195,10 @@ export default function ContractDetails() {
         .update({ status: 'pending' as ContractStatus })
         .eq('id', id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Status update error:', updateError);
+        throw updateError;
+      }
 
     } catch (error: any) {
       console.error('Error sending contract:', error);
