@@ -10,6 +10,7 @@ import { useNavigate, Link } from 'react-router-dom';
 
 export default function GenerateContract() {
   const navigate = useNavigate();
+  const [showPreview, setShowPreview] = useState(false);
   const [assets, setAssets] = useState<Asset[]>([{
     name: '',
     value: '',
@@ -121,14 +122,29 @@ export default function GenerateContract() {
             </Link>
           </div>
           
-          <ContractForm
-            formData={formData}
-            assets={assets}
-            onInputChange={handleInputChange}
-            onAssetChange={handleAssetChange}
-            onAddAsset={addAssetRow}
-            onDeleteAsset={deleteAssetRow}
-          />
+          {!showPreview ? (
+            <ContractForm
+              formData={formData}
+              assets={assets}
+              onInputChange={handleInputChange}
+              onAssetChange={handleAssetChange}
+              onAddAsset={addAssetRow}
+              onDeleteAsset={deleteAssetRow}
+            />
+          ) : (
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <ContractContent formData={formData} />
+            </div>
+          )}
+
+          <div className="mt-6 flex justify-end">
+            <Button
+              onClick={() => setShowPreview(!showPreview)}
+              className="ml-4"
+            >
+              {showPreview ? "Edit Contract" : "Preview Contract"}
+            </Button>
+          </div>
 
           <div className="hidden print:block">
             <ContractContent formData={formData} />
