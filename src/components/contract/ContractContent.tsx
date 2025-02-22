@@ -17,22 +17,22 @@ export function ContractContent({ formData }: ContractContentProps) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
+    <div className="max-w-4xl mx-auto py-8 px-4 print:p-0">
       <div className="print:hidden mb-8 flex justify-end">
         <Button onClick={handlePrint} variant="outline">
           <Printer className="mr-2 h-4 w-4" />
           Print Contract
         </Button>
       </div>
-      <div className="space-y-8">
-        <header className="text-center mb-8">
+      <div className="space-y-8 print:space-y-4">
+        <header className="text-center mb-8 print:mb-4">
           <h1 className="text-2xl font-bold mb-2">CONTRACT DE ÎNCHIRIERE</h1>
           <p>Nr. {formData.contractNumber} din {formData.contractDate}</p>
         </header>
 
         <section>
-          <h2 className="text-lg font-semibold mb-4">I. PĂRȚILE CONTRACTANTE</h2>
-          <div className="space-y-4">
+          <h2 className="text-lg font-semibold mb-4 print:mb-2">I. PĂRȚILE CONTRACTANTE</h2>
+          <div className="space-y-4 print:space-y-2">
             <div>
               <p className="font-medium">1.1. {formData.ownerName}</p>
               <p>cu sediul în {formData.ownerAddress}</p>
@@ -128,8 +128,8 @@ export function ContractContent({ formData }: ContractContentProps) {
         </section>
 
         {formData.assets && formData.assets.length > 0 && (
-          <section>
-            <h2 className="text-lg font-semibold mb-4">VIII. INVENTARUL BUNURILOR</h2>
+          <section className="print:break-inside-avoid">
+            <h2 className="text-lg font-semibold mb-4 print:mb-2">VIII. INVENTARUL BUNURILOR</h2>
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b">
