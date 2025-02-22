@@ -65,16 +65,24 @@ export const DashboardSidebar = () => {
         className="flex-1 overflow-y-auto py-4 px-3"
       >
         <nav className="space-y-1.5">
-          {filteredMenuItems.map((item) => (
-            <SidebarMenuItem
-              key={item.href}
-              item={item}
-              isActive={isActive(item.href)}
-              isExpanded={isExpanded}
-              notifications={notifications}
-              onNotificationClick={handleNotificationClick}
-            />
-          ))}
+          {filteredMenuItems.map((item) => {
+            // Get notification count for this menu item if it has a notification type
+            const notificationCount = item.notificationType
+              ? notifications?.find(n => n.type === item.notificationType)?.count || 0
+              : 0;
+              
+            return (
+              <SidebarMenuItem
+                key={item.href}
+                item={item}
+                isActive={isActive(item.href)}
+                isExpanded={isExpanded}
+                notifications={notifications}
+                onNotificationClick={handleNotificationClick}
+                notificationCount={notificationCount}
+              />
+            );
+          })}
         </nav>
       </CollapsibleContent>
 

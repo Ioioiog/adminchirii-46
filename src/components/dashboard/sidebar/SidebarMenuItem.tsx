@@ -22,6 +22,7 @@ interface SidebarMenuItemProps {
   isExpanded: boolean;
   notifications?: Notification[];
   onNotificationClick?: (type: NotificationType) => void;
+  notificationCount?: number;
 }
 
 export const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
@@ -30,15 +31,11 @@ export const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
   isExpanded,
   notifications = [],
   onNotificationClick,
+  notificationCount = 0,
 }) => {
   const Icon = item.icon;
   
-  const notificationCount = React.useMemo(() => {
-    if (!item.notificationType || !notifications.length) return 0;
-    const notification = notifications.find(n => n.type === item.notificationType);
-    console.log(`Notification for ${item.title}:`, notification);
-    return notification?.count || 0;
-  }, [item.notificationType, notifications, item.title]);
+  console.log(`Rendering menu item ${item.title} with notification count:`, notificationCount);
 
   const handleClick = (e: React.MouseEvent) => {
     if (item.notificationType && notificationCount > 0 && onNotificationClick) {
