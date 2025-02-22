@@ -1,4 +1,3 @@
-
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +16,8 @@ import { FormData } from "@/types/contract";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useState } from "react";
+import { useTenants } from "@/hooks/useTenants";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type ContractStatus = 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled';
 
@@ -41,6 +42,9 @@ export default function ContractDetails() {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [selectedEmailOption, setSelectedEmailOption] = useState<string>('tenant');
   const [customEmail, setCustomEmail] = useState('');
+  const [selectedTenantEmail, setSelectedTenantEmail] = useState('');
+  
+  const { data: tenants = [] } = useTenants();
 
   const { data: contract, isLoading } = useQuery({
     queryKey: ['contract', id],
@@ -137,6 +141,9 @@ export default function ContractDetails() {
       switch (selectedEmailOption) {
         case 'tenant':
           emailToSend = contract?.metadata.tenantEmail || '';
+          break;
+        case 'tenant-list':
+          emailToSend = selectedTenantEmail;
           break;
         case 'custom':
           emailToSend = customEmail;
@@ -399,20 +406,53 @@ export default function ContractDetails() {
               <div className="space-y-4">
                 <RadioGroup
                   value={selectedEmailOption}
-                  onValueChange={setSelectedEmailOption}
+                  onValueChange={(value) => {
+                    setSelectedEmailOption(value);
+                    if (value !== 'tenant-list') {
+                      setSelectedTenantEmail('');
+                    }
+                  }}
                   className="space-y-2"
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="tenant" id="tenant" />
                     <Label htmlFor="tenant">
-                      Tenant Email ({metadata.tenantEmail || 'Not provided'})
+                      Contract Tenant ({metadata.tenantEmail || 'Not provided'})
                     </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="tenant-list" id="tenant-list" />
+                    <Label htmlFor="tenant-list">Select from Tenant List</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="custom" id="custom" />
                     <Label htmlFor="custom">Custom Email</Label>
                   </div>
                 </RadioGroup>
+
+                {selectedEmailOption === 'tenant-list' && (
+                  <div className="space-y-2">
+                    <Label>Select Tenant</Label>
+                    <Select
+                      value={selectedTenantEmail}
+                      onValueChange={setSelectedTenantEmail}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select a tenant" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tenants.map((tenant) => (
+                          <SelectItem 
+                            key={tenant.id} 
+                            value={tenant.email || ''}
+                          >
+                            {tenant.first_name} {tenant.last_name} ({tenant.email})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 {selectedEmailOption === 'custom' && (
                   <div className="space-y-2">
