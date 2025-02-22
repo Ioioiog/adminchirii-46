@@ -4,7 +4,6 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Message } from "./Message";
 import { TypingIndicator } from "./TypingIndicator";
-
 interface Message {
   id: string;
   sender_id: string;
@@ -17,7 +16,6 @@ interface Message {
     last_name: string | null;
   } | null;
 }
-
 interface MessageListProps {
   messages: Message[];
   currentUserId: string | null;
@@ -25,7 +23,6 @@ interface MessageListProps {
   typingUsers?: string[];
   className?: string;
 }
-
 export function MessageList({
   messages = [],
   currentUserId,
@@ -39,7 +36,6 @@ export function MessageList({
   const {
     toast
   } = useToast();
-
   useEffect(() => {
     if (!messages || messages.length === 0) {
       setVisibleMessages([]);
@@ -48,7 +44,6 @@ export function MessageList({
     const lastMessages = messages.slice(-12);
     setVisibleMessages(lastMessages);
   }, [messages]);
-
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({
@@ -56,7 +51,6 @@ export function MessageList({
       });
     }
   }, [visibleMessages, messagesEndRef]);
-
   useEffect(() => {
     if (!currentUserId || !messages || messages.length === 0) return;
     const updateMessageStatus = async () => {
@@ -88,12 +82,10 @@ export function MessageList({
     };
     updateMessageStatus();
   }, [messages, currentUserId, toast]);
-
   const handleEditMessage = (messageId: string, content: string) => {
     setEditingMessageId(messageId);
     setEditedContent(content);
   };
-
   const handleSaveEdit = async (messageId: string) => {
     try {
       const {
@@ -117,7 +109,6 @@ export function MessageList({
       });
     }
   };
-
   const handleDeleteMessage = async (messageId: string) => {
     try {
       const {
@@ -137,7 +128,6 @@ export function MessageList({
       });
     }
   };
-
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const element = event.currentTarget;
     if (element.scrollTop === 0 && messages && messages.length > 0) {
@@ -148,19 +138,14 @@ export function MessageList({
       }
     }
   };
-
   if (!messages || messages.length === 0) {
     return <div className="flex-1 flex items-center justify-center p-8 text-center">
         <div className="text-gray-500">No messages yet</div>
       </div>;
   }
-
   return <div className="flex-1 flex flex-col overflow-hidden">
       <ScrollArea className={className || "flex-1 h-full"}>
-        <div 
-          onScroll={handleScroll} 
-          className="space-y-4 p-4 bg-sky-50/80 min-h-full"
-        >
+        <div onScroll={handleScroll} className="space-y-4 p-4 min-h-full bg-sky-200 hover:bg-sky-100">
           {visibleMessages.map(message => {
           const senderName = message.sender ? `${message.sender.first_name || ''} ${message.sender.last_name || ''}`.trim() || 'Unknown User' : 'Unknown User';
           const isCurrentUser = message.sender_id === currentUserId;
