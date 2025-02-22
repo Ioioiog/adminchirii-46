@@ -374,92 +374,6 @@ export default function ContractDetails() {
       return;
     }
 
-    const printContent = `
-      <div class="contract-content">
-        <h1 class="text-2xl text-center font-bold mb-8">Contract de Închiriere</h1>
-        
-        <div class="mb-8">
-          <h2 class="text-lg font-semibold">Contract Information</h2>
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <p><strong>Contract Number:</strong> ${metadata.contractNumber}</p>
-              <p><strong>Contract Date:</strong> ${metadata.contractDate}</p>
-              <p><strong>Valid From:</strong> ${contract?.valid_from || 'N/A'}</p>
-            </div>
-            <div>
-              <p><strong>Status:</strong> ${contract?.status}</p>
-              <p><strong>Valid Until:</strong> ${contract?.valid_until || 'N/A'}</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="mb-8">
-          <h2 class="text-lg font-semibold">Landlord Information</h2>
-          <div class="grid grid-cols-2 gap-4">
-            <p><strong>Name:</strong> ${metadata.ownerName}</p>
-            <p><strong>Registration:</strong> ${metadata.ownerReg}</p>
-            <p><strong>Fiscal Code:</strong> ${metadata.ownerFiscal}</p>
-            <p><strong>Address:</strong> ${metadata.ownerAddress}</p>
-            <p><strong>Bank Account:</strong> ${metadata.ownerBank}</p>
-            <p><strong>Bank:</strong> ${metadata.ownerBankName}</p>
-            <p><strong>Email:</strong> ${metadata.ownerEmail}</p>
-            <p><strong>Phone:</strong> ${metadata.ownerPhone}</p>
-            <p><strong>County:</strong> ${metadata.ownerCounty}</p>
-            <p><strong>City:</strong> ${metadata.ownerCity}</p>
-            <p><strong>Representative:</strong> ${metadata.ownerRepresentative}</p>
-          </div>
-        </div>
-
-        <div class="mb-8">
-          <h2 class="text-lg font-semibold">Tenant Information</h2>
-          <div class="grid grid-cols-2 gap-4">
-            <p><strong>Name:</strong> ${metadata.tenantName}</p>
-            <p><strong>Registration:</strong> ${metadata.tenantReg}</p>
-            <p><strong>Fiscal Code:</strong> ${metadata.tenantFiscal}</p>
-            <p><strong>Address:</strong> ${metadata.tenantAddress}</p>
-            <p><strong>Bank Account:</strong> ${metadata.tenantBank}</p>
-            <p><strong>Bank:</strong> ${metadata.tenantBankName}</p>
-            <p><strong>Email:</strong> ${metadata.tenantEmail}</p>
-            <p><strong>Phone:</strong> ${metadata.tenantPhone}</p>
-            <p><strong>County:</strong> ${metadata.tenantCounty}</p>
-            <p><strong>City:</strong> ${metadata.tenantCity}</p>
-            <p><strong>Representative:</strong> ${metadata.tenantRepresentative}</p>
-          </div>
-        </div>
-
-        <div class="mb-8">
-          <h2 class="text-lg font-semibold">Property Details</h2>
-          <div class="grid grid-cols-2 gap-4">
-            <p><strong>Property Address:</strong> ${metadata.propertyAddress}</p>
-            <p><strong>Room Count:</strong> ${metadata.roomCount}</p>
-            <p><strong>Rent Amount:</strong> ${metadata.rentAmount} RON</p>
-            <p><strong>VAT Included:</strong> ${metadata.vatIncluded}</p>
-            <p><strong>Contract Duration:</strong> ${metadata.contractDuration} months</p>
-            <p><strong>Payment Day:</strong> ${metadata.paymentDay}</p>
-            <p><strong>Start Date:</strong> ${metadata.startDate}</p>
-          </div>
-        </div>
-
-        <div class="signature-section">
-          <h2 class="text-lg font-semibold mb-4">Signatures</h2>
-          <div class="signature-grid">
-            <div class="signature-box">
-              <p><strong>Landlord:</strong></p>
-              ${metadata.ownerSignatureImage ? `<img src="${metadata.ownerSignatureImage}" alt="Owner Signature" />` : '<p>No signature</p>'}
-              <p class="signature-line">${metadata.ownerSignatureName || ''}</p>
-              <p>Date: ${metadata.ownerSignatureDate || ''}</p>
-            </div>
-            <div class="signature-box">
-              <p><strong>Tenant:</strong></p>
-              ${metadata.tenantSignatureImage ? `<img src="${metadata.tenantSignatureImage}" alt="Tenant Signature" />` : '<p>No signature</p>'}
-              <p class="signature-line">${metadata.tenantSignatureName || ''}</p>
-              <p>Date: ${metadata.tenantSignatureDate || ''}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-
     const printStyles = `
       <style>
         @media print {
@@ -472,63 +386,43 @@ export default function ContractDetails() {
             line-height: 1.5;
             color: #000;
           }
-          .contract-content {
-            max-width: 100%;
-            margin: 0 auto;
-          }
-          h1 {
-            font-size: 18pt;
-            text-align: center;
-            margin-bottom: 20pt;
-          }
-          h2 {
-            font-size: 14pt;
-            margin-top: 15pt;
-            margin-bottom: 10pt;
-          }
-          p {
-            font-size: 11pt;
-            margin: 5pt 0;
-          }
-          .grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10pt;
-            margin: 10pt 0;
-          }
-          .signature-section {
-            margin-top: 30pt;
-            page-break-inside: avoid;
-          }
-          .signature-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40pt;
-            margin-top: 20pt;
-          }
-          .signature-box {
-            text-align: center;
-          }
-          .signature-line {
-            border-top: 1px solid #000;
-            margin-top: 40pt;
-            padding-top: 5pt;
-          }
+          .text-black { color: #000; }
+          .text-2xl { font-size: 1.5rem; }
+          .text-lg { font-size: 1.125rem; }
+          .font-bold { font-weight: bold; }
+          .font-semibold { font-weight: 600; }
+          .mb-8 { margin-bottom: 2rem; }
+          .mb-4 { margin-bottom: 1rem; }
+          .mb-2 { margin-bottom: 0.5rem; }
+          .text-center { text-align: center; }
+          .grid { display: grid; }
+          .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .gap-4 { gap: 1rem; }
+          .w-full { width: 100%; }
+          .border-collapse { border-collapse: collapse; }
+          .border { border: 1px solid #000; }
+          .border-gray-400 { border-color: #9ca3af; }
+          .px-4 { padding-left: 1rem; padding-right: 1rem; }
+          .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
           img {
             max-width: 150px;
             height: auto;
           }
-          .section-break {
-            margin: 15pt 0;
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
           }
-          strong {
-            font-weight: bold;
+          th, td {
+            border: 1px solid #000;
+            padding: 0.5rem;
+            text-align: left;
           }
         }
       </style>
     `;
 
-    const htmlContent = `
+    const content = `
       <!DOCTYPE html>
       <html>
         <head>
@@ -536,7 +430,10 @@ export default function ContractDetails() {
           ${printStyles}
         </head>
         <body>
-          ${printContent}
+          <div class="contract-preview">
+            ${<ContractContent formData={metadata} />}
+            ${<ContractSignatures formData={metadata} contractId={id!} />}
+          </div>
           <script>
             Promise.all(
               Array.from(document.images)
@@ -555,7 +452,7 @@ export default function ContractDetails() {
       </html>
     `;
 
-    printWindow.document.write(htmlContent);
+    printWindow.document.write(content);
     printWindow.document.close();
   };
 
