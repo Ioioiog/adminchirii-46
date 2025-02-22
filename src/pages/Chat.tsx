@@ -41,9 +41,11 @@ const Chat = () => {
     return acc;
   }, [] as typeof tenants extends (infer T)[] ? T[] : never) || [];
 
+  // Update this to properly handle profile_id from messages
   const unreadMessagesByTenant = messageNotification?.items?.reduce((acc, message) => {
-    // Check if sender_id exists before using it
     if (message.sender_id) {
+      // Log the message to help debug
+      console.log('Processing message notification:', message);
       acc[message.sender_id] = (acc[message.sender_id] || 0) + 1;
     }
     return acc;
@@ -105,6 +107,11 @@ const Chat = () => {
       </>;
   };
 
+  // Debug logging to help track tenant-message mapping
+  console.log('Unread messages by tenant:', unreadMessagesByTenant);
+  console.log('Message notifications:', messageNotification?.items);
+  console.log('Current tenants:', uniqueTenants);
+
   return (
     <div className="min-h-screen flex w-full bg-[#F1F0FB]">
       <DashboardSidebar />
@@ -130,40 +137,45 @@ const Chat = () => {
                   </div>
                 ) : (
                   <div className="space-y-0.5 p-2">
-                    {filteredTenants?.map((tenant) => (
-                      <button
-                        key={tenant.id}
-                        onClick={() => handleTenantSelect(tenant.id)}
-                        className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-all duration-200 ${
-                          selectedTenantId === tenant.id
-                            ? "bg-blue-50/80 hover:bg-blue-50"
-                            : "hover:bg-gray-50"
-                        }`}
-                      >
-                        <Avatar className="shadow-sm border border-gray-100">
-                          <AvatarFallback className="bg-blue-500 text-white font-medium">
-                            {tenant.first_name?.[0] || tenant.email?.[0] || "?"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 text-left">
-                          <div className="font-medium text-sm text-gray-800 flex items-center gap-2">
-                            {tenant.first_name && tenant.last_name
-                              ? `${tenant.first_name} ${tenant.last_name}`
-                              : tenant.email}
-                            {unreadMessagesByTenant[tenant.id] > 0 && (
-                              <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-                                {unreadMessagesByTenant[tenant.id]} new
-                              </Badge>
+                    {filteredTenants?.map((tenant) => {
+                      const unreadCount = unreadMessagesByTenant[tenant.id] || 0;
+                      console.log(`Tenant ${tenant.id} unread count:`, unreadCount); // Debug log
+                      
+                      return (
+                        <button
+                          key={tenant.id}
+                          onClick={() => handleTenantSelect(tenant.id)}
+                          className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-all duration-200 ${
+                            selectedTenantId === tenant.id
+                              ? "bg-blue-50/80 hover:bg-blue-50"
+                              : "hover:bg-gray-50"
+                          }`}
+                        >
+                          <Avatar className="shadow-sm border border-gray-100">
+                            <AvatarFallback className="bg-blue-500 text-white font-medium">
+                              {tenant.first_name?.[0] || tenant.email?.[0] || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 text-left">
+                            <div className="font-medium text-sm text-gray-800 flex items-center gap-2">
+                              {tenant.first_name && tenant.last_name
+                                ? `${tenant.first_name} ${tenant.last_name}`
+                                : tenant.email}
+                              {unreadCount > 0 && (
+                                <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                                  {unreadCount} new
+                                </Badge>
+                              )}
+                            </div>
+                            {tenant.property?.name && (
+                              <div className="text-xs text-gray-500 truncate">
+                                {tenant.property.name}
+                              </div>
                             )}
                           </div>
-                          {tenant.property?.name && (
-                            <div className="text-xs text-gray-500 truncate">
-                              {tenant.property.name}
-                            </div>
-                          )}
-                        </div>
-                      </button>
-                    ))}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </ScrollArea>
