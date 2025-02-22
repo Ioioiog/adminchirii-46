@@ -364,7 +364,6 @@ export default function ContractDetails() {
   };
 
   const handlePrint = () => {
-    // Create a new window for printing
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       toast({
@@ -375,7 +374,92 @@ export default function ContractDetails() {
       return;
     }
 
-    // Define print-specific styles
+    const printContent = `
+      <div class="contract-content">
+        <h1 class="text-2xl text-center font-bold mb-8">Contract de Închiriere</h1>
+        
+        <div class="mb-8">
+          <h2 class="text-lg font-semibold">Contract Information</h2>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <p><strong>Contract Number:</strong> ${metadata.contractNumber}</p>
+              <p><strong>Contract Date:</strong> ${metadata.contractDate}</p>
+              <p><strong>Valid From:</strong> ${contract?.valid_from || 'N/A'}</p>
+            </div>
+            <div>
+              <p><strong>Status:</strong> ${contract?.status}</p>
+              <p><strong>Valid Until:</strong> ${contract?.valid_until || 'N/A'}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-8">
+          <h2 class="text-lg font-semibold">Landlord Information</h2>
+          <div class="grid grid-cols-2 gap-4">
+            <p><strong>Name:</strong> ${metadata.ownerName}</p>
+            <p><strong>Registration:</strong> ${metadata.ownerReg}</p>
+            <p><strong>Fiscal Code:</strong> ${metadata.ownerFiscal}</p>
+            <p><strong>Address:</strong> ${metadata.ownerAddress}</p>
+            <p><strong>Bank Account:</strong> ${metadata.ownerBank}</p>
+            <p><strong>Bank:</strong> ${metadata.ownerBankName}</p>
+            <p><strong>Email:</strong> ${metadata.ownerEmail}</p>
+            <p><strong>Phone:</strong> ${metadata.ownerPhone}</p>
+            <p><strong>County:</strong> ${metadata.ownerCounty}</p>
+            <p><strong>City:</strong> ${metadata.ownerCity}</p>
+            <p><strong>Representative:</strong> ${metadata.ownerRepresentative}</p>
+          </div>
+        </div>
+
+        <div class="mb-8">
+          <h2 class="text-lg font-semibold">Tenant Information</h2>
+          <div class="grid grid-cols-2 gap-4">
+            <p><strong>Name:</strong> ${metadata.tenantName}</p>
+            <p><strong>Registration:</strong> ${metadata.tenantReg}</p>
+            <p><strong>Fiscal Code:</strong> ${metadata.tenantFiscal}</p>
+            <p><strong>Address:</strong> ${metadata.tenantAddress}</p>
+            <p><strong>Bank Account:</strong> ${metadata.tenantBank}</p>
+            <p><strong>Bank:</strong> ${metadata.tenantBankName}</p>
+            <p><strong>Email:</strong> ${metadata.tenantEmail}</p>
+            <p><strong>Phone:</strong> ${metadata.tenantPhone}</p>
+            <p><strong>County:</strong> ${metadata.tenantCounty}</p>
+            <p><strong>City:</strong> ${metadata.tenantCity}</p>
+            <p><strong>Representative:</strong> ${metadata.tenantRepresentative}</p>
+          </div>
+        </div>
+
+        <div class="mb-8">
+          <h2 class="text-lg font-semibold">Property Details</h2>
+          <div class="grid grid-cols-2 gap-4">
+            <p><strong>Property Address:</strong> ${metadata.propertyAddress}</p>
+            <p><strong>Room Count:</strong> ${metadata.roomCount}</p>
+            <p><strong>Rent Amount:</strong> ${metadata.rentAmount} RON</p>
+            <p><strong>VAT Included:</strong> ${metadata.vatIncluded}</p>
+            <p><strong>Contract Duration:</strong> ${metadata.contractDuration} months</p>
+            <p><strong>Payment Day:</strong> ${metadata.paymentDay}</p>
+            <p><strong>Start Date:</strong> ${metadata.startDate}</p>
+          </div>
+        </div>
+
+        <div class="signature-section">
+          <h2 class="text-lg font-semibold mb-4">Signatures</h2>
+          <div class="signature-grid">
+            <div class="signature-box">
+              <p><strong>Landlord:</strong></p>
+              ${metadata.ownerSignatureImage ? `<img src="${metadata.ownerSignatureImage}" alt="Owner Signature" />` : '<p>No signature</p>'}
+              <p class="signature-line">${metadata.ownerSignatureName || ''}</p>
+              <p>Date: ${metadata.ownerSignatureDate || ''}</p>
+            </div>
+            <div class="signature-box">
+              <p><strong>Tenant:</strong></p>
+              ${metadata.tenantSignatureImage ? `<img src="${metadata.tenantSignatureImage}" alt="Tenant Signature" />` : '<p>No signature</p>'}
+              <p class="signature-line">${metadata.tenantSignatureName || ''}</p>
+              <p>Date: ${metadata.tenantSignatureDate || ''}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
     const printStyles = `
       <style>
         @media print {
@@ -406,22 +490,11 @@ export default function ContractDetails() {
             font-size: 11pt;
             margin: 5pt 0;
           }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 10pt 0;
-            page-break-inside: avoid;
-          }
-          th, td {
-            border: 1px solid #000;
-            padding: 5pt;
-            text-align: left;
-            font-size: 10pt;
-          }
           .grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10pt;
+            margin: 10pt 0;
           }
           .signature-section {
             margin-top: 30pt;
@@ -448,26 +521,13 @@ export default function ContractDetails() {
           .section-break {
             margin: 15pt 0;
           }
-          .print-header {
-            text-align: right;
-            margin-bottom: 20pt;
+          strong {
+            font-weight: bold;
           }
         }
       </style>
     `;
 
-    // Get the contract content
-    const contractElement = document.querySelector('.contract-content');
-    if (!contractElement) {
-      toast({
-        title: "Error",
-        description: "Could not find contract content to print.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Create the HTML content for printing
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -476,14 +536,8 @@ export default function ContractDetails() {
           ${printStyles}
         </head>
         <body>
-          <div class="print-header">
-            <p>Data printării: ${new Date().toLocaleDateString()}</p>
-          </div>
-          <div class="contract-content">
-            ${contractElement.innerHTML}
-          </div>
+          ${printContent}
           <script>
-            // Wait for images to load before printing
             Promise.all(
               Array.from(document.images)
                 .filter(img => !img.complete)
@@ -491,7 +545,6 @@ export default function ContractDetails() {
                   img.onload = img.onerror = resolve;
                 }))
             ).then(() => {
-              // Small delay to ensure proper rendering
               setTimeout(() => {
                 window.print();
                 window.onafterprint = () => window.close();
@@ -502,7 +555,6 @@ export default function ContractDetails() {
       </html>
     `;
 
-    // Write content to print window and trigger print
     printWindow.document.write(htmlContent);
     printWindow.document.close();
   };
