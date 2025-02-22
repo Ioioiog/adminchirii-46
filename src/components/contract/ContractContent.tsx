@@ -61,16 +61,16 @@ export function ContractContent({ formData }: ContractContentProps) {
           </div>
         </section>
 
-        <section>
-          <h2 className="text-lg font-semibold mb-4">II. OBIECTUL CONTRACTULUI</h2>
+        <section className="print:break-inside-avoid">
+          <h2 className="text-lg font-semibold mb-4 print:mb-2">II. OBIECTUL CONTRACTULUI</h2>
           <p>
             2.1. Obiectul contractului îl constituie închirierea spațiului situat la adresa: {formData.propertyAddress}
           </p>
           <p>2.2. Spațiul închiriat are {formData.roomCount} camere.</p>
         </section>
 
-        <section>
-          <h2 className="text-lg font-semibold mb-4">III. DURATA CONTRACTULUI</h2>
+        <section className="print:break-inside-avoid">
+          <h2 className="text-lg font-semibold mb-4 print:mb-2">III. DURATA CONTRACTULUI</h2>
           <p>
             3.1. Durata închirierii este de {formData.contractDuration} luni, începând cu data de {formData.startDate}.
           </p>
@@ -80,8 +80,8 @@ export function ContractContent({ formData }: ContractContentProps) {
           </p>
         </section>
 
-        <section>
-          <h2 className="text-lg font-semibold mb-4">IV. PREȚUL ÎNCHIRIERII</h2>
+        <section className="print:break-inside-avoid">
+          <h2 className="text-lg font-semibold mb-4 print:mb-2">IV. PREȚUL ÎNCHIRIERII</h2>
           <p>
             4.1. Chiria lunară este de {formData.rentAmount} lei{formData.vatIncluded === 'da' ? ', TVA inclus' : ''}.
           </p>
@@ -93,8 +93,8 @@ export function ContractContent({ formData }: ContractContentProps) {
           </p>
         </section>
 
-        <section>
-          <h2 className="text-lg font-semibold mb-4">V. GARANȚIA</h2>
+        <section className="print:break-inside-avoid">
+          <h2 className="text-lg font-semibold mb-4 print:mb-2">V. GARANȚIA</h2>
           <p>
             5.1. La semnarea contractului, chiriașul va plăti o garanție în valoare de {formData.securityDeposit} lei.
           </p>
@@ -103,8 +103,8 @@ export function ContractContent({ formData }: ContractContentProps) {
           </p>
         </section>
 
-        <section>
-          <h2 className="text-lg font-semibold mb-4">VI. REZILIEREA CONTRACTULUI</h2>
+        <section className="print:break-inside-avoid">
+          <h2 className="text-lg font-semibold mb-4 print:mb-2">VI. REZILIEREA CONTRACTULUI</h2>
           <p>
             6.1. Oricare dintre părți poate denunța unilateral contractul cu un preaviz de {formData.unilateralNotice} zile.
           </p>
@@ -117,8 +117,8 @@ export function ContractContent({ formData }: ContractContentProps) {
           </p>
         </section>
 
-        <section>
-          <h2 className="text-lg font-semibold mb-4">VII. INDEXURILE UTILITĂȚILOR LA PREDARE</h2>
+        <section className="print:break-inside-avoid">
+          <h2 className="text-lg font-semibold mb-4 print:mb-2">VII. INDEXURILE UTILITĂȚILOR LA PREDARE</h2>
           <div className="space-y-2">
             <p>Apă rece: {formData.waterColdMeter}</p>
             <p>Apă caldă: {formData.waterHotMeter}</p>
