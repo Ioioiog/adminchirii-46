@@ -427,14 +427,13 @@ function ContractDetailsContent() {
       </style>
     `;
 
-    const contractContent = <ContractContent formData={metadata} />;
-    const contractSignatures = <ContractSignatures formData={metadata} contractId={id!} />;
-    
     const contentHtml = ReactDOMServer.renderToString(
-      <>
-        {contractContent}
-        {contractSignatures}
-      </>
+      <QueryClientProvider client={queryClient}>
+        <div className="contract-preview">
+          <ContractContent formData={metadata} />
+          <ContractSignatures formData={metadata} contractId={id!} />
+        </div>
+      </QueryClientProvider>
     );
 
     const htmlContent = `
@@ -445,9 +444,7 @@ function ContractDetailsContent() {
           ${printStyles}
         </head>
         <body>
-          <div class="contract-preview">
-            ${contentHtml}
-          </div>
+          ${contentHtml}
           <script>
             Promise.all(
               Array.from(document.images)
