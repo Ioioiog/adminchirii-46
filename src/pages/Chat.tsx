@@ -31,7 +31,6 @@ const Chat = () => {
   const { data: tenants, isLoading: isTenantsLoading } = useTenants();
   const { data: notifications } = useSidebarNotifications();
 
-  // Find the messages notification from sidebar notifications
   const messageNotification = notifications?.find(n => n.type === 'messages');
 
   const uniqueTenants = tenants?.reduce((acc, current) => {
@@ -42,7 +41,8 @@ const Chat = () => {
     return acc;
   }, [] as typeof tenants extends (infer T)[] ? T[] : never) || [];
 
-  const unreadMessagesByTenant = messageNotification?.items.reduce((acc, message) => {
+  const unreadMessagesByTenant = messageNotification?.items?.reduce((acc, message) => {
+    // Check if sender_id exists before using it
     if (message.sender_id) {
       acc[message.sender_id] = (acc[message.sender_id] || 0) + 1;
     }

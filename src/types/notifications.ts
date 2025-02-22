@@ -6,6 +6,7 @@ export type NotificationItem = {
   message: string;
   created_at: string;
   read: boolean;
+  sender_id?: string; // Added sender_id as optional property
 };
 
 export type Notification = {
