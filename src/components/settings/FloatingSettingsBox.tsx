@@ -25,8 +25,10 @@ export function FloatingSettingsBox() {
   const { data: notifications, markAsRead } = useSidebarNotifications();
   const navigate = useNavigate();
 
-  // Calculate total notifications the same way as sidebar
-  const totalNotifications = notifications?.reduce((acc, curr) => acc + (curr.count || 0), 0) || 0;
+  // Calculate total notifications by summing up all notification counts
+  const totalNotifications = notifications?.reduce((total, notification) => {
+    return total + (notification.count || 0);
+  }, 0) || 0;
 
   const handleNotificationClick = async (type: NotificationType, messageId?: string) => {
     try {
