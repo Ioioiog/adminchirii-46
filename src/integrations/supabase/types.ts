@@ -95,6 +95,9 @@ export type Database = {
           contract_type: string
           created_at: string
           id: string
+          invitation_email: string | null
+          invitation_sent_at: string | null
+          invitation_token: string | null
           landlord_id: string
           metadata: Json | null
           property_id: string
@@ -112,6 +115,9 @@ export type Database = {
           contract_type: string
           created_at?: string
           id?: string
+          invitation_email?: string | null
+          invitation_sent_at?: string | null
+          invitation_token?: string | null
           landlord_id: string
           metadata?: Json | null
           property_id: string
@@ -129,6 +135,9 @@ export type Database = {
           contract_type?: string
           created_at?: string
           id?: string
+          invitation_email?: string | null
+          invitation_sent_at?: string | null
+          invitation_token?: string | null
           landlord_id?: string
           metadata?: Json | null
           property_id?: string

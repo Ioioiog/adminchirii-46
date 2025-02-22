@@ -1,6 +1,5 @@
 
 project_id = "wecmvyohaxizmnhuvjly"
-[functions.send-contract]
-verify_jwt = true
-[functions.scrape-utility-invoices]
-verify_jwt = true
+
+[global.env]
+PUBLIC_SITE_URL = "http://localhost:5173"

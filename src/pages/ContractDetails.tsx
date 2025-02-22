@@ -1,4 +1,3 @@
-
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Eye, Printer, Send, Save } from "lucide-react";
+import { ArrowLeft, Eye, Printer, Send, Save, Mail } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
@@ -15,12 +14,13 @@ import { Json } from "@/integrations/supabase/types/json";
 import { ContractContent } from "@/components/contract/ContractContent";
 import { ContractSignatures } from "@/components/contract/ContractSignatures";
 import { FormData } from "@/types/contract";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useState } from "react";
 import { useTenants } from "@/hooks/useTenants";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useUserRole } from "@/hooks/use-user-role";
 
 type ContractStatus = 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled';
 
@@ -49,7 +49,9 @@ export default function ContractDetails() {
   const [selectedTenantEmail, setSelectedTenantEmail] = useState('');
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [editedData, setEditedData] = useState<FormData | null>(null);
-  
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const { userRole } = useUserRole();
   const { data: tenants = [] } = useTenants();
 
   const { data: contract, isLoading } = useQuery({
@@ -68,7 +70,7 @@ export default function ContractDetails() {
       const transformedMetadata: FormData = {
         contractNumber: String(metadataObj.contractNumber || ''),
         contractDate: String(metadataObj.contractDate || ''),
-        ownerName: String(metadataObj.ownerName || '',),
+        ownerName: String(metadataObj.ownerName || ''),
         ownerReg: String(metadataObj.ownerReg || ''),
         ownerFiscal: String(metadataObj.ownerFiscal || ''),
         ownerAddress: String(metadataObj.ownerAddress || ''),
@@ -325,6 +327,86 @@ export default function ContractDetails() {
     }
   };
 
+  const handleInviteTenant = async () => {
+    if (!contract || !inviteEmail) return;
+
+    try {
+      const { error } = await supabase.functions.invoke('send-contract-invitation', {
+        body: {
+          contractId: id,
+          tenantEmail: inviteEmail,
+          contractNumber: contract.metadata.contractNumber,
+          ownerName: contract.metadata.ownerName,
+          propertyAddress: contract.metadata.propertyAddress,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Invitation sent successfully",
+      });
+
+      setIsInviteModalOpen(false);
+      setInviteEmail("");
+    } catch (error: any) {
+      console.error('Error sending invitation:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send invitation",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const renderInviteButton = () => {
+    if (userRole !== 'landlord' || contract?.metadata.tenantSignatureName) return null;
+    
+    return (
+      <Button
+        onClick={() => setIsInviteModalOpen(true)}
+        className="flex items-center gap-2"
+      >
+        <Mail className="h-4 w-4" />
+        Invite Tenant to Sign
+      </Button>
+    );
+  };
+
+  const renderInviteModal = () => (
+    <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Invite Tenant to Sign Contract</DialogTitle>
+          <DialogDescription>
+            Send an invitation email to the tenant to review and sign this contract.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Tenant Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="tenant@example.com"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setIsInviteModalOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleInviteTenant}>
+            Send Invitation
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -354,6 +436,7 @@ export default function ContractDetails() {
             <h1 className="text-2xl font-bold">Contract Details</h1>
             
             <div className="flex items-center gap-2 ml-auto">
+              {renderInviteButton()}
               <Button
                 variant="outline"
                 onClick={() => setIsPreviewModalOpen(true)}
@@ -605,6 +688,8 @@ export default function ContractDetails() {
               </div>
             </DialogContent>
           </Dialog>
+
+          {renderInviteModal()}
         </div>
       </main>
     </div>
