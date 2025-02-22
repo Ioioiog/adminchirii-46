@@ -40,6 +40,25 @@ export function Message({
 }: MessageProps) {
   const messageTime = format(new Date(createdAt), 'HH:mm');
 
+  // Function to check if content is an image attachment
+  const isImageAttachment = (content: string) => {
+    const fileMatch = content.match(/\[File: (.*?)\]\((.*?)\)/);
+    if (!fileMatch) return false;
+    
+    const fileName = fileMatch[1].toLowerCase();
+    return fileName.endsWith('.jpg') || 
+           fileName.endsWith('.jpeg') || 
+           fileName.endsWith('.png') || 
+           fileName.endsWith('.gif') || 
+           fileName.endsWith('.webp');
+  };
+
+  // Function to extract URL from markdown-style content
+  const extractURL = (content: string) => {
+    const match = content.match(/\[File: .*?\]\((.*?)\)/);
+    return match ? match[1] : null;
+  };
+
   return (
     <div className={cn(
       "flex mb-2 px-4 animate-fade-in group",
@@ -88,9 +107,20 @@ export function Message({
             </div>
           ) : (
             <>
-              <p className="text-gray-800 dark:text-gray-200 text-sm whitespace-pre-wrap break-words">
-                {content}
-              </p>
+              {isImageAttachment(content) ? (
+                <div className="my-2">
+                  <img 
+                    src={extractURL(content)}
+                    alt="Message attachment"
+                    className="max-w-full rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200"
+                    style={{ maxHeight: '300px' }}
+                  />
+                </div>
+              ) : (
+                <p className="text-gray-800 dark:text-gray-200 text-sm whitespace-pre-wrap break-words">
+                  {content}
+                </p>
+              )}
               <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 flex justify-end items-center gap-1">
                 {messageTime}
               </div>
