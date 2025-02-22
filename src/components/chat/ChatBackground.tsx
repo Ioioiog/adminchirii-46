@@ -25,10 +25,17 @@ export function ChatBackground() {
     const shapes: THREE.Mesh[] = [];
     const shapeCount = 12;
 
+    // Function to create typing dot shape
+    function createTypingDot() {
+      const shape = new THREE.Shape();
+      const radius = 0.4;
+      shape.arc(0, 0, radius, 0, Math.PI * 2, false);
+      return shape;
+    }
+
     // Function to create curved path for phone shape
     function createPhoneShape() {
       const shape = new THREE.Shape();
-      // Enhanced curved path for phone shape
       shape.moveTo(0, 0);
       shape.bezierCurveTo(0.8, 0, 1.2, 0.6, 1.2, 1.2);
       shape.bezierCurveTo(1.2, 1.8, 0.8, 2.4, 0, 2.4);
@@ -40,13 +47,11 @@ export function ChatBackground() {
     // Function to create speech bubble shape
     function createBubbleShape() {
       const shape = new THREE.Shape();
-      // Enhanced bubble with more pronounced curves
       shape.moveTo(0, 0);
       shape.bezierCurveTo(2, 0, 2.5, 0.8, 2.5, 1.5);
       shape.bezierCurveTo(2.5, 2.2, 2, 2.8, 0, 2.8);
       shape.bezierCurveTo(-2, 2.8, -2.5, 2.2, -2.5, 1.5);
       shape.bezierCurveTo(-2.5, 0.8, -2, 0, 0, 0);
-      // Enhanced tail with smoother curve
       shape.moveTo(-0.5, 0);
       shape.quadraticCurveTo(-1.2, -0.8, -1.5, -1.5);
       return shape;
@@ -55,6 +60,42 @@ export function ChatBackground() {
     // Create different shape variations
     const shapeTypes = [createPhoneShape(), createBubbleShape()];
 
+    // Create typing dots
+    const typingDots: THREE.Mesh[] = [];
+    const dotsCount = 3;
+    const dotSpacing = 1;
+
+    for (let i = 0; i < dotsCount; i++) {
+      const dotGeometry = new THREE.ExtrudeGeometry(createTypingDot(), {
+        depth: 0.2,
+        bevelEnabled: true,
+        bevelThickness: 0.05,
+        bevelSize: 0.05,
+        bevelSegments: 4
+      });
+
+      const dotMaterial = new THREE.MeshPhysicalMaterial({
+        color: new THREE.Color('#2563EB'),
+        transparent: true,
+        opacity: 0.9,
+        metalness: 0.1,
+        roughness: 0.2,
+        clearcoat: 0.4,
+        clearcoatRoughness: 0.2,
+      });
+
+      const dot = new THREE.Mesh(dotGeometry, dotMaterial);
+      dot.position.x = (i - 1) * dotSpacing;
+      dot.position.y = 0;
+      dot.position.z = 2;
+      dot.userData.initialY = dot.position.y;
+      dot.userData.delay = i * 0.2;
+
+      typingDots.push(dot);
+      scene.add(dot);
+    }
+
+    // Create regular shapes
     for (let i = 0; i < shapeCount; i++) {
       const shapeType = shapeTypes[Math.floor(Math.random() * shapeTypes.length)];
       const scale = Math.random() * 0.5 + 0.5;
@@ -69,7 +110,7 @@ export function ChatBackground() {
 
       // Create main shape with blue-600
       const mainMaterial = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color('#2563EB'), // blue-600
+        color: new THREE.Color('#2563EB'),
         transparent: true,
         opacity: 0.9,
         side: THREE.DoubleSide,
@@ -81,7 +122,7 @@ export function ChatBackground() {
 
       // Create overlay with new sky blue color
       const overlayMaterial = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color('#87c0fa'), // New sky blue color
+        color: new THREE.Color('#87c0fa'),
         transparent: true,
         opacity: 0.4,
         side: THREE.DoubleSide,
@@ -94,7 +135,7 @@ export function ChatBackground() {
       const mainShape = new THREE.Mesh(geometry, mainMaterial);
       mainShape.scale.set(scale, scale, scale);
 
-      // Create and position overlay with enhanced offset
+      // Create and position overlay
       const overlayShape = new THREE.Mesh(geometry, overlayMaterial);
       overlayShape.scale.set(scale, scale, scale);
       overlayShape.position.set(0.15, -0.15, 0.02);
@@ -107,12 +148,10 @@ export function ChatBackground() {
       mainShape.rotation.x = Math.random() * Math.PI * 0.25;
       mainShape.rotation.y = Math.random() * Math.PI * 0.25;
 
-      // Store initial position for animation
       mainShape.userData.initialY = mainShape.position.y;
       mainShape.userData.speed = Math.random() * 0.5 + 0.5;
       mainShape.userData.rotationSpeed = (Math.random() * 0.002) + 0.001;
 
-      // Enable shadows
       mainShape.castShadow = true;
       mainShape.receiveShadow = true;
       overlayShape.castShadow = true;
@@ -132,19 +171,25 @@ export function ChatBackground() {
     directionalLight.shadow.mapSize.height = 1024;
     scene.add(directionalLight);
 
-    // Add a soft point light for extra dimension
     const pointLight = new THREE.PointLight(0x3b82f6, 0.5);
     pointLight.position.set(-5, 5, 3);
     scene.add(pointLight);
 
     camera.position.z = 10;
 
-    // Enhanced animation with faster and more varied movements
     let time = 0;
     function animate() {
       requestAnimationFrame(animate);
       time += 0.008;
 
+      // Animate typing dots
+      typingDots.forEach((dot, index) => {
+        const delay = dot.userData.delay;
+        dot.position.y = Math.sin(time * 3 + delay) * 0.2;
+        dot.rotation.z = Math.sin(time * 2 + delay) * 0.1;
+      });
+
+      // Animate shapes
       shapes.forEach((shape, index) => {
         const speed = shape.userData.speed;
         const rotationSpeed = shape.userData.rotationSpeed;
@@ -167,7 +212,6 @@ export function ChatBackground() {
       renderer.render(scene, camera);
     }
 
-    // Handle resize
     function handleResize() {
       if (!containerRef.current) return;
       camera.aspect = window.innerWidth / window.innerHeight;
