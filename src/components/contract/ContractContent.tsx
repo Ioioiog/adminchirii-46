@@ -1,4 +1,3 @@
-
 import { FormData } from "@/types/contract";
 
 interface ContractContentProps {
@@ -6,6 +5,10 @@ interface ContractContentProps {
 }
 
 export function ContractContent({ formData }: ContractContentProps) {
+  console.log("Contract formData:", formData);
+  console.log("Owner signature:", formData.ownerSignatureImage);
+  console.log("Tenant signature:", formData.tenantSignatureImage);
+
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
       <div className="space-y-8">
@@ -149,6 +152,10 @@ export function ContractContent({ formData }: ContractContentProps) {
                       src={formData.ownerSignatureImage} 
                       alt="Owner Signature" 
                       className="mt-2 max-w-[200px] border border-gray-200"
+                      onError={(e) => {
+                        console.error("Error loading owner signature image:", e);
+                        e.currentTarget.style.display = 'none';
+                      }}
                     />
                   )}
                 </div>
@@ -168,6 +175,10 @@ export function ContractContent({ formData }: ContractContentProps) {
                       src={formData.tenantSignatureImage} 
                       alt="Tenant Signature" 
                       className="mt-2 max-w-[200px] border border-gray-200"
+                      onError={(e) => {
+                        console.error("Error loading tenant signature image:", e);
+                        e.currentTarget.style.display = 'none';
+                      }}
                     />
                   )}
                 </div>
