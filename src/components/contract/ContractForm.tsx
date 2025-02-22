@@ -525,12 +525,6 @@ export function ContractForm({
 
       <div className="flex gap-4 mt-6">
         <Button 
-          onClick={() => window.print()}
-          className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 text-lg"
-        >
-          Printează Contractul
-        </Button>
-        <Button 
           onClick={handleSaveContract}
           className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg"
         >
