@@ -2,12 +2,14 @@
 import { FormData } from "@/types/contract";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
+import { ContractSignatures } from "./ContractSignatures";
 
 interface ContractContentProps {
   formData: FormData;
+  contractId?: string;
 }
 
-export function ContractContent({ formData }: ContractContentProps) {
+export function ContractContent({ formData, contractId }: ContractContentProps) {
   console.log("Contract formData:", formData);
   console.log("Owner signature:", formData.ownerSignatureImage);
   console.log("Tenant signature:", formData.tenantSignatureImage);
@@ -150,6 +152,27 @@ export function ContractContent({ formData }: ContractContentProps) {
             </table>
           </section>
         )}
+
+        <section className="print:break-inside-avoid mt-8">
+          {contractId ? (
+            <ContractSignatures formData={formData} contractId={contractId} />
+          ) : (
+            <div className="grid grid-cols-2 gap-8">
+              <div>
+                <p className="font-bold mb-2">PROPRIETAR,</p>
+                <p className="mb-2">Data: _____</p>
+                <p className="mb-2">Nume în clar și semnătură:</p>
+                <p>___________________________</p>
+              </div>
+              <div>
+                <p className="font-bold mb-2">CHIRIAȘ,</p>
+                <p className="mb-2">Data: _____</p>
+                <p className="mb-2">Nume în clar și semnătură:</p>
+                <p>___________________________</p>
+              </div>
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
