@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -273,6 +272,54 @@ export function useSidebarNotifications() {
       supabase.removeChannel(channel);
     };
   }, [userId, userRole, fetchNotifications]);
+
+  const markAsRead = useCallback(async (type: NotificationType) => {
+    if (!userId || !userRole) return;
+
+    try {
+      if (type === 'messages') {
+        const { error } = await supabase
+          .from('messages')
+          .update({ read: true })
+          .eq('receiver_id', userId)
+          .eq('read', false);
+
+        if (error) throw error;
+      } else if (type === 'maintenance') {
+        const { error } = await supabase
+          .from('maintenance_requests')
+          .update({ 
+            [userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant']: true 
+          })
+          .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false);
+
+        if (error) throw error;
+      } else if (type === 'payments') {
+        const { error } = await supabase
+          .from('payments')
+          .update({ 
+            [userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant']: true 
+          })
+          .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false);
+
+        if (error) throw error;
+      }
+
+      setData(prevData => 
+        prevData.map(item => 
+          item.type === type ? { ...item, count: 0, items: [] } : item
+        )
+      );
+    } catch (error) {
+      console.error(`Error marking ${type} as read:`, error);
+      toast({
+        title: "Error",
+        description: `Failed to mark ${type} as read`,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }, [userId, userRole, toast]);
 
   return { data, markAsRead };
 }
