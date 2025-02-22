@@ -16,7 +16,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ChatBackground } from "@/components/chat/ChatBackground";
 import { Badge } from "@/components/ui/badge";
 import { useSidebarNotifications } from "@/hooks/use-sidebar-notifications";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 
 const Chat = () => {
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
