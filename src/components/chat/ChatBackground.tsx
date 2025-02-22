@@ -28,26 +28,27 @@ export function ChatBackground() {
     // Function to create curved path for phone shape
     function createPhoneShape() {
       const shape = new THREE.Shape();
+      // Enhanced curved path for phone shape
       shape.moveTo(0, 0);
-      shape.bezierCurveTo(0.5, 0, 1, 0.5, 1, 1);
-      shape.bezierCurveTo(1, 1.5, 0.5, 2, 0, 2);
-      shape.bezierCurveTo(-0.5, 2, -1, 1.5, -1, 1);
-      shape.bezierCurveTo(-1, 0.5, -0.5, 0, 0, 0);
+      shape.bezierCurveTo(0.8, 0, 1.2, 0.6, 1.2, 1.2);
+      shape.bezierCurveTo(1.2, 1.8, 0.8, 2.4, 0, 2.4);
+      shape.bezierCurveTo(-0.8, 2.4, -1.2, 1.8, -1.2, 1.2);
+      shape.bezierCurveTo(-1.2, 0.6, -0.8, 0, 0, 0);
       return shape;
     }
 
     // Function to create speech bubble shape
     function createBubbleShape() {
       const shape = new THREE.Shape();
-      // Main bubble
+      // Enhanced bubble with more pronounced curves
       shape.moveTo(0, 0);
-      shape.bezierCurveTo(1.5, 0, 2, 0.5, 2, 1);
-      shape.bezierCurveTo(2, 1.5, 1.5, 2, 0, 2);
-      shape.bezierCurveTo(-1.5, 2, -2, 1.5, -2, 1);
-      shape.bezierCurveTo(-2, 0.5, -1.5, 0, 0, 0);
-      // Add tail
+      shape.bezierCurveTo(2, 0, 2.5, 0.8, 2.5, 1.5);
+      shape.bezierCurveTo(2.5, 2.2, 2, 2.8, 0, 2.8);
+      shape.bezierCurveTo(-2, 2.8, -2.5, 2.2, -2.5, 1.5);
+      shape.bezierCurveTo(-2.5, 0.8, -2, 0, 0, 0);
+      // Enhanced tail with smoother curve
       shape.moveTo(-0.5, 0);
-      shape.quadraticCurveTo(-0.8, -0.5, -1, -1);
+      shape.quadraticCurveTo(-1.2, -0.8, -1.5, -1.5);
       return shape;
     }
 
@@ -66,9 +67,9 @@ export function ChatBackground() {
         bevelSegments: 4
       });
 
-      // Create main shape with darker blue
+      // Create main shape with dark blue
       const mainMaterial = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color('#1D4ED8'), // blue-700
+        color: new THREE.Color('#0EA5E9'), // Ocean Blue
         transparent: true,
         opacity: 0.9,
         side: THREE.DoubleSide,
@@ -78,9 +79,9 @@ export function ChatBackground() {
         clearcoatRoughness: 0.2,
       });
 
-      // Create overlay with lighter blue
+      // Create overlay with light blue
       const overlayMaterial = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color('#93C5FD'), // blue-300
+        color: new THREE.Color('#D3E4FD'), // Soft Blue
         transparent: true,
         opacity: 0.4,
         side: THREE.DoubleSide,
@@ -93,23 +94,23 @@ export function ChatBackground() {
       const mainShape = new THREE.Mesh(geometry, mainMaterial);
       mainShape.scale.set(scale, scale, scale);
 
-      // Create and position overlay
+      // Create and position overlay with enhanced offset
       const overlayShape = new THREE.Mesh(geometry, overlayMaterial);
       overlayShape.scale.set(scale, scale, scale);
       overlayShape.position.set(0.15, -0.15, 0.02);
       mainShape.add(overlayShape);
 
       // Random position with wider spread
-      mainShape.position.x = (Math.random() - 0.5) * 15; // Increased spread
+      mainShape.position.x = (Math.random() - 0.5) * 15;
       mainShape.position.y = (Math.random() - 0.5) * 15;
       mainShape.position.z = (Math.random() - 0.5) * 10;
-      mainShape.rotation.x = Math.random() * Math.PI * 0.25; // Increased initial rotation
+      mainShape.rotation.x = Math.random() * Math.PI * 0.25;
       mainShape.rotation.y = Math.random() * Math.PI * 0.25;
 
       // Store initial position for animation
       mainShape.userData.initialY = mainShape.position.y;
-      mainShape.userData.speed = Math.random() * 0.5 + 0.5; // Random speed multiplier
-      mainShape.userData.rotationSpeed = (Math.random() * 0.002) + 0.001; // Random rotation speed
+      mainShape.userData.speed = Math.random() * 0.5 + 0.5;
+      mainShape.userData.rotationSpeed = (Math.random() * 0.002) + 0.001;
 
       // Enable shadows
       mainShape.castShadow = true;
@@ -142,27 +143,22 @@ export function ChatBackground() {
     let time = 0;
     function animate() {
       requestAnimationFrame(animate);
-      time += 0.008; // Increased base animation speed
+      time += 0.008;
 
       shapes.forEach((shape, index) => {
         const speed = shape.userData.speed;
         const rotationSpeed = shape.userData.rotationSpeed;
         
-        // More dynamic floating animation
         shape.position.y = shape.userData.initialY + 
-          Math.sin(time * speed + index) * 0.8; // Increased amplitude
+          Math.sin(time * speed + index) * 0.8;
         
-        // Faster rotation with varying speeds
         shape.rotation.x += rotationSpeed * 2;
         shape.rotation.y += rotationSpeed * 3;
         
-        // Dynamic wobble effect
-        shape.rotation.z = Math.sin(time * speed + index) * 0.15; // Increased wobble
+        shape.rotation.z = Math.sin(time * speed + index) * 0.15;
 
-        // Add slight horizontal movement
         shape.position.x += Math.sin(time * speed * 0.5 + index) * 0.01;
         
-        // Reset position if moved too far
         if (Math.abs(shape.position.x) > 15) {
           shape.position.x = Math.sign(shape.position.x) * 15;
         }
