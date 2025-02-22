@@ -51,17 +51,29 @@ export function MessageList({
     const unreadCount = unreadMessages.length;
     console.log('Unread count:', unreadCount);
 
-    if (unreadCount > 0) {
-      const newTitle = `(${unreadCount}) New Messages | Chat`;
-      console.log('Setting title to:', newTitle);
-      document.title = newTitle;
-    } else {
-      console.log('Resetting title to Chat');
-      document.title = 'Chat';
-    }
+    // Store the original title to restore it later
+    const originalTitle = document.title;
+
+    const updateTitle = () => {
+      if (unreadCount > 0) {
+        const newTitle = `(${unreadCount}) New Messages | Chat`;
+        console.log('Setting title to:', newTitle);
+        document.title = newTitle;
+      } else {
+        console.log('Resetting title to Chat');
+        document.title = 'Chat';
+      }
+    };
+
+    // Initial update
+    updateTitle();
+
+    // Set up an interval to periodically check and update the title
+    const titleInterval = setInterval(updateTitle, 1000);
 
     return () => {
-      document.title = 'Chat';
+      clearInterval(titleInterval);
+      document.title = originalTitle;
     };
   }, [messages, currentUserId]);
 
@@ -96,10 +108,10 @@ export function MessageList({
       }
     };
 
-    // Add a small delay before marking messages as read
+    // Add a longer delay before marking messages as read
     const timeoutId = setTimeout(() => {
       updateMessageStatus();
-    }, 1000); // 1 second delay
+    }, 2000); // 2 seconds delay
 
     return () => clearTimeout(timeoutId);
   }, [messages, currentUserId, toast]);
