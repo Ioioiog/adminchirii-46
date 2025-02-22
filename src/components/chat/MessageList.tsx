@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
@@ -131,13 +130,22 @@ export function MessageList({
     }
   };
 
-  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
-    const element = event.currentTarget;
-    if (element.scrollTop === 0 && messages && messages.length > 0) {
+  const handleScroll = (event: Event) => {
+    const element = event.target as HTMLDivElement;
+    console.log('Scroll position:', element.scrollTop); // Debug log
+    console.log('Current first message:', visibleMessages[0]?.id); // Debug log
+    
+    if (element.scrollTop < 50 && messages && messages.length > 0) {
       const currentFirstMessageIndex = messages.findIndex(msg => msg.id === visibleMessages[0]?.id);
+      console.log('Current first message index:', currentFirstMessageIndex); // Debug log
+      
       if (currentFirstMessageIndex > 0) {
-        const nextMessages = messages.slice(Math.max(0, currentFirstMessageIndex - 12), currentFirstMessageIndex + visibleMessages.length);
-        setVisibleMessages(nextMessages);
+        const newMessages = messages.slice(
+          Math.max(0, currentFirstMessageIndex - 12), 
+          currentFirstMessageIndex + visibleMessages.length
+        );
+        console.log('Loading more messages:', newMessages.length); // Debug log
+        setVisibleMessages(newMessages);
       }
     }
   };
@@ -152,17 +160,32 @@ export function MessageList({
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <ScrollArea className={className || "flex-1 h-full"}>
-        <div 
-          onScroll={handleScroll} 
-          className="space-y-4 p-4 min-h-full bg-sky-200/90 transition-colors duration-200 ease-in-out hover:bg-sky-100"
-        >
+      <ScrollArea 
+        className={className || "flex-1 h-full"}
+        onScrollCapture={handleScroll}
+      >
+        <div className="space-y-4 p-4 min-h-full bg-sky-200/90 transition-colors duration-200 ease-in-out hover:bg-sky-100">
           {visibleMessages.map(message => {
             const senderName = message.sender 
               ? `${message.sender.first_name || ''} ${message.sender.last_name || ''}`.trim() || 'Unknown User' 
               : 'Unknown User';
             const isCurrentUser = message.sender_id === currentUserId;
-            return <Message key={message.id} id={message.id} content={message.content} senderName={senderName} createdAt={message.created_at} isCurrentUser={isCurrentUser} status={message.status} isEditing={editingMessageId === message.id} editedContent={editedContent} onEditStart={handleEditMessage} onEditSave={handleSaveEdit} onEditCancel={() => setEditingMessageId(null)} onEditChange={setEditedContent} onDelete={handleDeleteMessage} />;
+            return <Message 
+              key={message.id} 
+              id={message.id} 
+              content={message.content} 
+              senderName={senderName} 
+              createdAt={message.created_at} 
+              isCurrentUser={isCurrentUser} 
+              status={message.status} 
+              isEditing={editingMessageId === message.id} 
+              editedContent={editedContent} 
+              onEditStart={handleEditMessage} 
+              onEditSave={handleSaveEdit} 
+              onEditCancel={() => setEditingMessageId(null)} 
+              onEditChange={setEditedContent} 
+              onDelete={handleDeleteMessage} 
+            />;
           })}
           
           <TypingIndicator typingUsers={typingUsers} />
