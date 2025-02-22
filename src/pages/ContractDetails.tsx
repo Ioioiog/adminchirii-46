@@ -24,7 +24,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ScrollArea } from "@/components/ui/scroll-area";
 import * as ReactDOMServer from 'react-dom/server';
 
-// Create a new QueryClient instance
 const queryClient = new QueryClient();
 
 type ContractStatus = 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled';
@@ -583,7 +582,12 @@ function ContractDetailsContent() {
   };
 
   const renderInviteButton = () => {
-    if (userRole !== 'landlord' || contract?.metadata.tenantSignatureName) return null;
+    if (userRole !== 'landlord') return null;
+    if (!contract) return null;
+    if (contract?.metadata.tenantSignatureName || 
+        (contract?.status !== 'draft' && contract?.status !== 'pending')) {
+      return null;
+    }
     
     return (
       <Button
