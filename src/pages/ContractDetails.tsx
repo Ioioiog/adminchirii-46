@@ -657,6 +657,95 @@ export default function ContractDetails() {
           </Card>
         </div>
       </main>
+
+      <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Contract Preview</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[80vh]">
+            <div className="p-6">
+              <ContractContent formData={metadata} />
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {renderInviteModal()}
+
+      <Dialog open={isEmailModalOpen} onOpenChange={() => setIsEmailModalOpen(false)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Send Contract via Email</DialogTitle>
+            <DialogDescription>
+              Choose where to send the contract
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <RadioGroup
+              value={selectedEmailOption}
+              onValueChange={(value) => setSelectedEmailOption(value)}
+              className="space-y-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="tenant" id="email-tenant" />
+                <Label htmlFor="email-tenant">
+                  Contract Tenant ({metadata.tenantEmail || 'Not provided'})
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="tenant-list" id="email-tenant-list" />
+                <Label htmlFor="email-tenant-list">Select from Tenant List</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="custom" id="email-custom" />
+                <Label htmlFor="email-custom">Custom Email</Label>
+              </div>
+            </RadioGroup>
+
+            {selectedEmailOption === 'tenant-list' && (
+              <div className="space-y-2">
+                <Label>Select Tenant</Label>
+                <Select
+                  value={selectedTenantEmail}
+                  onValueChange={setSelectedTenantEmail}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a tenant" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tenants.map((tenant) => (
+                      <SelectItem key={tenant.id} value={tenant.email || ''}>
+                        {tenant.first_name} {tenant.last_name} ({tenant.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {selectedEmailOption === 'custom' && (
+              <div className="space-y-2">
+                <Label htmlFor="customEmail">Custom Email Address</Label>
+                <Input
+                  id="customEmail"
+                  type="email"
+                  placeholder="Enter email address"
+                  value={customEmail}
+                  onChange={(e) => setCustomEmail(e.target.value)}
+                />
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button type="button" variant="secondary" onClick={() => setIsEmailModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleEmailSubmit}>Send Email</Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
