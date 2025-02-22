@@ -40,6 +40,24 @@ export function MessageList({
   const { toast } = useToast();
 
   useEffect(() => {
+    if (!currentUserId || !messages) return;
+
+    const unreadCount = messages.filter(msg => 
+      msg.sender_id !== currentUserId && !msg.read
+    ).length;
+
+    if (unreadCount > 0) {
+      document.title = `(${unreadCount}) New Messages | Chat`;
+    } else {
+      document.title = 'Chat';
+    }
+
+    return () => {
+      document.title = 'Chat';
+    };
+  }, [messages, currentUserId]);
+
+  useEffect(() => {
     if (!messages || messages.length === 0) {
       setVisibleMessages([]);
       return;
