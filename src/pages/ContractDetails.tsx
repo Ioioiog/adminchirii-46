@@ -18,6 +18,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useState } from "react";
 import { useTenants } from "@/hooks/useTenants";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type ContractStatus = 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled';
 
@@ -65,7 +66,7 @@ export default function ContractDetails() {
       const transformedMetadata: FormData = {
         contractNumber: String(metadataObj.contractNumber || ''),
         contractDate: String(metadataObj.contractDate || ''),
-        ownerName: String(metadataObj.ownerName || ''),
+        ownerName: String(metadataObj.ownerName || '',),
         ownerReg: String(metadataObj.ownerReg || ''),
         ownerFiscal: String(metadataObj.ownerFiscal || ''),
         ownerAddress: String(metadataObj.ownerAddress || ''),
@@ -386,139 +387,133 @@ export default function ContractDetails() {
             </div>
           </div>
 
-          <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
-            <DialogContent className="max-w-4xl h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <ContractContent formData={metadata} />
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          <div className="print:hidden">
-            <Card>
-              <CardHeader>
-                <CardTitle>Contract Information</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Contract Number</Label>
-                  <Input 
-                    value={metadata.contractNumber || ''} 
-                    onChange={(e) => handleInputChange('contractNumber', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Status</Label>
-                  <div className="mt-2">
-                    <Badge variant="secondary" className={
-                      contract.status === 'signed' ? 'bg-green-100 text-green-800' :
-                      contract.status === 'draft' ? 'bg-gray-100 text-gray-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }>
-                      {contract.status}
-                    </Badge>
+          <ScrollArea className="h-[calc(100vh-12rem)] print:hidden">
+            <div className="space-y-6 pr-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Contract Information</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Contract Number</Label>
+                    <Input 
+                      value={metadata.contractNumber || ''} 
+                      onChange={(e) => handleInputChange('contractNumber', e.target.value)}
+                    />
                   </div>
-                </div>
-                <div>
-                  <Label>Valid From</Label>
-                  <Input value={contract.valid_from ? format(new Date(contract.valid_from), 'PPP') : 'Not specified'} readOnly />
-                </div>
-                <div>
-                  <Label>Valid Until</Label>
-                  <Input value={contract.valid_until ? format(new Date(contract.valid_until), 'PPP') : 'Not specified'} readOnly />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Landlord Information</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4">
-                {Object.entries(metadata)
-                  .filter(([key]) => key.startsWith('owner'))
-                  .map(([key, value]) => (
-                    <div key={key}>
-                      <Label>{key.replace('owner', '').replace(/([A-Z])/g, ' $1').trim()}</Label>
-                      <Input 
-                        value={value || ''} 
-                        onChange={(e) => handleInputChange(key as keyof FormData, e.target.value)}
-                      />
+                  <div>
+                    <Label>Status</Label>
+                    <div className="mt-2">
+                      <Badge variant="secondary" className={
+                        contract.status === 'signed' ? 'bg-green-100 text-green-800' :
+                        contract.status === 'draft' ? 'bg-gray-100 text-gray-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }>
+                        {contract.status}
+                      </Badge>
                     </div>
-                  ))}
-              </CardContent>
-            </Card>
+                  </div>
+                  <div>
+                    <Label>Valid From</Label>
+                    <Input value={contract.valid_from ? format(new Date(contract.valid_from), 'PPP') : 'Not specified'} readOnly />
+                  </div>
+                  <div>
+                    <Label>Valid Until</Label>
+                    <Input value={contract.valid_until ? format(new Date(contract.valid_until), 'PPP') : 'Not specified'} readOnly />
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Tenant Information</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4">
-                {Object.entries(metadata)
-                  .filter(([key]) => key.startsWith('tenant'))
-                  .map(([key, value]) => (
-                    <div key={key}>
-                      <Label>{key.replace('tenant', '').replace(/([A-Z])/g, ' $1').trim()}</Label>
-                      <Input 
-                        value={value || ''} 
-                        onChange={(e) => handleInputChange(key as keyof FormData, e.target.value)}
-                      />
-                    </div>
-                  ))}
-              </CardContent>
-            </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Landlord Information</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 gap-4">
+                  {Object.entries(metadata)
+                    .filter(([key]) => key.startsWith('owner'))
+                    .map(([key, value]) => (
+                      <div key={key}>
+                        <Label>{key.replace('owner', '').replace(/([A-Z])/g, ' $1').trim()}</Label>
+                        <Input 
+                          value={value || ''} 
+                          onChange={(e) => handleInputChange(key as keyof FormData, e.target.value)}
+                        />
+                      </div>
+                    ))}
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Contract Terms</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Property</Label>
-                  <Input value={contract.properties?.name || 'Untitled Property'} readOnly />
-                </div>
-                <div>
-                  <Label>Contract Type</Label>
-                  <Input value={contract.contract_type} className="capitalize" readOnly />
-                </div>
-                <div>
-                  <Label>Rent Amount</Label>
-                  <Input 
-                    value={metadata.rentAmount || ''} 
-                    onChange={(e) => handleInputChange('rentAmount', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Contract Duration (months)</Label>
-                  <Input 
-                    value={metadata.contractDuration || ''} 
-                    onChange={(e) => handleInputChange('contractDuration', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Payment Day</Label>
-                  <Input 
-                    value={metadata.paymentDay || ''} 
-                    onChange={(e) => handleInputChange('paymentDay', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Late Fee</Label>
-                  <Input 
-                    value={metadata.lateFee || ''} 
-                    onChange={(e) => handleInputChange('lateFee', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Security Deposit</Label>
-                  <Input 
-                    value={metadata.securityDeposit || ''} 
-                    onChange={(e) => handleInputChange('securityDeposit', e.target.value)}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tenant Information</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 gap-4">
+                  {Object.entries(metadata)
+                    .filter(([key]) => key.startsWith('tenant'))
+                    .map(([key, value]) => (
+                      <div key={key}>
+                        <Label>{key.replace('tenant', '').replace(/([A-Z])/g, ' $1').trim()}</Label>
+                        <Input 
+                          value={value || ''} 
+                          onChange={(e) => handleInputChange(key as keyof FormData, e.target.value)}
+                        />
+                      </div>
+                    ))}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Contract Terms</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Property</Label>
+                    <Input value={contract.properties?.name || 'Untitled Property'} readOnly />
+                  </div>
+                  <div>
+                    <Label>Contract Type</Label>
+                    <Input value={contract.contract_type} className="capitalize" readOnly />
+                  </div>
+                  <div>
+                    <Label>Rent Amount</Label>
+                    <Input 
+                      value={metadata.rentAmount || ''} 
+                      onChange={(e) => handleInputChange('rentAmount', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Contract Duration (months)</Label>
+                    <Input 
+                      value={metadata.contractDuration || ''} 
+                      onChange={(e) => handleInputChange('contractDuration', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Payment Day</Label>
+                    <Input 
+                      value={metadata.paymentDay || ''} 
+                      onChange={(e) => handleInputChange('paymentDay', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Late Fee</Label>
+                    <Input 
+                      value={metadata.lateFee || ''} 
+                      onChange={(e) => handleInputChange('lateFee', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Security Deposit</Label>
+                    <Input 
+                      value={metadata.securityDeposit || ''} 
+                      onChange={(e) => handleInputChange('securityDeposit', e.target.value)}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </ScrollArea>
 
           <div className="hidden print:block">
             <ContractContent formData={metadata} />
