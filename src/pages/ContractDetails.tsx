@@ -1,3 +1,4 @@
+
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -12,31 +13,7 @@ import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useToast } from "@/hooks/use-toast";
 import { Json } from "@/integrations/supabase/types/json";
 import { ContractContent } from "@/components/contract/ContractContent";
-
-interface ContractMetadata {
-  contractNumber: string;
-  ownerName: string;
-  ownerReg: string;
-  ownerFiscal: string;
-  ownerAddress: string;
-  ownerBank: string;
-  ownerBankName: string;
-  ownerEmail: string;
-  ownerPhone: string;
-  tenantName: string;
-  tenantReg: string;
-  tenantFiscal: string;
-  tenantAddress: string;
-  tenantBank: string;
-  tenantBankName: string;
-  tenantEmail: string;
-  tenantPhone: string;
-  rentAmount: string;
-  contractDuration: string;
-  paymentDay: string;
-  lateFee: string;
-  securityDeposit: string;
-}
+import { FormData } from "@/types/contract";
 
 type ContractStatus = 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled';
 
@@ -51,7 +28,7 @@ interface Contract {
 }
 
 interface ContractResponse extends Omit<Contract, 'metadata'> {
-  metadata: ContractMetadata;
+  metadata: FormData;
 }
 
 export default function ContractDetails() {
@@ -71,9 +48,61 @@ export default function ContractDetails() {
       if (error) throw error;
       console.log('Contract data from Supabase:', data);
       
+      // Transform the metadata to include all required FormData fields with defaults
+      const transformedMetadata: FormData = {
+        contractNumber: data.metadata?.contractNumber || '',
+        contractDate: data.metadata?.contractDate || '',
+        ownerName: data.metadata?.ownerName || '',
+        ownerReg: data.metadata?.ownerReg || '',
+        ownerFiscal: data.metadata?.ownerFiscal || '',
+        ownerAddress: data.metadata?.ownerAddress || '',
+        ownerBank: data.metadata?.ownerBank || '',
+        ownerBankName: data.metadata?.ownerBankName || '',
+        ownerEmail: data.metadata?.ownerEmail || '',
+        ownerPhone: data.metadata?.ownerPhone || '',
+        ownerCounty: data.metadata?.ownerCounty || '',
+        ownerCity: data.metadata?.ownerCity || '',
+        ownerRepresentative: data.metadata?.ownerRepresentative || '',
+        tenantName: data.metadata?.tenantName || '',
+        tenantReg: data.metadata?.tenantReg || '',
+        tenantFiscal: data.metadata?.tenantFiscal || '',
+        tenantAddress: data.metadata?.tenantAddress || '',
+        tenantBank: data.metadata?.tenantBank || '',
+        tenantBankName: data.metadata?.tenantBankName || '',
+        tenantEmail: data.metadata?.tenantEmail || '',
+        tenantPhone: data.metadata?.tenantPhone || '',
+        tenantCounty: data.metadata?.tenantCounty || '',
+        tenantCity: data.metadata?.tenantCity || '',
+        tenantRepresentative: data.metadata?.tenantRepresentative || '',
+        propertyAddress: data.metadata?.propertyAddress || '',
+        rentAmount: data.metadata?.rentAmount || '',
+        vatIncluded: data.metadata?.vatIncluded || '',
+        contractDuration: data.metadata?.contractDuration || '',
+        paymentDay: data.metadata?.paymentDay || '',
+        roomCount: data.metadata?.roomCount || '',
+        startDate: data.metadata?.startDate || '',
+        lateFee: data.metadata?.lateFee || '',
+        renewalPeriod: data.metadata?.renewalPeriod || '',
+        unilateralNotice: data.metadata?.unilateralNotice || '',
+        terminationNotice: data.metadata?.terminationNotice || '',
+        earlyTerminationFee: data.metadata?.earlyTerminationFee || '',
+        latePaymentTermination: data.metadata?.latePaymentTermination || '',
+        securityDeposit: data.metadata?.securityDeposit || '',
+        depositReturnPeriod: data.metadata?.depositReturnPeriod || '',
+        waterColdMeter: data.metadata?.waterColdMeter || '',
+        waterHotMeter: data.metadata?.waterHotMeter || '',
+        electricityMeter: data.metadata?.electricityMeter || '',
+        gasMeter: data.metadata?.gasMeter || '',
+        ownerSignatureDate: data.metadata?.ownerSignatureDate || '',
+        ownerSignatureName: data.metadata?.ownerSignatureName || '',
+        tenantSignatureDate: data.metadata?.tenantSignatureDate || '',
+        tenantSignatureName: data.metadata?.tenantSignatureName || '',
+        assets: data.metadata?.assets || []
+      };
+
       const transformedData: ContractResponse = {
         ...data,
-        metadata: data.metadata as unknown as ContractMetadata
+        metadata: transformedMetadata
       };
 
       return transformedData;
