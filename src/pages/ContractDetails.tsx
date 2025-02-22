@@ -11,6 +11,41 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 
+interface ContractMetadata {
+  contractNumber?: string;
+  ownerName?: string;
+  ownerReg?: string;
+  ownerFiscal?: string;
+  ownerAddress?: string;
+  ownerBank?: string;
+  ownerBankName?: string;
+  ownerEmail?: string;
+  ownerPhone?: string;
+  tenantName?: string;
+  tenantReg?: string;
+  tenantFiscal?: string;
+  tenantAddress?: string;
+  tenantBank?: string;
+  tenantBankName?: string;
+  tenantEmail?: string;
+  tenantPhone?: string;
+  rentAmount?: string;
+  contractDuration?: string;
+  paymentDay?: string;
+  lateFee?: string;
+  securityDeposit?: string;
+}
+
+interface Contract {
+  id: string;
+  properties?: { name: string };
+  contract_type: string;
+  status: string;
+  valid_from: string | null;
+  valid_until: string | null;
+  metadata: ContractMetadata;
+}
+
 export default function ContractDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -25,7 +60,7 @@ export default function ContractDetails() {
         .single();
 
       if (error) throw error;
-      return data;
+      return data as Contract;
     },
   });
 
