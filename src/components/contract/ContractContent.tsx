@@ -1,5 +1,7 @@
 
 import { FormData } from "@/types/contract";
+import { Button } from "@/components/ui/button";
+import { Printer } from "lucide-react";
 
 interface ContractContentProps {
   formData: FormData;
@@ -10,8 +12,18 @@ export function ContractContent({ formData }: ContractContentProps) {
   console.log("Owner signature:", formData.ownerSignatureImage);
   console.log("Tenant signature:", formData.tenantSignatureImage);
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
+      <div className="print:hidden mb-8 flex justify-end">
+        <Button onClick={handlePrint} variant="outline">
+          <Printer className="mr-2 h-4 w-4" />
+          Print Contract
+        </Button>
+      </div>
       <div className="space-y-8">
         <header className="text-center mb-8">
           <h1 className="text-2xl font-bold mb-2">CONTRACT DE ÎNCHIRIERE</h1>
