@@ -517,6 +517,7 @@ export default function ContractDetails() {
 
           <div className="hidden print:block">
             <ContractContent formData={metadata} />
+            <ContractSignatures formData={metadata} contractId={id || ''} />
           </div>
 
           <Dialog open={isEmailModalOpen} onOpenChange={setIsEmailModalOpen}>
