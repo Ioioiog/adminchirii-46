@@ -40,16 +40,23 @@ export function MessageList({
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
+  // Title update effect - Moved before the mark-as-read effect
   useEffect(() => {
     if (!currentUserId || !messages) return;
 
-    const unreadCount = messages.filter(msg => 
+    console.log('Checking unread messages...');
+    const unreadMessages = messages.filter(msg => 
       msg.sender_id !== currentUserId && !msg.read
-    ).length;
+    );
+    const unreadCount = unreadMessages.length;
+    console.log('Unread count:', unreadCount);
 
     if (unreadCount > 0) {
-      document.title = `(${unreadCount}) New Messages | Chat`;
+      const newTitle = `(${unreadCount}) New Messages | Chat`;
+      console.log('Setting title to:', newTitle);
+      document.title = newTitle;
     } else {
+      console.log('Resetting title to Chat');
       document.title = 'Chat';
     }
 
@@ -58,12 +65,16 @@ export function MessageList({
     };
   }, [messages, currentUserId]);
 
+  // Mark as read effect - Now runs after title update
   useEffect(() => {
     if (!currentUserId || !messages || messages.length === 0) return;
+    
     const updateMessageStatus = async () => {
       try {
         const unreadMessages = messages.filter(msg => msg.sender_id !== currentUserId && !msg.read);
         if (unreadMessages.length === 0) return;
+
+        console.log('Marking messages as read:', unreadMessages.length);
         const batchSize = 10;
         for (let i = 0; i < unreadMessages.length; i += batchSize) {
           const batch = unreadMessages.slice(i, i + batchSize);
@@ -72,9 +83,8 @@ export function MessageList({
             read: true,
             updated_at: new Date().toISOString()
           }).in('id', batch.map(msg => msg.id));
-          if (error) {
-            throw error;
-          }
+          
+          if (error) throw error;
         }
       } catch (error) {
         console.error('Error updating message status:', error);
@@ -85,7 +95,13 @@ export function MessageList({
         });
       }
     };
-    updateMessageStatus();
+
+    // Add a small delay before marking messages as read
+    const timeoutId = setTimeout(() => {
+      updateMessageStatus();
+    }, 1000); // 1 second delay
+
+    return () => clearTimeout(timeoutId);
   }, [messages, currentUserId, toast]);
 
   useEffect(() => {
