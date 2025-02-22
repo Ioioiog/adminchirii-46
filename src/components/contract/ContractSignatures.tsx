@@ -50,7 +50,7 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
 
         // Update the contract's metadata with the signature
         const signatureDate = new Date().toISOString().split('T')[0];
-        const newMetadata = {
+        const updatedMetadata = {
           ...formData,
           [`${userRole}SignatureDate`]: signatureDate,
           [`${userRole}SignatureName`]: signatureName,
@@ -60,7 +60,7 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
         const { error: contractError } = await supabase
           .from('contracts')
           .update({
-            metadata: newMetadata,
+            metadata: updatedMetadata,
             status: 'signed'
           })
           .eq('id', contractId);
