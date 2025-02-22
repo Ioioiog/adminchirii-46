@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/use-user-role";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import SignaturePad from 'react-signature-canvas';
 import { Card } from "@/components/ui/card";
@@ -20,6 +20,14 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
   const [signatureName, setSignatureName] = useState("");
   const signaturePadRef = useRef<SignaturePad>(null);
 
+  // Debug log when component mounts and when formData changes
+  useEffect(() => {
+    console.log('Current user role:', userRole);
+    console.log('Contract formData:', formData);
+    console.log('Owner signature:', formData.ownerSignatureImage);
+    console.log('Tenant signature:', formData.tenantSignatureImage);
+  }, [formData, userRole]);
+
   const handleSign = async () => {
     if (!userId || !userRole) {
       toast({
@@ -34,19 +42,40 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
       try {
         const signatureImage = signaturePadRef.current?.getTrimmedCanvas().toDataURL('image/png');
         
-        // Insert the signature record
-        const { error } = await supabase
+        // First, check if a signature already exists for this user and role
+        const { data: existingSignatures } = await supabase
           .from('contract_signatures')
-          .insert({
-            contract_id: contractId,
-            signer_id: userId,
-            signer_role: userRole === 'landlord' ? 'landlord' : 'tenant',
-            signature_data: signatureName,
-            signature_image: signatureImage,
-            ip_address: await fetch('https://api.ipify.org?format=json').then(res => res.json()).then(data => data.ip)
-          });
+          .select('*')
+          .eq('contract_id', contractId)
+          .eq('signer_role', userRole === 'landlord' ? 'landlord' : 'tenant');
 
-        if (error) throw error;
+        if (existingSignatures && existingSignatures.length > 0) {
+          // If signature exists, update it instead of creating a new one
+          const { error: updateError } = await supabase
+            .from('contract_signatures')
+            .update({
+              signature_data: signatureName,
+              signature_image: signatureImage,
+              signed_at: new Date().toISOString()
+            })
+            .eq('id', existingSignatures[0].id);
+
+          if (updateError) throw updateError;
+        } else {
+          // If no signature exists, create a new one
+          const { error } = await supabase
+            .from('contract_signatures')
+            .insert({
+              contract_id: contractId,
+              signer_id: userId,
+              signer_role: userRole === 'landlord' ? 'landlord' : 'tenant',
+              signature_data: signatureName,
+              signature_image: signatureImage,
+              ip_address: await fetch('https://api.ipify.org?format=json').then(res => res.json()).then(data => data.ip)
+            });
+
+          if (error) throw error;
+        }
 
         // Update the contract's metadata with the signature
         const signatureDate = new Date().toISOString().split('T')[0];
