@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { FormData, Asset } from '@/types/contract';
 import { ContractForm } from '@/components/contract/ContractForm';
@@ -104,9 +103,7 @@ export default function GenerateContract() {
 
   return (
     <div className="flex bg-[#F8F9FC] min-h-screen">
-      <div className="print:hidden">
-        <DashboardSidebar />
-      </div>
+      <DashboardSidebar />
 
       <main className="flex-1 p-8">
         <div className="max-w-4xl mx-auto relative">
@@ -144,10 +141,6 @@ export default function GenerateContract() {
             >
               {showPreview ? "Edit Contract" : "Preview Contract"}
             </Button>
-          </div>
-
-          <div className="hidden print:block">
-            <ContractContent formData={formData} />
           </div>
         </div>
       </main>
