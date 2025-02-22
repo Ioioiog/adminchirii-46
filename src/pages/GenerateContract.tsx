@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { FormData, Asset } from '@/types/contract';
 import { ContractForm } from '@/components/contract/ContractForm';
@@ -5,9 +6,14 @@ import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { useProperties } from '@/hooks/useProperties';
+import { useUserRole } from '@/hooks/use-user-role';
 
 export default function GenerateContract() {
   const navigate = useNavigate();
+  const { properties } = useProperties({ userRole: "landlord" });
   const [assets, setAssets] = useState<Asset[]>([{
     name: '',
     value: '',
@@ -39,7 +45,7 @@ export default function GenerateContract() {
     tenantCounty: 'București',
     tenantCity: 'București',
     tenantRepresentative: 'Administrator',
-    propertyAddress: 'București, Fabrica de Glucoza, nr 6-8, bloc 4b, etaj 5, ap 26, sector 2',
+    propertyAddress: '',
     rentAmount: '1100',
     vatIncluded: 'nu',
     contractDuration: '12',
@@ -64,6 +70,17 @@ export default function GenerateContract() {
     tenantSignatureName: '',
     assets: []
   });
+
+  const handlePropertySelect = (propertyId: string) => {
+    const selectedProperty = properties?.find(p => p.id === propertyId);
+    if (selectedProperty) {
+      setFormData(prev => ({
+        ...prev,
+        propertyAddress: selectedProperty.address,
+        rentAmount: selectedProperty.monthly_rent.toString()
+      }));
+    }
+  };
 
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData(prev => ({
@@ -115,6 +132,22 @@ export default function GenerateContract() {
                 Back
               </Button>
             </Link>
+          </div>
+          
+          <div className="mb-6">
+            <Label htmlFor="property-select">Select Property</Label>
+            <Select onValueChange={handlePropertySelect}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a property" />
+              </SelectTrigger>
+              <SelectContent>
+                {properties?.map((property) => (
+                  <SelectItem key={property.id} value={property.id}>
+                    {property.name} - {property.address}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           <ContractForm
