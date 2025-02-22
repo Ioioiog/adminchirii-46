@@ -12,6 +12,43 @@ import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useToast } from "@/hooks/use-toast";
 
+interface ContractMetadata {
+  contractNumber: string;
+  ownerName: string;
+  ownerReg: string;
+  ownerFiscal: string;
+  ownerAddress: string;
+  ownerBank: string;
+  ownerBankName: string;
+  ownerEmail: string;
+  ownerPhone: string;
+  tenantName: string;
+  tenantReg: string;
+  tenantFiscal: string;
+  tenantAddress: string;
+  tenantBank: string;
+  tenantBankName: string;
+  tenantEmail: string;
+  tenantPhone: string;
+  rentAmount: string;
+  contractDuration: string;
+  paymentDay: string;
+  lateFee: string;
+  securityDeposit: string;
+}
+
+type ContractStatus = 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled';
+
+interface Contract {
+  id: string;
+  properties?: { name: string };
+  contract_type: string;
+  status: ContractStatus;
+  valid_from: string | null;
+  valid_until: string | null;
+  metadata: ContractMetadata;
+}
+
 export default function ContractDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -28,7 +65,7 @@ export default function ContractDetails() {
 
       if (error) throw error;
       console.log('Contract data from Supabase:', data);
-      return data;
+      return data as Contract;
     },
   });
 
@@ -49,7 +86,7 @@ export default function ContractDetails() {
       // Here you would typically update the contract status and trigger email sending
       const { error } = await supabase
         .from('contracts')
-        .update({ status: 'sent' })
+        .update({ status: 'pending' as ContractStatus })
         .eq('id', id);
 
       if (error) throw error;
@@ -75,7 +112,7 @@ export default function ContractDetails() {
     return <div>Contract not found</div>;
   }
 
-  const metadata = contract.metadata || {};
+  const metadata = contract.metadata || {} as ContractMetadata;
 
   return (
     <div className="flex bg-[#F8F9FC] min-h-screen">
