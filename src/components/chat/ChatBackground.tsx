@@ -79,21 +79,36 @@ export function ChatBackground() {
         bevelSegments: 3
       });
 
-      // Create more sophisticated material
-      const material = new THREE.MeshPhysicalMaterial({
-        map: messageTexture,
+      // Create more sophisticated material with a lighter blue for the overlay effect
+      const mainMaterial = new THREE.MeshPhysicalMaterial({
+        color: new THREE.Color('#2563EB'), // blue-600
         transparent: true,
         opacity: 0.9,
         side: THREE.DoubleSide,
-        metalness: 0.2,
-        roughness: 0.3,
+        metalness: 0.1,
+        roughness: 0.2,
         clearcoat: 0.3,
         clearcoatRoughness: 0.2,
-        envMapIntensity: 1,
-        transmission: 0.05,
       });
 
-      const message = new THREE.Mesh(geometry, material);
+      const overlayMaterial = new THREE.MeshPhysicalMaterial({
+        color: new THREE.Color('#60A5FA'), // blue-400
+        transparent: true,
+        opacity: 0.4,
+        side: THREE.DoubleSide,
+        metalness: 0.1,
+        roughness: 0.2,
+        clearcoat: 0.3,
+        clearcoatRoughness: 0.2,
+      });
+
+      // Create main message shape
+      const message = new THREE.Mesh(geometry, mainMaterial);
+      
+      // Create overlay shape
+      const overlayShape = new THREE.Mesh(geometry, overlayMaterial);
+      overlayShape.position.set(0.1, -0.1, 0.02); // Slightly offset
+      message.add(overlayShape);
       
       // Random position and rotation with better distribution
       message.position.x = (Math.random() - 0.5) * 12;
@@ -105,6 +120,7 @@ export function ChatBackground() {
       // Enable shadows
       message.castShadow = true;
       message.receiveShadow = true;
+      overlayShape.castShadow = true;
       
       messages.push(message);
       scene.add(message);
