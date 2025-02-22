@@ -1,4 +1,3 @@
-
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +13,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Json } from "@/integrations/supabase/types/json";
 import { ContractContent } from "@/components/contract/ContractContent";
 import { FormData } from "@/types/contract";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useState } from "react";
 
 type ContractStatus = 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled';
 
@@ -35,6 +37,9 @@ export default function ContractDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { toast } = useToast();
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [selectedEmailOption, setSelectedEmailOption] = useState<string>('tenant');
+  const [customEmail, setCustomEmail] = useState('');
 
   const { data: contract, isLoading } = useQuery({
     queryKey: ['contract', id],
@@ -48,10 +53,8 @@ export default function ContractDetails() {
       if (error) throw error;
       console.log('Contract data from Supabase:', data);
       
-      // Cast metadata to object type first
       const metadataObj = data.metadata as Record<string, any> || {};
       
-      // Transform the metadata to include all required FormData fields with defaults
       const transformedMetadata: FormData = {
         contractNumber: String(metadataObj.contractNumber || ''),
         contractDate: String(metadataObj.contractDate || ''),
@@ -124,8 +127,36 @@ export default function ContractDetails() {
     window.print();
   };
 
-  const handleSendContract = async () => {
+  const handleSendContract = () => {
+    setIsEmailModalOpen(true);
+  };
+
+  const handleEmailSubmit = async () => {
     try {
+      let emailToSend = '';
+
+      switch (selectedEmailOption) {
+        case 'tenant':
+          emailToSend = contract?.metadata.tenantEmail || '';
+          break;
+        case 'custom':
+          emailToSend = customEmail;
+          break;
+        default:
+          throw new Error('Invalid email option selected');
+      }
+
+      if (!emailToSend) {
+        throw new Error('No email address provided');
+      }
+
+      toast({
+        title: "Success",
+        description: `Contract will be sent to ${emailToSend}`,
+      });
+
+      setIsEmailModalOpen(false);
+      
       const { error } = await supabase
         .from('contracts')
         .update({ status: 'pending' as ContractStatus })
@@ -133,14 +164,10 @@ export default function ContractDetails() {
 
       if (error) throw error;
 
-      toast({
-        title: "Success",
-        description: "Contract has been sent successfully",
-      });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to send the contract. Please try again.",
+        description: error.message || "Failed to send the contract. Please try again.",
         variant: "destructive"
       });
     }
@@ -361,6 +388,57 @@ export default function ContractDetails() {
           <div className="hidden print:block">
             <ContractContent formData={metadata} />
           </div>
+
+          <Dialog open={isEmailModalOpen} onOpenChange={setIsEmailModalOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Send Contract</DialogTitle>
+                <DialogDescription>
+                  Choose where to send the contract
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <RadioGroup
+                  value={selectedEmailOption}
+                  onValueChange={setSelectedEmailOption}
+                  className="space-y-2"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="tenant" id="tenant" />
+                    <Label htmlFor="tenant">
+                      Tenant Email ({metadata.tenantEmail || 'Not provided'})
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="custom" id="custom" />
+                    <Label htmlFor="custom">Custom Email</Label>
+                  </div>
+                </RadioGroup>
+
+                {selectedEmailOption === 'custom' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="customEmail">Custom Email Address</Label>
+                    <Input
+                      id="customEmail"
+                      type="email"
+                      placeholder="Enter email address"
+                      value={customEmail}
+                      onChange={(e) => setCustomEmail(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                <div className="flex justify-end space-x-2">
+                  <Button variant="outline" onClick={() => setIsEmailModalOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleEmailSubmit}>
+                    Send Contract
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </main>
     </div>
