@@ -12,6 +12,7 @@ import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useToast } from "@/hooks/use-toast";
 import { Json } from "@/integrations/supabase/types/json";
 import { ContractContent } from "@/components/contract/ContractContent";
+import { ContractSignatures } from "@/components/contract/ContractSignatures";
 import { FormData } from "@/types/contract";
 import { useState } from "react";
 import { useTenants } from "@/hooks/useTenants";
@@ -422,7 +423,18 @@ export default function ContractDetails() {
       </style>
     `;
 
-    const content = `
+    const tempContainer = document.createElement('div');
+    const contractContent = <ContractContent formData={metadata} />;
+    const contractSignatures = <ContractSignatures formData={metadata} contractId={id!} />;
+    
+    const contentHtml = ReactDOM.renderToString(
+      <>
+        {contractContent}
+        {contractSignatures}
+      </>
+    );
+
+    const htmlContent = `
       <!DOCTYPE html>
       <html>
         <head>
@@ -431,8 +443,7 @@ export default function ContractDetails() {
         </head>
         <body>
           <div class="contract-preview">
-            ${<ContractContent formData={metadata} />}
-            ${<ContractSignatures formData={metadata} contractId={id!} />}
+            ${contentHtml}
           </div>
           <script>
             Promise.all(
@@ -452,7 +463,7 @@ export default function ContractDetails() {
       </html>
     `;
 
-    printWindow.document.write(content);
+    printWindow.document.write(htmlContent);
     printWindow.document.close();
   };
 
@@ -784,23 +795,8 @@ export default function ContractDetails() {
       <ContractModals
         isPreviewModalOpen={isPreviewModalOpen}
         setIsPreviewModalOpen={setIsPreviewModalOpen}
-        isEmailModalOpen={isEmailModalOpen}
-        setIsEmailModalOpen={setIsEmailModalOpen}
-        isInviteModalOpen={isInviteModalOpen}
-        setIsInviteModalOpen={setIsInviteModalOpen}
-        selectedEmailOption={selectedEmailOption}
-        setSelectedEmailOption={setSelectedEmailOption}
-        customEmail={customEmail}
-        setCustomEmail={setCustomEmail}
-        selectedTenantEmail={selectedTenantEmail}
-        setSelectedTenantEmail={setSelectedTenantEmail}
-        inviteEmail={inviteEmail}
-        setInviteEmail={setInviteEmail}
         metadata={metadata}
         contractId={id!}
-        tenants={tenants}
-        handleEmailSubmit={handleEmailSubmit}
-        handleInviteTenant={handleInviteTenant}
       />
     </div>
   );

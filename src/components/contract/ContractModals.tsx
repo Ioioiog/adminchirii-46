@@ -1,5 +1,6 @@
 
 import React from 'react';
+import ReactDOM from 'react-dom';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ContractContent } from "./ContractContent";
 import { ContractSignatures } from "./ContractSignatures";
