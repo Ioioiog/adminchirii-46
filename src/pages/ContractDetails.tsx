@@ -378,33 +378,86 @@ export default function ContractDetails() {
 
   const renderInviteModal = () => (
     <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Invite Tenant to Sign Contract</DialogTitle>
           <DialogDescription>
-            Send an invitation email to the tenant to review and sign this contract.
+            Choose where to send the invitation
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Tenant Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="tenant@example.com"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-            />
+        <div className="space-y-4">
+          <RadioGroup
+            value={selectedEmailOption}
+            onValueChange={(value) => {
+              setSelectedEmailOption(value);
+              if (value !== 'tenant-list') {
+                setSelectedTenantEmail('');
+              }
+            }}
+            className="space-y-2"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="tenant" id="invite-tenant" />
+              <Label htmlFor="invite-tenant">
+                Contract Tenant ({metadata.tenantEmail || 'Not provided'})
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="tenant-list" id="invite-tenant-list" />
+              <Label htmlFor="invite-tenant-list">Select from Tenant List</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="custom" id="invite-custom" />
+              <Label htmlFor="invite-custom">Custom Email</Label>
+            </div>
+          </RadioGroup>
+
+          {selectedEmailOption === 'tenant-list' && (
+            <div className="space-y-2">
+              <Label>Select Tenant</Label>
+              <Select
+                value={selectedTenantEmail}
+                onValueChange={setSelectedTenantEmail}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a tenant" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tenants.map((tenant) => (
+                    <SelectItem 
+                      key={tenant.id} 
+                      value={tenant.email || ''}
+                    >
+                      {tenant.first_name} {tenant.last_name} ({tenant.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {selectedEmailOption === 'custom' && (
+            <div className="space-y-2">
+              <Label htmlFor="inviteEmail">Custom Email Address</Label>
+              <Input
+                id="inviteEmail"
+                type="email"
+                placeholder="Enter email address"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+              />
+            </div>
+          )}
+
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setIsInviteModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleInviteTenant} className="bg-blue-600 hover:bg-blue-700">
+              Send Invitation
+            </Button>
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setIsInviteModalOpen(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleInviteTenant}>
-            Send Invitation
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
