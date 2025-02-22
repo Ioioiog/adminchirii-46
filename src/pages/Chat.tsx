@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { MessageList } from "@/components/chat/MessageList";
@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ChatBackground } from "@/components/chat/ChatBackground";
 import { Badge } from "@/components/ui/badge";
 import { useSidebarNotifications } from "@/hooks/use-sidebar-notifications";
+import { supabase } from "@/lib/supabase";
 
 const Chat = () => {
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
@@ -83,6 +84,46 @@ const Chat = () => {
       setNewMessage("");
     }
   };
+
+  useEffect(() => {
+    const markMessagesAsRead = async () => {
+      if (!selectedTenantId || !messages || messages.length === 0) return;
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user?.id) return;
+
+        const unreadMessages = messages.filter(msg => 
+          msg.sender_id !== user.id && !msg.read
+        );
+
+        if (unreadMessages.length === 0) return;
+
+        console.log('Marking messages as read:', unreadMessages.length);
+
+        const batchSize = 10;
+        for (let i = 0; i < unreadMessages.length; i += batchSize) {
+          const batch = unreadMessages.slice(i, i + batchSize);
+          const { error } = await supabase
+            .from('messages')
+            .update({
+              read: true,
+              status: 'read',
+              updated_at: new Date().toISOString()
+            })
+            .in('id', batch.map(msg => msg.id));
+
+          if (error) throw error;
+        }
+
+        console.log('Messages marked as read successfully');
+      } catch (error) {
+        console.error('Error marking messages as read:', error);
+      }
+    };
+
+    markMessagesAsRead();
+  }, [messages, selectedTenantId]);
 
   const renderChatContent = () => {
     if (isConversationLoading) {
