@@ -690,6 +690,18 @@ export default function ContractDetails() {
             </DialogContent>
           </Dialog>
 
+          <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
+            <DialogContent className="max-w-4xl">
+              <DialogHeader>
+                <DialogTitle>Contract Preview</DialogTitle>
+              </DialogHeader>
+              <div className="mt-4">
+                <ContractContent formData={metadata} />
+                <ContractSignatures formData={metadata} contractId={id || ''} />
+              </div>
+            </DialogContent>
+          </Dialog>
+
           {renderInviteModal()}
         </div>
       </main>
