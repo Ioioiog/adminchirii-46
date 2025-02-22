@@ -1,3 +1,4 @@
+
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +54,35 @@ export default function ContractDetails() {
   const [inviteEmail, setInviteEmail] = useState("");
   const { userRole } = useUserRole();
   const { data: tenants = [] } = useTenants();
+
+  // Add the update contract mutation
+  const updateContractMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      if (!id) throw new Error('Contract ID is required');
+      
+      const { error } = await supabase
+        .from('contracts')
+        .update({ metadata: formData })
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contract', id] });
+      toast({
+        title: "Success",
+        description: "Contract updated successfully",
+      });
+      setEditedData(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update contract",
+        variant: "destructive",
+      });
+    }
+  });
 
   const { data: contract, isLoading, error } = useQuery({
     queryKey: ['contract', id],
@@ -112,7 +142,7 @@ export default function ContractDetails() {
         }
       }
 
-      // Transform metadata
+      // Transform metadata with full FormData structure
       const transformedMetadata: FormData = {
         contractNumber: String(metadataObj.contractNumber || ''),
         contractDate: String(metadataObj.contractDate || ''),
