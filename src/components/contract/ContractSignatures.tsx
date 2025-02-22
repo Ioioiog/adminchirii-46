@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/use-user-role";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
+import SignaturePad from 'react-signature-canvas';
+import { Card } from "@/components/ui/card";
 
 interface ContractSignaturesProps {
   formData: FormData;
@@ -15,8 +17,8 @@ interface ContractSignaturesProps {
 export function ContractSignatures({ formData, contractId }: ContractSignaturesProps) {
   const { userRole, userId } = useUserRole();
   const { toast } = useToast();
-  const [isSigningModalOpen, setIsSigningModalOpen] = useState(false);
   const [signatureName, setSignatureName] = useState("");
+  const signaturePadRef = useRef<SignaturePad>(null);
 
   const handleSign = async () => {
     if (!userId || !userRole) {
@@ -28,56 +30,72 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
       return;
     }
 
-    try {
-      const { error } = await supabase
-        .from('contract_signatures')
-        .insert({
-          contract_id: contractId,
-          signer_id: userId,
-          signer_role: userRole === 'landlord' ? 'landlord' : 'tenant',
-          signature_data: signatureName,
-          ip_address: await fetch('https://api.ipify.org?format=json').then(res => res.json()).then(data => data.ip)
+    if (!signaturePadRef.current?.isEmpty() && signatureName) {
+      try {
+        const signatureImage = signaturePadRef.current?.getTrimmedCanvas().toDataURL('image/png');
+        
+        const { error } = await supabase
+          .from('contract_signatures')
+          .insert({
+            contract_id: contractId,
+            signer_id: userId,
+            signer_role: userRole === 'landlord' ? 'landlord' : 'tenant',
+            signature_data: signatureName,
+            signature_image: signatureImage,
+            ip_address: await fetch('https://api.ipify.org?format=json').then(res => res.json()).then(data => data.ip)
+          });
+
+        if (error) throw error;
+
+        // Update the contract's metadata with the signature
+        const signatureDate = new Date().toISOString().split('T')[0];
+        const newMetadata = {
+          ...formData,
+          [`${userRole}SignatureDate`]: signatureDate,
+          [`${userRole}SignatureName`]: signatureName,
+          [`${userRole}SignatureImage`]: signatureImage
+        };
+
+        const { error: contractError } = await supabase
+          .from('contracts')
+          .update({
+            metadata: newMetadata,
+            status: 'signed'
+          })
+          .eq('id', contractId);
+
+        if (contractError) throw contractError;
+
+        toast({
+          title: "Success",
+          description: "Contract signed successfully",
         });
 
-      if (error) throw error;
+        // Reset state
+        setSignatureName("");
+        signaturePadRef.current?.clear();
 
-      // Update the contract's metadata with the signature
-      const signatureDate = new Date().toISOString().split('T')[0];
-      const newMetadata = {
-        ...formData,
-        [`${userRole}SignatureDate`]: signatureDate,
-        [`${userRole}SignatureName`]: signatureName
-      };
-
-      const { error: contractError } = await supabase
-        .from('contracts')
-        .update({
-          metadata: newMetadata,
-          status: 'signed'
-        })
-        .eq('id', contractId);
-
-      if (contractError) throw contractError;
-
-      toast({
-        title: "Success",
-        description: "Contract signed successfully",
-      });
-
-      // Reset state
-      setSignatureName("");
-      setIsSigningModalOpen(false);
-
-      // Refresh the page to show updated signatures
-      window.location.reload();
-    } catch (error: any) {
-      console.error('Error signing contract:', error);
+        // Refresh the page to show updated signatures
+        window.location.reload();
+      } catch (error: any) {
+        console.error('Error signing contract:', error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to sign the contract",
+          variant: "destructive"
+        });
+      }
+    } else {
       toast({
         title: "Error",
-        description: error.message || "Failed to sign the contract",
+        description: "Please provide both your name and signature",
         variant: "destructive"
       });
     }
+  };
+
+  const clearSignature = () => {
+    signaturePadRef.current?.clear();
   };
 
   return (
@@ -86,7 +104,20 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
         <p className="font-bold mb-2">PROPRIETAR,</p>
         <p className="mb-2">Data: {formData.ownerSignatureDate || '_____'}</p>
         <p className="mb-2">Nume în clar și semnătură:</p>
-        <p>{formData.ownerSignatureName || '___________________________'}</p>
+        {formData.ownerSignatureName ? (
+          <>
+            <p>{formData.ownerSignatureName}</p>
+            {formData.ownerSignatureImage && (
+              <img 
+                src={formData.ownerSignatureImage} 
+                alt="Owner Signature" 
+                className="mt-2 max-w-[200px]"
+              />
+            )}
+          </>
+        ) : (
+          <p>___________________________</p>
+        )}
         {userRole === 'landlord' && !formData.ownerSignatureName && (
           <div className="mt-4">
             <Input
@@ -96,6 +127,25 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
               onChange={(e) => setSignatureName(e.target.value)}
               className="mb-2"
             />
+            <Card className="p-4 mb-2">
+              <p className="text-sm text-gray-500 mb-2">Draw your signature below:</p>
+              <SignaturePad
+                ref={signaturePadRef}
+                canvasProps={{
+                  className: 'border border-gray-200 rounded-md w-full',
+                  width: 300,
+                  height: 150
+                }}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearSignature}
+                className="mt-2"
+              >
+                Clear
+              </Button>
+            </Card>
             <Button onClick={handleSign} className="w-full">
               Sign as Landlord
             </Button>
@@ -106,7 +156,20 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
         <p className="font-bold mb-2">CHIRIAȘ,</p>
         <p className="mb-2">Data: {formData.tenantSignatureDate || '_____'}</p>
         <p className="mb-2">Nume în clar și semnătură:</p>
-        <p>{formData.tenantSignatureName || '___________________________'}</p>
+        {formData.tenantSignatureName ? (
+          <>
+            <p>{formData.tenantSignatureName}</p>
+            {formData.tenantSignatureImage && (
+              <img 
+                src={formData.tenantSignatureImage} 
+                alt="Tenant Signature" 
+                className="mt-2 max-w-[200px]"
+              />
+            )}
+          </>
+        ) : (
+          <p>___________________________</p>
+        )}
         {userRole === 'tenant' && !formData.tenantSignatureName && (
           <div className="mt-4">
             <Input
@@ -116,6 +179,25 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
               onChange={(e) => setSignatureName(e.target.value)}
               className="mb-2"
             />
+            <Card className="p-4 mb-2">
+              <p className="text-sm text-gray-500 mb-2">Draw your signature below:</p>
+              <SignaturePad
+                ref={signaturePadRef}
+                canvasProps={{
+                  className: 'border border-gray-200 rounded-md w-full',
+                  width: 300,
+                  height: 150
+                }}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearSignature}
+                className="mt-2"
+              >
+                Clear
+              </Button>
+            </Card>
             <Button onClick={handleSign} className="w-full">
               Sign as Tenant
             </Button>
