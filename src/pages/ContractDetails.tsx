@@ -603,20 +603,26 @@ function ContractDetailsContent() {
     const hasLandlordSignature = !!contract.metadata.ownerSignatureName;
     const hasTenantSignature = !!contract.metadata.tenantSignatureName;
 
-    if (!hasLandlordSignature || hasTenantSignature) {
-      console.log('Button hidden: Contract either missing landlord signature or already has tenant signature');
-      return null;
+    console.log('Signature Debug:', {
+      hasLandlordSignature,
+      hasTenantSignature,
+      rawLandlordSignature: contract.metadata.ownerSignatureName,
+      rawTenantSignature: contract.metadata.tenantSignatureName
+    });
+
+    if (hasLandlordSignature && !hasTenantSignature) {
+      return (
+        <Button
+          onClick={() => setIsInviteModalOpen(true)}
+          className="flex items-center gap-2"
+        >
+          <Mail className="h-4 w-4" />
+          Invite Tenant to Sign
+        </Button>
+      );
     }
-    
-    return (
-      <Button
-        onClick={() => setIsInviteModalOpen(true)}
-        className="flex items-center gap-2"
-      >
-        <Mail className="h-4 w-4" />
-        Invite Tenant to Sign
-      </Button>
-    );
+
+    return null;
   };
 
   if (isLoading) {
