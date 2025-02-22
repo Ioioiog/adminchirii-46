@@ -1,4 +1,3 @@
-
 import { FormData } from "@/types/contract";
 
 interface ContractContentProps {
@@ -134,6 +133,49 @@ export function ContractContent({ formData }: ContractContentProps) {
             </table>
           </section>
         )}
+
+        <section className="mt-16">
+          <div className="grid grid-cols-2 gap-8">
+            <div>
+              <p className="font-bold mb-2">PROPRIETAR,</p>
+              <p className="mb-2">Data: {formData.ownerSignatureDate || '_____'}</p>
+              <p className="mb-2">Nume în clar și semnătură:</p>
+              {formData.ownerSignatureName ? (
+                <>
+                  <p>{formData.ownerSignatureName}</p>
+                  {formData.ownerSignatureImage && (
+                    <img 
+                      src={formData.ownerSignatureImage} 
+                      alt="Owner Signature" 
+                      className="mt-2 max-w-[200px]"
+                    />
+                  )}
+                </>
+              ) : (
+                <p>___________________________</p>
+              )}
+            </div>
+            <div>
+              <p className="font-bold mb-2">CHIRIAȘ,</p>
+              <p className="mb-2">Data: {formData.tenantSignatureDate || '_____'}</p>
+              <p className="mb-2">Nume în clar și semnătură:</p>
+              {formData.tenantSignatureName ? (
+                <>
+                  <p>{formData.tenantSignatureName}</p>
+                  {formData.tenantSignatureImage && (
+                    <img 
+                      src={formData.tenantSignatureImage} 
+                      alt="Tenant Signature" 
+                      className="mt-2 max-w-[200px]"
+                    />
+                  )}
+                </>
+              ) : (
+                <p>___________________________</p>
+              )}
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );
