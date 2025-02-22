@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Json } from "@/integrations/supabase/types/json";
 import { ContractContent } from "@/components/contract/ContractContent";
 import { FormData } from "@/types/contract";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useState } from "react";
 import { useTenants } from "@/hooks/useTenants";
@@ -122,10 +122,15 @@ export default function ContractDetails() {
 
   const updateContractMutation = useMutation({
     mutationFn: async (updatedData: FormData) => {
+      const jsonData: Json = Object.entries(updatedData).reduce((acc, [key, value]) => {
+        acc[key] = value;
+        return acc;
+      }, {} as { [key: string]: string | string[] });
+
       const { error } = await supabase
         .from('contracts')
         .update({
-          metadata: updatedData,
+          metadata: jsonData,
           updated_at: new Date().toISOString()
         })
         .eq('id', id);
@@ -156,9 +161,59 @@ export default function ContractDetails() {
 
   const handleInputChange = (field: keyof FormData, value: string) => {
     if (!editedData) {
-      setEditedData(contract?.metadata || {} as FormData);
+      const initialFormData: FormData = {
+        contractNumber: contract?.metadata.contractNumber || '',
+        contractDate: contract?.metadata.contractDate || '',
+        ownerName: contract?.metadata.ownerName || '',
+        ownerReg: contract?.metadata.ownerReg || '',
+        ownerFiscal: contract?.metadata.ownerFiscal || '',
+        ownerAddress: contract?.metadata.ownerAddress || '',
+        ownerBank: contract?.metadata.ownerBank || '',
+        ownerBankName: contract?.metadata.ownerBankName || '',
+        ownerEmail: contract?.metadata.ownerEmail || '',
+        ownerPhone: contract?.metadata.ownerPhone || '',
+        ownerCounty: contract?.metadata.ownerCounty || '',
+        ownerCity: contract?.metadata.ownerCity || '',
+        ownerRepresentative: contract?.metadata.ownerRepresentative || '',
+        tenantName: contract?.metadata.tenantName || '',
+        tenantReg: contract?.metadata.tenantReg || '',
+        tenantFiscal: contract?.metadata.tenantFiscal || '',
+        tenantAddress: contract?.metadata.tenantAddress || '',
+        tenantBank: contract?.metadata.tenantBank || '',
+        tenantBankName: contract?.metadata.tenantBankName || '',
+        tenantEmail: contract?.metadata.tenantEmail || '',
+        tenantPhone: contract?.metadata.tenantPhone || '',
+        tenantCounty: contract?.metadata.tenantCounty || '',
+        tenantCity: contract?.metadata.tenantCity || '',
+        tenantRepresentative: contract?.metadata.tenantRepresentative || '',
+        propertyAddress: contract?.metadata.propertyAddress || '',
+        rentAmount: contract?.metadata.rentAmount || '',
+        vatIncluded: contract?.metadata.vatIncluded || '',
+        contractDuration: contract?.metadata.contractDuration || '',
+        paymentDay: contract?.metadata.paymentDay || '',
+        roomCount: contract?.metadata.roomCount || '',
+        startDate: contract?.metadata.startDate || '',
+        lateFee: contract?.metadata.lateFee || '',
+        renewalPeriod: contract?.metadata.renewalPeriod || '',
+        unilateralNotice: contract?.metadata.unilateralNotice || '',
+        terminationNotice: contract?.metadata.terminationNotice || '',
+        earlyTerminationFee: contract?.metadata.earlyTerminationFee || '',
+        latePaymentTermination: contract?.metadata.latePaymentTermination || '',
+        securityDeposit: contract?.metadata.securityDeposit || '',
+        depositReturnPeriod: contract?.metadata.depositReturnPeriod || '',
+        waterColdMeter: contract?.metadata.waterColdMeter || '',
+        waterHotMeter: contract?.metadata.waterHotMeter || '',
+        electricityMeter: contract?.metadata.electricityMeter || '',
+        gasMeter: contract?.metadata.gasMeter || '',
+        ownerSignatureDate: contract?.metadata.ownerSignatureDate || '',
+        ownerSignatureName: contract?.metadata.ownerSignatureName || '',
+        tenantSignatureDate: contract?.metadata.tenantSignatureDate || '',
+        tenantSignatureName: contract?.metadata.tenantSignatureName || '',
+        assets: contract?.metadata.assets || []
+      };
+      setEditedData(initialFormData);
     }
-    setEditedData(prev => prev ? { ...prev, [field]: value } : { [field]: value } as FormData);
+    setEditedData(prev => prev ? { ...prev, [field]: value } : {} as FormData);
   };
 
   const handleEditContract = () => {
