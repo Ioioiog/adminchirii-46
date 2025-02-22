@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Settings, Globe, DollarSign, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -67,30 +66,38 @@ export function FloatingSettingsBox() {
       console.log('Handling notification click:', { type, messageId });
       await markAsRead(type, messageId);
       
-      // Navigate to the appropriate page based on notification type
+      let targetRoute = '';
+      
       switch (type) {
         case 'messages':
-          navigate('/chat');
+          targetRoute = '/chat';
           break;
         case 'maintenance':
-          navigate('/maintenance');
+          targetRoute = '/maintenance';
           break;
         case 'payments':
-          navigate('/payments');
+          targetRoute = '/payments';
           break;
       }
 
-      setIsNotificationsOpen(false); // Close the dropdown after navigation
+      console.log('Attempting to navigate to:', targetRoute);
+      
+      setIsNotificationsOpen(false);
+      
+      setTimeout(() => {
+        console.log('Executing navigation to:', targetRoute);
+        navigate(targetRoute);
+      }, 100);
       
       toast({
         title: "Notifications Cleared",
         description: `${type.charAt(0).toUpperCase() + type.slice(1)} notifications have been marked as read.`,
       });
     } catch (error) {
-      console.error('Error marking notifications as read:', error);
+      console.error('Error in notification click handler:', error);
       toast({
         title: "Error",
-        description: "Failed to mark notifications as read",
+        description: "Failed to handle notification",
         variant: "destructive",
       });
     }
@@ -98,7 +105,6 @@ export function FloatingSettingsBox() {
 
   return (
     <div className="fixed top-8 right-8 z-40 flex items-center gap-2">
-      {/* Notifications Button */}
       <DropdownMenu open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
         <DropdownMenuTrigger asChild>
           <Button 
@@ -135,7 +141,6 @@ export function FloatingSettingsBox() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Settings Button */}
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="icon" className="h-10 w-10 bg-white">
@@ -144,7 +149,6 @@ export function FloatingSettingsBox() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48 bg-white">
           <div className="p-2 space-y-2">
-            {/* Language Selector */}
             <div className="space-y-1">
               <label className="text-sm font-medium flex items-center gap-2">
                 <Globe className="h-4 w-4" />
@@ -160,7 +164,6 @@ export function FloatingSettingsBox() {
               </select>
             </div>
 
-            {/* Currency Selector */}
             <div className="space-y-1">
               <label className="text-sm font-medium flex items-center gap-2">
                 <DollarSign className="h-4 w-4" />
