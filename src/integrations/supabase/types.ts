@@ -16,6 +16,7 @@ export type Database = {
           id: string
           ip_address: string | null
           signature_data: string | null
+          signature_image: string | null
           signed_at: string | null
           signer_id: string
           signer_role: string
@@ -26,6 +27,7 @@ export type Database = {
           id?: string
           ip_address?: string | null
           signature_data?: string | null
+          signature_image?: string | null
           signed_at?: string | null
           signer_id: string
           signer_role: string
@@ -36,6 +38,7 @@ export type Database = {
           id?: string
           ip_address?: string | null
           signature_data?: string | null
+          signature_image?: string | null
           signed_at?: string | null
           signer_id?: string
           signer_role?: string

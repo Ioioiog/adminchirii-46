@@ -34,6 +34,7 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
       try {
         const signatureImage = signaturePadRef.current?.getTrimmedCanvas().toDataURL('image/png');
         
+        // Insert the signature record
         const { error } = await supabase
           .from('contract_signatures')
           .insert({
