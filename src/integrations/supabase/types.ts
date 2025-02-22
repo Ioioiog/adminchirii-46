@@ -2371,6 +2371,7 @@ export type Database = {
         | "landscaping"
         | "general_maintenance"
         | "other"
+      signer_role: "tenant" | "landlord"
       subscription_plan: "free" | "basic" | "premium" | "gold"
       tenant_action_type:
         | "invitation_sent"
