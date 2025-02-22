@@ -6,7 +6,7 @@ import { ContractContent } from '@/components/contract/ContractContent';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 export default function GenerateContract() {
   const navigate = useNavigate();
@@ -108,16 +108,17 @@ export default function GenerateContract() {
       </div>
 
       <main className="flex-1 p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="mb-6">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(-1)}
-              className="hover:bg-gray-100"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
+        <div className="max-w-4xl mx-auto relative">
+          <div className="absolute left-0 -top-2">
+            <Link to="/contracts">
+              <Button
+                variant="ghost"
+                className="gap-2 hover:bg-gray-100"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back
+              </Button>
+            </Link>
           </div>
           
           <ContractForm
