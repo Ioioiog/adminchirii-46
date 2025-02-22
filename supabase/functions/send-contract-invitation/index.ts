@@ -59,7 +59,7 @@ const handler = async (req: Request): Promise<Response> => {
     const signLink = `${Deno.env.get("PUBLIC_SITE_URL")}/documents/contracts/${contractId}?token=${contract.invitation_token}`;
 
     const { error: emailError } = await resend.emails.send({
-      from: "Lovable Properties <onboarding@resend.dev>",
+      from: "AdminChirii.ro <onboarding@resend.dev>",
       to: [tenantEmail],
       subject: `Contract Signing Invitation - #${contractNumber}`,
       html: `
@@ -71,7 +71,7 @@ const handler = async (req: Request): Promise<Response> => {
         <p>Or copy and paste this link in your browser:</p>
         <p>${signLink}</p>
         <p>This link is for one-time use only and is tied to your email address.</p>
-        <p>Best regards,<br>Lovable Properties</p>
+        <p>Best regards,<br>AdminChirii.ro</p>
       `,
     });
 
