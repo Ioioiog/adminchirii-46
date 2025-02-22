@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
@@ -58,6 +59,36 @@ export function MessageList({
   }, [messages, currentUserId]);
 
   useEffect(() => {
+    if (!currentUserId || !messages || messages.length === 0) return;
+    const updateMessageStatus = async () => {
+      try {
+        const unreadMessages = messages.filter(msg => msg.sender_id !== currentUserId && !msg.read);
+        if (unreadMessages.length === 0) return;
+        const batchSize = 10;
+        for (let i = 0; i < unreadMessages.length; i += batchSize) {
+          const batch = unreadMessages.slice(i, i + batchSize);
+          const { error } = await supabase.from('messages').update({
+            status: 'read',
+            read: true,
+            updated_at: new Date().toISOString()
+          }).in('id', batch.map(msg => msg.id));
+          if (error) {
+            throw error;
+          }
+        }
+      } catch (error) {
+        console.error('Error updating message status:', error);
+        toast({
+          title: "Error",
+          description: "Failed to update message status",
+          variant: "destructive"
+        });
+      }
+    };
+    updateMessageStatus();
+  }, [messages, currentUserId, toast]);
+
+  useEffect(() => {
     if (!messages || messages.length === 0) {
       setVisibleMessages([]);
       return;
@@ -65,14 +96,6 @@ export function MessageList({
     const lastMessages = messages.slice(-12);
     setVisibleMessages(lastMessages);
   }, [messages]);
-
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({
-        behavior: "smooth"
-      });
-    }
-  }, [visibleMessages, messagesEndRef]);
 
   useEffect(() => {
     const viewport = scrollViewportRef.current?.querySelector('[data-radix-scroll-area-viewport]');
@@ -104,34 +127,12 @@ export function MessageList({
   }, [messages, visibleMessages]);
 
   useEffect(() => {
-    if (!currentUserId || !messages || messages.length === 0) return;
-    const updateMessageStatus = async () => {
-      try {
-        const unreadMessages = messages.filter(msg => msg.sender_id !== currentUserId && !msg.read);
-        if (unreadMessages.length === 0) return;
-        const batchSize = 10;
-        for (let i = 0; i < unreadMessages.length; i += batchSize) {
-          const batch = unreadMessages.slice(i, i + batchSize);
-          const { error } = await supabase.from('messages').update({
-            status: 'read',
-            read: true,
-            updated_at: new Date().toISOString()
-          }).in('id', batch.map(msg => msg.id));
-          if (error) {
-            throw error;
-          }
-        }
-      } catch (error) {
-        console.error('Error updating message status:', error);
-        toast({
-          title: "Error",
-          description: "Failed to update message status",
-          variant: "destructive"
-        });
-      }
-    };
-    updateMessageStatus();
-  }, [messages, currentUserId, toast]);
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({
+        behavior: "smooth"
+      });
+    }
+  }, [visibleMessages, messagesEndRef]);
 
   const handleEditMessage = (messageId: string, content: string) => {
     setEditingMessageId(messageId);
