@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import * as ReactDOMServer from 'react-dom/server';
 
 type ContractStatus = 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled';
 
@@ -423,11 +424,10 @@ export default function ContractDetails() {
       </style>
     `;
 
-    const tempContainer = document.createElement('div');
     const contractContent = <ContractContent formData={metadata} />;
     const contractSignatures = <ContractSignatures formData={metadata} contractId={id!} />;
     
-    const contentHtml = ReactDOM.renderToString(
+    const contentHtml = ReactDOMServer.renderToString(
       <>
         {contractContent}
         {contractSignatures}
