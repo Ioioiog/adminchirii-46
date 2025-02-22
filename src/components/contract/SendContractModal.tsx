@@ -6,8 +6,7 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useTenants } from "@/hooks/useTenants";
 
 interface SendContractModalProps {
   open: boolean;
@@ -20,16 +19,7 @@ export function SendContractModal({ open, onOpenChange, contractId }: SendContra
   const [selectedTenantEmail, setSelectedTenantEmail] = useState('');
   const [customEmail, setCustomEmail] = useState('');
 
-  const { data: tenants } = useQuery({
-    queryKey: ['tenants'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('tenants')
-        .select('*');
-      if (error) throw error;
-      return data;
-    }
-  });
+  const { data: tenants } = useTenants();
 
   const handleSend = async () => {
     // Handle send logic here
