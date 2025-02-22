@@ -694,13 +694,92 @@ export default function ContractDetails() {
             <DialogContent className="max-w-4xl max-h-[90vh]">
               <DialogHeader>
                 <DialogTitle>Contract Preview</DialogTitle>
+                <DialogDescription>
+                  Preview and share the contract
+                </DialogDescription>
               </DialogHeader>
-              <ScrollArea className="h-[calc(90vh-8rem)]">
-                <div className="mt-4 px-4">
-                  <ContractContent formData={metadata} />
-                  <ContractSignatures formData={metadata} contractId={id || ''} />
+              <div className="space-y-4">
+                <div className="space-y-4">
+                  <RadioGroup
+                    value={selectedEmailOption}
+                    onValueChange={(value) => {
+                      setSelectedEmailOption(value);
+                      if (value !== 'tenant-list') {
+                        setSelectedTenantEmail('');
+                      }
+                    }}
+                    className="space-y-2"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="tenant" id="preview-tenant" />
+                      <Label htmlFor="preview-tenant">
+                        Contract Tenant ({metadata.tenantEmail || 'Not provided'})
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="tenant-list" id="preview-tenant-list" />
+                      <Label htmlFor="preview-tenant-list">Select from Tenant List</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="custom" id="preview-custom" />
+                      <Label htmlFor="preview-custom">Custom Email</Label>
+                    </div>
+                  </RadioGroup>
+
+                  {selectedEmailOption === 'tenant-list' && (
+                    <div className="space-y-2">
+                      <Label>Select Tenant</Label>
+                      <Select
+                        value={selectedTenantEmail}
+                        onValueChange={setSelectedTenantEmail}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select a tenant" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tenants.map((tenant) => (
+                            <SelectItem 
+                              key={tenant.id} 
+                              value={tenant.email || ''}
+                            >
+                              {tenant.first_name} {tenant.last_name} ({tenant.email})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {selectedEmailOption === 'custom' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="customEmail">Custom Email Address</Label>
+                      <Input
+                        id="customEmail"
+                        type="email"
+                        placeholder="Enter email address"
+                        value={customEmail}
+                        onChange={(e) => setCustomEmail(e.target.value)}
+                      />
+                    </div>
+                  )}
                 </div>
-              </ScrollArea>
+
+                <ScrollArea className="h-[calc(90vh-16rem)]">
+                  <div className="mt-4 px-4">
+                    <ContractContent formData={metadata} />
+                    <ContractSignatures formData={metadata} contractId={id || ''} />
+                  </div>
+                </ScrollArea>
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsPreviewModalOpen(false)}>
+                    Close
+                  </Button>
+                  <Button onClick={handleEmailSubmit}>
+                    Send Contract
+                  </Button>
+                </DialogFooter>
+              </div>
             </DialogContent>
           </Dialog>
 
