@@ -1,3 +1,4 @@
+
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useToast } from "@/hooks/use-toast";
+import { Json } from "@/integrations/supabase/types/json";
 
 interface ContractMetadata {
   contractNumber: string;
@@ -71,7 +73,7 @@ export default function ContractDetails() {
       
       const transformedData: ContractResponse = {
         ...data,
-        metadata: data.metadata as ContractMetadata
+        metadata: data.metadata as unknown as ContractMetadata
       };
 
       return transformedData;
