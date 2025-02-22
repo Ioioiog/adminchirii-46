@@ -67,28 +67,37 @@ export default function ContractDetails() {
 
       const { data: signatures, error: signaturesError } = await supabase
         .from('contract_signatures')
-        .select('*')
-        .eq('contract_id', id);
+        .select('*, signer:signer_id(email)')
+        .eq('contract_id', id)
+        .order('created_at', { ascending: true });
 
       if (signaturesError) throw signaturesError;
 
-      console.log("Contract data:", contractData);
-      console.log("Signatures:", signatures);
+      console.log("Contract ID:", id);
+      console.log("All signatures found:", signatures);
 
       const metadataObj = contractData.metadata as Record<string, any> || {};
 
-      if (signatures && signatures.length > 0) {
-        signatures.forEach(signature => {
-          if (signature.signer_role === 'landlord') {
-            metadataObj.ownerSignatureImage = signature.signature_image;
-            metadataObj.ownerSignatureName = signature.signature_data;
-            metadataObj.ownerSignatureDate = signature.signed_at?.split('T')[0];
-          } else if (signature.signer_role === 'tenant') {
-            metadataObj.tenantSignatureImage = signature.signature_image;
-            metadataObj.tenantSignatureName = signature.signature_data;
-            metadataObj.tenantSignatureDate = signature.signed_at?.split('T')[0];
-          }
-        });
+      const uniqueSignatures = signatures?.reduce((acc, curr) => {
+        acc[curr.signer_role] = curr;
+        return acc;
+      }, {} as Record<string, any>);
+
+      console.log("Unique signatures after processing:", uniqueSignatures);
+
+      if (uniqueSignatures) {
+        if (uniqueSignatures['landlord']) {
+          const landlordSig = uniqueSignatures['landlord'];
+          metadataObj.ownerSignatureImage = landlordSig.signature_image;
+          metadataObj.ownerSignatureName = landlordSig.signature_data;
+          metadataObj.ownerSignatureDate = landlordSig.signed_at?.split('T')[0];
+        }
+        if (uniqueSignatures['tenant']) {
+          const tenantSig = uniqueSignatures['tenant'];
+          metadataObj.tenantSignatureImage = tenantSig.signature_image;
+          metadataObj.tenantSignatureName = tenantSig.signature_data;
+          metadataObj.tenantSignatureDate = tenantSig.signed_at?.split('T')[0];
+        }
       }
 
       const transformedMetadata: FormData = {
