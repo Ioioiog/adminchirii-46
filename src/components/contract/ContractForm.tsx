@@ -1,4 +1,3 @@
-
 import { FormData, Asset } from "@/types/contract";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { Json } from "@/integrations/supabase/types/json";
+import { useProperties } from "@/hooks/useProperties";
+import { useUserRole } from "@/hooks/use-user-role";
 
 interface ContractFormProps {
   formData: FormData;
@@ -31,6 +32,15 @@ export function ContractForm({
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { userRole } = useUserRole();
+  const { properties, isLoading: isLoadingProperties } = useProperties({ userRole: "landlord" });
+
+  const handlePropertySelect = (propertyId: string) => {
+    const selectedProperty = properties.find(p => p.id === propertyId);
+    if (selectedProperty) {
+      onInputChange('propertyAddress', selectedProperty.address);
+    }
+  };
 
   const handleSaveContract = async () => {
     if (!user) {
@@ -43,7 +53,6 @@ export function ContractForm({
     }
 
     try {
-      // Convert the data to be compatible with Json type
       const metadataJson: Json = {
         ...formData,
         assets: assets.map(asset => ({
@@ -53,7 +62,6 @@ export function ContractForm({
         }))
       };
 
-      // First get or create a property
       const { data: propertyData, error: propertyError } = await supabase
         .from('properties')
         .insert({
@@ -67,7 +75,6 @@ export function ContractForm({
 
       if (propertyError) throw propertyError;
 
-      // Then create the contract
       const { data, error } = await supabase
         .from('contracts')
         .insert({
@@ -318,6 +325,21 @@ export function ContractForm({
           <CardTitle>Property Details</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="property-select">Select Property</Label>
+            <Select onValueChange={handlePropertySelect}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a property" />
+              </SelectTrigger>
+              <SelectContent>
+                {properties?.map((property) => (
+                  <SelectItem key={property.id} value={property.id}>
+                    {property.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div>
             <Label htmlFor="property-address">Adresa apartamentului:</Label>
             <Input 
