@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSidebarNotifications } from "@/hooks/use-sidebar-notifications";
 import { NotificationType } from "@/types/notifications";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 export function FloatingSettingsBox() {
   const [isOpen, setIsOpen] = useState(false);
@@ -22,6 +23,7 @@ export function FloatingSettingsBox() {
   const { availableCurrencies } = useCurrency();
   const { toast } = useToast();
   const { data: notifications, markAsRead } = useSidebarNotifications();
+  const navigate = useNavigate();
 
   const totalNotifications = notifications?.reduce((acc, curr) => acc + curr.count, 0) || 0;
 
@@ -64,6 +66,22 @@ export function FloatingSettingsBox() {
     try {
       console.log('Handling notification click:', { type, messageId });
       await markAsRead(type, messageId);
+      
+      // Navigate to the appropriate page based on notification type
+      switch (type) {
+        case 'messages':
+          navigate('/chat');
+          break;
+        case 'maintenance':
+          navigate('/maintenance');
+          break;
+        case 'payments':
+          navigate('/payments');
+          break;
+      }
+
+      setIsNotificationsOpen(false); // Close the dropdown after navigation
+      
       toast({
         title: "Notifications Cleared",
         description: `${type.charAt(0).toUpperCase() + type.slice(1)} notifications have been marked as read.`,
