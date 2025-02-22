@@ -240,7 +240,7 @@ export default function ContractDetails() {
         ownerSignatureName: String(metadataObj.ownerSignatureName || ''),
         ownerSignatureImage: metadataObj.ownerSignatureImage || '',
         tenantSignatureDate: String(metadataObj.tenantSignatureDate || ''),
-        tenantSignatureName: String(metadataObj.tenantSignatureName || ''),
+        tenantSignatureName: metadataObj.tenantSignatureName || '',
         tenantSignatureImage: metadataObj.tenantSignatureImage || '',
         assets: Array.isArray(metadataObj.assets) ? metadataObj.assets : []
       };
@@ -364,11 +364,19 @@ export default function ContractDetails() {
   };
 
   const handlePrint = () => {
+    // Create a new window for printing
     const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+    if (!printWindow) {
+      toast({
+        title: "Error",
+        description: "Could not open print window. Please check your popup blocker settings.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    // Add print styles
-    const styles = `
+    // Define print-specific styles
+    const printStyles = `
       <style>
         @media print {
           @page { 
@@ -376,50 +384,73 @@ export default function ContractDetails() {
             margin: 20mm;
           }
           body { 
-            margin: 0;
-            padding: 0;
             font-family: Arial, sans-serif;
+            line-height: 1.5;
+            color: #000;
           }
-          .print-content {
+          .contract-content {
             max-width: 100%;
             margin: 0 auto;
           }
-          .page-break { 
-            page-break-before: always; 
-          }
-          section {
-            page-break-inside: avoid;
-          }
-          table { 
-            width: 100%;
-            border-collapse: collapse;
-            page-break-inside: avoid;
-          }
-          td, th { 
-            padding: 8px;
-            border: 1px solid #ddd;
-          }
-          img {
-            max-width: 200px;
-            page-break-inside: avoid;
-          }
           h1 {
-            font-size: 24px;
-            font-weight: bold;
+            font-size: 18pt;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 20pt;
           }
           h2 {
-            font-size: 18px;
-            font-weight: bold;
-            margin-top: 20px;
-            margin-bottom: 10px;
+            font-size: 14pt;
+            margin-top: 15pt;
+            margin-bottom: 10pt;
           }
           p {
-            margin: 8px 0;
+            font-size: 11pt;
+            margin: 5pt 0;
           }
-          .print-hidden {
-            display: none !important;
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10pt 0;
+            page-break-inside: avoid;
+          }
+          th, td {
+            border: 1px solid #000;
+            padding: 5pt;
+            text-align: left;
+            font-size: 10pt;
+          }
+          .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10pt;
+          }
+          .signature-section {
+            margin-top: 30pt;
+            page-break-inside: avoid;
+          }
+          .signature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40pt;
+            margin-top: 20pt;
+          }
+          .signature-box {
+            text-align: center;
+          }
+          .signature-line {
+            border-top: 1px solid #000;
+            margin-top: 40pt;
+            padding-top: 5pt;
+          }
+          img {
+            max-width: 150px;
+            height: auto;
+          }
+          .section-break {
+            margin: 15pt 0;
+          }
+          .print-header {
+            text-align: right;
+            margin-bottom: 20pt;
           }
         }
       </style>
@@ -427,22 +458,32 @@ export default function ContractDetails() {
 
     // Get the contract content
     const contractElement = document.querySelector('.contract-content');
-    if (!contractElement) return;
+    if (!contractElement) {
+      toast({
+        title: "Error",
+        description: "Could not find contract content to print.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    // Create HTML content
+    // Create the HTML content for printing
     const htmlContent = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Contract de Închiriere</title>
-          ${styles}
+          <title>Contract de Închiriere - ${metadata.contractNumber}</title>
+          ${printStyles}
         </head>
         <body>
-          <div class="print-content">
+          <div class="print-header">
+            <p>Data printării: ${new Date().toLocaleDateString()}</p>
+          </div>
+          <div class="contract-content">
             ${contractElement.innerHTML}
           </div>
           <script>
-            // Wait for all images to load before printing
+            // Wait for images to load before printing
             Promise.all(
               Array.from(document.images)
                 .filter(img => !img.complete)
@@ -461,7 +502,7 @@ export default function ContractDetails() {
       </html>
     `;
 
-    // Write content to print window
+    // Write content to print window and trigger print
     printWindow.document.write(htmlContent);
     printWindow.document.close();
   };
