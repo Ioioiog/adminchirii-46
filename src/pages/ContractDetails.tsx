@@ -43,6 +43,7 @@ export default function ContractDetails() {
   const [selectedEmailOption, setSelectedEmailOption] = useState<string>('tenant');
   const [customEmail, setCustomEmail] = useState('');
   const [selectedTenantEmail, setSelectedTenantEmail] = useState('');
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   
   const { data: tenants = [] } = useTenants();
 
@@ -123,7 +124,7 @@ export default function ContractDetails() {
   };
 
   const handleViewContract = () => {
-    navigate(`/documents/contracts/${id}/view`);
+    setIsPreviewModalOpen(true);
   };
 
   const handlePrintContract = () => {
@@ -227,6 +228,7 @@ export default function ContractDetails() {
       </div>
       <main className="flex-1 p-8">
         <div className="max-w-7xl mx-auto space-y-6">
+          
           <div className="flex items-center gap-4 mb-6 print:hidden">
             <Button
               variant="outline"
@@ -272,6 +274,16 @@ export default function ContractDetails() {
             </div>
           </div>
 
+          {/* Contract Preview Modal */}
+          <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
+            <DialogContent className="max-w-4xl h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <ContractContent formData={metadata} />
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          
           <div className="print:hidden">
             <Card>
               <CardHeader>
