@@ -54,7 +54,9 @@ export interface FormData {
   gasMeter: string;
   ownerSignatureDate: string;
   ownerSignatureName: string;
+  ownerSignatureImage?: string;
   tenantSignatureDate: string;
   tenantSignatureName: string;
+  tenantSignatureImage?: string;
   assets: Asset[];
 }
