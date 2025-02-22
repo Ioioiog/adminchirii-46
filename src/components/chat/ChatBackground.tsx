@@ -67,9 +67,9 @@ export function ChatBackground() {
         bevelSegments: 4
       });
 
-      // Create main shape with dark blue
+      // Create main shape with blue-600
       const mainMaterial = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color('#0EA5E9'), // Ocean Blue
+        color: new THREE.Color('#2563EB'), // blue-600
         transparent: true,
         opacity: 0.9,
         side: THREE.DoubleSide,
@@ -79,9 +79,9 @@ export function ChatBackground() {
         clearcoatRoughness: 0.2,
       });
 
-      // Create overlay with light blue
+      // Create overlay with sky blue
       const overlayMaterial = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color('#D3E4FD'), // Soft Blue
+        color: new THREE.Color('#33C3F0'), // Sky Blue
         transparent: true,
         opacity: 0.4,
         side: THREE.DoubleSide,
