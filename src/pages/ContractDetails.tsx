@@ -1,3 +1,4 @@
+
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -106,12 +107,10 @@ export default function ContractDetails() {
         assets: Array.isArray(metadataObj.assets) ? metadataObj.assets : []
       };
 
-      const transformedData: ContractResponse = {
+      return {
         ...data,
         metadata: transformedMetadata
-      };
-
-      return transformedData;
+      } as ContractResponse;
     },
   });
 
