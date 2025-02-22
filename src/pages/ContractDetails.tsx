@@ -1,3 +1,4 @@
+
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -5,49 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Edit, Eye, Printer, Send } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
-
-interface ContractMetadata {
-  contractNumber?: string;
-  ownerName?: string;
-  ownerReg?: string;
-  ownerFiscal?: string;
-  ownerAddress?: string;
-  ownerBank?: string;
-  ownerBankName?: string;
-  ownerEmail?: string;
-  ownerPhone?: string;
-  tenantName?: string;
-  tenantReg?: string;
-  tenantFiscal?: string;
-  tenantAddress?: string;
-  tenantBank?: string;
-  tenantBankName?: string;
-  tenantEmail?: string;
-  tenantPhone?: string;
-  rentAmount?: string;
-  contractDuration?: string;
-  paymentDay?: string;
-  lateFee?: string;
-  securityDeposit?: string;
-}
-
-interface Contract {
-  id: string;
-  properties?: { name: string };
-  contract_type: string;
-  status: string;
-  valid_from: string | null;
-  valid_until: string | null;
-  metadata: ContractMetadata;
-}
+import { useToast } from "@/hooks/use-toast";
 
 export default function ContractDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { toast } = useToast();
 
   const { data: contract, isLoading } = useQuery({
     queryKey: ['contract', id],
@@ -60,9 +28,44 @@ export default function ContractDetails() {
 
       if (error) throw error;
       console.log('Contract data from Supabase:', data);
-      return data as Contract;
+      return data;
     },
   });
+
+  const handleEditContract = () => {
+    navigate(`/documents/contracts/${id}/edit`);
+  };
+
+  const handleViewContract = () => {
+    navigate(`/documents/contracts/${id}/view`);
+  };
+
+  const handlePrintContract = () => {
+    window.print();
+  };
+
+  const handleSendContract = async () => {
+    try {
+      // Here you would typically update the contract status and trigger email sending
+      const { error } = await supabase
+        .from('contracts')
+        .update({ status: 'sent' })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Contract has been sent successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send the contract. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -73,7 +76,6 @@ export default function ContractDetails() {
   }
 
   const metadata = contract.metadata || {};
-  console.log('Contract metadata:', metadata);
 
   return (
     <div className="flex bg-[#F8F9FC] min-h-screen">
@@ -89,6 +91,40 @@ export default function ContractDetails() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <h1 className="text-2xl font-bold">Contract Details</h1>
+            
+            <div className="flex items-center gap-2 ml-auto">
+              <Button
+                variant="outline"
+                onClick={handleViewContract}
+                className="flex items-center gap-2"
+              >
+                <Eye className="h-4 w-4" />
+                View
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleEditContract}
+                className="flex items-center gap-2"
+              >
+                <Edit className="h-4 w-4" />
+                Edit
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handlePrintContract}
+                className="flex items-center gap-2"
+              >
+                <Printer className="h-4 w-4" />
+                Print
+              </Button>
+              <Button
+                onClick={handleSendContract}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+              >
+                <Send className="h-4 w-4" />
+                Send Contract
+              </Button>
+            </div>
           </div>
 
           <Card>
