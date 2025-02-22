@@ -149,8 +149,7 @@ const Documents = () => {
                     <TableCell>{contract.valid_until ? format(new Date(contract.valid_until), 'MMM d, yyyy') : '-'}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="outline" size="sm" onClick={() => {
-                    setSelectedContract(contract);
-                    setShowContractDetails(true);
+                    navigate(`/documents/contracts/${contract.id}`);
                   }}>
                         View Details
                       </Button>

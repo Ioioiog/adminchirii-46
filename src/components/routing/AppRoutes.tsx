@@ -25,6 +25,7 @@ import Info from "@/pages/Info";
 import { useUserRole } from "@/hooks/use-user-role";
 import PropertyTenants from "@/pages/PropertyTenants";
 import GenerateContract from "@/pages/GenerateContract";
+import ContractDetails from "@/pages/ContractDetails";
 
 interface AppRoutesProps {
   isAuthenticated: boolean;
@@ -123,6 +124,14 @@ export function AppRoutes({ isAuthenticated }: AppRoutesProps) {
         element={
           <ProtectedRoute isAuthenticated={isAuthenticated}>
             <Documents />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/documents/contracts/:id"
+        element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <ContractDetails />
           </ProtectedRoute>
         }
       />
