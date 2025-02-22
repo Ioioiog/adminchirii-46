@@ -79,9 +79,9 @@ export function ChatBackground() {
         clearcoatRoughness: 0.2,
       });
 
-      // Create overlay with sky blue
+      // Create overlay with new sky blue color
       const overlayMaterial = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color('#33C3F0'), // Sky Blue
+        color: new THREE.Color('#87c0fa'), // New sky blue color
         transparent: true,
         opacity: 0.4,
         side: THREE.DoubleSide,
