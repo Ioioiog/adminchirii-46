@@ -363,8 +363,38 @@ export default function ContractDetails() {
     setIsPreviewModalOpen(true);
   };
 
-  const handlePrintContract = () => {
-    window.print();
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const contractContent = document.createElement('div');
+    contractContent.innerHTML = `
+      <style>
+        @media print {
+          body { margin: 0; padding: 20px; }
+          .page-break { page-break-before: always; }
+          table { width: 100%; border-collapse: collapse; }
+          td, th { padding: 8px; border: 1px solid #ddd; }
+        }
+      </style>
+    `;
+
+    const contractElement = document.querySelector('.contract-content');
+    if (contractElement) {
+      contractContent.appendChild(contractElement.cloneNode(true));
+    }
+
+    printWindow.document.write('<!DOCTYPE html><html><head><title>Print Contract</title></head><body>');
+    printWindow.document.write(contractContent.innerHTML);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+
+    printWindow.onload = () => {
+      printWindow.print();
+      printWindow.onafterprint = () => {
+        printWindow.close();
+      };
+    };
   };
 
   const handleSendContract = () => {
@@ -624,7 +654,7 @@ export default function ContractDetails() {
               </Button>
               <Button
                 variant="outline"
-                onClick={handlePrintContract}
+                onClick={handlePrint}
                 size="sm"
                 className="flex items-center gap-2"
               >
@@ -784,7 +814,7 @@ export default function ContractDetails() {
             <DialogTitle>Contract Preview</DialogTitle>
           </DialogHeader>
           <ScrollArea className="max-h-[80vh]">
-            <div className="p-6 space-y-8">
+            <div className="p-6 space-y-8 contract-content">
               <ContractContent formData={metadata} />
               <ContractSignatures formData={metadata} contractId={id!} />
             </div>
