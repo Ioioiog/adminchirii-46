@@ -1,3 +1,4 @@
+
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,7 @@ import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useToast } from "@/hooks/use-toast";
 import { Json } from "@/integrations/supabase/types/json";
 import { ContractContent } from "@/components/contract/ContractContent";
+import { ContractSignatures } from "@/components/contract/ContractSignatures";
 import { FormData } from "@/types/contract";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
