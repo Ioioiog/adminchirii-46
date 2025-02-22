@@ -257,6 +257,10 @@ function ContractDetailsContent() {
     retry: false
   });
 
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
   if (error) {
     return (
       <div className="flex bg-[#F8F9FC] min-h-screen">
@@ -289,6 +293,15 @@ function ContractDetailsContent() {
       </div>
     );
   }
+
+  if (!contract) {
+    return <div>Contract not found</div>;
+  }
+
+  const metadata = editedData || contract.metadata;
+  const hasLandlordSignature = !!contract.metadata.ownerSignatureName;
+  const hasTenantSignature = !!contract.metadata.tenantSignatureName;
+  const canInviteTenant = userRole === 'landlord' && hasLandlordSignature && !hasTenantSignature;
 
   const handleInputChange = (field: keyof FormData, value: string) => {
     if (!editedData) {
@@ -624,20 +637,6 @@ function ContractDetailsContent() {
 
     return null;
   };
-
-  const hasLandlordSignature = !!contract.metadata.ownerSignatureName;
-  const hasTenantSignature = !!contract.metadata.tenantSignatureName;
-  const canInviteTenant = userRole === 'landlord' && hasLandlordSignature && !hasTenantSignature;
-
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
-
-  if (!contract) {
-    return <div>Contract not found</div>;
-  }
-
-  const metadata = editedData || contract.metadata;
 
   return (
     <div className="flex bg-[#F8F9FC] min-h-screen">
