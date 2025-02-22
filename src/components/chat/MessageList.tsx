@@ -130,8 +130,8 @@ export function MessageList({
     }
   };
 
-  const handleScroll = (event: Event) => {
-    const element = event.target as HTMLDivElement;
+  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const element = event.currentTarget;
     console.log('Scroll position:', element.scrollTop); // Debug log
     console.log('Current first message:', visibleMessages[0]?.id); // Debug log
     
@@ -162,7 +162,7 @@ export function MessageList({
     <div className="flex-1 flex flex-col overflow-hidden">
       <ScrollArea 
         className={className || "flex-1 h-full"}
-        onScrollCapture={handleScroll}
+        onScroll={handleScroll}
       >
         <div className="space-y-4 p-4 min-h-full bg-sky-200/90 transition-colors duration-200 ease-in-out hover:bg-sky-100">
           {visibleMessages.map(message => {
