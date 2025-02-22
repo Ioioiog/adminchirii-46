@@ -156,21 +156,37 @@ export default function ContractDetails() {
         throw new Error('No email address provided');
       }
 
+      const { error: emailError } = await supabase.functions.invoke('send-contract', {
+        body: {
+          recipientEmail: emailToSend,
+          contractData: {
+            contractNumber: metadata.contractNumber,
+            tenantName: metadata.tenantName,
+            ownerName: metadata.ownerName,
+            propertyAddress: metadata.propertyAddress,
+            contractContent: document.querySelector('.print\\:block')?.innerHTML || '',
+          },
+        },
+      });
+
+      if (emailError) throw emailError;
+
       toast({
         title: "Success",
-        description: `Contract will be sent to ${emailToSend}`,
+        description: `Contract sent to ${emailToSend}`,
       });
 
       setIsEmailModalOpen(false);
       
-      const { error } = await supabase
+      const { error: updateError } = await supabase
         .from('contracts')
         .update({ status: 'pending' as ContractStatus })
         .eq('id', id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
     } catch (error: any) {
+      console.error('Error sending contract:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to send the contract. Please try again.",
