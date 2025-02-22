@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { useTenants } from "@/hooks/useTenants";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface InviteSignersModalProps {
   open: boolean;
@@ -19,7 +20,16 @@ export function InviteSignersModal({ open, onOpenChange, contractId }: InviteSig
   const [selectedTenantEmail, setSelectedTenantEmail] = useState('');
   const [customEmail, setCustomEmail] = useState('');
 
-  const { data: tenants } = useTenants();
+  const { data: tenants } = useQuery({
+    queryKey: ['tenants'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tenants')
+        .select('*');
+      if (error) throw error;
+      return data;
+    }
+  });
 
   const handleInvite = async () => {
     // Handle invite logic here

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -112,8 +111,8 @@ export default function ContractDetails() {
         </div>
 
         <div className="contract-content">
-          <ContractContent formData={metadata as any} />
-          <ContractSignatures formData={metadata as any} contractId={id || ''} />
+          <ContractContent formData={metadata} />
+          <ContractSignatures formData={metadata} contractId={id || ''} />
         </div>
       </div>
     </div>
