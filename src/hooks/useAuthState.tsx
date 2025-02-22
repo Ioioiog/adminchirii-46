@@ -1,9 +1,9 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
 
 export function useAuthState() {
-  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -61,7 +61,7 @@ export function useAuthState() {
     return () => {
       mounted = false;
     };
-  }, [toast]);
+  }, []); // Removed toast from dependencies since we don't use it here
 
   return { isLoading, isAuthenticated, setIsAuthenticated, currentUserId };
 }
