@@ -1,3 +1,4 @@
+
 import { FormData, Asset } from "@/types/contract";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
+import { Json } from "@/integrations/supabase/types/json";
 
 interface ContractFormProps {
   formData: FormData;
@@ -41,7 +43,8 @@ export function ContractForm({
     }
 
     try {
-      const metadataJson: Record<string, any> = {
+      // Convert the data to be compatible with Json type
+      const metadataJson: Json = {
         ...formData,
         assets: assets.map(asset => ({
           name: asset.name,
@@ -50,19 +53,39 @@ export function ContractForm({
         }))
       };
 
-      const { data, error } = await supabase.from('contracts').insert({
-        contract_type: 'lease',
-        status: 'draft',
-        landlord_id: user.id,
-        content: {}, // Required empty object for the content field
-        metadata: metadataJson,
-        valid_from: formData.startDate || null,
-        valid_until: formData.startDate ? 
-          new Date(new Date(formData.startDate).setMonth(
-            new Date(formData.startDate).getMonth() + 
-            parseInt(formData.contractDuration || '0')
-          )).toISOString() : null,
-      }).select().single();
+      // First get or create a property
+      const { data: propertyData, error: propertyError } = await supabase
+        .from('properties')
+        .insert({
+          name: formData.propertyAddress,
+          address: formData.propertyAddress,
+          landlord_id: user.id,
+          monthly_rent: parseFloat(formData.rentAmount) || 0
+        })
+        .select()
+        .single();
+
+      if (propertyError) throw propertyError;
+
+      // Then create the contract
+      const { data, error } = await supabase
+        .from('contracts')
+        .insert({
+          contract_type: 'lease',
+          status: 'draft',
+          landlord_id: user.id,
+          property_id: propertyData.id,
+          content: {} as Json,
+          metadata: metadataJson,
+          valid_from: formData.startDate || null,
+          valid_until: formData.startDate ? 
+            new Date(new Date(formData.startDate).setMonth(
+              new Date(formData.startDate).getMonth() + 
+              parseInt(formData.contractDuration || '0')
+            )).toISOString() : null,
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
