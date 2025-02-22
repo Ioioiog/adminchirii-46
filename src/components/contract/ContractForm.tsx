@@ -4,6 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface ContractFormProps {
   formData: FormData;
@@ -22,6 +25,39 @@ export function ContractForm({
   onAddAsset,
   onDeleteAsset
 }: ContractFormProps) {
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const handleSaveContract = async () => {
+    try {
+      const { data, error } = await supabase.from('contracts').insert({
+        contract_type: 'lease',
+        status: 'draft',
+        metadata: {
+          ...formData,
+          assets: assets
+        },
+        valid_from: formData.startDate || null,
+        valid_until: formData.startDate ? new Date(new Date(formData.startDate).setMonth(new Date(formData.startDate).getMonth() + parseInt(formData.contractDuration || '0'))).toISOString() : null,
+      }).select().single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Contract has been saved successfully",
+      });
+
+      navigate(`/documents/contracts/${data.id}`);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save the contract. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="edit-form bg-white rounded-lg shadow-sm p-6 print:hidden">
       <h1 className="text-3xl font-bold text-center mb-8">CONTRACT DE ÎNCHIRIERE A LOCUINȚEI</h1>
@@ -418,12 +454,20 @@ export function ContractForm({
         </CardContent>
       </Card>
 
-      <Button 
-        onClick={() => window.print()}
-        className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg"
-      >
-        Printează Contractul
-      </Button>
+      <div className="flex gap-4 mt-6">
+        <Button 
+          onClick={() => window.print()}
+          className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 text-lg"
+        >
+          Printează Contractul
+        </Button>
+        <Button 
+          onClick={handleSaveContract}
+          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg"
+        >
+          Salvează Contractul
+        </Button>
+      </div>
     </div>
   );
 }
