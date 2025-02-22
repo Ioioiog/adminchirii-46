@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Eye, Printer, Mail, Settings } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +24,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ScrollArea } from "@/components/ui/scroll-area";
 import * as ReactDOMServer from 'react-dom/server';
 
+// Create a new QueryClient instance
+const queryClient = new QueryClient();
+
 type ContractStatus = 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled';
 
 interface Contract {
@@ -40,7 +43,7 @@ interface ContractResponse extends Omit<Contract, 'metadata'> {
   metadata: FormData;
 }
 
-export default function ContractDetails() {
+function ContractDetailsContent() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { toast } = useToast();
@@ -799,5 +802,13 @@ export default function ContractDetails() {
         contractId={id!}
       />
     </div>
+  );
+}
+
+export default function ContractDetails() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ContractDetailsContent />
+    </QueryClientProvider>
   );
 }
