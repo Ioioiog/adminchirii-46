@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Settings, Globe, DollarSign, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,42 +25,8 @@ export function FloatingSettingsBox() {
   const { data: notifications, markAsRead } = useSidebarNotifications();
   const navigate = useNavigate();
 
-  const totalNotifications = notifications?.reduce((acc, curr) => acc + curr.count, 0) || 0;
-
-  const handleLanguageChange = (value: string) => {
-    localStorage.setItem('language', value);
-    i18n.changeLanguage(value);
-    toast({
-      title: "Language Updated",
-      description: "Your language preference has been saved.",
-    });
-  };
-
-  const handleCurrencyChange = async (value: string) => {
-    try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
-
-      const { error } = await supabase
-        .from('profiles')
-        .update({ currency_preference: value })
-        .eq('id', user?.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Currency Updated",
-        description: "Your currency preference has been saved.",
-      });
-    } catch (error) {
-      console.error('Error updating currency:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update currency preference",
-        variant: "destructive",
-      });
-    }
-  };
+  // Calculate total notifications the same way as sidebar
+  const totalNotifications = notifications?.reduce((acc, curr) => acc + (curr.count || 0), 0) || 0;
 
   const handleNotificationClick = async (type: NotificationType, messageId?: string) => {
     try {
@@ -102,6 +69,44 @@ export function FloatingSettingsBox() {
       });
     }
   };
+
+  const handleLanguageChange = (value: string) => {
+    localStorage.setItem('language', value);
+    i18n.changeLanguage(value);
+    toast({
+      title: "Language Updated",
+      description: "Your language preference has been saved.",
+    });
+  };
+
+  const handleCurrencyChange = async (value: string) => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ currency_preference: value })
+        .eq('id', user?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Currency Updated",
+        description: "Your currency preference has been saved.",
+      });
+    } catch (error) {
+      console.error('Error updating currency:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update currency preference",
+        variant: "destructive",
+      });
+    }
+  };
+
+  console.log('Floating notifications total:', totalNotifications);
+  console.log('Notifications data:', notifications);
 
   return (
     <div className="fixed top-8 right-8 z-40 flex items-center gap-2">
