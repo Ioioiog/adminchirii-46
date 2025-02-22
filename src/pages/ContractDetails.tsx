@@ -123,9 +123,15 @@ export default function ContractDetails() {
   const updateContractMutation = useMutation({
     mutationFn: async (updatedData: FormData) => {
       const jsonData: Json = Object.entries(updatedData).reduce((acc, [key, value]) => {
-        acc[key] = value;
+        if (Array.isArray(value)) {
+          acc[key] = value;
+        } else {
+          acc[key] = String(value || '');
+        }
         return acc;
       }, {} as { [key: string]: string | string[] });
+
+      console.log('Saving contract with data:', jsonData);
 
       const { error } = await supabase
         .from('contracts')
@@ -146,6 +152,7 @@ export default function ContractDetails() {
       setEditedData(null);
     },
     onError: (error) => {
+      console.error('Error updating contract:', error);
       toast({
         title: "Error",
         description: "Failed to update contract",
@@ -153,11 +160,6 @@ export default function ContractDetails() {
       });
     },
   });
-
-  const handleUpdateContract = () => {
-    if (!editedData) return;
-    updateContractMutation.mutate(editedData);
-  };
 
   const handleInputChange = (field: keyof FormData, value: string) => {
     if (!editedData) {
@@ -213,7 +215,19 @@ export default function ContractDetails() {
       };
       setEditedData(initialFormData);
     }
-    setEditedData(prev => prev ? { ...prev, [field]: value } : {} as FormData);
+    setEditedData(prev => {
+      if (!prev) return {} as FormData;
+      return { ...prev, [field]: value };
+    });
+  };
+
+  const handleUpdateContract = () => {
+    if (!editedData) {
+      console.log('No changes to save');
+      return;
+    }
+    console.log('Saving changes:', editedData);
+    updateContractMutation.mutate(editedData);
   };
 
   const handleEditContract = () => {
