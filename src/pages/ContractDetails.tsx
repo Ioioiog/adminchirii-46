@@ -1,4 +1,3 @@
-<lov-code>
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -914,4 +913,4 @@ export default function ContractDetails() {
                   Contract Tenant ({metadata.tenantEmail || 'Not provided'})
                 </Label>
               </div>
-              <div className="flex
+              <div className="flex items-center
