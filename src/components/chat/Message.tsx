@@ -115,8 +115,12 @@ export function Message({
                     <img 
                       src={extractURL(content)}
                       alt="Message attachment"
-                      className="max-w-full rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer"
-                      style={{ maxHeight: '300px' }}
+                      className="max-w-full w-auto h-auto rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer"
+                      style={{ 
+                        maxHeight: '200px',
+                        objectFit: 'cover',
+                        maxWidth: '250px'
+                      }}
                       onClick={() => setIsImagePreviewOpen(true)}
                     />
                   </div>
