@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +36,7 @@ export function MessageList({
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editedContent, setEditedContent] = useState("");
   const [visibleMessages, setVisibleMessages] = useState<Message[]>([]);
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -54,6 +55,35 @@ export function MessageList({
       });
     }
   }, [visibleMessages, messagesEndRef]);
+
+  useEffect(() => {
+    const viewport = scrollViewportRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    if (!viewport) return;
+
+    const handleScroll = (event: Event) => {
+      const element = event.target as HTMLDivElement;
+      const scrollTop = element.scrollTop;
+      console.log('Scroll position:', scrollTop);
+      console.log('Current first message:', visibleMessages[0]?.id);
+      
+      if (scrollTop < 50 && messages && messages.length > 0) {
+        const currentFirstMessageIndex = messages.findIndex(msg => msg.id === visibleMessages[0]?.id);
+        console.log('Current first message index:', currentFirstMessageIndex);
+        
+        if (currentFirstMessageIndex > 0) {
+          const newMessages = messages.slice(
+            Math.max(0, currentFirstMessageIndex - 12),
+            currentFirstMessageIndex + visibleMessages.length
+          );
+          console.log('Loading more messages:', newMessages.length);
+          setVisibleMessages(prevMessages => [...newMessages]);
+        }
+      }
+    };
+
+    viewport.addEventListener('scroll', handleScroll);
+    return () => viewport.removeEventListener('scroll', handleScroll);
+  }, [messages, visibleMessages]);
 
   useEffect(() => {
     if (!currentUserId || !messages || messages.length === 0) return;
@@ -130,26 +160,6 @@ export function MessageList({
     }
   };
 
-  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
-    const element = event.currentTarget;
-    console.log('Scroll position:', element.scrollTop); // Debug log
-    console.log('Current first message:', visibleMessages[0]?.id); // Debug log
-    
-    if (element.scrollTop < 50 && messages && messages.length > 0) {
-      const currentFirstMessageIndex = messages.findIndex(msg => msg.id === visibleMessages[0]?.id);
-      console.log('Current first message index:', currentFirstMessageIndex); // Debug log
-      
-      if (currentFirstMessageIndex > 0) {
-        const newMessages = messages.slice(
-          Math.max(0, currentFirstMessageIndex - 12), 
-          currentFirstMessageIndex + visibleMessages.length
-        );
-        console.log('Loading more messages:', newMessages.length); // Debug log
-        setVisibleMessages(newMessages);
-      }
-    }
-  };
-
   if (!messages || messages.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center p-8 text-center">
@@ -161,8 +171,8 @@ export function MessageList({
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <ScrollArea 
+        ref={scrollViewportRef}
         className={className || "flex-1 h-full"}
-        onScroll={handleScroll}
       >
         <div className="space-y-4 p-4 min-h-full bg-sky-200/90 transition-colors duration-200 ease-in-out hover:bg-sky-100">
           {visibleMessages.map(message => {
