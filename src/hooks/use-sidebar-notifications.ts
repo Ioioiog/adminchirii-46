@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -63,7 +64,6 @@ function isMessage(value: unknown): value is Message {
   return isValid;
 }
 
-// Update the fetchNotifications function to include profile_id in notifications
 export function useSidebarNotifications() {
   const [data, setData] = useState<Notification[]>([]);
   const { userRole, userId } = useUserRole();
@@ -119,6 +119,28 @@ export function useSidebarNotifications() {
         }
       }
 
+      // Fetch maintenance requests
+      const { data: maintenance, error: maintenanceError } = await supabase
+        .from('maintenance_requests')
+        .select('*')
+        .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false);
+
+      if (maintenanceError) {
+        console.error('Error fetching maintenance:', maintenanceError);
+        throw maintenanceError;
+      }
+
+      // Fetch payments
+      const { data: payments, error: paymentsError } = await supabase
+        .from('payments')
+        .select('*')
+        .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false);
+
+      if (paymentsError) {
+        console.error('Error fetching payments:', paymentsError);
+        throw paymentsError;
+      }
+
       // Combine both message types
       const allMessages = [...(directMessages || []), ...broadcastMessages];
 
@@ -130,7 +152,7 @@ export function useSidebarNotifications() {
         userId,
       });
 
-      // Map messages to notification items with profile_id
+      // Map all notifications
       const notifications: Notification[] = [
         {
           type: 'messages',
@@ -251,54 +273,6 @@ export function useSidebarNotifications() {
       supabase.removeChannel(channel);
     };
   }, [userId, userRole, fetchNotifications]);
-
-  const markAsRead = async (type: NotificationType) => {
-    if (!userId || !userRole) return;
-
-    try {
-      if (type === 'messages') {
-        const { error } = await supabase
-          .from('messages')
-          .update({ read: true })
-          .eq('receiver_id', userId)
-          .eq('read', false);
-
-        if (error) throw error;
-      } else if (type === 'maintenance') {
-        const { error } = await supabase
-          .from('maintenance_requests')
-          .update({ 
-            [userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant']: true 
-          })
-          .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false);
-
-        if (error) throw error;
-      } else if (type === 'payments') {
-        const { error } = await supabase
-          .from('payments')
-          .update({ 
-            [userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant']: true 
-          })
-          .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false);
-
-        if (error) throw error;
-      }
-
-      setData(prevData => 
-        prevData.map(item => 
-          item.type === type ? { ...item, count: 0, items: [] } : item
-        )
-      );
-    } catch (error) {
-      console.error(`Error marking ${type} as read:`, error);
-      toast({
-        title: "Error",
-        description: `Failed to mark ${type} as read`,
-        variant: "destructive",
-      });
-      throw error;
-    }
-  };
 
   return { data, markAsRead };
 }
