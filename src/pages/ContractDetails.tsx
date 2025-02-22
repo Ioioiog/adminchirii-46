@@ -1,3 +1,4 @@
+<lov-code>
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -367,34 +368,103 @@ export default function ContractDetails() {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const contractContent = document.createElement('div');
-    contractContent.innerHTML = `
+    // Add print styles
+    const styles = `
       <style>
         @media print {
-          body { margin: 0; padding: 20px; }
-          .page-break { page-break-before: always; }
-          table { width: 100%; border-collapse: collapse; }
-          td, th { padding: 8px; border: 1px solid #ddd; }
+          @page { 
+            size: A4;
+            margin: 20mm;
+          }
+          body { 
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+          }
+          .print-content {
+            max-width: 100%;
+            margin: 0 auto;
+          }
+          .page-break { 
+            page-break-before: always; 
+          }
+          section {
+            page-break-inside: avoid;
+          }
+          table { 
+            width: 100%;
+            border-collapse: collapse;
+            page-break-inside: avoid;
+          }
+          td, th { 
+            padding: 8px;
+            border: 1px solid #ddd;
+          }
+          img {
+            max-width: 200px;
+            page-break-inside: avoid;
+          }
+          h1 {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+          }
+          h2 {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 10px;
+          }
+          p {
+            margin: 8px 0;
+          }
+          .print-hidden {
+            display: none !important;
+          }
         }
       </style>
     `;
 
+    // Get the contract content
     const contractElement = document.querySelector('.contract-content');
-    if (contractElement) {
-      contractContent.appendChild(contractElement.cloneNode(true));
-    }
+    if (!contractElement) return;
 
-    printWindow.document.write('<!DOCTYPE html><html><head><title>Print Contract</title></head><body>');
-    printWindow.document.write(contractContent.innerHTML);
-    printWindow.document.write('</body></html>');
+    // Create HTML content
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Contract de Închiriere</title>
+          ${styles}
+        </head>
+        <body>
+          <div class="print-content">
+            ${contractElement.innerHTML}
+          </div>
+          <script>
+            // Wait for all images to load before printing
+            Promise.all(
+              Array.from(document.images)
+                .filter(img => !img.complete)
+                .map(img => new Promise(resolve => {
+                  img.onload = img.onerror = resolve;
+                }))
+            ).then(() => {
+              // Small delay to ensure proper rendering
+              setTimeout(() => {
+                window.print();
+                window.onafterprint = () => window.close();
+              }, 500);
+            });
+          </script>
+        </body>
+      </html>
+    `;
+
+    // Write content to print window
+    printWindow.document.write(htmlContent);
     printWindow.document.close();
-
-    printWindow.onload = () => {
-      printWindow.print();
-      printWindow.onafterprint = () => {
-        printWindow.close();
-      };
-    };
   };
 
   const handleSendContract = () => {
@@ -844,59 +914,4 @@ export default function ContractDetails() {
                   Contract Tenant ({metadata.tenantEmail || 'Not provided'})
                 </Label>
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="tenant-list" id="email-tenant-list" />
-                <Label htmlFor="email-tenant-list">Select from Tenant List</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="custom" id="email-custom" />
-                <Label htmlFor="email-custom">Custom Email</Label>
-              </div>
-            </RadioGroup>
-
-            {selectedEmailOption === 'tenant-list' && (
-              <div className="space-y-2">
-                <Label>Select Tenant</Label>
-                <Select
-                  value={selectedTenantEmail}
-                  onValueChange={setSelectedTenantEmail}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a tenant" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tenants.map((tenant) => (
-                      <SelectItem key={tenant.id} value={tenant.email || ''}>
-                        {tenant.first_name} {tenant.last_name} ({tenant.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {selectedEmailOption === 'custom' && (
-              <div className="space-y-2">
-                <Label htmlFor="customEmail">Custom Email Address</Label>
-                <Input
-                  id="customEmail"
-                  type="email"
-                  placeholder="Enter email address"
-                  value={customEmail}
-                  onChange={(e) => setCustomEmail(e.target.value)}
-                />
-              </div>
-            )}
-
-            <DialogFooter>
-              <Button type="button" variant="secondary" onClick={() => setIsEmailModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleEmailSubmit}>Send Email</Button>
-            </DialogFooter>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
+              <div className="flex
