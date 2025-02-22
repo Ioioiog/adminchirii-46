@@ -1,4 +1,3 @@
-
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +59,7 @@ export default function ContractDetails() {
         .single();
 
       if (error) throw error;
+      console.log('Contract data from Supabase:', data);
       return data as Contract;
     },
   });
@@ -73,6 +73,7 @@ export default function ContractDetails() {
   }
 
   const metadata = contract.metadata || {};
+  console.log('Contract metadata:', metadata);
 
   return (
     <div className="flex bg-[#F8F9FC] min-h-screen">
