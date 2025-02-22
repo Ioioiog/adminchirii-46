@@ -1,4 +1,3 @@
-
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -55,14 +54,66 @@ export default function ContractDetails() {
   const { userRole } = useUserRole();
   const { data: tenants = [] } = useTenants();
 
-  // Add the update contract mutation
   const updateContractMutation = useMutation({
     mutationFn: async (formData: FormData) => {
       if (!id) throw new Error('Contract ID is required');
       
+      const jsonMetadata: { [key: string]: Json } = {
+        contractNumber: formData.contractNumber,
+        contractDate: formData.contractDate,
+        ownerName: formData.ownerName,
+        ownerReg: formData.ownerReg,
+        ownerFiscal: formData.ownerFiscal,
+        ownerAddress: formData.ownerAddress,
+        ownerBank: formData.ownerBank,
+        ownerBankName: formData.ownerBankName,
+        ownerEmail: formData.ownerEmail,
+        ownerPhone: formData.ownerPhone,
+        ownerCounty: formData.ownerCounty,
+        ownerCity: formData.ownerCity,
+        ownerRepresentative: formData.ownerRepresentative,
+        tenantName: formData.tenantName,
+        tenantReg: formData.tenantReg,
+        tenantFiscal: formData.tenantFiscal,
+        tenantAddress: formData.tenantAddress,
+        tenantBank: formData.tenantBank,
+        tenantBankName: formData.tenantBankName,
+        tenantEmail: formData.tenantEmail,
+        tenantPhone: formData.tenantPhone,
+        tenantCounty: formData.tenantCounty,
+        tenantCity: formData.tenantCity,
+        tenantRepresentative: formData.tenantRepresentative,
+        propertyAddress: formData.propertyAddress,
+        rentAmount: formData.rentAmount,
+        vatIncluded: formData.vatIncluded,
+        contractDuration: formData.contractDuration,
+        paymentDay: formData.paymentDay,
+        roomCount: formData.roomCount,
+        startDate: formData.startDate,
+        lateFee: formData.lateFee,
+        renewalPeriod: formData.renewalPeriod,
+        unilateralNotice: formData.unilateralNotice,
+        terminationNotice: formData.terminationNotice,
+        earlyTerminationFee: formData.earlyTerminationFee,
+        latePaymentTermination: formData.latePaymentTermination,
+        securityDeposit: formData.securityDeposit,
+        depositReturnPeriod: formData.depositReturnPeriod,
+        waterColdMeter: formData.waterColdMeter,
+        waterHotMeter: formData.waterHotMeter,
+        electricityMeter: formData.electricityMeter,
+        gasMeter: formData.gasMeter,
+        ownerSignatureDate: formData.ownerSignatureDate,
+        ownerSignatureName: formData.ownerSignatureName,
+        ownerSignatureImage: formData.ownerSignatureImage,
+        tenantSignatureDate: formData.tenantSignatureDate,
+        tenantSignatureName: formData.tenantSignatureName,
+        tenantSignatureImage: formData.tenantSignatureImage,
+        assets: formData.assets
+      };
+      
       const { error } = await supabase
         .from('contracts')
-        .update({ metadata: formData })
+        .update({ metadata: jsonMetadata })
         .eq('id', id);
       
       if (error) throw error;
@@ -123,7 +174,6 @@ export default function ContractDetails() {
 
       const metadataObj = contractData.metadata as Record<string, any> || {};
 
-      // Process signatures
       if (signatures) {
         const uniqueSignatures = signatures.reduce((acc, curr) => {
           acc[curr.signer_role] = curr;
@@ -142,7 +192,6 @@ export default function ContractDetails() {
         }
       }
 
-      // Transform metadata with full FormData structure
       const transformedMetadata: FormData = {
         contractNumber: String(metadataObj.contractNumber || ''),
         contractDate: String(metadataObj.contractDate || ''),
