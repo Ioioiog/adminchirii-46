@@ -582,10 +582,30 @@ function ContractDetailsContent() {
   };
 
   const renderInviteButton = () => {
-    if (userRole !== 'landlord') return null;
-    if (!contract) return null;
-    if (contract?.metadata.tenantSignatureName || 
-        (contract?.status !== 'draft' && contract?.status !== 'pending')) {
+    console.log('Debug Invite Button:', {
+      userRole,
+      contractStatus: contract?.status,
+      tenantSignature: contract?.metadata.tenantSignatureName,
+      contract: contract
+    });
+
+    if (userRole !== 'landlord') {
+      console.log('Button hidden: User is not landlord');
+      return null;
+    }
+    
+    if (!contract) {
+      console.log('Button hidden: Contract not loaded');
+      return null;
+    }
+    
+    if (contract?.metadata.tenantSignatureName) {
+      console.log('Button hidden: Contract already has tenant signature');
+      return null;
+    }
+
+    if (contract?.status !== 'draft' && contract?.status !== 'pending') {
+      console.log('Button hidden: Contract status is not draft or pending');
       return null;
     }
     
@@ -648,6 +668,15 @@ function ContractDetailsContent() {
               >
                 <Printer className="h-4 w-4" />
                 Print
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleSendContract}
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Mail className="h-4 w-4" />
+                Send
               </Button>
               <Button
                 variant="outline"
