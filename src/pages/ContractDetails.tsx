@@ -691,14 +691,16 @@ export default function ContractDetails() {
           </Dialog>
 
           <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
-            <DialogContent className="max-w-4xl">
+            <DialogContent className="max-w-4xl max-h-[90vh]">
               <DialogHeader>
                 <DialogTitle>Contract Preview</DialogTitle>
               </DialogHeader>
-              <div className="mt-4">
-                <ContractContent formData={metadata} />
-                <ContractSignatures formData={metadata} contractId={id || ''} />
-              </div>
+              <ScrollArea className="h-[calc(90vh-8rem)]">
+                <div className="mt-4 px-4">
+                  <ContractContent formData={metadata} />
+                  <ContractSignatures formData={metadata} contractId={id || ''} />
+                </div>
+              </ScrollArea>
             </DialogContent>
           </Dialog>
 
