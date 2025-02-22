@@ -1,172 +1,100 @@
+
 import { FormData } from "@/types/contract";
-import { Button } from "@/components/ui/button";
-import { Printer } from "lucide-react";
-import { ContractSignatures } from "./ContractSignatures";
 
 interface ContractContentProps {
   formData: FormData;
-  contractId?: string;
 }
 
-export function ContractContent({ formData, contractId }: ContractContentProps) {
-  console.log("Contract formData:", formData);
-  console.log("Owner signature:", formData.ownerSignatureImage);
-  console.log("Tenant signature:", formData.tenantSignatureImage);
-
-  const handlePrint = () => {
-    window.print();
-  };
-
+export function ContractContent({ formData }: ContractContentProps) {
   return (
-    <article className="max-w-4xl mx-auto py-8 px-4 print:p-0">      
-      <div className="space-y-6 print:space-y-4 print:overflow-visible">
-        <header className="text-center mb-6 print:mb-8">
-          <h1 className="text-2xl font-bold mb-2 print:text-xl">CONTRACT DE ÎNCHIRIERE</h1>
-          <p>Nr. {formData.contractNumber} din {formData.contractDate}</p>
-        </header>
-
-        <section className="print:break-inside-avoid-page">
-          <h2 className="text-lg font-semibold mb-4">I. PĂRȚILE CONTRACTANTE</h2>
-          <div className="space-y-4">
-            <div>
-              <p className="font-medium">1.1. {formData.ownerName}</p>
-              <p>cu sediul în {formData.ownerAddress}</p>
-              <p>înregistrată la Registrul Comerțului sub nr. {formData.ownerReg}</p>
-              <p>cod fiscal {formData.ownerFiscal}</p>
-              <p>cont {formData.ownerBank}</p>
-              <p>deschis la {formData.ownerBankName}</p>
-              <p>reprezentată de {formData.ownerRepresentative}</p>
-              <p>în calitate de PROPRIETAR</p>
-            </div>
-
-            <div>
-              <p>și</p>
-            </div>
-
-            <div>
-              <p className="font-medium">1.2. {formData.tenantName}</p>
-              <p>cu sediul în {formData.tenantAddress}</p>
-              <p>înregistrată la Registrul Comerțului sub nr. {formData.tenantReg}</p>
-              <p>cod fiscal {formData.tenantFiscal}</p>
-              <p>cont {formData.tenantBank}</p>
-              <p>deschis la {formData.tenantBankName}</p>
-              <p>reprezentată de {formData.tenantRepresentative}</p>
-              <p>în calitate de CHIRIAȘ</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="print:break-inside-avoid-page">
-          <h2 className="text-lg font-semibold mb-4">II. OBIECTUL CONTRACTULUI</h2>
-          <p>
-            2.1. Obiectul contractului îl constituie închirierea spațiului situat la adresa: {formData.propertyAddress}
-          </p>
-          <p>2.2. Spațiul închiriat are {formData.roomCount} camere.</p>
-        </section>
-
-        <section className="print:break-inside-avoid-page">
-          <h2 className="text-lg font-semibold mb-4">III. DURATA CONTRACTULUI</h2>
-          <p>
-            3.1. Durata închirierii este de {formData.contractDuration} luni, începând cu data de {formData.startDate}.
-          </p>
-          <p>
-            3.2. La expirarea termenului, contractul poate fi reînnoit pentru o perioadă de {formData.renewalPeriod} luni, 
-            cu acordul ambelor părți.
-          </p>
-        </section>
-
-        <section className="print:break-inside-avoid-page">
-          <h2 className="text-lg font-semibold mb-4">IV. PREȚUL ÎNCHIRIERII</h2>
-          <p>
-            4.1. Chiria lunară este de {formData.rentAmount} lei{formData.vatIncluded === 'da' ? ', TVA inclus' : ''}.
-          </p>
-          <p>
-            4.2. Plata chiriei se va face lunar, până în data de {formData.paymentDay} a fiecărei luni.
-          </p>
-          <p>
-            4.3. Pentru întârzieri la plată se percep penalități de {formData.lateFee}% pe zi din suma datorată.
-          </p>
-        </section>
-
-        <section className="print:break-inside-avoid-page">
-          <h2 className="text-lg font-semibold mb-4">V. GARANȚIA</h2>
-          <p>
-            5.1. La semnarea contractului, chiriașul va plăti o garanție în valoare de {formData.securityDeposit} lei.
-          </p>
-          <p>
-            5.2. Garanția va fi returnată în termen de {formData.depositReturnPeriod} zile de la încetarea contractului.
-          </p>
-        </section>
-
-        <section className="print:break-inside-avoid-page">
-          <h2 className="text-lg font-semibold mb-4">VI. REZILIEREA CONTRACTULUI</h2>
-          <p>
-            6.1. Oricare dintre părți poate denunța unilateral contractul cu un preaviz de {formData.unilateralNotice} zile.
-          </p>
-          <p>
-            6.2. În caz de nerespectare a termenului de preaviz, se va plăti o penalizare de {formData.earlyTerminationFee} lei.
-          </p>
-          <p>
-            6.3. Neplata chiriei timp de {formData.latePaymentTermination} zile consecutive dă dreptul proprietarului 
-            de a rezilia contractul fără preaviz.
-          </p>
-        </section>
-
-        <section className="print:break-inside-avoid-page">
-          <h2 className="text-lg font-semibold mb-4">VII. INDEXURILE UTILITĂȚILOR LA PREDARE</h2>
-          <div className="space-y-2">
-            <p>Apă rece: {formData.waterColdMeter}</p>
-            <p>Apă caldă: {formData.waterHotMeter}</p>
-            <p>Electricitate: {formData.electricityMeter}</p>
-            <p>Gaz: {formData.gasMeter}</p>
-          </div>
-        </section>
-
-        {formData.assets && formData.assets.length > 0 && (
-          <section className="print:break-inside-avoid-page">
-            <h2 className="text-lg font-semibold mb-4">VIII. INVENTARUL BUNURILOR</h2>
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2">Denumire</th>
-                  <th className="text-left py-2">Valoare</th>
-                  <th className="text-left py-2">Stare</th>
-                </tr>
-              </thead>
-              <tbody>
-                {formData.assets.map((asset, index) => (
-                  <tr key={index} className="border-b">
-                    <td className="py-2">{asset.name}</td>
-                    <td className="py-2">{asset.value}</td>
-                    <td className="py-2">{asset.condition}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-        )}
-
-        <section className="print:break-inside-avoid-page mt-8">
-          {contractId ? (
-            <ContractSignatures formData={formData} contractId={contractId} />
-          ) : (
-            <div className="grid grid-cols-2 gap-8">
-              <div>
-                <p className="font-bold mb-2">PROPRIETAR,</p>
-                <p className="mb-2">Data: _____</p>
-                <p className="mb-2">Nume în clar și semnătură:</p>
-                <p>___________________________</p>
-              </div>
-              <div>
-                <p className="font-bold mb-2">CHIRIAȘ,</p>
-                <p className="mb-2">Data: _____</p>
-                <p className="mb-2">Nume în clar și semnătură:</p>
-                <p>___________________________</p>
-              </div>
-            </div>
-          )}
-        </section>
+    <div className="text-black">
+      <h1 className="text-2xl text-center font-bold mb-8">Contract de Închiriere</h1>
+      
+      <div className="mb-8">
+        <p className="mb-2">Contract nr. {formData.contractNumber}</p>
+        <p>Data: {formData.contractDate}</p>
       </div>
-    </article>
+
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-4">I. Părțile contractante</h2>
+        
+        <div className="mb-4">
+          <p className="mb-2">1.1. {formData.ownerName}, cu sediul social în {formData.ownerAddress}, înregistrată la Registrul Comerțului sub nr. {formData.ownerReg}, având cod fiscal {formData.ownerFiscal}, cont bancar {formData.ownerBank} deschis la {formData.ownerBankName}, email {formData.ownerEmail}, telefon {formData.ownerPhone}, cu sediul în județul {formData.ownerCounty}, localitatea {formData.ownerCity}, reprezentată prin {formData.ownerRepresentative}, în calitate de PROPRIETAR</p>
+        </div>
+
+        <div>
+          <p>și</p>
+        </div>
+
+        <div className="mb-4">
+          <p className="mb-2">1.2. {formData.tenantName}, cu sediul social în {formData.tenantAddress}, înregistrată la Registrul Comerțului sub nr. {formData.tenantReg}, având cod fiscal {formData.tenantFiscal}, cont bancar {formData.tenantBank} deschis la {formData.tenantBankName}, email {formData.tenantEmail}, telefon {formData.tenantPhone}, cu sediul în județul {formData.tenantCounty}, localitatea {formData.tenantCity}, reprezentată prin {formData.tenantRepresentative}, în calitate de CHIRIAȘ</p>
+        </div>
+      </div>
+
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-4">II. Obiectul contractului</h2>
+        <p className="mb-4">2.1. Obiectul prezentului contract îl constituie închirierea imobilului situat în {formData.propertyAddress}, compus din {formData.roomCount} camere.</p>
+      </div>
+
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-4">III. Durata contractului</h2>
+        <p className="mb-4">3.1. Prezentul contract se încheie pe o durată de {formData.contractDuration} luni, începând cu data de {formData.startDate}.</p>
+        <p className="mb-4">3.2. La expirarea termenului, contractul poate fi reînnoit pentru o perioadă de {formData.renewalPeriod} luni prin act adițional semnat de ambele părți.</p>
+      </div>
+
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-4">IV. Chiria și modalitatea de plată</h2>
+        <p className="mb-4">4.1. Chiria lunară este de {formData.rentAmount} RON {formData.vatIncluded === 'da' ? '(inclusiv TVA)' : '(fără TVA)'}.</p>
+        <p className="mb-4">4.2. Plata chiriei se va efectua lunar, până în data de {formData.paymentDay} a fiecărei luni, pentru luna în curs.</p>
+        <p className="mb-4">4.3. Pentru întârzierea la plată se vor percepe penalități de {formData.lateFee}% pe zi din suma datorată.</p>
+      </div>
+
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-4">V. Garanția</h2>
+        <p className="mb-4">5.1. La semnarea contractului, chiriașul va constitui o garanție în valoare de {formData.securityDeposit}.</p>
+        <p className="mb-4">5.2. Garanția va fi returnată în termen de {formData.depositReturnPeriod} zile de la încetarea contractului.</p>
+      </div>
+
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-4">VI. Rezilierea contractului</h2>
+        <p className="mb-4">6.1. Contractul poate fi reziliat unilateral cu un preaviz de {formData.unilateralNotice} zile.</p>
+        <p className="mb-4">6.2. În cazul întârzierii la plată cu mai mult de {formData.latePaymentTermination} zile, proprietarul poate rezilia contractul.</p>
+        <p className="mb-4">6.3. În cazul rezilierii anticipate, se va aplica o penalizare de {formData.earlyTerminationFee}.</p>
+      </div>
+
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-4">VII. Indexuri utilități</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <p>Apă rece: {formData.waterColdMeter}</p>
+          <p>Apă caldă: {formData.waterHotMeter}</p>
+          <p>Electricitate: {formData.electricityMeter}</p>
+          <p>Gaz: {formData.gasMeter}</p>
+        </div>
+      </div>
+
+      {formData.assets && formData.assets.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4">VIII. Inventarul bunurilor</h2>
+          <table className="w-full border-collapse">
+            <thead>
+              <tr>
+                <th className="border border-gray-400 px-4 py-2">Denumire</th>
+                <th className="border border-gray-400 px-4 py-2">Valoare</th>
+                <th className="border border-gray-400 px-4 py-2">Stare</th>
+              </tr>
+            </thead>
+            <tbody>
+              {formData.assets.map((asset, index) => (
+                <tr key={index}>
+                  <td className="border border-gray-400 px-4 py-2">{asset.name}</td>
+                  <td className="border border-gray-400 px-4 py-2">{asset.value}</td>
+                  <td className="border border-gray-400 px-4 py-2">{asset.condition}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }
