@@ -607,7 +607,7 @@ export default function ContractDetails() {
           </div>
 
           <Dialog open={isEmailModalOpen} onOpenChange={setIsEmailModalOpen}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
                 <DialogTitle>Send Contract</DialogTitle>
                 <DialogDescription>
