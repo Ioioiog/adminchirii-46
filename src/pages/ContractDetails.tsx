@@ -57,16 +57,40 @@ export default function ContractDetails() {
   const { data: contract, isLoading } = useQuery({
     queryKey: ['contract', id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: contractData, error: contractError } = await supabase
         .from('contracts')
         .select('*, properties(name)')
         .eq('id', id)
         .single();
 
-      if (error) throw error;
-      
-      const metadataObj = data.metadata as Record<string, any> || {};
-      
+      if (contractError) throw contractError;
+
+      const { data: signatures, error: signaturesError } = await supabase
+        .from('contract_signatures')
+        .select('*')
+        .eq('contract_id', id);
+
+      if (signaturesError) throw signaturesError;
+
+      console.log("Contract data:", contractData);
+      console.log("Signatures:", signatures);
+
+      const metadataObj = contractData.metadata as Record<string, any> || {};
+
+      if (signatures && signatures.length > 0) {
+        signatures.forEach(signature => {
+          if (signature.signer_role === 'landlord') {
+            metadataObj.ownerSignatureImage = signature.signature_image;
+            metadataObj.ownerSignatureName = signature.signature_data;
+            metadataObj.ownerSignatureDate = signature.signed_at?.split('T')[0];
+          } else if (signature.signer_role === 'tenant') {
+            metadataObj.tenantSignatureImage = signature.signature_image;
+            metadataObj.tenantSignatureName = signature.signature_data;
+            metadataObj.tenantSignatureDate = signature.signed_at?.split('T')[0];
+          }
+        });
+      }
+
       const transformedMetadata: FormData = {
         contractNumber: String(metadataObj.contractNumber || ''),
         contractDate: String(metadataObj.contractDate || ''),
@@ -113,13 +137,15 @@ export default function ContractDetails() {
         gasMeter: String(metadataObj.gasMeter || ''),
         ownerSignatureDate: String(metadataObj.ownerSignatureDate || ''),
         ownerSignatureName: String(metadataObj.ownerSignatureName || ''),
+        ownerSignatureImage: metadataObj.ownerSignatureImage || '',
         tenantSignatureDate: String(metadataObj.tenantSignatureDate || ''),
         tenantSignatureName: String(metadataObj.tenantSignatureName || ''),
+        tenantSignatureImage: metadataObj.tenantSignatureImage || '',
         assets: Array.isArray(metadataObj.assets) ? metadataObj.assets : []
       };
 
       return {
-        ...data,
+        ...contractData,
         metadata: transformedMetadata
       } as ContractResponse;
     },
