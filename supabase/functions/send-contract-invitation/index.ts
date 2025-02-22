@@ -22,6 +22,7 @@ interface ContractInvitationRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -29,44 +30,67 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { contractId, tenantEmail, contractNumber, ownerName, propertyAddress }: ContractInvitationRequest = await req.json();
 
+    console.log("Sending contract invitation:", {
+      contractId,
+      tenantEmail,
+      contractNumber,
+      ownerName,
+      propertyAddress,
+    });
+
     // Update contract with invitation details
     const { data: contract, error: updateError } = await supabase
       .from('contracts')
       .update({
         invitation_sent_at: new Date().toISOString(),
         invitation_email: tenantEmail,
-        invitation_token: crypto.randomUUID()
+        invitation_token: crypto.randomUUID(),
+        status: 'pending'
       })
       .eq('id', contractId)
       .select()
       .single();
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      console.error("Error updating contract:", updateError);
+      throw updateError;
+    }
 
     const signLink = `${Deno.env.get("PUBLIC_SITE_URL")}/documents/contracts/${contractId}?token=${contract.invitation_token}`;
 
-    const emailResponse = await resend.emails.send({
-      from: "Lovable <onboarding@resend.dev>",
+    const { error: emailError } = await resend.emails.send({
+      from: "Lovable Properties <onboarding@resend.dev>",
       to: [tenantEmail],
-      subject: `Contract de închiriere #${contractNumber} - Invitație de semnare`,
+      subject: `Contract Signing Invitation - #${contractNumber}`,
       html: `
-        <h1>Invitație de semnare contract</h1>
-        <p>Bună ziua,</p>
-        <p>Ați fost invitat(ă) de către ${ownerName} să semnați contractul de închiriere pentru proprietatea situată la adresa: ${propertyAddress}.</p>
-        <p>Pentru a vizualiza și semna contractul, vă rugăm să accesați următorul link:</p>
-        <p><a href="${signLink}">${signLink}</a></p>
-        <p>Link-ul este valabil pentru o singură utilizare.</p>
-        <p>Cu stimă,<br>Echipa Lovable</p>
+        <h1>Contract Signing Invitation</h1>
+        <p>Hello,</p>
+        <p>You have been invited by ${ownerName} to sign a rental contract for the property located at: ${propertyAddress}.</p>
+        <p>To view and sign the contract, please click the link below:</p>
+        <p><a href="${signLink}" style="display: inline-block; background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">View and Sign Contract</a></p>
+        <p>Or copy and paste this link in your browser:</p>
+        <p>${signLink}</p>
+        <p>This link is for one-time use only and is tied to your email address.</p>
+        <p>Best regards,<br>Lovable Properties</p>
       `,
     });
 
-    console.log("Invitation email sent successfully:", emailResponse);
+    if (emailError) {
+      console.error("Error sending email:", emailError);
+      throw emailError;
+    }
 
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.log("Invitation sent successfully");
+
+    return new Response(
+      JSON.stringify({ success: true }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
   } catch (error) {
-    console.error("Error sending contract invitation:", error);
+    console.error("Error in send-contract-invitation function:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {

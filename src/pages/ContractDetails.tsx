@@ -350,6 +350,8 @@ export default function ContractDetails() {
 
       setIsInviteModalOpen(false);
       setInviteEmail("");
+      
+      queryClient.invalidateQueries({ queryKey: ['contract', id] });
     } catch (error: any) {
       console.error('Error sending invitation:', error);
       toast({
@@ -424,7 +426,6 @@ export default function ContractDetails() {
       </div>
       <main className="flex-1 p-8">
         <div className="max-w-7xl mx-auto space-y-6">
-          
           <div className="flex items-center gap-4 mb-6 print:hidden">
             <Button
               variant="outline"
@@ -439,7 +440,7 @@ export default function ContractDetails() {
               {renderInviteButton()}
               <Button
                 variant="outline"
-                onClick={() => setIsPreviewModalOpen(true)}
+                onClick={handleViewContract}
                 className="flex items-center gap-2"
               >
                 <Eye className="h-4 w-4" />
