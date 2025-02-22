@@ -1,4 +1,3 @@
-
 import { FormData } from "@/types/contract";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
@@ -19,14 +18,7 @@ export function ContractContent({ formData, contractId }: ContractContentProps) 
   };
 
   return (
-    <article className="max-w-4xl mx-auto py-8 px-4 print:p-0">
-      <div className="print:hidden mb-8 flex justify-end">
-        <Button onClick={handlePrint} variant="outline">
-          <Printer className="mr-2 h-4 w-4" />
-          Print Contract
-        </Button>
-      </div>
-      
+    <article className="max-w-4xl mx-auto py-8 px-4 print:p-0">      
       <div className="space-y-6 print:space-y-4 print:overflow-visible">
         <header className="text-center mb-6 print:mb-8">
           <h1 className="text-2xl font-bold mb-2 print:text-xl">CONTRACT DE ÎNCHIRIERE</h1>
