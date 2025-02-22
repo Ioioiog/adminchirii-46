@@ -5,22 +5,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Eye, Printer, Send, Mail, Settings } from "lucide-react";
+import { ArrowLeft, Eye, Printer, Mail, Settings } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useToast } from "@/hooks/use-toast";
 import { Json } from "@/integrations/supabase/types/json";
 import { ContractContent } from "@/components/contract/ContractContent";
-import { ContractSignatures } from "@/components/contract/ContractSignatures";
 import { FormData } from "@/types/contract";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useState } from "react";
 import { useTenants } from "@/hooks/useTenants";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useUserRole } from "@/hooks/use-user-role";
+import { ContractModals } from "@/components/contract/ContractModals";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type ContractStatus = 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled';
 
@@ -595,92 +595,6 @@ export default function ContractDetails() {
     );
   };
 
-  const renderInviteModal = () => (
-    <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Invite Tenant to Sign Contract</DialogTitle>
-          <DialogDescription>
-            Choose where to send the invitation
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          <RadioGroup
-            value={selectedEmailOption}
-            onValueChange={(value) => {
-              setSelectedEmailOption(value);
-              if (value !== 'tenant-list') {
-                setSelectedTenantEmail('');
-              }
-            }}
-            className="space-y-2"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="tenant" id="invite-tenant" />
-              <Label htmlFor="invite-tenant">
-                Contract Tenant ({metadata.tenantEmail || 'Not provided'})
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="tenant-list" id="invite-tenant-list" />
-              <Label htmlFor="invite-tenant-list">Select from Tenant List</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="custom" id="invite-custom" />
-              <Label htmlFor="invite-custom">Custom Email</Label>
-            </div>
-          </RadioGroup>
-
-          {selectedEmailOption === 'tenant-list' && (
-            <div className="space-y-2">
-              <Label>Select Tenant</Label>
-              <Select
-                value={selectedTenantEmail}
-                onValueChange={setSelectedTenantEmail}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a tenant" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tenants.map((tenant) => (
-                    <SelectItem 
-                      key={tenant.id} 
-                      value={tenant.email || ''}
-                    >
-                      {tenant.first_name} {tenant.last_name} ({tenant.email})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {selectedEmailOption === 'custom' && (
-            <div className="space-y-2">
-              <Label htmlFor="inviteEmail">Custom Email Address</Label>
-              <Input
-                id="inviteEmail"
-                type="email"
-                placeholder="Enter email address"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-              />
-            </div>
-          )}
-
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => setIsInviteModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleInviteTenant} className="bg-blue-600 hover:bg-blue-700">
-              Send Invitation
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -877,40 +791,27 @@ export default function ContractDetails() {
         </div>
       </main>
 
-      <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Contract Preview</DialogTitle>
-          </DialogHeader>
-          <ScrollArea className="max-h-[80vh]">
-            <div className="p-6 space-y-8 contract-content">
-              <ContractContent formData={metadata} />
-              <ContractSignatures formData={metadata} contractId={id!} />
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-
-      {renderInviteModal()}
-
-      <Dialog open={isEmailModalOpen} onOpenChange={() => setIsEmailModalOpen(false)}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Send Contract via Email</DialogTitle>
-            <DialogDescription>
-              Choose where to send the contract
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <RadioGroup
-              value={selectedEmailOption}
-              onValueChange={(value) => setSelectedEmailOption(value)}
-              className="space-y-2"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="tenant" id="email-tenant" />
-                <Label htmlFor="email-tenant">
-                  Contract Tenant ({metadata.tenantEmail || 'Not provided'})
-                </Label>
-              </div>
-              <div className="flex items-center
+      <ContractModals
+        isPreviewModalOpen={isPreviewModalOpen}
+        setIsPreviewModalOpen={setIsPreviewModalOpen}
+        isEmailModalOpen={isEmailModalOpen}
+        setIsEmailModalOpen={setIsEmailModalOpen}
+        isInviteModalOpen={isInviteModalOpen}
+        setIsInviteModalOpen={setIsInviteModalOpen}
+        selectedEmailOption={selectedEmailOption}
+        setSelectedEmailOption={setSelectedEmailOption}
+        customEmail={customEmail}
+        setCustomEmail={setCustomEmail}
+        selectedTenantEmail={selectedTenantEmail}
+        setSelectedTenantEmail={setSelectedTenantEmail}
+        inviteEmail={inviteEmail}
+        setInviteEmail={setInviteEmail}
+        metadata={metadata}
+        contractId={id!}
+        tenants={tenants}
+        handleEmailSubmit={handleEmailSubmit}
+        handleInviteTenant={handleInviteTenant}
+      />
+    </div>
+  );
+}
