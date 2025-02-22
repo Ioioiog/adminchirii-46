@@ -1,4 +1,3 @@
-
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +45,10 @@ interface Contract {
   status: ContractStatus;
   valid_from: string | null;
   valid_until: string | null;
+  metadata: Json;
+}
+
+interface ContractResponse extends Omit<Contract, 'metadata'> {
   metadata: ContractMetadata;
 }
 
@@ -65,7 +68,13 @@ export default function ContractDetails() {
 
       if (error) throw error;
       console.log('Contract data from Supabase:', data);
-      return data as Contract;
+      
+      const transformedData: ContractResponse = {
+        ...data,
+        metadata: data.metadata as ContractMetadata
+      };
+
+      return transformedData;
     },
   });
 
@@ -83,7 +92,6 @@ export default function ContractDetails() {
 
   const handleSendContract = async () => {
     try {
-      // Here you would typically update the contract status and trigger email sending
       const { error } = await supabase
         .from('contracts')
         .update({ status: 'pending' as ContractStatus })
@@ -112,7 +120,7 @@ export default function ContractDetails() {
     return <div>Contract not found</div>;
   }
 
-  const metadata = contract.metadata || {} as ContractMetadata;
+  const metadata = contract.metadata;
 
   return (
     <div className="flex bg-[#F8F9FC] min-h-screen">
