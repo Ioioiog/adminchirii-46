@@ -516,13 +516,6 @@ export default function ContractDetails() {
                   Save Modifications
                 </Button>
               )}
-              <Button
-                onClick={handleSendContract}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-              >
-                <Send className="h-4 w-4" />
-                Send Contract
-              </Button>
             </div>
           </div>
 
