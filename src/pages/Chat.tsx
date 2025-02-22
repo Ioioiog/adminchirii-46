@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from "react";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { ChatHeader } from "@/components/chat/ChatHeader";
@@ -33,6 +32,8 @@ const Chat = () => {
 
   const messageNotification = notifications?.find(n => n.type === 'messages');
 
+  console.log('Raw message notification:', messageNotification);
+
   const uniqueTenants = tenants?.reduce((acc, current) => {
     const existingTenant = acc.find(item => item.email === current.email);
     if (!existingTenant) {
@@ -41,11 +42,13 @@ const Chat = () => {
     return acc;
   }, [] as typeof tenants extends (infer T)[] ? T[] : never) || [];
 
-  // Update this to properly handle profile_id from messages
   const unreadMessagesByTenant = messageNotification?.items?.reduce((acc, message) => {
     if (message.sender_id) {
-      // Log the message to help debug
-      console.log('Processing message notification:', message);
+      console.log('Processing message notification:', {
+        messageId: message.id,
+        senderId: message.sender_id,
+        currentCount: acc[message.sender_id] || 0
+      });
       acc[message.sender_id] = (acc[message.sender_id] || 0) + 1;
     }
     return acc;
@@ -107,7 +110,6 @@ const Chat = () => {
       </>;
   };
 
-  // Debug logging to help track tenant-message mapping
   console.log('Unread messages by tenant:', unreadMessagesByTenant);
   console.log('Message notifications:', messageNotification?.items);
   console.log('Current tenants:', uniqueTenants);

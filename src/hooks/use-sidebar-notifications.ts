@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -64,6 +63,7 @@ function isMessage(value: unknown): value is Message {
   return isValid;
 }
 
+// Update the fetchNotifications function to include profile_id in notifications
 export function useSidebarNotifications() {
   const [data, setData] = useState<Notification[]>([]);
   const { userRole, userId } = useUserRole();
@@ -130,28 +130,7 @@ export function useSidebarNotifications() {
         userId,
       });
 
-      // Fetch maintenance requests
-      const { data: maintenance, error: maintenanceError } = await supabase
-        .from('maintenance_requests')
-        .select('*')
-        .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false);
-
-      if (maintenanceError) {
-        console.error('Error fetching maintenance:', maintenanceError);
-        throw maintenanceError;
-      }
-
-      // Fetch payments
-      const { data: payments, error: paymentsError } = await supabase
-        .from('payments')
-        .select('*')
-        .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false);
-
-      if (paymentsError) {
-        console.error('Error fetching payments:', paymentsError);
-        throw paymentsError;
-      }
-
+      // Map messages to notification items with profile_id
       const notifications: Notification[] = [
         {
           type: 'messages',
@@ -160,7 +139,8 @@ export function useSidebarNotifications() {
             id: m.id,
             message: m.content,
             created_at: m.created_at,
-            read: m.read
+            read: m.read,
+            sender_id: m.profile_id // Use profile_id as sender_id
           }))
         },
         {
