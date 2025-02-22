@@ -58,87 +58,6 @@ function ContractDetailsContent() {
   const { userRole } = useUserRole();
   const { data: tenants = [] } = useTenants();
 
-  const updateContractMutation = useMutation({
-    mutationFn: async (formData: FormData) => {
-      if (!id) throw new Error('Contract ID is required');
-      
-      const jsonMetadata: { [key: string]: Json } = {
-        contractNumber: formData.contractNumber,
-        contractDate: formData.contractDate,
-        ownerName: formData.ownerName,
-        ownerReg: formData.ownerReg,
-        ownerFiscal: formData.ownerFiscal,
-        ownerAddress: formData.ownerAddress,
-        ownerBank: formData.ownerBank,
-        ownerBankName: formData.ownerBankName,
-        ownerEmail: formData.ownerEmail,
-        ownerPhone: formData.ownerPhone,
-        ownerCounty: formData.ownerCounty,
-        ownerCity: formData.ownerCity,
-        ownerRepresentative: formData.ownerRepresentative,
-        tenantName: formData.tenantName,
-        tenantReg: formData.tenantReg,
-        tenantFiscal: formData.tenantFiscal,
-        tenantAddress: formData.tenantAddress,
-        tenantBank: formData.tenantBank,
-        tenantBankName: formData.tenantBankName,
-        tenantEmail: formData.tenantEmail,
-        tenantPhone: formData.tenantPhone,
-        tenantCounty: formData.tenantCounty,
-        tenantCity: formData.tenantCity,
-        tenantRepresentative: formData.tenantRepresentative,
-        propertyAddress: formData.propertyAddress,
-        rentAmount: formData.rentAmount,
-        vatIncluded: formData.vatIncluded,
-        contractDuration: formData.contractDuration,
-        paymentDay: formData.paymentDay,
-        roomCount: formData.roomCount,
-        startDate: formData.startDate,
-        lateFee: formData.lateFee,
-        renewalPeriod: formData.renewalPeriod,
-        unilateralNotice: formData.unilateralNotice,
-        terminationNotice: formData.terminationNotice,
-        earlyTerminationFee: formData.earlyTerminationFee,
-        latePaymentTermination: formData.latePaymentTermination,
-        securityDeposit: formData.securityDeposit,
-        depositReturnPeriod: formData.depositReturnPeriod,
-        waterColdMeter: formData.waterColdMeter,
-        waterHotMeter: formData.waterHotMeter,
-        electricityMeter: formData.electricityMeter,
-        gasMeter: formData.gasMeter,
-        ownerSignatureDate: formData.ownerSignatureDate,
-        ownerSignatureName: formData.ownerSignatureName,
-        ownerSignatureImage: formData.ownerSignatureImage,
-        tenantSignatureDate: formData.tenantSignatureDate,
-        tenantSignatureName: formData.tenantSignatureName,
-        tenantSignatureImage: formData.tenantSignatureImage,
-        assets: formData.assets
-      };
-      
-      const { error } = await supabase
-        .from('contracts')
-        .update({ metadata: jsonMetadata })
-        .eq('id', id);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['contract', id] });
-      toast({
-        title: "Success",
-        description: "Contract updated successfully",
-      });
-      setEditedData(null);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update contract",
-        variant: "destructive",
-      });
-    }
-  });
-
   const { data: contract, isLoading, error } = useQuery({
     queryKey: ['contract', id],
     queryFn: async () => {
@@ -257,51 +176,86 @@ function ContractDetailsContent() {
     retry: false
   });
 
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
-
-  if (error) {
-    return (
-      <div className="flex bg-[#F8F9FC] min-h-screen">
-        <div className="print:hidden">
-          <DashboardSidebar />
-        </div>
-        <main className="flex-1 p-8">
-          <div className="max-w-7xl mx-auto space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigate('/documents')}
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <h1 className="text-xl font-semibold">Error Loading Contract</h1>
-              </div>
-            </div>
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-red-500">
-                  {error instanceof Error ? error.message : 'Failed to load contract details'}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  if (!contract) {
-    return <div>Contract not found</div>;
-  }
-
-  const metadata = editedData || contract.metadata;
-  const hasLandlordSignature = !!contract.metadata.ownerSignatureName;
-  const hasTenantSignature = !!contract.metadata.tenantSignatureName;
-  const canInviteTenant = userRole === 'landlord' && hasLandlordSignature && !hasTenantSignature;
+  const updateContractMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      if (!id) throw new Error('Contract ID is required');
+      
+      const jsonMetadata: { [key: string]: Json } = {
+        contractNumber: formData.contractNumber,
+        contractDate: formData.contractDate,
+        ownerName: formData.ownerName,
+        ownerReg: formData.ownerReg,
+        ownerFiscal: formData.ownerFiscal,
+        ownerAddress: formData.ownerAddress,
+        ownerBank: formData.ownerBank,
+        ownerBankName: formData.ownerBankName,
+        ownerEmail: formData.ownerEmail,
+        ownerPhone: formData.ownerPhone,
+        ownerCounty: formData.ownerCounty,
+        ownerCity: formData.ownerCity,
+        ownerRepresentative: formData.ownerRepresentative,
+        tenantName: formData.tenantName,
+        tenantReg: formData.tenantReg,
+        tenantFiscal: formData.tenantFiscal,
+        tenantAddress: formData.tenantAddress,
+        tenantBank: formData.tenantBank,
+        tenantBankName: formData.tenantBankName,
+        tenantEmail: formData.tenantEmail,
+        tenantPhone: formData.tenantPhone,
+        tenantCounty: formData.tenantCounty,
+        tenantCity: formData.tenantCity,
+        tenantRepresentative: formData.tenantRepresentative,
+        propertyAddress: formData.propertyAddress,
+        rentAmount: formData.rentAmount,
+        vatIncluded: formData.vatIncluded,
+        contractDuration: formData.contractDuration,
+        paymentDay: formData.paymentDay,
+        roomCount: formData.roomCount,
+        startDate: formData.startDate,
+        lateFee: formData.lateFee,
+        renewalPeriod: formData.renewalPeriod,
+        unilateralNotice: formData.unilateralNotice,
+        terminationNotice: formData.terminationNotice,
+        earlyTerminationFee: formData.earlyTerminationFee,
+        latePaymentTermination: formData.latePaymentTermination,
+        securityDeposit: formData.securityDeposit,
+        depositReturnPeriod: formData.depositReturnPeriod,
+        waterColdMeter: formData.waterColdMeter,
+        waterHotMeter: formData.waterHotMeter,
+        electricityMeter: formData.electricityMeter,
+        gasMeter: formData.gasMeter,
+        ownerSignatureDate: formData.ownerSignatureDate,
+        ownerSignatureName: formData.ownerSignatureName,
+        ownerSignatureImage: formData.ownerSignatureImage,
+        tenantSignatureDate: formData.tenantSignatureDate,
+        tenantSignatureName: formData.tenantSignatureName,
+        tenantSignatureImage: formData.tenantSignatureImage,
+        assets: formData.assets
+      };
+      
+      const { error } = await supabase
+        .from('contracts')
+        .update({ metadata: jsonMetadata })
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contract', id] });
+      toast({
+        title: "Success",
+        description: "Contract updated successfully",
+      });
+      setEditedData(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update contract",
+        variant: "destructive",
+      });
+    }
+  });
 
   const handleInputChange = (field: keyof FormData, value: string) => {
     if (!editedData) {
@@ -560,9 +514,13 @@ function ContractDetailsContent() {
   };
 
   const handleInviteTenant = async () => {
-    if (!contract || !inviteEmail) return;
+    if (!contract || !inviteEmail) {
+      console.log('Missing contract or invite email');
+      return;
+    }
 
     try {
+      console.log('Sending contract invitation to:', inviteEmail);
       const { error } = await supabase.functions.invoke('send-contract-invitation', {
         body: {
           contractId: id,
@@ -637,6 +595,52 @@ function ContractDetailsContent() {
 
     return null;
   };
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="flex bg-[#F8F9FC] min-h-screen">
+        <div className="print:hidden">
+          <DashboardSidebar />
+        </div>
+        <main className="flex-1 p-8">
+          <div className="max-w-7xl mx-auto space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate('/documents')}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <h1 className="text-xl font-semibold">Error Loading Contract</h1>
+              </div>
+            </div>
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-red-500">
+                  {error instanceof Error ? error.message : 'Failed to load contract details'}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!contract) {
+    return <div>Contract not found</div>;
+  }
+
+  const metadata = editedData || contract.metadata;
+  const hasLandlordSignature = !!metadata.ownerSignatureName;
+  const hasTenantSignature = !!metadata.tenantSignatureName;
+  const canInviteTenant = userRole === 'landlord' && hasLandlordSignature && !hasTenantSignature;
 
   return (
     <div className="flex bg-[#F8F9FC] min-h-screen">
@@ -847,6 +851,35 @@ function ContractDetailsContent() {
         metadata={metadata}
         contractId={id!}
       />
+
+      <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Invite Tenant to Sign</DialogTitle>
+            <DialogDescription>
+              Enter the tenant's email address to send them a contract signing invitation.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="inviteEmail" className="text-right">
+                Email
+              </Label>
+              <Input
+                id="inviteEmail"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                className="col-span-3"
+                placeholder="tenant@example.com"
+                type="email"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleInviteTenant}>Send Invitation</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
