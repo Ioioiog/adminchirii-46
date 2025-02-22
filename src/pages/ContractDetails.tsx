@@ -625,6 +625,10 @@ function ContractDetailsContent() {
     return null;
   };
 
+  const hasLandlordSignature = !!contract.metadata.ownerSignatureName;
+  const hasTenantSignature = !!contract.metadata.tenantSignatureName;
+  const canInviteTenant = userRole === 'landlord' && hasLandlordSignature && !hasTenantSignature;
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -655,7 +659,15 @@ function ContractDetailsContent() {
             </div>
             
             <div className="flex items-center gap-2">
-              {renderInviteButton()}
+              {canInviteTenant && (
+                <Button
+                  onClick={() => setIsInviteModalOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Mail className="h-4 w-4" />
+                  Invite Tenant to Sign
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={handleViewContract}
