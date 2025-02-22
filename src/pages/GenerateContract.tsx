@@ -1,10 +1,15 @@
+
 import React, { useState } from 'react';
 import { FormData, Asset } from '@/types/contract';
 import { ContractForm } from '@/components/contract/ContractForm';
 import { ContractContent } from '@/components/contract/ContractContent';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function GenerateContract() {
+  const navigate = useNavigate();
   const [assets, setAssets] = useState<Asset[]>([{
     name: '',
     value: '',
@@ -104,6 +109,17 @@ export default function GenerateContract() {
 
       <main className="flex-1 p-8">
         <div className="max-w-4xl mx-auto">
+          <div className="mb-6">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(-1)}
+              className="hover:bg-gray-100"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </div>
+          
           <ContractForm
             formData={formData}
             assets={assets}
