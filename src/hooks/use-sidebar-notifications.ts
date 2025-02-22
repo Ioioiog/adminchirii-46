@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -161,7 +162,7 @@ export function useSidebarNotifications() {
             message: m.content,
             created_at: m.created_at,
             read: m.read,
-            sender_id: m.profile_id // Use profile_id as sender_id
+            sender_id: m.profile_id
           }))
         },
         {
@@ -267,6 +268,10 @@ export function useSidebarNotifications() {
           item.type === type ? { ...item, count: 0, items: [] } : item
         )
       );
+
+      // After marking as read, refresh notifications to ensure consistency
+      await fetchNotifications();
+
     } catch (error) {
       console.error(`Error marking ${type} as read:`, error);
       toast({
@@ -276,7 +281,7 @@ export function useSidebarNotifications() {
       });
       throw error;
     }
-  }, [userId, userRole, toast]);
+  }, [userId, userRole, toast, fetchNotifications]);
 
   useEffect(() => {
     fetchNotifications();
@@ -284,13 +289,13 @@ export function useSidebarNotifications() {
     const channel = supabase.channel('db-changes')
       .on('postgres_changes', 
         { 
-          event: 'INSERT',
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
           schema: 'public', 
           table: 'messages'
         },
-        (payload: RealtimePostgresChangesPayload<any>) => {
+        async (payload: RealtimePostgresChangesPayload<any>) => {
           console.log('Message change detected:', payload);
-          fetchNotifications();
+          await fetchNotifications(); // Immediately fetch new notifications
         }
       )
       .on('postgres_changes',
@@ -299,9 +304,9 @@ export function useSidebarNotifications() {
           schema: 'public', 
           table: 'maintenance_requests' 
         },
-        (payload) => {
-          console.log('Maintenance change detected:', payload);
-          fetchNotifications();
+        async () => {
+          console.log('Maintenance change detected');
+          await fetchNotifications();
         }
       )
       .on('postgres_changes',
@@ -310,9 +315,9 @@ export function useSidebarNotifications() {
           schema: 'public', 
           table: 'payments'
         },
-        (payload) => {
-          console.log('Payment change detected:', payload);
-          fetchNotifications();
+        async () => {
+          console.log('Payment change detected');
+          await fetchNotifications();
         }
       )
       .subscribe();
