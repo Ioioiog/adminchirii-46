@@ -110,7 +110,7 @@ export default function GenerateContract() {
       <main className="flex-1 p-8">
         <div className="max-w-4xl mx-auto relative">
           <div className="absolute left-0 -top-2">
-            <Link to="/contracts">
+            <Link to="/documents" state={{ activeTab: 'contracts' }}>
               <Button
                 variant="ghost"
                 className="gap-2 hover:bg-gray-100"
