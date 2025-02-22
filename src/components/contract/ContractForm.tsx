@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ContractFormProps {
   formData: FormData;
@@ -27,18 +28,40 @@ export function ContractForm({
 }: ContractFormProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const handleSaveContract = async () => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to save a contract",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
+      const metadataJson: Record<string, any> = {
+        ...formData,
+        assets: assets.map(asset => ({
+          name: asset.name,
+          value: asset.value,
+          condition: asset.condition
+        }))
+      };
+
       const { data, error } = await supabase.from('contracts').insert({
         contract_type: 'lease',
         status: 'draft',
-        metadata: {
-          ...formData,
-          assets: assets
-        },
+        landlord_id: user.id,
+        content: {}, // Required empty object for the content field
+        metadata: metadataJson,
         valid_from: formData.startDate || null,
-        valid_until: formData.startDate ? new Date(new Date(formData.startDate).setMonth(new Date(formData.startDate).getMonth() + parseInt(formData.contractDuration || '0'))).toISOString() : null,
+        valid_until: formData.startDate ? 
+          new Date(new Date(formData.startDate).setMonth(
+            new Date(formData.startDate).getMonth() + 
+            parseInt(formData.contractDuration || '0')
+          )).toISOString() : null,
       }).select().single();
 
       if (error) throw error;
@@ -50,6 +73,7 @@ export function ContractForm({
 
       navigate(`/documents/contracts/${data.id}`);
     } catch (error) {
+      console.error('Error saving contract:', error);
       toast({
         title: "Error",
         description: "Failed to save the contract. Please try again.",

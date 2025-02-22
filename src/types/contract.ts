@@ -1,5 +1,8 @@
 
+import { Json } from "@/integrations/supabase/types/json";
+
 export interface Asset {
+  [key: string]: string; // This makes Asset compatible with Json type
   name: string;
   value: string;
   condition: string;
