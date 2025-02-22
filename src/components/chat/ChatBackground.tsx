@@ -99,12 +99,17 @@ export function ChatBackground() {
       overlayShape.position.set(0.15, -0.15, 0.02);
       mainShape.add(overlayShape);
 
-      // Random position and gentle rotation
-      mainShape.position.x = (Math.random() - 0.5) * 12;
-      mainShape.position.y = (Math.random() - 0.5) * 12;
-      mainShape.position.z = (Math.random() - 0.5) * 8;
-      mainShape.rotation.x = Math.random() * Math.PI * 0.15;
-      mainShape.rotation.y = Math.random() * Math.PI * 0.15;
+      // Random position with wider spread
+      mainShape.position.x = (Math.random() - 0.5) * 15; // Increased spread
+      mainShape.position.y = (Math.random() - 0.5) * 15;
+      mainShape.position.z = (Math.random() - 0.5) * 10;
+      mainShape.rotation.x = Math.random() * Math.PI * 0.25; // Increased initial rotation
+      mainShape.rotation.y = Math.random() * Math.PI * 0.25;
+
+      // Store initial position for animation
+      mainShape.userData.initialY = mainShape.position.y;
+      mainShape.userData.speed = Math.random() * 0.5 + 0.5; // Random speed multiplier
+      mainShape.userData.rotationSpeed = (Math.random() * 0.002) + 0.001; // Random rotation speed
 
       // Enable shadows
       mainShape.castShadow = true;
@@ -133,20 +138,34 @@ export function ChatBackground() {
 
     camera.position.z = 10;
 
-    // Smoother animation
+    // Enhanced animation with faster and more varied movements
     let time = 0;
     function animate() {
       requestAnimationFrame(animate);
-      time += 0.003;
+      time += 0.008; // Increased base animation speed
 
       shapes.forEach((shape, index) => {
-        // Smooth floating animation
-        shape.position.y += Math.sin(time + index * 0.5) * 0.003;
-        shape.rotation.x += 0.0005;
-        shape.rotation.y += 0.0008;
+        const speed = shape.userData.speed;
+        const rotationSpeed = shape.userData.rotationSpeed;
         
-        // Subtle wobble
-        shape.rotation.z = Math.sin(time + index * 0.5) * 0.05;
+        // More dynamic floating animation
+        shape.position.y = shape.userData.initialY + 
+          Math.sin(time * speed + index) * 0.8; // Increased amplitude
+        
+        // Faster rotation with varying speeds
+        shape.rotation.x += rotationSpeed * 2;
+        shape.rotation.y += rotationSpeed * 3;
+        
+        // Dynamic wobble effect
+        shape.rotation.z = Math.sin(time * speed + index) * 0.15; // Increased wobble
+
+        // Add slight horizontal movement
+        shape.position.x += Math.sin(time * speed * 0.5 + index) * 0.01;
+        
+        // Reset position if moved too far
+        if (Math.abs(shape.position.x) > 15) {
+          shape.position.x = Math.sign(shape.position.x) * 15;
+        }
       });
 
       renderer.render(scene, camera);
