@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Eye, Printer, Send, Save, Mail, Settings } from "lucide-react";
+import { ArrowLeft, Eye, Printer, Send, Mail, Settings } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
@@ -54,52 +54,65 @@ export default function ContractDetails() {
   const { userRole } = useUserRole();
   const { data: tenants = [] } = useTenants();
 
-  const { data: contract, isLoading } = useQuery({
+  const { data: contract, isLoading, error } = useQuery({
     queryKey: ['contract', id],
     queryFn: async () => {
+      if (!id) throw new Error('Contract ID is required');
+
+      console.log('Fetching contract with ID:', id);
+
       const { data: contractData, error: contractError } = await supabase
         .from('contracts')
         .select('*, properties(name)')
         .eq('id', id)
         .single();
 
-      if (contractError) throw contractError;
+      if (contractError) {
+        console.error('Error fetching contract:', contractError);
+        throw contractError;
+      }
+
+      if (!contractData) {
+        console.error('No contract found with ID:', id);
+        throw new Error('Contract not found');
+      }
+
+      console.log('Contract data fetched:', contractData);
 
       const { data: signatures, error: signaturesError } = await supabase
         .from('contract_signatures')
-        .select('*, signer:signer_id(email)')
-        .eq('contract_id', id)
-        .order('created_at', { ascending: true });
+        .select('*')
+        .eq('contract_id', id);
 
-      if (signaturesError) throw signaturesError;
+      if (signaturesError) {
+        console.error('Error fetching signatures:', signaturesError);
+        throw signaturesError;
+      }
 
-      console.log("Contract ID:", id);
-      console.log("All signatures found:", signatures);
+      console.log('Signatures fetched:', signatures);
 
       const metadataObj = contractData.metadata as Record<string, any> || {};
 
-      const uniqueSignatures = signatures?.reduce((acc, curr) => {
-        acc[curr.signer_role] = curr;
-        return acc;
-      }, {} as Record<string, any>);
+      // Process signatures
+      if (signatures) {
+        const uniqueSignatures = signatures.reduce((acc, curr) => {
+          acc[curr.signer_role] = curr;
+          return acc;
+        }, {} as Record<string, any>);
 
-      console.log("Unique signatures after processing:", uniqueSignatures);
-
-      if (uniqueSignatures) {
         if (uniqueSignatures['landlord']) {
-          const landlordSig = uniqueSignatures['landlord'];
-          metadataObj.ownerSignatureImage = landlordSig.signature_image;
-          metadataObj.ownerSignatureName = landlordSig.signature_data;
-          metadataObj.ownerSignatureDate = landlordSig.signed_at?.split('T')[0];
+          metadataObj.ownerSignatureImage = uniqueSignatures['landlord'].signature_image;
+          metadataObj.ownerSignatureName = uniqueSignatures['landlord'].signature_data;
+          metadataObj.ownerSignatureDate = uniqueSignatures['landlord'].signed_at?.split('T')[0];
         }
         if (uniqueSignatures['tenant']) {
-          const tenantSig = uniqueSignatures['tenant'];
-          metadataObj.tenantSignatureImage = tenantSig.signature_image;
-          metadataObj.tenantSignatureName = tenantSig.signature_data;
-          metadataObj.tenantSignatureDate = tenantSig.signed_at?.split('T')[0];
+          metadataObj.tenantSignatureImage = uniqueSignatures['tenant'].signature_image;
+          metadataObj.tenantSignatureName = uniqueSignatures['tenant'].signature_data;
+          metadataObj.tenantSignatureDate = uniqueSignatures['tenant'].signed_at?.split('T')[0];
         }
       }
 
+      // Transform metadata
       const transformedMetadata: FormData = {
         contractNumber: String(metadataObj.contractNumber || ''),
         contractDate: String(metadataObj.contractDate || ''),
@@ -158,48 +171,41 @@ export default function ContractDetails() {
         metadata: transformedMetadata
       } as ContractResponse;
     },
+    retry: false
   });
 
-  const updateContractMutation = useMutation({
-    mutationFn: async (updatedData: FormData) => {
-      const jsonData: Json = Object.entries(updatedData).reduce((acc, [key, value]) => {
-        if (Array.isArray(value)) {
-          acc[key] = value;
-        } else {
-          acc[key] = String(value || '');
-        }
-        return acc;
-      }, {} as { [key: string]: string | string[] });
-
-      console.log('Saving contract with data:', jsonData);
-
-      const { error } = await supabase
-        .from('contracts')
-        .update({
-          metadata: jsonData,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['contract', id] });
-      toast({
-        title: "Success",
-        description: "Contract has been updated successfully",
-      });
-      setEditedData(null);
-    },
-    onError: (error) => {
-      console.error('Error updating contract:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update contract",
-        variant: "destructive",
-      });
-    },
-  });
+  if (error) {
+    return (
+      <div className="flex bg-[#F8F9FC] min-h-screen">
+        <div className="print:hidden">
+          <DashboardSidebar />
+        </div>
+        <main className="flex-1 p-8">
+          <div className="max-w-7xl mx-auto space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate('/documents')}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <h1 className="text-xl font-semibold">Error Loading Contract</h1>
+              </div>
+            </div>
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-red-500">
+                  {error instanceof Error ? error.message : 'Failed to load contract details'}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   const handleInputChange = (field: keyof FormData, value: string) => {
     if (!editedData) {
