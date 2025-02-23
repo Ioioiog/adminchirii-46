@@ -1,3 +1,4 @@
+
 import { FormData, Asset } from "@/types/contract";
 import { Input } from "@/components/ui/input";
 
@@ -29,8 +30,8 @@ export function ContractContent({ formData, isEditing, onFieldChange }: Contract
       <h1 className="text-2xl text-center font-bold mb-8">Contract de Închiriere</h1>
       
       <div className="mb-8">
-        <p className="mb-2">Contract nr. {renderField("Contract Number", "contractNumber")}</p>
-        <p>Data: {renderField("Contract Date", "contractDate")}</p>
+        <p className="mb-2">Contract nr. {renderField("contractNumber", formData.contractNumber, "Contract Number")}</p>
+        <p>Data: {renderField("contractDate", formData.contractDate, "Contract Date")}</p>
       </div>
 
       <div className="mb-8">
@@ -41,47 +42,47 @@ export function ContractContent({ formData, isEditing, onFieldChange }: Contract
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Name:</label>
-              {renderField("Owner Name", "ownerName")}
+              {renderField("ownerName", formData.ownerName, "Owner Name")}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Registration:</label>
-              {renderField("Owner Registration", "ownerReg")}
+              {renderField("ownerReg", formData.ownerReg, "Owner Registration")}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Fiscal Code:</label>
-              {renderField("Owner Fiscal Code", "ownerFiscal")}
+              {renderField("ownerFiscal", formData.ownerFiscal, "Owner Fiscal Code")}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Address:</label>
-              {renderField("Owner Address", "ownerAddress")}
+              {renderField("ownerAddress", formData.ownerAddress, "Owner Address")}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Bank Account:</label>
-              {renderField("Owner Bank", "ownerBank")}
+              {renderField("ownerBank", formData.ownerBank, "Owner Bank")}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Bank Name:</label>
-              {renderField("Owner Bank Name", "ownerBankName")}
+              {renderField("ownerBankName", formData.ownerBankName, "Owner Bank Name")}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Email:</label>
-              {renderField("Owner Email", "ownerEmail")}
+              {renderField("ownerEmail", formData.ownerEmail, "Owner Email")}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Phone:</label>
-              {renderField("Owner Phone", "ownerPhone")}
+              {renderField("ownerPhone", formData.ownerPhone, "Owner Phone")}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">County:</label>
-              {renderField("Owner County", "ownerCounty")}
+              {renderField("ownerCounty", formData.ownerCounty, "Owner County")}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">City:</label>
-              {renderField("Owner City", "ownerCity")}
+              {renderField("ownerCity", formData.ownerCity, "Owner City")}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Representative:</label>
-              {renderField("Owner Representative", "ownerRepresentative")}
+              {renderField("ownerRepresentative", formData.ownerRepresentative, "Owner Representative")}
             </div>
           </div>
         </div>
@@ -95,47 +96,47 @@ export function ContractContent({ formData, isEditing, onFieldChange }: Contract
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Name:</label>
-              {renderField("Tenant Name", "tenantName")}
+              {renderField("tenantName", formData.tenantName, "Tenant Name")}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Registration:</label>
-              {renderField("Tenant Registration", "tenantReg")}
+              {renderField("tenantReg", formData.tenantReg, "Tenant Registration")}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Fiscal Code:</label>
-              {renderField("Tenant Fiscal Code", "tenantFiscal")}
+              {renderField("tenantFiscal", formData.tenantFiscal, "Tenant Fiscal Code")}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Address:</label>
-              {renderField("Tenant Address", "tenantAddress")}
+              {renderField("tenantAddress", formData.tenantAddress, "Tenant Address")}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Bank Account:</label>
-              {renderField("Tenant Bank", "tenantBank")}
+              {renderField("tenantBank", formData.tenantBank, "Tenant Bank")}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Bank Name:</label>
-              {renderField("Tenant Bank Name", "tenantBankName")}
+              {renderField("tenantBankName", formData.tenantBankName, "Tenant Bank Name")}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Email:</label>
-              {renderField("Tenant Email", "tenantEmail")}
+              {renderField("tenantEmail", formData.tenantEmail, "Tenant Email")}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Phone:</label>
-              {renderField("Tenant Phone", "tenantPhone")}
+              {renderField("tenantPhone", formData.tenantPhone, "Tenant Phone")}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">County:</label>
-              {renderField("Tenant County", "tenantCounty")}
+              {renderField("tenantCounty", formData.tenantCounty, "Tenant County")}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">City:</label>
-              {renderField("Tenant City", "tenantCity")}
+              {renderField("tenantCity", formData.tenantCity, "Tenant City")}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Representative:</label>
-              {renderField("Tenant Representative", "tenantRepresentative")}
+              {renderField("tenantRepresentative", formData.tenantRepresentative, "Tenant Representative")}
             </div>
           </div>
         </div>
@@ -146,11 +147,11 @@ export function ContractContent({ formData, isEditing, onFieldChange }: Contract
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Property Address:</label>
-            {renderField("Property Address", "propertyAddress")}
+            {renderField("propertyAddress", formData.propertyAddress, "Property Address")}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Room Count:</label>
-            {renderField("Room Count", "roomCount")}
+            {renderField("roomCount", formData.roomCount, "Room Count")}
           </div>
         </div>
       </div>
@@ -160,35 +161,35 @@ export function ContractContent({ formData, isEditing, onFieldChange }: Contract
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Duration (months):</label>
-            {renderField("Contract Duration", "contractDuration")}
+            {renderField("contractDuration", formData.contractDuration, "Contract Duration")}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Start Date:</label>
-            {renderField("Start Date", "startDate")}
+            {renderField("startDate", formData.startDate, "Start Date", "date")}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Payment Day:</label>
-            {renderField("Payment Day", "paymentDay")}
+            {renderField("paymentDay", formData.paymentDay, "Payment Day")}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Rent Amount:</label>
-            {renderField("Rent Amount", "rentAmount")}
+            {renderField("rentAmount", formData.rentAmount, "Rent Amount")}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">VAT Included:</label>
-            {renderField("VAT Included", "vatIncluded")}
+            {renderField("vatIncluded", formData.vatIncluded, "VAT Included")}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Late Fee (%):</label>
-            {renderField("Late Fee", "lateFee")}
+            {renderField("lateFee", formData.lateFee, "Late Fee")}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Security Deposit:</label>
-            {renderField("Security Deposit", "securityDeposit")}
+            {renderField("securityDeposit", formData.securityDeposit, "Security Deposit")}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Deposit Return Period:</label>
-            {renderField("Deposit Return Period", "depositReturnPeriod")}
+            {renderField("depositReturnPeriod", formData.depositReturnPeriod, "Deposit Return Period")}
           </div>
         </div>
       </div>
@@ -198,19 +199,19 @@ export function ContractContent({ formData, isEditing, onFieldChange }: Contract
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Cold Water Meter:</label>
-            {renderField("Water Cold Meter", "waterColdMeter")}
+            {renderField("waterColdMeter", formData.waterColdMeter, "Water Cold Meter")}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Hot Water Meter:</label>
-            {renderField("Water Hot Meter", "waterHotMeter")}
+            {renderField("waterHotMeter", formData.waterHotMeter, "Water Hot Meter")}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Electricity Meter:</label>
-            {renderField("Electricity Meter", "electricityMeter")}
+            {renderField("electricityMeter", formData.electricityMeter, "Electricity Meter")}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Gas Meter:</label>
-            {renderField("Gas Meter", "gasMeter")}
+            {renderField("gasMeter", formData.gasMeter, "Gas Meter")}
           </div>
         </div>
       </div>

@@ -23,7 +23,11 @@ export function ContractModals({
     <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <div className="contract-preview">
-          <ContractContent formData={metadata} />
+          <ContractContent 
+            formData={metadata} 
+            isEditing={false} 
+            onFieldChange={() => {}} 
+          />
           <ContractSignatures formData={metadata} contractId={contractId} />
         </div>
       </DialogContent>
