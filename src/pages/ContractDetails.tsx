@@ -683,62 +683,70 @@ function ContractDetailsContent() {
       </div>
       <main className="flex-1 p-8">
         <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex items-center justify-between print:hidden">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between bg-white rounded-lg shadow-soft-md p-4 print:hidden">
+            <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => navigate('/documents')}
+                className="hover:bg-gray-100"
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className="h-4 w-4 text-gray-600" />
               </Button>
-              <h1 className="text-xl font-semibold">Contract Details</h1>
+              <div>
+                <h1 className="text-xl font-semibold text-gray-900">Contract Details</h1>
+                <p className="text-sm text-gray-500">
+                  Contract #{metadata.contractNumber || 'N/A'} • {contract.status}
+                </p>
+              </div>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {canInviteTenant && (
                 <Button
                   onClick={() => setIsInviteModalOpen(true)}
-                  className="flex items-center gap-2"
+                  className="bg-primary-600 hover:bg-primary-700 text-white"
                 >
-                  <Mail className="h-4 w-4" />
+                  <Mail className="h-4 w-4 mr-2" />
                   Invite Tenant to Sign
                 </Button>
               )}
-              <Button
-                variant="outline"
-                onClick={handleViewContract}
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                <Eye className="h-4 w-4" />
-                View
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handlePrint}
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                <Printer className="h-4 w-4" />
-                Print
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleSendContract}
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                <Mail className="h-4 w-4" />
-                Send
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-lg">
+                <Button
+                  variant="ghost"
+                  onClick={handleViewContract}
+                  size="sm"
+                  className="hover:bg-white hover:text-primary-600"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  View
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={handlePrint}
+                  size="sm"
+                  className="hover:bg-white hover:text-primary-600"
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={handleSendContract}
+                  size="sm"
+                  className="hover:bg-white hover:text-primary-600"
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="hover:bg-white hover:text-primary-600"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
 
