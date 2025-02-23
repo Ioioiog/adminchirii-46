@@ -63,10 +63,65 @@ const TenantRegistration = () => {
           return;
         }
 
+        // Safely cast the metadata to FormData
+        const metadata = contractData.metadata as Record<string, any>;
+        const typedMetadata: FormData = {
+          contractNumber: metadata.contractNumber || '',
+          contractDate: metadata.contractDate || '',
+          ownerName: metadata.ownerName || '',
+          ownerReg: metadata.ownerReg || '',
+          ownerFiscal: metadata.ownerFiscal || '',
+          ownerAddress: metadata.ownerAddress || '',
+          ownerBank: metadata.ownerBank || '',
+          ownerBankName: metadata.ownerBankName || '',
+          ownerEmail: metadata.ownerEmail || '',
+          ownerPhone: metadata.ownerPhone || '',
+          ownerCounty: metadata.ownerCounty || '',
+          ownerCity: metadata.ownerCity || '',
+          ownerRepresentative: metadata.ownerRepresentative || '',
+          tenantName: metadata.tenantName || '',
+          tenantReg: metadata.tenantReg || '',
+          tenantFiscal: metadata.tenantFiscal || '',
+          tenantAddress: metadata.tenantAddress || '',
+          tenantBank: metadata.tenantBank || '',
+          tenantBankName: metadata.tenantBankName || '',
+          tenantEmail: metadata.tenantEmail || '',
+          tenantPhone: metadata.tenantPhone || '',
+          tenantCounty: metadata.tenantCounty || '',
+          tenantCity: metadata.tenantCity || '',
+          tenantRepresentative: metadata.tenantRepresentative || '',
+          propertyAddress: metadata.propertyAddress || '',
+          rentAmount: metadata.rentAmount || '',
+          vatIncluded: metadata.vatIncluded || '',
+          contractDuration: metadata.contractDuration || '',
+          paymentDay: metadata.paymentDay || '',
+          roomCount: metadata.roomCount || '',
+          startDate: metadata.startDate || '',
+          lateFee: metadata.lateFee || '',
+          renewalPeriod: metadata.renewalPeriod || '',
+          unilateralNotice: metadata.unilateralNotice || '',
+          terminationNotice: metadata.terminationNotice || '',
+          earlyTerminationFee: metadata.earlyTerminationFee || '',
+          latePaymentTermination: metadata.latePaymentTermination || '',
+          securityDeposit: metadata.securityDeposit || '',
+          depositReturnPeriod: metadata.depositReturnPeriod || '',
+          waterColdMeter: metadata.waterColdMeter || '',
+          waterHotMeter: metadata.waterHotMeter || '',
+          electricityMeter: metadata.electricityMeter || '',
+          gasMeter: metadata.gasMeter || '',
+          ownerSignatureDate: metadata.ownerSignatureDate || '',
+          ownerSignatureName: metadata.ownerSignatureName || '',
+          ownerSignatureImage: metadata.ownerSignatureImage,
+          tenantSignatureDate: metadata.tenantSignatureDate || '',
+          tenantSignatureName: metadata.tenantSignatureName || '',
+          tenantSignatureImage: metadata.tenantSignatureImage,
+          assets: Array.isArray(metadata.assets) ? metadata.assets : []
+        };
+
         // Cast the contract data to our Contract type
         const typedContract: Contract = {
           ...contractData,
-          metadata: contractData.metadata as FormData,
+          metadata: typedMetadata,
           status: contractData.status
         };
 
@@ -74,7 +129,7 @@ const TenantRegistration = () => {
         setContract(typedContract);
 
         // Check if the user exists using tenantEmail from metadata
-        const tenantEmail = (typedContract.metadata as any).tenantEmail;
+        const tenantEmail = typedMetadata.tenantEmail;
         if (!tenantEmail) {
           console.error("No tenant email found in contract metadata");
           throw new Error("Invalid contract configuration");
@@ -203,8 +258,8 @@ const TenantRegistration = () => {
           </CardTitle>
           <CardDescription className="text-center">
             {isExistingUser
-              ? `Welcome back! Please sign in to view and sign the contract for ${propertyName}`
-              : `You've been invited to sign a contract for ${propertyName}. Please create your account to continue.`
+              ? `Welcome back! Please sign in to view and sign the contract for ${contract?.properties?.name || 'Property'}`
+              : `You've been invited to sign a contract for ${contract?.properties?.name || 'Property'}. Please create your account to continue.`
             }
           </CardDescription>
         </CardHeader>
