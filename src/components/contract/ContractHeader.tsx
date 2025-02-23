@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Eye, Printer, Mail, Edit, Save, Send } from "lucide-react";
 import type { ContractStatus } from "@/types/contract";
@@ -78,9 +77,17 @@ export function ContractHeader({
     onEmail();
   };
 
-  // Function to render extra fields based on selected option
   const renderExtraFields = () => {
     switch (inviteOption) {
+      case 'contract-tenant':
+        return (
+          <Input
+            type="email"
+            value={tenantEmail || ''}
+            readOnly
+            className="mt-2 bg-gray-50"
+          />
+        );
       case 'tenant-list':
         return (
           <Select value={selectedTenantEmail} onValueChange={setSelectedTenantEmail}>
@@ -175,7 +182,7 @@ export function ContractHeader({
                   {tenantEmail && (
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="contract-tenant" id="contract-tenant" />
-                      <Label htmlFor="contract-tenant">Contract Tenant ({tenantEmail})</Label>
+                      <Label htmlFor="contract-tenant">Contract Tenant</Label>
                     </div>
                   )}
                   <div className="flex items-center space-x-2">
