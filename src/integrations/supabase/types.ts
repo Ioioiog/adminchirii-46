@@ -2360,7 +2360,13 @@ export type Database = {
       }
     }
     Enums: {
-      contract_status: "draft" | "pending" | "signed" | "expired" | "cancelled"
+      contract_status:
+        | "draft"
+        | "pending"
+        | "signed"
+        | "expired"
+        | "cancelled"
+        | "pending_signature"
       document_type: "lease_agreement" | "invoice" | "receipt" | "other"
       invoice_status: "pending" | "paid" | "overdue"
       maintenance_request_priority: "low" | "medium" | "high"

@@ -127,7 +127,7 @@ const TenantRegistration = () => {
                 .from('contracts')
                 .update({
                   tenant_id: session.user.id,
-                  status: 'pending' // Using 'pending' instead of 'pending_signature'
+                  status: 'pending_signature'
                 })
                 .eq('id', invitation.contract_id);
 
@@ -142,7 +142,7 @@ const TenantRegistration = () => {
                 .insert({
                   property_id: invitation.property_id,
                   tenant_id: session.user.id,
-                  start_date: new Date().toISOString().split('T')[0], // Current date as start date
+                  start_date: new Date().toISOString().split('T')[0],
                   status: 'pending'
                 });
 
