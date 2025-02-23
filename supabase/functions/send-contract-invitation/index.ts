@@ -102,7 +102,7 @@ serve(async (req) => {
           ` : ''}
 
           <div style="text-align: center; margin: 30px 0;">
-            <a href="https://www.adminchirii.ro/tenant-registration?token=${token}&contractId=${contractId}"
+            <a href="https://adminchirii.ro/tenant-registration?token=${token}&contractId=${contractId}"
                style="background-color: #4CAF50; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
               ${isExistingUser ? 'View and Sign Contract' : 'Create Account & View Contract'}
             </a>

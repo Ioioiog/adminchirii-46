@@ -1,8 +1,16 @@
+
 {
   "rewrites": [
     {
       "source": "/(.*)",
       "destination": "/index.html"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "https://www.adminchirii.ro/:path*",
+      "destination": "https://adminchirii.ro/:path*",
+      "permanent": true
     }
   ]
 }
