@@ -1,3 +1,4 @@
+
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { QueryClient, QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +11,7 @@ import { ContractError } from "@/components/contract/ContractError";
 import { useContractPrint } from "@/components/contract/ContractPrintPreview";
 import { ContractPreviewDialog } from "@/components/contract/ContractPreviewDialog";
 import { useToast } from "@/hooks/use-toast";
-import type { FormData, ContractStatus } from "@/types/contract";
+import type { FormData } from "@/types/contract";
 import { Json } from "@/integrations/supabase/types/json";
 
 const queryClient = new QueryClient();
@@ -66,13 +67,11 @@ const defaultFormData: FormData = {
   assets: []
 };
 
-type ContractStatus = 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled' | 'pending_signature';
-
 interface Contract {
   id: string;
   properties?: { name: string };
   contract_type: string;
-  status: ContractStatus;
+  status: 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled' | 'pending_signature';
   valid_from: string | null;
   valid_until: string | null;
   metadata: FormData;
@@ -119,12 +118,66 @@ function ContractDetailsContent() {
         throw new Error('This contract invitation has expired or been used');
       }
 
-      const metadata = contractData.metadata as FormData;
-      setFormData(metadata);
+      // Safely convert metadata to FormData type
+      const metadata = contractData.metadata as unknown as { [key: string]: string | Asset[] };
+      const typedMetadata: FormData = {
+        contractNumber: metadata.contractNumber as string || '',
+        contractDate: metadata.contractDate as string || '',
+        ownerName: metadata.ownerName as string || '',
+        ownerReg: metadata.ownerReg as string || '',
+        ownerFiscal: metadata.ownerFiscal as string || '',
+        ownerAddress: metadata.ownerAddress as string || '',
+        ownerBank: metadata.ownerBank as string || '',
+        ownerBankName: metadata.ownerBankName as string || '',
+        ownerEmail: metadata.ownerEmail as string || '',
+        ownerPhone: metadata.ownerPhone as string || '',
+        ownerCounty: metadata.ownerCounty as string || '',
+        ownerCity: metadata.ownerCity as string || '',
+        ownerRepresentative: metadata.ownerRepresentative as string || '',
+        tenantName: metadata.tenantName as string || '',
+        tenantReg: metadata.tenantReg as string || '',
+        tenantFiscal: metadata.tenantFiscal as string || '',
+        tenantAddress: metadata.tenantAddress as string || '',
+        tenantBank: metadata.tenantBank as string || '',
+        tenantBankName: metadata.tenantBankName as string || '',
+        tenantEmail: metadata.tenantEmail as string || '',
+        tenantPhone: metadata.tenantPhone as string || '',
+        tenantCounty: metadata.tenantCounty as string || '',
+        tenantCity: metadata.tenantCity as string || '',
+        tenantRepresentative: metadata.tenantRepresentative as string || '',
+        propertyAddress: metadata.propertyAddress as string || '',
+        rentAmount: metadata.rentAmount as string || '',
+        vatIncluded: metadata.vatIncluded as string || '',
+        contractDuration: metadata.contractDuration as string || '',
+        paymentDay: metadata.paymentDay as string || '',
+        roomCount: metadata.roomCount as string || '',
+        startDate: metadata.startDate as string || '',
+        lateFee: metadata.lateFee as string || '',
+        renewalPeriod: metadata.renewalPeriod as string || '',
+        unilateralNotice: metadata.unilateralNotice as string || '',
+        terminationNotice: metadata.terminationNotice as string || '',
+        earlyTerminationFee: metadata.earlyTerminationFee as string || '',
+        latePaymentTermination: metadata.latePaymentTermination as string || '',
+        securityDeposit: metadata.securityDeposit as string || '',
+        depositReturnPeriod: metadata.depositReturnPeriod as string || '',
+        waterColdMeter: metadata.waterColdMeter as string || '',
+        waterHotMeter: metadata.waterHotMeter as string || '',
+        electricityMeter: metadata.electricityMeter as string || '',
+        gasMeter: metadata.gasMeter as string || '',
+        ownerSignatureDate: metadata.ownerSignatureDate as string || '',
+        ownerSignatureName: metadata.ownerSignatureName as string || '',
+        ownerSignatureImage: metadata.ownerSignatureImage as string || undefined,
+        tenantSignatureDate: metadata.tenantSignatureDate as string || '',
+        tenantSignatureName: metadata.tenantSignatureName as string || '',
+        tenantSignatureImage: metadata.tenantSignatureImage as string || undefined,
+        assets: (metadata.assets || []) as Asset[],
+      };
+      
+      setFormData(typedMetadata);
 
       return {
         ...contractData,
-        metadata,
+        metadata: typedMetadata,
       } as Contract;
     }
   });
@@ -247,12 +300,12 @@ function ContractDetailsContent() {
             onPreview={() => setIsPreviewModalOpen(true)}
             onPrint={() => contract && handlePrint()}
             onEmail={() => {}} // Implement email functionality later
-            canEdit={canEdit}
+            canEdit={contract?.status === 'draft'}
             isEditing={isEditing}
             onEdit={() => setIsEditing(true)}
             onSave={handleSave}
             onInviteTenant={handleInviteTenant}
-            contractStatus={contract.status}
+            contractStatus={contract?.status || 'draft'}
           />
 
           <ContractContent 
