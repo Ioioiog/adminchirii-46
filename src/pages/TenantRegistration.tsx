@@ -18,15 +18,6 @@ interface Contract {
   status: 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled' | 'pending_signature';
 }
 
-// Type for the raw contract data from Supabase
-interface RawContract {
-  id: string;
-  properties?: { name: string };
-  property_id: string;
-  metadata: Json;
-  status: 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled' | 'pending_signature';
-}
-
 const TenantRegistration = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -40,7 +31,7 @@ const TenantRegistration = () => {
   useEffect(() => {
     const verifyToken = async () => {
       if (!token || !contractId) {
-        console.log("Missing token or contractId");
+        console.log("Missing token or contractId", { token, contractId });
         toast({
           title: "Invalid Invitation",
           description: "This invitation link is invalid or has expired.",
@@ -53,18 +44,16 @@ const TenantRegistration = () => {
       try {
         console.log("Verifying contract invitation token");
         
-        // Verify the token and get contract details
-        const { data: rawContract, error: contractError } = await supabase
+        // First, verify if the contract exists and is in the correct status
+        const { data: contractData, error: contractError } = await supabase
           .from('contracts')
           .select('*, properties(*)')
           .eq('id', contractId)
           .eq('invitation_token', token)
-          .eq('status', 'pending_signature')
-          .single()
-          .throwOnError();  // This will ensure errors are properly caught
+          .single();
 
-        if (!rawContract) {
-          console.log("Invalid or expired contract invitation");
+        if (contractError || !contractData) {
+          console.error("Contract verification error:", contractError);
           toast({
             title: "Invalid Contract Invitation",
             description: "This contract invitation link is invalid or has expired.",
@@ -74,20 +63,21 @@ const TenantRegistration = () => {
           return;
         }
 
-        // Cast the raw contract data to our Contract type
+        // Cast the contract data to our Contract type
         const typedContract: Contract = {
-          ...rawContract,
-          metadata: rawContract.metadata as unknown as FormData
+          ...contractData,
+          metadata: contractData.metadata as FormData,
+          status: contractData.status
         };
 
+        console.log("Found contract:", typedContract);
         setContract(typedContract);
 
         // Check if the user exists using tenantEmail from metadata
-        const metadata = rawContract.metadata as { [key: string]: any };
-        const tenantEmail = metadata.tenantEmail as string;
-
+        const tenantEmail = (typedContract.metadata as any).tenantEmail;
         if (!tenantEmail) {
-          throw new Error("Tenant email not found in contract metadata");
+          console.error("No tenant email found in contract metadata");
+          throw new Error("Invalid contract configuration");
         }
 
         const { data: existingUser, error: userError } = await supabase
@@ -96,14 +86,14 @@ const TenantRegistration = () => {
           .eq('email', tenantEmail)
           .single();
 
-        if (userError && userError.code !== 'PGRST116') { // PGRST116 is the "not found" error code
+        if (userError && userError.code !== 'PGRST116') {
           throw userError;
         }
 
         setIsExistingUser(!!existingUser);
         console.log("User status:", existingUser ? "Existing user" : "New user");
 
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error verifying invitation:", error);
         toast({
           title: "Error",
@@ -122,7 +112,7 @@ const TenantRegistration = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("Auth state changed:", event, "Session:", session ? "exists" : "null");
+        console.log("Auth state changed:", event, session?.user?.id);
         
         if (event === 'SIGNED_IN' && session && contract) {
           try {
@@ -138,7 +128,6 @@ const TenantRegistration = () => {
               .eq('id', contractId);
 
             if (contractError) {
-              console.error("Error updating contract:", contractError);
               throw contractError;
             }
 
@@ -148,12 +137,11 @@ const TenantRegistration = () => {
               .insert({
                 property_id: contract.property_id,
                 tenant_id: session.user.id,
-                start_date: contract.metadata.startDate || new Date().toISOString(),
+                start_date: (contract.metadata as any).startDate || new Date().toISOString(),
                 status: 'pending'
               });
 
             if (tenancyError) {
-              console.error("Error creating tenancy:", tenancyError);
               throw tenancyError;
             }
 
@@ -162,8 +150,8 @@ const TenantRegistration = () => {
               description: "You can now review and sign the contract.",
             });
 
-            // Redirect to the contract page
-            navigate(`/documents/contracts/${contractId}`);
+            // Redirect to the contract page with token parameter
+            navigate(`/documents/contracts/${contractId}?token=${token}`);
             
           } catch (error: any) {
             console.error("Error setting up tenant:", error);
@@ -178,7 +166,7 @@ const TenantRegistration = () => {
     );
 
     return () => subscription.unsubscribe();
-  }, [contract, contractId, isExistingUser, navigate, toast]);
+  }, [contract, contractId, isExistingUser, navigate, toast, token]);
 
   if (isLoading) {
     return (
