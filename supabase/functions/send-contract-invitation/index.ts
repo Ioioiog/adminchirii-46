@@ -12,7 +12,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-deno-subhost",
 };
 
 interface ContractInvitationRequest {
@@ -26,10 +26,21 @@ interface ContractInvitationRequest {
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      headers: {
+        ...corsHeaders,
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+      }
+    });
   }
 
   try {
+    // Validate request headers
+    const denoSubhost = req.headers.get("x-deno-subhost");
+    if (!denoSubhost) {
+      throw new Error("Missing required x-deno-subhost header");
+    }
+
     const { contractId, tenantEmail, contractNumber, ownerName, propertyAddress }: ContractInvitationRequest = await req.json();
 
     console.log("Sending contract invitation:", {
@@ -40,8 +51,11 @@ const handler = async (req: Request): Promise<Response> => {
       propertyAddress,
     });
 
-    // Get the site URL, falling back to the request origin if not set
-    const siteUrl = Deno.env.get("PUBLIC_SITE_URL") || new URL(req.url).origin;
+    // Get the site URL from environment variable
+    const siteUrl = Deno.env.get("PUBLIC_SITE_URL");
+    if (!siteUrl) {
+      throw new Error("PUBLIC_SITE_URL environment variable is not set");
+    }
     console.log("Using site URL:", siteUrl);
 
     // Update contract with invitation details
