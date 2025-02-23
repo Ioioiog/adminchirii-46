@@ -233,10 +233,13 @@ function ContractDetailsContent() {
         title: "Success",
         description: "Invitation sent to tenant",
       });
-      updateContractMutation.mutate({
-        ...formData,
-        status: 'pending_signature'
-      });
+      supabase
+        .from('contracts')
+        .update({ status: 'pending_signature' })
+        .eq('id', id)
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ['contract', id] });
+        });
     },
     onError: (error) => {
       toast({
