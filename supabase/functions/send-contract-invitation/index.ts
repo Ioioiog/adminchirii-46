@@ -40,13 +40,18 @@ const handler = async (req: Request): Promise<Response> => {
       propertyAddress,
     });
 
+    // Get the site URL, falling back to the request origin if not set
+    const siteUrl = Deno.env.get("PUBLIC_SITE_URL") || new URL(req.url).origin;
+    console.log("Using site URL:", siteUrl);
+
     // Update contract with invitation details
+    const invitationToken = crypto.randomUUID();
     const { data: contract, error: updateError } = await supabase
       .from('contracts')
       .update({
         invitation_sent_at: new Date().toISOString(),
         invitation_email: tenantEmail,
-        invitation_token: crypto.randomUUID(),
+        invitation_token: invitationToken,
         status: 'pending'
       })
       .eq('id', contractId)
@@ -58,8 +63,8 @@ const handler = async (req: Request): Promise<Response> => {
       throw updateError;
     }
 
-    // Generate the correct link using PUBLIC_SITE_URL environment variable
-    const signLink = `${Deno.env.get("PUBLIC_SITE_URL")}/documents/contracts/${contractId}?token=${contract.invitation_token}`;
+    // Generate the sign link with proper URL
+    const signLink = `${siteUrl}/documents/contracts/${contractId}?token=${invitationToken}`;
     console.log("Generated sign link:", signLink);
 
     const { error: emailError } = await resend.emails.send({
