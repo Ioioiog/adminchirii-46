@@ -1,4 +1,5 @@
-import { useNavigate, useParams } from "react-router-dom";
+<lov-code>
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +15,7 @@ import { Json } from "@/integrations/supabase/types/json";
 import { ContractContent } from "@/components/contract/ContractContent";
 import { ContractSignatures } from "@/components/contract/ContractSignatures";
 import { FormData } from "@/types/contract";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTenants } from "@/hooks/useTenants";
 import { useUserRole } from "@/hooks/use-user-role";
 import { ContractModals } from "@/components/contract/ContractModals";
@@ -45,6 +46,8 @@ interface ContractResponse extends Omit<Contract, 'metadata'> {
 function ContractDetailsContent() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -60,6 +63,7 @@ function ContractDetailsContent() {
   const [inviteSelectedTenantEmail, setInviteSelectedTenantEmail] = useState("");
   const { userRole } = useUserRole();
   const { data: tenants = [] } = useTenants();
+  const [showDashboard, setShowDashboard] = useState(true);
 
   const { data: contract, isLoading, error } = useQuery({
     queryKey: ['contract', id],
@@ -67,12 +71,19 @@ function ContractDetailsContent() {
       if (!id) throw new Error('Contract ID is required');
 
       console.log('Fetching contract with ID:', id);
-
-      const { data: contractData, error: contractError } = await supabase
+      
+      const query = supabase
         .from('contracts')
         .select('*, properties(name)')
-        .eq('id', id)
-        .single();
+        .eq('id', id);
+
+      // If using token access, verify the token
+      if (token) {
+        query.eq('invitation_token', token);
+        setShowDashboard(false); // Hide dashboard for token-based access
+      }
+
+      const { data: contractData, error: contractError } = await query.single();
 
       if (contractError) {
         console.error('Error fetching contract:', contractError);
@@ -82,6 +93,11 @@ function ContractDetailsContent() {
       if (!contractData) {
         console.error('No contract found with ID:', id);
         throw new Error('Contract not found');
+      }
+
+      // If using token access, verify it hasn't expired or been used
+      if (token && contractData.status !== 'pending' && contractData.status !== 'pending_signature') {
+        throw new Error('This contract invitation has expired or been used');
       }
 
       console.log('Contract data fetched:', contractData);
@@ -178,6 +194,19 @@ function ContractDetailsContent() {
     },
     retry: false
   });
+
+  // Effect to handle authentication for token-based access
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session && token) {
+        // If there's a token but no session, redirect to registration
+        navigate(`/tenant-registration?token=${token}&contractId=${id}`);
+      }
+    };
+
+    checkAuth();
+  }, [token, id, navigate]);
 
   const updateContractMutation = useMutation({
     mutationFn: async (formData: FormData) => {
@@ -637,9 +666,11 @@ function ContractDetailsContent() {
   if (error) {
     return (
       <div className="flex bg-[#F8F9FC] min-h-screen">
-        <div className="print:hidden">
-          <DashboardSidebar />
-        </div>
+        {showDashboard && (
+          <div className="print:hidden">
+            <DashboardSidebar />
+          </div>
+        )}
         <main className="flex-1 p-8">
           <div className="max-w-7xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
@@ -678,9 +709,11 @@ function ContractDetailsContent() {
 
   return (
     <div className="flex bg-[#F8F9FC] min-h-screen">
-      <div className="print:hidden">
-        <DashboardSidebar />
-      </div>
+      {showDashboard && (
+        <div className="print:hidden">
+          <DashboardSidebar />
+        </div>
+      )}
       <main className="flex-1 p-8 pt-12">
         <div className="max-w-7xl mx-auto space-y-8">
           <div className="flex items-center justify-between bg-white rounded-lg shadow-soft-md p-4 print:hidden">
@@ -855,164 +888,4 @@ function ContractDetailsContent() {
                 <Label>Payment Day</Label>
                 <Input 
                   value={metadata.paymentDay || ''} 
-                  onChange={(e) => handleInputChange('paymentDay', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Late Fee</Label>
-                <Input 
-                  value={metadata.lateFee || ''} 
-                  onChange={(e) => handleInputChange('lateFee', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Security Deposit</Label>
-                <Input 
-                  value={metadata.securityDeposit || ''} 
-                  onChange={(e) => handleInputChange('securityDeposit', e.target.value)}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-
-      <ContractModals
-        isPreviewModalOpen={isPreviewModalOpen}
-        setIsPreviewModalOpen={setIsPreviewModalOpen}
-        metadata={metadata}
-        contractId={id!}
-      />
-
-      <Dialog open={isEmailModalOpen} onOpenChange={setIsEmailModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Send Contract</DialogTitle>
-            <DialogDescription>
-              Choose who to send the contract to.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <RadioGroup
-              defaultValue="contract-tenant"
-              value={selectedEmailOption}
-              onValueChange={setSelectedEmailOption}
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="contract-tenant" id="contract-tenant" />
-                <Label htmlFor="contract-tenant">
-                  Contract Tenant ({metadata.tenantEmail || 'No email set'})
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="tenant-list" id="tenant-list" />
-                <Label htmlFor="tenant-list">Select from Tenant List</Label>
-              </div>
-              {selectedEmailOption === 'tenant-list' && (
-                <Select
-                  value={selectedTenantEmail}
-                  onValueChange={setSelectedTenantEmail}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a tenant" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tenants.map((tenant) => (
-                      <SelectItem key={tenant.id} value={tenant.email || ''}>
-                        {tenant.first_name} {tenant.last_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="custom" id="custom" />
-                <Label htmlFor="custom">Custom Email</Label>
-              </div>
-              {selectedEmailOption === 'custom' && (
-                <Input
-                  type="email"
-                  placeholder="Enter email address"
-                  value={customEmail}
-                  onChange={(e) => setCustomEmail(e.target.value)}
-                />
-              )}
-            </RadioGroup>
-          </div>
-          <DialogFooter>
-            <Button onClick={handleEmailSubmit}>Send Contract</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Invite Tenant to Sign</DialogTitle>
-            <DialogDescription>
-              Enter the tenant's email address to send them a contract signing invitation.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <RadioGroup
-              defaultValue="contract-tenant"
-              value={inviteEmailOption}
-              onValueChange={setInviteEmailOption}
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="contract-tenant" id="invite-contract-tenant" />
-                <Label htmlFor="invite-contract-tenant">
-                  Contract Tenant ({metadata.tenantEmail || 'No email set'})
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="tenant-list" id="invite-tenant-list" />
-                <Label htmlFor="invite-tenant-list">Select from Tenant List</Label>
-              </div>
-              {inviteEmailOption === 'tenant-list' && (
-                <Select
-                  value={inviteSelectedTenantEmail}
-                  onValueChange={setInviteSelectedTenantEmail}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a tenant" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tenants.map((tenant) => (
-                      <SelectItem key={tenant.id} value={tenant.email || ''}>
-                        {tenant.first_name} {tenant.last_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="custom" id="invite-custom" />
-                <Label htmlFor="invite-custom">Custom Email</Label>
-              </div>
-              {inviteEmailOption === 'custom' && (
-                <Input
-                  type="email"
-                  placeholder="Enter email address"
-                  value={inviteCustomEmail}
-                  onChange={(e) => setInviteCustomEmail(e.target.value)}
-                />
-              )}
-            </RadioGroup>
-          </div>
-          <DialogFooter>
-            <Button onClick={handleInviteTenant}>Send Invitation</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-
-export default function ContractDetails() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <ContractDetailsContent />
-    </QueryClientProvider>
-  );
-}
+                  onChange={(e) => handleInputChange('
