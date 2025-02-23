@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Eye, Printer, Mail, Edit, Save, Send } from "lucide-react";
 import type { ContractStatus } from "@/types/contract";
@@ -80,15 +81,19 @@ export function ContractHeader({
   const renderExtraFields = () => {
     switch (inviteOption) {
       case 'contract-tenant':
-        return (
+        return tenantEmail ? (
           <div className="mt-2 space-y-2">
             <Label className="text-sm text-gray-500">Contract Tenant Email</Label>
             <Input
               type="email"
-              value={tenantEmail || ''}
+              value={tenantEmail}
               readOnly
               className="bg-gray-50"
             />
+          </div>
+        ) : (
+          <div className="mt-2 text-sm text-gray-500">
+            No tenant email available in contract. Please select another option.
           </div>
         );
       case 'tenant-list':
@@ -197,7 +202,7 @@ export function ContractHeader({
                   {tenantEmail && (
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="contract-tenant" id="contract-tenant" />
-                      <Label htmlFor="contract-tenant">Contract Tenant</Label>
+                      <Label htmlFor="contract-tenant">Contract Tenant ({tenantEmail})</Label>
                     </div>
                   )}
                   <div className="flex items-center space-x-2">
