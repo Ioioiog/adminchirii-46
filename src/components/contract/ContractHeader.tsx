@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Eye, Printer, Mail, Edit, Save, Send } from "lucide-react";
 import type { ContractStatus } from "@/types/contract";
@@ -99,11 +98,14 @@ export function ContractHeader({
               <SelectValue placeholder="Select a tenant" />
             </SelectTrigger>
             <SelectContent>
-              {tenants.map((tenant) => (
-                <SelectItem key={tenant.id} value={tenant.email || ''}>
-                  {tenant.first_name} {tenant.last_name} ({tenant.email})
-                </SelectItem>
-              ))}
+              {tenants.map((tenant) => {
+                const uniqueKey = `${tenant.id}-${tenant.email}`;
+                return (
+                  <SelectItem key={uniqueKey} value={tenant.email || ''}>
+                    {tenant.first_name} {tenant.last_name} ({tenant.email})
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         );
