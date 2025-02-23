@@ -681,8 +681,8 @@ function ContractDetailsContent() {
       <div className="print:hidden">
         <DashboardSidebar />
       </div>
-      <main className="flex-1 p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
+      <main className="flex-1 p-8 pt-12">
+        <div className="max-w-7xl mx-auto space-y-8">
           <div className="flex items-center justify-between bg-white rounded-lg shadow-soft-md p-4 print:hidden">
             <div className="flex items-center gap-4">
               <Button
