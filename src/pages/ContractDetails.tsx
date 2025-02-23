@@ -695,9 +695,6 @@ function ContractDetailsContent() {
               </Button>
               <div>
                 <h1 className="text-xl font-semibold text-gray-900">Contract Details</h1>
-                <p className="text-sm text-gray-500">
-                  Contract #{metadata.contractNumber || 'N/A'} {contract.status}
-                </p>
               </div>
             </div>
             
