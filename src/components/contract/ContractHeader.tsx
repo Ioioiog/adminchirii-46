@@ -28,7 +28,8 @@ export function ContractHeader({
   onInviteTenant,
   contractStatus
 }: ContractHeaderProps) {
-  const showInviteButton = contractStatus === 'draft' && !isEditing;
+  // Show invite button as long as contract isn't signed and we're not editing
+  const showInviteButton = (contractStatus === 'draft' || contractStatus === 'pending_signature') && !isEditing;
 
   return (
     <div className="flex items-center justify-between bg-white rounded-lg shadow-soft-md p-4">
