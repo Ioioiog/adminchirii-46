@@ -70,13 +70,24 @@ const TenantRegistration = () => {
           .select('*, properties(*)')
           .eq('id', contractId)
           .eq('invitation_token', token)
-          .single();
+          .maybeSingle();
 
         if (contractError || !contractData) {
           console.error("Contract verification error:", contractError);
           toast({
             title: "Invalid Contract Invitation",
             description: "This contract invitation link is invalid or has expired.",
+            variant: "destructive",
+          });
+          navigate("/auth");
+          return;
+        }
+
+        // Check if contract status is valid for tenant registration
+        if (contractData.status !== 'pending' && contractData.status !== 'pending_signature') {
+          toast({
+            title: "Invalid Contract Status",
+            description: "This contract is no longer available for signing.",
             variant: "destructive",
           });
           navigate("/auth");
