@@ -11,7 +11,6 @@ import { useContractPrint } from "@/components/contract/ContractPrintPreview";
 import { ContractPreviewDialog } from "@/components/contract/ContractPreviewDialog";
 import { useToast } from "@/hooks/use-toast";
 import type { FormData, Asset } from "@/types/contract";
-import { Json } from "@/integrations/supabase/types/json";
 
 const queryClient = new QueryClient();
 
@@ -314,8 +313,9 @@ function ContractDetailsContent() {
             isEditing={isEditing}
             onEdit={() => setIsEditing(true)}
             onSave={handleSave}
-            onInviteTenant={handleInviteTenant}
+            onInviteTenant={inviteTenantMutation.mutate}
             contractStatus={contract?.status || 'draft'}
+            formData={formData}
           />
 
           <ContractContent 
