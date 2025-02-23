@@ -1,4 +1,3 @@
-
 import { FormData } from "@/types/contract";
 import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -21,7 +20,6 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
   const signaturePadRef = useRef<SignaturePad>(null);
   const [contractStatus, setContractStatus] = useState<string>('draft');
 
-  // Fetch contract status on mount
   useEffect(() => {
     const fetchContractStatus = async () => {
       const { data, error } = await supabase
@@ -32,7 +30,7 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
       
       if (data) {
         setContractStatus(data.status);
-        console.log('Contract status:', data.status); // Debug log
+        console.log('Contract status:', data.status);
       }
     };
 
@@ -40,7 +38,7 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
   }, [contractId]);
 
   const handleSign = async () => {
-    console.log('Signing attempt - Role:', userRole); // Debug log
+    console.log('Signing attempt - Role:', userRole);
 
     if (!userId || !userRole) {
       toast({
@@ -54,8 +52,7 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
     if (!signaturePadRef.current?.isEmpty() && signatureName) {
       try {
         const signatureImage = signaturePadRef.current?.getTrimmedCanvas().toDataURL('image/png');
-        
-        // First, check if a signature already exists for this user and role
+
         const { data: existingSignatures } = await supabase
           .from('contract_signatures')
           .select('*')
@@ -63,7 +60,6 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
           .eq('signer_role', userRole === 'landlord' ? 'landlord' : 'tenant');
 
         if (existingSignatures && existingSignatures.length > 0) {
-          // If signature exists, update it instead of creating a new one
           const { error: updateError } = await supabase
             .from('contract_signatures')
             .update({
@@ -75,7 +71,6 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
 
           if (updateError) throw updateError;
         } else {
-          // If no signature exists, create a new one
           const { error } = await supabase
             .from('contract_signatures')
             .insert({
@@ -90,7 +85,6 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
           if (error) throw error;
         }
 
-        // Update the contract's metadata with the signature
         const signatureDate = new Date().toISOString().split('T')[0];
         const updatedMetadata = {
           ...formData,
@@ -99,11 +93,20 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
           [`${userRole === 'landlord' ? 'owner' : 'tenant'}SignatureImage`]: signatureImage
         };
 
+        let newStatus = contractStatus;
+        if (userRole === 'landlord' && !formData.tenantSignatureName) {
+          newStatus = 'pending_signature';
+        } else if (userRole === 'tenant' && formData.ownerSignatureName) {
+          newStatus = 'signed';
+        } else if (userRole === 'landlord' && formData.tenantSignatureName) {
+          newStatus = 'signed';
+        }
+
         const { error: contractError } = await supabase
           .from('contracts')
           .update({
             metadata: updatedMetadata,
-            status: userRole === 'tenant' ? 'signed' : 'pending_signature'
+            status: newStatus
           })
           .eq('id', contractId);
 
@@ -114,11 +117,9 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
           description: "Contract signed successfully",
         });
 
-        // Reset state
         setSignatureName("");
         signaturePadRef.current?.clear();
 
-        // Refresh the page to show updated signatures
         window.location.reload();
       } catch (error: any) {
         console.error('Error signing contract:', error);
@@ -141,8 +142,13 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
     signaturePadRef.current?.clear();
   };
 
-  const canSignAsLandlord = userRole === 'landlord' && contractStatus === 'draft';
-  const canSignAsTenant = userRole === 'tenant' && contractStatus === 'pending_signature';
+  const canSignAsLandlord = userRole === 'landlord' && 
+    (contractStatus === 'draft' || 
+    (contractStatus === 'pending_signature' && formData.tenantSignatureName && !formData.ownerSignatureName));
+    
+  const canSignAsTenant = userRole === 'tenant' && 
+    contractStatus === 'pending_signature' && 
+    !formData.tenantSignatureName;
   
   console.log('Render conditions:', { // Debug logs
     userRole,
