@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Eye, Printer, Mail, Edit, Save, Send } from "lucide-react";
 import type { ContractStatus } from "@/types/contract";
@@ -6,7 +5,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
-import { BrowserRouter } from "react-router-dom";
 
 interface ContractHeaderProps {
   onBack: () => void;
