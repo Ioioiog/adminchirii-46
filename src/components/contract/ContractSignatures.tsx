@@ -19,16 +19,29 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
   const { toast } = useToast();
   const [signatureName, setSignatureName] = useState("");
   const signaturePadRef = useRef<SignaturePad>(null);
+  const [contractStatus, setContractStatus] = useState<string>('draft');
 
-  // Debug log when component mounts and when formData changes
+  // Fetch contract status on mount
   useEffect(() => {
-    console.log('Current user role:', userRole);
-    console.log('Contract formData:', formData);
-    console.log('Owner signature:', formData.ownerSignatureImage);
-    console.log('Tenant signature:', formData.tenantSignatureImage);
-  }, [formData, userRole]);
+    const fetchContractStatus = async () => {
+      const { data, error } = await supabase
+        .from('contracts')
+        .select('status')
+        .eq('id', contractId)
+        .single();
+      
+      if (data) {
+        setContractStatus(data.status);
+        console.log('Contract status:', data.status); // Debug log
+      }
+    };
+
+    fetchContractStatus();
+  }, [contractId]);
 
   const handleSign = async () => {
+    console.log('Signing attempt - Role:', userRole); // Debug log
+
     if (!userId || !userRole) {
       toast({
         title: "Error",
@@ -81,16 +94,16 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
         const signatureDate = new Date().toISOString().split('T')[0];
         const updatedMetadata = {
           ...formData,
-          [`${userRole}SignatureDate`]: signatureDate,
-          [`${userRole}SignatureName`]: signatureName,
-          [`${userRole}SignatureImage`]: signatureImage
+          [`${userRole === 'landlord' ? 'owner' : 'tenant'}SignatureDate`]: signatureDate,
+          [`${userRole === 'landlord' ? 'owner' : 'tenant'}SignatureName`]: signatureName,
+          [`${userRole === 'landlord' ? 'owner' : 'tenant'}SignatureImage`]: signatureImage
         };
 
         const { error: contractError } = await supabase
           .from('contracts')
           .update({
             metadata: updatedMetadata,
-            status: 'signed'
+            status: userRole === 'tenant' ? 'signed' : 'pending_signature'
           })
           .eq('id', contractId);
 
@@ -128,6 +141,18 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
     signaturePadRef.current?.clear();
   };
 
+  const canSignAsLandlord = userRole === 'landlord' && contractStatus === 'draft';
+  const canSignAsTenant = userRole === 'tenant' && contractStatus === 'pending_signature';
+  
+  console.log('Render conditions:', { // Debug logs
+    userRole,
+    contractStatus,
+    canSignAsLandlord,
+    canSignAsTenant,
+    ownerSignature: formData.ownerSignatureName,
+    tenantSignature: formData.tenantSignatureName
+  });
+
   return (
     <div className="grid grid-cols-2 gap-8 mt-16">
       <div>
@@ -148,7 +173,7 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
         ) : (
           <p>___________________________</p>
         )}
-        {userRole === 'landlord' && !formData.ownerSignatureName && (
+        {canSignAsLandlord && (
           <div className="mt-4">
             <Input
               type="text"
@@ -200,7 +225,7 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
         ) : (
           <p>___________________________</p>
         )}
-        {userRole === 'tenant' && !formData.tenantSignatureName && (
+        {canSignAsTenant && (
           <div className="mt-4">
             <Input
               type="text"
