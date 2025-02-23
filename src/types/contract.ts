@@ -8,6 +8,8 @@ export interface Asset {
   condition: string;
 }
 
+export type ContractStatus = 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled' | 'pending_signature';
+
 export interface FormData {
   contractNumber: string;
   contractDate: string;

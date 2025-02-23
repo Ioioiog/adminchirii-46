@@ -1,4 +1,3 @@
-
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { QueryClient, QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -119,7 +118,13 @@ function ContractDetailsContent() {
         throw new Error('This contract invitation has expired or been used');
       }
 
-      return contractData as Contract;
+      const metadata = contractData.metadata as unknown as FormData;
+      setFormData(metadata);
+
+      return {
+        ...contractData,
+        metadata,
+      } as Contract;
     },
     retry: false,
     onSuccess: (data) => {
