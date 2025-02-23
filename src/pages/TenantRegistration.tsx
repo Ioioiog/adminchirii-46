@@ -60,9 +60,10 @@ const TenantRegistration = () => {
           .eq('id', contractId)
           .eq('invitation_token', token)
           .eq('status', 'pending_signature')
-          .single();
+          .single()
+          .throwOnError();  // This will ensure errors are properly caught
 
-        if (contractError || !rawContract) {
+        if (!rawContract) {
           console.log("Invalid or expired contract invitation");
           toast({
             title: "Invalid Contract Invitation",
@@ -76,7 +77,7 @@ const TenantRegistration = () => {
         // Cast the raw contract data to our Contract type
         const typedContract: Contract = {
           ...rawContract,
-          metadata: rawContract.metadata as unknown as FormData // First cast to unknown, then to FormData
+          metadata: rawContract.metadata as unknown as FormData
         };
 
         setContract(typedContract);
@@ -85,11 +86,19 @@ const TenantRegistration = () => {
         const metadata = rawContract.metadata as { [key: string]: any };
         const tenantEmail = metadata.tenantEmail as string;
 
-        const { data: existingUser } = await supabase
+        if (!tenantEmail) {
+          throw new Error("Tenant email not found in contract metadata");
+        }
+
+        const { data: existingUser, error: userError } = await supabase
           .from('profiles')
           .select('id')
           .eq('email', tenantEmail)
           .single();
+
+        if (userError && userError.code !== 'PGRST116') { // PGRST116 is the "not found" error code
+          throw userError;
+        }
 
         setIsExistingUser(!!existingUser);
         console.log("User status:", existingUser ? "Existing user" : "New user");
