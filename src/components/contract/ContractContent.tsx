@@ -1,43 +1,27 @@
-
 import { FormData, Asset } from "@/types/contract";
 import { Input } from "@/components/ui/input";
 
 interface ContractContentProps {
   formData: FormData;
-  isEditing?: boolean;
-  onFieldChange?: (field: keyof FormData, value: string) => void;
+  isEditing: boolean;
+  onFieldChange: (field: keyof FormData, value: string) => void;
 }
 
-export function ContractContent({ formData, isEditing = false, onFieldChange }: ContractContentProps) {
-  const renderField = (label: string, field: keyof FormData) => {
-    const value = formData[field];
-    
-    // Special handling for assets array
-    if (field === 'assets' && Array.isArray(value)) {
-      return (
-        <div className="space-y-2">
-          {(value as Asset[]).map((asset, index) => (
-            <div key={index} className="border p-2 rounded bg-gray-50">
-              {`${asset.name}: ${asset.value} (${asset.condition})`}
-            </div>
-          ))}
-        </div>
-      );
-    }
+export function ContractContent({ formData, isEditing, onFieldChange }: ContractContentProps) {
+  const isOwnerSigned = formData.ownerSignatureImage && formData.ownerSignatureName && formData.ownerSignatureDate;
 
-    // Regular field handling
-    if (isEditing && onFieldChange) {
+  const renderField = (fieldName: keyof FormData, value: string, label: string, type: string = 'text') => {
+    if (isEditing && !isOwnerSigned) {
       return (
         <Input
-          type="text"
-          value={value as string}
-          onChange={(e) => onFieldChange(field, e.target.value)}
+          type={type}
+          value={value || ''}
+          onChange={(e) => onFieldChange(fieldName, e.target.value)}
           className="w-full"
         />
       );
     }
-    
-    return <div className="border p-2 rounded bg-gray-50">{value as string}</div>;
+    return <span>{value || '_____'}</span>;
   };
 
   return (
@@ -228,6 +212,40 @@ export function ContractContent({ formData, isEditing = false, onFieldChange }: 
             <label className="block text-sm font-medium mb-1">Gas Meter:</label>
             {renderField("Gas Meter", "gasMeter")}
           </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-8 mt-16">
+        <div>
+          <p className="font-bold mb-2">PROPRIETAR,</p>
+          <div className="mb-2">
+            <p>Data:</p>
+            {renderField('ownerSignatureDate', formData.ownerSignatureDate, 'Data semnării', 'date')}
+          </div>
+          <div className="mb-2">
+            <p>Nume în clar și semnătura:</p>
+            {renderField('ownerSignatureName', formData.ownerSignatureName, 'Nume și prenume')}
+          </div>
+          {formData.ownerSignatureImage && (
+            <img 
+              src={formData.ownerSignatureImage} 
+              alt="Owner Signature" 
+              className="mt-2 max-w-[200px]"
+            />
+          )}
+        </div>
+        <div>
+          <p className="font-bold mb-2">CHIRIAȘ,</p>
+          <p>Data: {formData.tenantSignatureDate || '_____'}</p>
+          <p>Nume și semnătură:</p>
+          <p>{formData.tenantSignatureName || '___________________________'}</p>
+          {formData.tenantSignatureImage && (
+            <img 
+              src={formData.tenantSignatureImage} 
+              alt="Tenant Signature" 
+              className="mt-2 max-w-[200px]"
+            />
+          )}
         </div>
       </div>
     </div>
