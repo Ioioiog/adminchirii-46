@@ -117,7 +117,6 @@ function ContractDetailsContent() {
         throw new Error('This contract invitation has expired or been used');
       }
 
-      // Safely convert metadata to FormData type
       const metadata = contractData.metadata as unknown as { [key: string]: string | Asset[] };
       const typedMetadata: FormData = {
         contractNumber: metadata.contractNumber as string || '',
@@ -234,6 +233,10 @@ function ContractDetailsContent() {
         title: "Success",
         description: "Invitation sent to tenant",
       });
+      updateContractMutation.mutate({
+        ...formData,
+        status: 'pending_signature'
+      });
     },
     onError: (error) => {
       toast({
@@ -257,6 +260,11 @@ function ContractDetailsContent() {
   };
 
   const handleInviteTenant = () => {
+    console.log("Attempting to invite tenant", { 
+      email: formData.tenantEmail,
+      contractStatus: contract?.status 
+    });
+    
     if (!formData.tenantEmail) {
       toast({
         title: "Error",
