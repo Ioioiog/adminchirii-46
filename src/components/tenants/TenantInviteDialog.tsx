@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -92,7 +93,8 @@ export function TenantInviteDialog({ properties, open, onOpenChange }: TenantInv
             properties: propertyDetails,
             token: token,
             startDate: data.startDate,
-            endDate: data.endDate
+            endDate: data.endDate,
+            registrationUrl: `${window.location.origin}/tenant-registration?invitation=${token}`
           }
         }
       );

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import AuthPage from "@/pages/Auth";
@@ -44,7 +43,6 @@ export function AppRoutes({ isAuthenticated }: AppRoutesProps) {
       <Route path="/tenant-registration" element={<TenantRegistration />} />
       <Route path="/info" element={<Info />} />
       
-      {/* Protected Routes */}
       <Route
         path="/dashboard"
         element={
@@ -86,7 +84,6 @@ export function AppRoutes({ isAuthenticated }: AppRoutesProps) {
         }
       />
       
-      {/* Standard Routes */}
       <Route
         path="/properties"
         element={
