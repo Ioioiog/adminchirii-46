@@ -127,7 +127,7 @@ const TenantRegistration = () => {
                 .from('contracts')
                 .update({
                   tenant_id: session.user.id,
-                  status: 'pending_signature'
+                  status: 'pending' // Using 'pending' instead of 'pending_signature'
                 })
                 .eq('id', invitation.contract_id);
 
@@ -136,12 +136,13 @@ const TenantRegistration = () => {
                 throw contractError;
               }
 
-              // Create tenancy for the property
+              // Create tenancy for the property with required fields
               const { error: tenancyError } = await supabase
                 .from('tenancies')
                 .insert({
                   property_id: invitation.property_id,
                   tenant_id: session.user.id,
+                  start_date: new Date().toISOString().split('T')[0], // Current date as start date
                   status: 'pending'
                 });
 
