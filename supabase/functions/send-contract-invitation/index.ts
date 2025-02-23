@@ -51,11 +51,8 @@ const handler = async (req: Request): Promise<Response> => {
       propertyAddress,
     });
 
-    // Get the site URL from environment variable
-    const siteUrl = Deno.env.get("PUBLIC_SITE_URL");
-    if (!siteUrl) {
-      throw new Error("PUBLIC_SITE_URL environment variable is not set");
-    }
+    // Get the site URL from environment variable with a fallback
+    const siteUrl = Deno.env.get("PUBLIC_SITE_URL") ?? new URL(req.url).origin;
     console.log("Using site URL:", siteUrl);
 
     // Update contract with invitation details
