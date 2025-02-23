@@ -6,6 +6,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useTenants } from "@/hooks/useTenants";
 
 interface ContractHeaderProps {
   onBack: () => void;
@@ -16,7 +19,7 @@ interface ContractHeaderProps {
   isEditing: boolean;
   onEdit: () => void;
   onSave: () => void;
-  onInviteTenant: () => void;
+  onInviteTenant: (email: string) => void;
   contractStatus: ContractStatus;
   tenantEmail?: string;
 }
@@ -34,9 +37,12 @@ export function ContractHeader({
   contractStatus,
   tenantEmail
 }: ContractHeaderProps) {
+  const { data: tenants = [] } = useTenants();
   const [inviteOption, setInviteOption] = useState<'contract-tenant' | 'tenant-list' | 'custom-email'>(
     tenantEmail ? 'contract-tenant' : 'tenant-list'
   );
+  const [selectedTenantEmail, setSelectedTenantEmail] = useState<string>("");
+  const [customEmail, setCustomEmail] = useState<string>("");
   const [sendOption, setSendOption] = useState<'contract-tenant' | 'tenant-list' | 'custom-email'>(
     tenantEmail ? 'contract-tenant' : 'tenant-list'
   );
@@ -44,13 +50,65 @@ export function ContractHeader({
   const showInviteButton = (contractStatus === 'draft' || contractStatus === 'pending_signature') && !isEditing;
 
   const handleInvite = () => {
-    console.log('Invite option selected:', inviteOption);
-    onInviteTenant();
+    let emailToUse = "";
+    
+    switch (inviteOption) {
+      case 'contract-tenant':
+        emailToUse = tenantEmail || '';
+        break;
+      case 'tenant-list':
+        emailToUse = selectedTenantEmail;
+        break;
+      case 'custom-email':
+        emailToUse = customEmail;
+        break;
+    }
+
+    if (!emailToUse) {
+      console.error('No email selected for invitation');
+      return;
+    }
+
+    console.log('Inviting tenant with email:', emailToUse);
+    onInviteTenant(emailToUse);
   };
 
   const handleSend = () => {
     console.log('Send option selected:', sendOption);
     onEmail();
+  };
+
+  // Function to render extra fields based on selected option
+  const renderExtraFields = () => {
+    switch (inviteOption) {
+      case 'tenant-list':
+        return (
+          <Select value={selectedTenantEmail} onValueChange={setSelectedTenantEmail}>
+            <SelectTrigger className="w-full mt-2">
+              <SelectValue placeholder="Select a tenant" />
+            </SelectTrigger>
+            <SelectContent>
+              {tenants.map((tenant) => (
+                <SelectItem key={tenant.id} value={tenant.email || ''}>
+                  {tenant.first_name} {tenant.last_name} ({tenant.email})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      case 'custom-email':
+        return (
+          <Input
+            type="email"
+            placeholder="Enter email address"
+            value={customEmail}
+            onChange={(e) => setCustomEmail(e.target.value)}
+            className="mt-2"
+          />
+        );
+      default:
+        return null;
+    }
   };
 
   return (
@@ -104,29 +162,45 @@ export function ContractHeader({
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80">
-              <RadioGroup 
-                value={inviteOption} 
-                onValueChange={(value: 'contract-tenant' | 'tenant-list' | 'custom-email') => setInviteOption(value)}
-                className="gap-3"
-              >
-                {tenantEmail && (
+              <div className="space-y-4">
+                <RadioGroup 
+                  value={inviteOption} 
+                  onValueChange={(value: 'contract-tenant' | 'tenant-list' | 'custom-email') => {
+                    setInviteOption(value);
+                    setSelectedTenantEmail("");
+                    setCustomEmail("");
+                  }}
+                  className="gap-3"
+                >
+                  {tenantEmail && (
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="contract-tenant" id="contract-tenant" />
+                      <Label htmlFor="contract-tenant">Contract Tenant ({tenantEmail})</Label>
+                    </div>
+                  )}
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="contract-tenant" id="contract-tenant" />
-                    <Label htmlFor="contract-tenant">Contract Tenant ({tenantEmail})</Label>
+                    <RadioGroupItem value="tenant-list" id="tenant-list" />
+                    <Label htmlFor="tenant-list">Select from Tenant List</Label>
                   </div>
-                )}
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="tenant-list" id="tenant-list" />
-                  <Label htmlFor="tenant-list">Select from Tenant List</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="custom-email" id="custom-email" />
-                  <Label htmlFor="custom-email">Custom Email</Label>
-                </div>
-              </RadioGroup>
-              <Button onClick={handleInvite} className="w-full mt-4">
-                Send Invitation
-              </Button>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="custom-email" id="custom-email" />
+                    <Label htmlFor="custom-email">Custom Email</Label>
+                  </div>
+                </RadioGroup>
+
+                {renderExtraFields()}
+
+                <Button 
+                  onClick={handleInvite} 
+                  className="w-full mt-4"
+                  disabled={
+                    (inviteOption === 'tenant-list' && !selectedTenantEmail) ||
+                    (inviteOption === 'custom-email' && !customEmail)
+                  }
+                >
+                  Send Invitation
+                </Button>
+              </div>
             </PopoverContent>
           </Popover>
         )}
