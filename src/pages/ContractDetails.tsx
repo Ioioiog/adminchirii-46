@@ -739,13 +739,6 @@ function ContractDetailsContent() {
                   <Mail className="h-4 w-4 mr-2" />
                   Send
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="hover:bg-white hover:text-primary-600"
-                >
-                  <Settings className="h-4 w-4" />
-                </Button>
               </div>
             </div>
           </div>
