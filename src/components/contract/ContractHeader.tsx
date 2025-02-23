@@ -92,14 +92,23 @@ export function ContractHeader({
           </div>
         );
       case 'tenant-list':
+        const uniqueTenants = tenants.reduce((acc, current) => {
+          const x = acc.find(item => item.email === current.email);
+          if (!x) {
+            return acc.concat([current]);
+          } else {
+            return acc;
+          }
+        }, [] as typeof tenants);
+
         return (
           <Select value={selectedTenantEmail} onValueChange={setSelectedTenantEmail}>
             <SelectTrigger className="w-full mt-2">
               <SelectValue placeholder="Select a tenant" />
             </SelectTrigger>
             <SelectContent>
-              {tenants.map((tenant) => {
-                const uniqueKey = `${tenant.id}-${tenant.email}`;
+              {uniqueTenants.map((tenant, index) => {
+                const uniqueKey = `${tenant.id}-${tenant.email}-${index}`;
                 return (
                   <SelectItem key={uniqueKey} value={tenant.email || ''}>
                     {tenant.first_name} {tenant.last_name} ({tenant.email})
