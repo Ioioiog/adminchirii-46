@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Eye, Printer, Mail, Edit, Save, Send } from "lucide-react";
 import type { ContractStatus } from "@/types/contract";
@@ -81,12 +82,15 @@ export function ContractHeader({
     switch (inviteOption) {
       case 'contract-tenant':
         return (
-          <Input
-            type="email"
-            value={tenantEmail || ''}
-            readOnly
-            className="mt-2 bg-gray-50"
-          />
+          <div className="mt-2 space-y-2">
+            <Label className="text-sm text-gray-500">Contract Tenant Email</Label>
+            <Input
+              type="email"
+              value={tenantEmail || ''}
+              readOnly
+              className="bg-gray-50"
+            />
+          </div>
         );
       case 'tenant-list':
         return (
@@ -202,7 +206,8 @@ export function ContractHeader({
                   className="w-full mt-4"
                   disabled={
                     (inviteOption === 'tenant-list' && !selectedTenantEmail) ||
-                    (inviteOption === 'custom-email' && !customEmail)
+                    (inviteOption === 'custom-email' && !customEmail) ||
+                    (inviteOption === 'contract-tenant' && !tenantEmail)
                   }
                 >
                   Send Invitation
