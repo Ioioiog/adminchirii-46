@@ -55,6 +55,9 @@ function ContractDetailsContent() {
   const [editedData, setEditedData] = useState<FormData | null>(null);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteEmailOption, setInviteEmailOption] = useState<string>('contract-tenant');
+  const [inviteCustomEmail, setInviteCustomEmail] = useState("");
+  const [inviteSelectedTenantEmail, setInviteSelectedTenantEmail] = useState("");
   const { userRole } = useUserRole();
   const { data: tenants = [] } = useTenants();
 
@@ -456,7 +459,12 @@ function ContractDetailsContent() {
       }
 
       if (!emailToSend) {
-        throw new Error('No email address provided');
+        toast({
+          title: "Error",
+          description: "Please provide a valid email address",
+          variant: "destructive"
+        });
+        return;
       }
 
       const contractElement = document.querySelector('.print\\:block');
@@ -514,17 +522,42 @@ function ContractDetailsContent() {
   };
 
   const handleInviteTenant = async () => {
-    if (!contract || !inviteEmail) {
-      console.log('Missing contract or invite email');
+    if (!contract) {
+      console.log('Missing contract');
+      return;
+    }
+
+    let emailToSend = '';
+
+    switch (inviteEmailOption) {
+      case 'contract-tenant':
+        emailToSend = metadata.tenantEmail || '';
+        break;
+      case 'tenant-list':
+        emailToSend = inviteSelectedTenantEmail;
+        break;
+      case 'custom':
+        emailToSend = inviteCustomEmail;
+        break;
+      default:
+        throw new Error('Invalid email option selected');
+    }
+
+    if (!emailToSend) {
+      toast({
+        title: "Error",
+        description: "Please provide a valid email address",
+        variant: "destructive"
+      });
       return;
     }
 
     try {
-      console.log('Sending contract invitation to:', inviteEmail);
+      console.log('Sending contract invitation to:', emailToSend);
       const { error } = await supabase.functions.invoke('send-contract-invitation', {
         body: {
           contractId: id,
-          tenantEmail: inviteEmail,
+          tenantEmail: emailToSend,
           contractNumber: contract.metadata.contractNumber,
           ownerName: contract.metadata.ownerName,
           propertyAddress: contract.metadata.propertyAddress,
@@ -539,7 +572,8 @@ function ContractDetailsContent() {
       });
 
       setIsInviteModalOpen(false);
-      setInviteEmail("");
+      setInviteCustomEmail("");
+      setInviteSelectedTenantEmail("");
       
       queryClient.invalidateQueries({ queryKey: ['contract', id] });
     } catch (error: any) {
@@ -922,19 +956,51 @@ function ContractDetailsContent() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="inviteEmail" className="text-right">
-                Email
-              </Label>
-              <Input
-                id="inviteEmail"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                className="col-span-3"
-                placeholder="tenant@example.com"
-                type="email"
-              />
-            </div>
+            <RadioGroup
+              defaultValue="contract-tenant"
+              value={inviteEmailOption}
+              onValueChange={setInviteEmailOption}
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="contract-tenant" id="invite-contract-tenant" />
+                <Label htmlFor="invite-contract-tenant">
+                  Contract Tenant ({metadata.tenantEmail || 'No email set'})
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="tenant-list" id="invite-tenant-list" />
+                <Label htmlFor="invite-tenant-list">Select from Tenant List</Label>
+              </div>
+              {inviteEmailOption === 'tenant-list' && (
+                <Select
+                  value={inviteSelectedTenantEmail}
+                  onValueChange={setInviteSelectedTenantEmail}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a tenant" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tenants.map((tenant) => (
+                      <SelectItem key={tenant.id} value={tenant.email || ''}>
+                        {tenant.first_name} {tenant.last_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="custom" id="invite-custom" />
+                <Label htmlFor="invite-custom">Custom Email</Label>
+              </div>
+              {inviteEmailOption === 'custom' && (
+                <Input
+                  type="email"
+                  placeholder="Enter email address"
+                  value={inviteCustomEmail}
+                  onChange={(e) => setInviteCustomEmail(e.target.value)}
+                />
+              )}
+            </RadioGroup>
           </div>
           <DialogFooter>
             <Button onClick={handleInviteTenant}>Send Invitation</Button>
