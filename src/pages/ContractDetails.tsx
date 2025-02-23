@@ -48,7 +48,7 @@ function ContractDetailsContent() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
-  const [selectedEmailOption, setSelectedEmailOption] = useState<string>('tenant');
+  const [selectedEmailOption, setSelectedEmailOption] = useState<string>('contract-tenant');
   const [customEmail, setCustomEmail] = useState('');
   const [selectedTenantEmail, setSelectedTenantEmail] = useState('');
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
@@ -442,7 +442,7 @@ function ContractDetailsContent() {
       let emailToSend = '';
 
       switch (selectedEmailOption) {
-        case 'tenant':
+        case 'contract-tenant':
           emailToSend = metadata.tenantEmail || '';
           break;
         case 'tenant-list':
@@ -851,6 +851,67 @@ function ContractDetailsContent() {
         metadata={metadata}
         contractId={id!}
       />
+
+      <Dialog open={isEmailModalOpen} onOpenChange={setIsEmailModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Contract</DialogTitle>
+            <DialogDescription>
+              Choose who to send the contract to.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <RadioGroup
+              defaultValue="contract-tenant"
+              value={selectedEmailOption}
+              onValueChange={setSelectedEmailOption}
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="contract-tenant" id="contract-tenant" />
+                <Label htmlFor="contract-tenant">
+                  Contract Tenant ({metadata.tenantEmail || 'No email set'})
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="tenant-list" id="tenant-list" />
+                <Label htmlFor="tenant-list">Select from Tenant List</Label>
+              </div>
+              {selectedEmailOption === 'tenant-list' && (
+                <Select
+                  value={selectedTenantEmail}
+                  onValueChange={setSelectedTenantEmail}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a tenant" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tenants.map((tenant) => (
+                      <SelectItem key={tenant.id} value={tenant.email || ''}>
+                        {tenant.first_name} {tenant.last_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="custom" id="custom" />
+                <Label htmlFor="custom">Custom Email</Label>
+              </div>
+              {selectedEmailOption === 'custom' && (
+                <Input
+                  type="email"
+                  placeholder="Enter email address"
+                  value={customEmail}
+                  onChange={(e) => setCustomEmail(e.target.value)}
+                />
+              )}
+            </RadioGroup>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleEmailSubmit}>Send Contract</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
         <DialogContent>
