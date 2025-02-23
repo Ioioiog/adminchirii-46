@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
+import { BrowserRouter } from "react-router-dom";
 
 interface ContractHeaderProps {
   onBack: () => void;
@@ -41,17 +42,14 @@ export function ContractHeader({
     tenantEmail ? 'contract-tenant' : 'tenant-list'
   );
 
-  // Show invite button as long as contract isn't signed and we're not editing
   const showInviteButton = (contractStatus === 'draft' || contractStatus === 'pending_signature') && !isEditing;
 
   const handleInvite = () => {
-    // Here you would handle the different invite options
     console.log('Invite option selected:', inviteOption);
     onInviteTenant();
   };
 
   const handleSend = () => {
-    // Here you would handle the different send options
     console.log('Send option selected:', sendOption);
     onEmail();
   };
