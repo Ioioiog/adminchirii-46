@@ -76,16 +76,19 @@ const TenantRegistration = () => {
         // Cast the raw contract data to our Contract type
         const typedContract: Contract = {
           ...rawContract,
-          metadata: rawContract.metadata as FormData
+          metadata: rawContract.metadata as unknown as FormData // First cast to unknown, then to FormData
         };
 
         setContract(typedContract);
 
         // Check if the user exists using tenantEmail from metadata
+        const metadata = rawContract.metadata as { [key: string]: any };
+        const tenantEmail = metadata.tenantEmail as string;
+
         const { data: existingUser } = await supabase
           .from('profiles')
           .select('id')
-          .eq('email', (rawContract.metadata as FormData).tenantEmail)
+          .eq('email', tenantEmail)
           .single();
 
         setIsExistingUser(!!existingUser);
