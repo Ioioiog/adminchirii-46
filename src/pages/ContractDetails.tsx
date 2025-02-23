@@ -1,3 +1,4 @@
+
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +8,7 @@ import { ContractContent } from "@/components/contract/ContractContent";
 import { ContractSignatures } from "@/components/contract/ContractSignatures";
 import { ContractHeader } from "@/components/contract/ContractHeader";
 import { ContractError } from "@/components/contract/ContractError";
-import { ContractPrintPreview } from "@/components/contract/ContractPrintPreview";
+import { useContractPrint } from "@/components/contract/ContractPrintPreview";
 import { ContractPreviewDialog } from "@/components/contract/ContractPreviewDialog";
 
 const queryClient = new QueryClient();
@@ -75,7 +76,7 @@ function ContractDetailsContent() {
   if (error) return <ContractError showDashboard={showDashboard} error={error} onBack={() => navigate('/documents')} />;
   if (!contract) return <div>Contract not found</div>;
 
-  const { handlePrint } = ContractPrintPreview({
+  const { handlePrint } = useContractPrint({
     queryClient,
     metadata: contract.metadata,
     contractId: id!,

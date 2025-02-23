@@ -13,7 +13,7 @@ interface ContractPrintPreviewProps {
   contractNumber?: string;
 }
 
-export function ContractPrintPreview({ queryClient, metadata, contractId, contractNumber }: ContractPrintPreviewProps) {
+export function useContractPrint({ queryClient, metadata, contractId, contractNumber }: ContractPrintPreviewProps) {
   const { toast } = useToast();
 
   const handlePrint = () => {
