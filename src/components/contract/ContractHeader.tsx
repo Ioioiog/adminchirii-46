@@ -110,17 +110,15 @@ export function ContractHeader({
                   onValueChange={(value: 'contract-tenant' | 'tenant-list' | 'custom-email') => setInviteOption(value)}
                   className="space-y-3"
                 >
-                  {tenantEmail && (
-                    <div className="flex items-center space-x-3">
-                      <RadioGroupItem value="contract-tenant" id="contract-tenant" />
-                      <Label 
-                        htmlFor="contract-tenant" 
-                        className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        Contract Tenant ({tenantEmail})
-                      </Label>
-                    </div>
-                  )}
+                  <div className="flex items-center space-x-3">
+                    <RadioGroupItem value="contract-tenant" id="contract-tenant" />
+                    <Label 
+                      htmlFor="contract-tenant" 
+                      className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Contract Tenant {tenantEmail && `(${tenantEmail})`}
+                    </Label>
+                  </div>
                   <div className="flex items-center space-x-3">
                     <RadioGroupItem value="tenant-list" id="tenant-list" />
                     <Label 
@@ -186,17 +184,15 @@ export function ContractHeader({
                 onValueChange={(value: 'contract-tenant' | 'tenant-list' | 'custom-email') => setSendOption(value)}
                 className="space-y-3"
               >
-                {tenantEmail && (
-                  <div className="flex items-center space-x-3">
-                    <RadioGroupItem value="contract-tenant" id="send-contract-tenant" />
-                    <Label 
-                      htmlFor="send-contract-tenant"
-                      className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      Contract Tenant ({tenantEmail})
-                    </Label>
-                  </div>
-                )}
+                <div className="flex items-center space-x-3">
+                  <RadioGroupItem value="contract-tenant" id="send-contract-tenant" />
+                  <Label 
+                    htmlFor="send-contract-tenant"
+                    className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Contract Tenant {tenantEmail && `(${tenantEmail})`}
+                  </Label>
+                </div>
                 <div className="flex items-center space-x-3">
                   <RadioGroupItem value="tenant-list" id="send-tenant-list" />
                   <Label 
