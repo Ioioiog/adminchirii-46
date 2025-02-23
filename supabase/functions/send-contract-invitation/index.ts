@@ -35,12 +35,6 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Validate request headers
-    const denoSubhost = req.headers.get("x-deno-subhost");
-    if (!denoSubhost) {
-      throw new Error("Missing required x-deno-subhost header");
-    }
-
     const { contractId, tenantEmail, contractNumber, ownerName, propertyAddress }: ContractInvitationRequest = await req.json();
 
     console.log("Sending contract invitation:", {
@@ -51,8 +45,8 @@ const handler = async (req: Request): Promise<Response> => {
       propertyAddress,
     });
 
-    // Get the site URL from environment variable with a fallback
-    const siteUrl = Deno.env.get("PUBLIC_SITE_URL") ?? new URL(req.url).origin;
+    // Always use the configured site URL from the environment
+    const siteUrl = "https://www.adminchirii.ro";
     console.log("Using site URL:", siteUrl);
 
     // Update contract with invitation details
