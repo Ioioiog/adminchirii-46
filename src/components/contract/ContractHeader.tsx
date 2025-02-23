@@ -2,6 +2,10 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Eye, Printer, Mail, Edit, Save, Send } from "lucide-react";
 import type { ContractStatus } from "@/types/contract";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { useState } from "react";
 
 interface ContractHeaderProps {
   onBack: () => void;
@@ -14,6 +18,7 @@ interface ContractHeaderProps {
   onSave: () => void;
   onInviteTenant: () => void;
   contractStatus: ContractStatus;
+  tenantEmail?: string;
 }
 
 export function ContractHeader({
@@ -26,10 +31,30 @@ export function ContractHeader({
   onEdit,
   onSave,
   onInviteTenant,
-  contractStatus
+  contractStatus,
+  tenantEmail
 }: ContractHeaderProps) {
+  const [inviteOption, setInviteOption] = useState<'contract-tenant' | 'tenant-list' | 'custom-email'>(
+    tenantEmail ? 'contract-tenant' : 'tenant-list'
+  );
+  const [sendOption, setSendOption] = useState<'contract-tenant' | 'tenant-list' | 'custom-email'>(
+    tenantEmail ? 'contract-tenant' : 'tenant-list'
+  );
+
   // Show invite button as long as contract isn't signed and we're not editing
   const showInviteButton = (contractStatus === 'draft' || contractStatus === 'pending_signature') && !isEditing;
+
+  const handleInvite = () => {
+    // Here you would handle the different invite options
+    console.log('Invite option selected:', inviteOption);
+    onInviteTenant();
+  };
+
+  const handleSend = () => {
+    // Here you would handle the different send options
+    console.log('Send option selected:', sendOption);
+    onEmail();
+  };
 
   return (
     <div className="flex items-center justify-between bg-white rounded-lg shadow-soft-md p-4">
@@ -71,14 +96,42 @@ export function ContractHeader({
         )}
 
         {showInviteButton && (
-          <Button
-            variant="default"
-            onClick={onInviteTenant}
-            size="sm"
-          >
-            <Send className="h-4 w-4 mr-2" />
-            Invite to Sign
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="default"
+                size="sm"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Invite to Sign
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <RadioGroup 
+                value={inviteOption} 
+                onValueChange={(value: 'contract-tenant' | 'tenant-list' | 'custom-email') => setInviteOption(value)}
+                className="gap-3"
+              >
+                {tenantEmail && (
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="contract-tenant" id="contract-tenant" />
+                    <Label htmlFor="contract-tenant">Contract Tenant ({tenantEmail})</Label>
+                  </div>
+                )}
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="tenant-list" id="tenant-list" />
+                  <Label htmlFor="tenant-list">Select from Tenant List</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="custom-email" id="custom-email" />
+                  <Label htmlFor="custom-email">Custom Email</Label>
+                </div>
+              </RadioGroup>
+              <Button onClick={handleInvite} className="w-full mt-4">
+                Send Invitation
+              </Button>
+            </PopoverContent>
+          </Popover>
         )}
 
         <Button
@@ -101,15 +154,43 @@ export function ContractHeader({
           Print
         </Button>
 
-        <Button
-          variant="ghost"
-          onClick={onEmail}
-          size="sm"
-          className="hover:bg-white hover:text-primary-600"
-        >
-          <Mail className="h-4 w-4 mr-2" />
-          Send
-        </Button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="hover:bg-white hover:text-primary-600"
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              Send
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80">
+            <RadioGroup 
+              value={sendOption} 
+              onValueChange={(value: 'contract-tenant' | 'tenant-list' | 'custom-email') => setSendOption(value)}
+              className="gap-3"
+            >
+              {tenantEmail && (
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="contract-tenant" id="send-contract-tenant" />
+                  <Label htmlFor="send-contract-tenant">Contract Tenant ({tenantEmail})</Label>
+                </div>
+              )}
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="tenant-list" id="send-tenant-list" />
+                <Label htmlFor="send-tenant-list">Select from Tenant List</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="custom-email" id="send-custom-email" />
+                <Label htmlFor="send-custom-email">Custom Email</Label>
+              </div>
+            </RadioGroup>
+            <Button onClick={handleSend} className="w-full mt-4">
+              Send Contract
+            </Button>
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );
