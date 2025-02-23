@@ -1,4 +1,3 @@
-
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { QueryClient, QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,7 +10,7 @@ import { ContractError } from "@/components/contract/ContractError";
 import { useContractPrint } from "@/components/contract/ContractPrintPreview";
 import { ContractPreviewDialog } from "@/components/contract/ContractPreviewDialog";
 import { useToast } from "@/hooks/use-toast";
-import type { FormData } from "@/types/contract";
+import type { FormData, Asset } from "@/types/contract";
 import { Json } from "@/integrations/supabase/types/json";
 
 const queryClient = new QueryClient();
