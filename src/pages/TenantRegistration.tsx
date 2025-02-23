@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FormData } from "@/types/contract";
-import { Json } from "@/integrations/supabase/types/json";
 
 interface Contract {
   id: string;
@@ -20,13 +19,34 @@ interface Contract {
 
 const TenantRegistration = () => {
   const navigate = useNavigate();
+  const { id } = useParams(); // Get contract ID from URL if available
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const token = searchParams.get('token');
-  const contractId = searchParams.get('contractId');
+  const contractId = id || searchParams.get('contractId');
   const [isLoading, setIsLoading] = useState(true);
   const [isExistingUser, setIsExistingUser] = useState<boolean | null>(null);
   const [contract, setContract] = useState<Contract | null>(null);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      // If user is already authenticated and has no token, redirect to contract page
+      if (session && !token && contractId) {
+        navigate(`/documents/contracts/${contractId}`);
+        return;
+      }
+
+      // If user is not authenticated and there's no token, redirect to auth
+      if (!session && !token) {
+        navigate('/auth');
+        return;
+      }
+    };
+
+    checkSession();
+  }, [navigate, token, contractId]);
 
   useEffect(() => {
     const verifyToken = async () => {
@@ -118,7 +138,6 @@ const TenantRegistration = () => {
           assets: Array.isArray(metadata.assets) ? metadata.assets : []
         };
 
-        // Cast the contract data to our Contract type
         const typedContract: Contract = {
           ...contractData,
           metadata: typedMetadata,
@@ -128,7 +147,6 @@ const TenantRegistration = () => {
         console.log("Found contract:", typedContract);
         setContract(typedContract);
 
-        // Check if the user exists using tenantEmail from metadata
         const tenantEmail = typedMetadata.tenantEmail;
         if (!tenantEmail) {
           console.error("No tenant email found in contract metadata");
@@ -161,7 +179,9 @@ const TenantRegistration = () => {
       }
     };
 
-    verifyToken();
+    if (token) {
+      verifyToken();
+    }
   }, [token, contractId, navigate, toast]);
 
   useEffect(() => {
@@ -243,11 +263,9 @@ const TenantRegistration = () => {
     );
   }
 
-  if (!contract) {
+  if (!contract && !token) {
     return null;
   }
-
-  const propertyName = contract.properties?.name || 'Property';
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
