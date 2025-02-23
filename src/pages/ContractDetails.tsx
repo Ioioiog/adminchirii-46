@@ -1,3 +1,4 @@
+
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { QueryClient, QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +12,7 @@ import { useContractPrint } from "@/components/contract/ContractPrintPreview";
 import { ContractPreviewDialog } from "@/components/contract/ContractPreviewDialog";
 import { useToast } from "@/hooks/use-toast";
 import type { FormData, Asset } from "@/types/contract";
+import { Json } from "@/integrations/supabase/types/json";
 
 const queryClient = new QueryClient();
 
@@ -214,13 +216,13 @@ function ContractDetailsContent() {
   });
 
   const inviteTenantMutation = useMutation({
-    mutationFn: async () => {
-      if (!id || !formData.tenantEmail) throw new Error('Contract ID and tenant email are required');
+    mutationFn: async (email: string) => {
+      if (!id) throw new Error('Contract ID is required');
 
       const { error } = await supabase.functions.invoke('send-contract-invitation', {
         body: {
           contractId: id,
-          email: formData.tenantEmail,
+          email: email,
           name: formData.tenantName,
         }
       });
@@ -261,13 +263,13 @@ function ContractDetailsContent() {
     updateContractMutation.mutate(formData);
   };
 
-  const handleInviteTenant = () => {
+  const handleInviteTenant = (email: string) => {
     console.log("Attempting to invite tenant", { 
-      email: formData.tenantEmail,
+      email: email,
       contractStatus: contract?.status 
     });
     
-    if (!formData.tenantEmail) {
+    if (!email) {
       toast({
         title: "Error",
         description: "Please fill in the tenant's email address",
@@ -275,7 +277,7 @@ function ContractDetailsContent() {
       });
       return;
     }
-    inviteTenantMutation.mutate();
+    inviteTenantMutation.mutate(email);
   };
 
   useEffect(() => {
@@ -313,7 +315,7 @@ function ContractDetailsContent() {
             isEditing={isEditing}
             onEdit={() => setIsEditing(true)}
             onSave={handleSave}
-            onInviteTenant={inviteTenantMutation.mutate}
+            onInviteTenant={handleInviteTenant}
             contractStatus={contract?.status || 'draft'}
             formData={formData}
           />
