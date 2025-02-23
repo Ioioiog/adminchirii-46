@@ -21,7 +21,7 @@ interface ContractHeaderProps {
   onSave: () => void;
   onInviteTenant: (email: string) => void;
   contractStatus: ContractStatus;
-  tenantEmail?: string;
+  formData: { tenantEmail: string };
 }
 
 export function ContractHeader({
@@ -35,16 +35,16 @@ export function ContractHeader({
   onSave,
   onInviteTenant,
   contractStatus,
-  tenantEmail
+  formData
 }: ContractHeaderProps) {
   const { data: tenants = [] } = useTenants();
   const [inviteOption, setInviteOption] = useState<'contract-tenant' | 'tenant-list' | 'custom-email'>(
-    tenantEmail ? 'contract-tenant' : 'tenant-list'
+    formData.tenantEmail ? 'contract-tenant' : 'tenant-list'
   );
   const [selectedTenantEmail, setSelectedTenantEmail] = useState<string>("");
   const [customEmail, setCustomEmail] = useState<string>("");
   const [sendOption, setSendOption] = useState<'contract-tenant' | 'tenant-list' | 'custom-email'>(
-    tenantEmail ? 'contract-tenant' : 'tenant-list'
+    formData.tenantEmail ? 'contract-tenant' : 'tenant-list'
   );
 
   const showInviteButton = (contractStatus === 'draft' || contractStatus === 'pending_signature') && !isEditing;
@@ -54,7 +54,7 @@ export function ContractHeader({
     
     switch (inviteOption) {
       case 'contract-tenant':
-        emailToUse = tenantEmail || '';
+        emailToUse = formData.tenantEmail || '';
         break;
       case 'tenant-list':
         emailToUse = selectedTenantEmail;
@@ -81,12 +81,12 @@ export function ContractHeader({
   const renderExtraFields = () => {
     switch (inviteOption) {
       case 'contract-tenant':
-        return tenantEmail ? (
+        return formData.tenantEmail ? (
           <div className="mt-2 space-y-2">
             <Label className="text-sm text-gray-500">Contract Tenant Email</Label>
             <Input
               type="email"
-              value={tenantEmail}
+              value={formData.tenantEmail}
               readOnly
               className="bg-gray-50"
             />
@@ -113,7 +113,7 @@ export function ContractHeader({
             </SelectTrigger>
             <SelectContent>
               {uniqueTenants.map((tenant, index) => {
-                const uniqueKey = `${tenant.id}-${tenant.email}-${index}`;
+                const uniqueKey = `${tenant.id}-${index}`;
                 return (
                   <SelectItem key={uniqueKey} value={tenant.email || ''}>
                     {tenant.first_name} {tenant.last_name} ({tenant.email})
@@ -199,10 +199,10 @@ export function ContractHeader({
                   }}
                   className="gap-3"
                 >
-                  {tenantEmail && (
+                  {formData.tenantEmail && (
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="contract-tenant" id="contract-tenant" />
-                      <Label htmlFor="contract-tenant">Contract Tenant ({tenantEmail})</Label>
+                      <Label htmlFor="contract-tenant">Contract Tenant ({formData.tenantEmail})</Label>
                     </div>
                   )}
                   <div className="flex items-center space-x-2">
@@ -223,7 +223,7 @@ export function ContractHeader({
                   disabled={
                     (inviteOption === 'tenant-list' && !selectedTenantEmail) ||
                     (inviteOption === 'custom-email' && !customEmail) ||
-                    (inviteOption === 'contract-tenant' && !tenantEmail)
+                    (inviteOption === 'contract-tenant' && !formData.tenantEmail)
                   }
                 >
                   Send Invitation
@@ -270,10 +270,10 @@ export function ContractHeader({
               onValueChange={(value: 'contract-tenant' | 'tenant-list' | 'custom-email') => setSendOption(value)}
               className="gap-3"
             >
-              {tenantEmail && (
+              {formData.tenantEmail && (
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="contract-tenant" id="send-contract-tenant" />
-                  <Label htmlFor="send-contract-tenant">Contract Tenant ({tenantEmail})</Label>
+                  <Label htmlFor="send-contract-tenant">Contract Tenant ({formData.tenantEmail})</Label>
                 </div>
               )}
               <div className="flex items-center space-x-2">
