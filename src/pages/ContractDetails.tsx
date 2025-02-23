@@ -33,6 +33,14 @@ function ContractDetailsContent() {
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [showDashboard, setShowDashboard] = useState(true);
 
+  // Initialize contract print functionality with default values
+  const { handlePrint } = useContractPrint({
+    queryClient,
+    metadata: {},
+    contractId: id || '',
+    contractNumber: ''
+  });
+
   const { data: contract, isLoading, error } = useQuery({
     queryKey: ['contract', id],
     queryFn: async () => {
@@ -76,13 +84,6 @@ function ContractDetailsContent() {
   if (error) return <ContractError showDashboard={showDashboard} error={error} onBack={() => navigate('/documents')} />;
   if (!contract) return <div>Contract not found</div>;
 
-  const { handlePrint } = useContractPrint({
-    queryClient,
-    metadata: contract.metadata,
-    contractId: id!,
-    contractNumber: contract.metadata.contractNumber
-  });
-
   return (
     <div className="flex bg-[#F8F9FC] min-h-screen">
       {showDashboard && (
@@ -95,7 +96,7 @@ function ContractDetailsContent() {
           <ContractHeader
             onBack={() => navigate('/documents')}
             onPreview={() => setIsPreviewModalOpen(true)}
-            onPrint={handlePrint}
+            onPrint={() => contract && handlePrint()}
             onEmail={() => {}} // Implement email functionality later
           />
 
