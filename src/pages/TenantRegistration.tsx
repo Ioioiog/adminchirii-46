@@ -8,12 +8,22 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FormData } from "@/types/contract";
+import { Json } from "@/integrations/supabase/types/json";
 
 interface Contract {
   id: string;
   properties?: { name: string };
   property_id: string;
   metadata: FormData;
+  status: 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled' | 'pending_signature';
+}
+
+// Type for the raw contract data from Supabase
+interface RawContract {
+  id: string;
+  properties?: { name: string };
+  property_id: string;
+  metadata: Json;
   status: 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled' | 'pending_signature';
 }
 
@@ -44,7 +54,7 @@ const TenantRegistration = () => {
         console.log("Verifying contract invitation token");
         
         // Verify the token and get contract details
-        const { data: contract, error: contractError } = await supabase
+        const { data: rawContract, error: contractError } = await supabase
           .from('contracts')
           .select('*, properties(*)')
           .eq('id', contractId)
@@ -52,7 +62,7 @@ const TenantRegistration = () => {
           .eq('status', 'pending_signature')
           .single();
 
-        if (contractError || !contract) {
+        if (contractError || !rawContract) {
           console.log("Invalid or expired contract invitation");
           toast({
             title: "Invalid Contract Invitation",
@@ -63,13 +73,19 @@ const TenantRegistration = () => {
           return;
         }
 
-        setContract(contract);
+        // Cast the raw contract data to our Contract type
+        const typedContract: Contract = {
+          ...rawContract,
+          metadata: rawContract.metadata as FormData
+        };
+
+        setContract(typedContract);
 
         // Check if the user exists using tenantEmail from metadata
         const { data: existingUser } = await supabase
           .from('profiles')
           .select('id')
-          .eq('email', contract.metadata.tenantEmail)
+          .eq('email', (rawContract.metadata as FormData).tenantEmail)
           .single();
 
         setIsExistingUser(!!existingUser);
