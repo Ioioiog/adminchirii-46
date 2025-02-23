@@ -7,6 +7,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FormData } from "@/types/contract";
+
+interface Contract {
+  id: string;
+  properties?: { name: string };
+  property_id: string;
+  metadata: FormData;
+  status: 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled' | 'pending_signature';
+}
 
 const TenantRegistration = () => {
   const navigate = useNavigate();
@@ -16,7 +25,7 @@ const TenantRegistration = () => {
   const contractId = searchParams.get('contractId');
   const [isLoading, setIsLoading] = useState(true);
   const [isExistingUser, setIsExistingUser] = useState<boolean | null>(null);
-  const [contract, setContract] = useState<any>(null);
+  const [contract, setContract] = useState<Contract | null>(null);
 
   useEffect(() => {
     const verifyToken = async () => {
@@ -56,7 +65,7 @@ const TenantRegistration = () => {
 
         setContract(contract);
 
-        // Check if the user exists
+        // Check if the user exists using tenantEmail from metadata
         const { data: existingUser } = await supabase
           .from('profiles')
           .select('id')
