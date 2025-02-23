@@ -1,81 +1,77 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { Resend } from "npm:resend@2.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface EmailRequest {
-  email: string;
-  firstName: string;
-  lastName: string;
-  contractId: string;
-  token: string;
-}
-
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    console.log("Starting contract invitation email process");
+    const { contractId, email, name } = await req.json();
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
-    const { email, firstName, lastName, contractId, token }: EmailRequest = await req.json();
-    console.log("Received request data:", { email, firstName, lastName, contractId, token });
+    // Update contract status
+    const { error: updateError } = await supabaseAdmin
+      .from('contracts')
+      .update({
+        status: 'pending_signature',
+        invitation_token: crypto.randomUUID(),
+        invitation_sent_at: new Date().toISOString(),
+      })
+      .eq('id', contractId);
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    if (!supabaseUrl) {
-      throw new Error("SUPABASE_URL is not set");
-    }
+    if (updateError) throw updateError;
 
-    const contractUrl = `${supabaseUrl.replace('.supabase.co', '')}/documents/contracts/${contractId}?token=${token}`;
-    console.log("Generated contract URL:", contractUrl);
+    // Get contract details
+    const { data: contract, error: contractError } = await supabaseAdmin
+      .from('contracts')
+      .select('*')
+      .eq('id', contractId)
+      .single();
 
-    const { data: emailResult, error: emailError } = await resend.emails.send({
-      from: "AdminChirii <onboarding@resend.dev>",
+    if (contractError) throw contractError;
+
+    // Send email invitation
+    const { error: emailError } = await resend.emails.send({
+      from: 'Contracts <onboarding@resend.dev>',
       to: [email],
-      subject: "Contract Invitation",
+      subject: 'Contract Signature Request',
       html: `
-        <h1>Hello ${firstName} ${lastName},</h1>
+        <h1>Hello ${name},</h1>
         <p>You have been invited to sign a contract.</p>
         <p>Please click the link below to view and sign the contract:</p>
-        <a href="${contractUrl}">View Contract</a>
-        <p>If you don't have an account yet, you'll be able to create one before signing the contract.</p>
-        <p>This invitation link will expire in 7 days.</p>
-        <br>
-        <p>Best regards,</p>
-        <p>AdminChirii Team</p>
-      `
+        <a href="${Deno.env.get('SITE_URL')}/documents/contracts/${contractId}?token=${contract.invitation_token}">
+          View Contract
+        </a>
+      `,
     });
 
-    if (emailError) {
-      console.error("Error sending email:", emailError);
-      throw emailError;
-    }
+    if (emailError) throw emailError;
 
-    console.log("Email sent successfully:", emailResult);
-
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+    return new Response(
+      JSON.stringify({ message: 'Invitation sent successfully' }),
+      { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+    );
 
   } catch (error) {
-    console.error("Error in send-contract-invitation function:", error);
+    console.error('Error:', error);
     return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        details: error.toString()
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      JSON.stringify({ error: error.message }),
+      { 
         status: 500,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
       }
     );
   }

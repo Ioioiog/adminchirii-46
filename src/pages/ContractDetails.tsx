@@ -1,6 +1,6 @@
 
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useEffect, useState } from "react";
@@ -10,6 +10,7 @@ import { ContractHeader } from "@/components/contract/ContractHeader";
 import { ContractError } from "@/components/contract/ContractError";
 import { useContractPrint } from "@/components/contract/ContractPrintPreview";
 import { ContractPreviewDialog } from "@/components/contract/ContractPreviewDialog";
+import { useToast } from "@/hooks/use-toast";
 import type { FormData } from "@/types/contract";
 
 const queryClient = new QueryClient();
@@ -74,7 +75,7 @@ interface Contract {
   status: ContractStatus;
   valid_from: string | null;
   valid_until: string | null;
-  metadata: any;
+  metadata: FormData;
 }
 
 function ContractDetailsContent() {
@@ -84,13 +85,15 @@ function ContractDetailsContent() {
   const token = searchParams.get('token');
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [showDashboard, setShowDashboard] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState<FormData>(defaultFormData);
+  const { toast } = useToast();
 
-  // Initialize contract print functionality with default values
   const { handlePrint } = useContractPrint({
     queryClient,
-    metadata: defaultFormData,
+    metadata: formData,
     contractId: id || '',
-    contractNumber: ''
+    contractNumber: formData.contractNumber
   });
 
   const { data: contract, isLoading, error } = useQuery({
@@ -118,8 +121,93 @@ function ContractDetailsContent() {
 
       return contractData as Contract;
     },
-    retry: false
+    retry: false,
+    onSuccess: (data) => {
+      setFormData(data.metadata);
+    }
   });
+
+  const updateContractMutation = useMutation({
+    mutationFn: async (updatedData: FormData) => {
+      if (!id) throw new Error('Contract ID is required');
+      
+      const { error } = await supabase
+        .from('contracts')
+        .update({ metadata: updatedData })
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Contract updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['contract', id] });
+      setIsEditing(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update contract",
+        variant: "destructive",
+      });
+      console.error('Update error:', error);
+    }
+  });
+
+  const inviteTenantMutation = useMutation({
+    mutationFn: async () => {
+      if (!id || !formData.tenantEmail) throw new Error('Contract ID and tenant email are required');
+
+      const { error } = await supabase.functions.invoke('send-contract-invitation', {
+        body: {
+          contractId: id,
+          email: formData.tenantEmail,
+          name: formData.tenantName,
+        }
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Invitation sent to tenant",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to send invitation",
+        variant: "destructive",
+      });
+      console.error('Invitation error:', error);
+    }
+  });
+
+  const handleFieldChange = (field: keyof FormData, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSave = () => {
+    updateContractMutation.mutate(formData);
+  };
+
+  const handleInviteTenant = () => {
+    if (!formData.tenantEmail) {
+      toast({
+        title: "Error",
+        description: "Please fill in the tenant's email address",
+        variant: "destructive",
+      });
+      return;
+    }
+    inviteTenantMutation.mutate();
+  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -136,6 +224,8 @@ function ContractDetailsContent() {
   if (error) return <ContractError showDashboard={showDashboard} error={error} onBack={() => navigate('/documents')} />;
   if (!contract) return <div>Contract not found</div>;
 
+  const canEdit = contract.status === 'draft';
+
   return (
     <div className="flex bg-[#F8F9FC] min-h-screen">
       {showDashboard && (
@@ -150,15 +240,25 @@ function ContractDetailsContent() {
             onPreview={() => setIsPreviewModalOpen(true)}
             onPrint={() => contract && handlePrint()}
             onEmail={() => {}} // Implement email functionality later
+            canEdit={canEdit}
+            isEditing={isEditing}
+            onEdit={() => setIsEditing(true)}
+            onSave={handleSave}
+            onInviteTenant={handleInviteTenant}
+            contractStatus={contract.status}
           />
 
-          <ContractContent formData={contract.metadata} />
-          <ContractSignatures formData={contract.metadata} contractId={id!} />
+          <ContractContent 
+            formData={formData} 
+            isEditing={isEditing} 
+            onFieldChange={handleFieldChange}
+          />
+          <ContractSignatures formData={formData} contractId={id!} />
 
           <ContractPreviewDialog
             isOpen={isPreviewModalOpen}
             onOpenChange={setIsPreviewModalOpen}
-            metadata={contract.metadata}
+            metadata={formData}
             contractId={id!}
           />
         </div>

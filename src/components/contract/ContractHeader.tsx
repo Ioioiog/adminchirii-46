@@ -1,15 +1,33 @@
 
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Eye, Printer, Mail } from "lucide-react";
+import { ArrowLeft, Eye, Printer, Mail, Edit, Save, Send } from "lucide-react";
+import type { ContractStatus } from "@/types/contract";
 
 interface ContractHeaderProps {
   onBack: () => void;
   onPreview: () => void;
   onPrint: () => void;
   onEmail: () => void;
+  canEdit: boolean;
+  isEditing: boolean;
+  onEdit: () => void;
+  onSave: () => void;
+  onInviteTenant: () => void;
+  contractStatus: ContractStatus;
 }
 
-export function ContractHeader({ onBack, onPreview, onPrint, onEmail }: ContractHeaderProps) {
+export function ContractHeader({
+  onBack,
+  onPreview,
+  onPrint,
+  onEmail,
+  canEdit,
+  isEditing,
+  onEdit,
+  onSave,
+  onInviteTenant,
+  contractStatus
+}: ContractHeaderProps) {
   return (
     <div className="flex items-center justify-between bg-white rounded-lg shadow-soft-md p-4">
       <div className="flex items-center gap-4">
@@ -27,6 +45,39 @@ export function ContractHeader({ onBack, onPreview, onPrint, onEmail }: Contract
       </div>
       
       <div className="flex items-center gap-2">
+        {canEdit && (
+          isEditing ? (
+            <Button
+              variant="default"
+              onClick={onSave}
+              size="sm"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Save
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={onEdit}
+              size="sm"
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          )
+        )}
+
+        {contractStatus === 'draft' && (
+          <Button
+            variant="default"
+            onClick={onInviteTenant}
+            size="sm"
+          >
+            <Send className="h-4 w-4 mr-2" />
+            Invite to Sign
+          </Button>
+        )}
+
         <Button
           variant="ghost"
           onClick={onPreview}
@@ -36,6 +87,7 @@ export function ContractHeader({ onBack, onPreview, onPrint, onEmail }: Contract
           <Eye className="h-4 w-4 mr-2" />
           View
         </Button>
+
         <Button
           variant="ghost"
           onClick={onPrint}
@@ -45,6 +97,7 @@ export function ContractHeader({ onBack, onPreview, onPrint, onEmail }: Contract
           <Printer className="h-4 w-4 mr-2" />
           Print
         </Button>
+
         <Button
           variant="ghost"
           onClick={onEmail}
