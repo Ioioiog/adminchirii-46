@@ -1,3 +1,4 @@
+
 import { FormData } from "@/types/contract";
 import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -7,6 +8,8 @@ import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import SignaturePad from 'react-signature-canvas';
 import { Card } from "@/components/ui/card";
+
+type ContractStatus = 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled' | 'pending_signature';
 
 interface ContractSignaturesProps {
   formData: FormData;
@@ -18,7 +21,7 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
   const { toast } = useToast();
   const [signatureName, setSignatureName] = useState("");
   const signaturePadRef = useRef<SignaturePad>(null);
-  const [contractStatus, setContractStatus] = useState<string>('draft');
+  const [contractStatus, setContractStatus] = useState<ContractStatus>('draft');
 
   useEffect(() => {
     const fetchContractStatus = async () => {
@@ -29,7 +32,7 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
         .single();
       
       if (data) {
-        setContractStatus(data.status);
+        setContractStatus(data.status as ContractStatus);
         console.log('Contract status:', data.status);
       }
     };
@@ -93,7 +96,7 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
           [`${userRole === 'landlord' ? 'owner' : 'tenant'}SignatureImage`]: signatureImage
         };
 
-        let newStatus = contractStatus;
+        let newStatus: ContractStatus = contractStatus;
         if (userRole === 'landlord' && !formData.tenantSignatureName) {
           newStatus = 'pending_signature';
         } else if (userRole === 'tenant' && formData.ownerSignatureName) {
@@ -150,7 +153,7 @@ export function ContractSignatures({ formData, contractId }: ContractSignaturesP
     contractStatus === 'pending_signature' && 
     !formData.tenantSignatureName;
   
-  console.log('Render conditions:', { // Debug logs
+  console.log('Render conditions:', {
     userRole,
     contractStatus,
     canSignAsLandlord,
