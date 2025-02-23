@@ -10,7 +10,8 @@ import { ContractError } from "@/components/contract/ContractError";
 import { useContractPrint } from "@/components/contract/ContractPrintPreview";
 import { ContractPreviewDialog } from "@/components/contract/ContractPreviewDialog";
 import { useToast } from "@/hooks/use-toast";
-import type { FormData } from "@/types/contract";
+import type { FormData, ContractStatus } from "@/types/contract";
+import { Json } from "@/integrations/supabase/types/json";
 
 const queryClient = new QueryClient();
 
@@ -118,17 +119,13 @@ function ContractDetailsContent() {
         throw new Error('This contract invitation has expired or been used');
       }
 
-      const metadata = contractData.metadata as unknown as FormData;
+      const metadata = contractData.metadata as FormData;
       setFormData(metadata);
 
       return {
         ...contractData,
         metadata,
       } as Contract;
-    },
-    retry: false,
-    onSuccess: (data) => {
-      setFormData(data.metadata);
     }
   });
 
@@ -136,9 +133,14 @@ function ContractDetailsContent() {
     mutationFn: async (updatedData: FormData) => {
       if (!id) throw new Error('Contract ID is required');
       
+      const jsonMetadata: Json = {};
+      Object.entries(updatedData).forEach(([key, value]) => {
+        jsonMetadata[key] = value;
+      });
+      
       const { error } = await supabase
         .from('contracts')
-        .update({ metadata: updatedData })
+        .update({ metadata: jsonMetadata })
         .eq('id', id);
 
       if (error) throw error;

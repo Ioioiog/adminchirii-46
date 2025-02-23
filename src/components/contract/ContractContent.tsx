@@ -1,5 +1,5 @@
 
-import { FormData } from "@/types/contract";
+import { FormData, Asset } from "@/types/contract";
 import { Input } from "@/components/ui/input";
 
 interface ContractContentProps {
@@ -10,17 +10,34 @@ interface ContractContentProps {
 
 export function ContractContent({ formData, isEditing = false, onFieldChange }: ContractContentProps) {
   const renderField = (label: string, field: keyof FormData) => {
+    const value = formData[field];
+    
+    // Special handling for assets array
+    if (field === 'assets' && Array.isArray(value)) {
+      return (
+        <div className="space-y-2">
+          {(value as Asset[]).map((asset, index) => (
+            <div key={index} className="border p-2 rounded bg-gray-50">
+              {`${asset.name}: ${asset.value} (${asset.condition})`}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // Regular field handling
     if (isEditing && onFieldChange) {
       return (
         <Input
           type="text"
-          value={formData[field] as string}
+          value={value as string}
           onChange={(e) => onFieldChange(field, e.target.value)}
           className="w-full"
         />
       );
     }
-    return <div className="border p-2 rounded bg-gray-50">{formData[field]}</div>;
+    
+    return <div className="border p-2 rounded bg-gray-50">{value as string}</div>;
   };
 
   return (
