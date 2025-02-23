@@ -10,8 +10,60 @@ import { ContractHeader } from "@/components/contract/ContractHeader";
 import { ContractError } from "@/components/contract/ContractError";
 import { useContractPrint } from "@/components/contract/ContractPrintPreview";
 import { ContractPreviewDialog } from "@/components/contract/ContractPreviewDialog";
+import type { FormData } from "@/types/contract";
 
 const queryClient = new QueryClient();
+
+const defaultFormData: FormData = {
+  contractNumber: '',
+  contractDate: '',
+  ownerName: '',
+  ownerReg: '',
+  ownerFiscal: '',
+  ownerAddress: '',
+  ownerBank: '',
+  ownerBankName: '',
+  ownerEmail: '',
+  ownerPhone: '',
+  ownerCounty: '',
+  ownerCity: '',
+  ownerRepresentative: '',
+  tenantName: '',
+  tenantReg: '',
+  tenantFiscal: '',
+  tenantAddress: '',
+  tenantBank: '',
+  tenantBankName: '',
+  tenantEmail: '',
+  tenantPhone: '',
+  tenantCounty: '',
+  tenantCity: '',
+  tenantRepresentative: '',
+  propertyAddress: '',
+  rentAmount: '',
+  vatIncluded: '',
+  contractDuration: '',
+  paymentDay: '',
+  roomCount: '',
+  startDate: '',
+  lateFee: '',
+  renewalPeriod: '',
+  unilateralNotice: '',
+  terminationNotice: '',
+  earlyTerminationFee: '',
+  latePaymentTermination: '',
+  securityDeposit: '',
+  depositReturnPeriod: '',
+  waterColdMeter: '',
+  waterHotMeter: '',
+  electricityMeter: '',
+  gasMeter: '',
+  ownerSignatureDate: '',
+  ownerSignatureName: '',
+  tenantSignatureDate: '',
+  tenantSignatureName: '',
+  assets: []
+};
 
 type ContractStatus = 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled' | 'pending_signature';
 
@@ -36,7 +88,7 @@ function ContractDetailsContent() {
   // Initialize contract print functionality with default values
   const { handlePrint } = useContractPrint({
     queryClient,
-    metadata: {},
+    metadata: defaultFormData,
     contractId: id || '',
     contractNumber: ''
   });
