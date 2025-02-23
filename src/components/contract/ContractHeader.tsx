@@ -35,10 +35,10 @@ export function ContractHeader({
   tenantEmail
 }: ContractHeaderProps) {
   const [inviteOption, setInviteOption] = useState<'contract-tenant' | 'tenant-list' | 'custom-email'>(
-    'tenant-list'
+    'contract-tenant'
   );
   const [sendOption, setSendOption] = useState<'contract-tenant' | 'tenant-list' | 'custom-email'>(
-    'tenant-list'
+    'contract-tenant'
   );
 
   const showInviteButton = (contractStatus === 'draft' || contractStatus === 'pending_signature') && !isEditing;
@@ -103,25 +103,41 @@ export function ContractHeader({
                 Invite to Sign
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-[300px]">
-              <div className="space-y-4 py-2">
+            <PopoverContent align="end" className="w-[300px] p-4">
+              <div className="space-y-4">
                 <RadioGroup 
                   value={inviteOption} 
                   onValueChange={(value: 'contract-tenant' | 'tenant-list' | 'custom-email') => setInviteOption(value)}
+                  className="space-y-3"
                 >
                   {tenantEmail && (
-                    <div className="flex items-center space-x-3 py-1.5">
+                    <div className="flex items-center space-x-3">
                       <RadioGroupItem value="contract-tenant" id="contract-tenant" />
-                      <Label htmlFor="contract-tenant">Contract Tenant ({tenantEmail})</Label>
+                      <Label 
+                        htmlFor="contract-tenant" 
+                        className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Contract Tenant ({tenantEmail})
+                      </Label>
                     </div>
                   )}
-                  <div className="flex items-center space-x-3 py-1.5">
+                  <div className="flex items-center space-x-3">
                     <RadioGroupItem value="tenant-list" id="tenant-list" />
-                    <Label htmlFor="tenant-list">Select from Tenant List</Label>
+                    <Label 
+                      htmlFor="tenant-list"
+                      className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Select from Tenant List
+                    </Label>
                   </div>
-                  <div className="flex items-center space-x-3 py-1.5">
+                  <div className="flex items-center space-x-3">
                     <RadioGroupItem value="custom-email" id="custom-email" />
-                    <Label htmlFor="custom-email">Custom Email</Label>
+                    <Label 
+                      htmlFor="custom-email"
+                      className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Custom Email
+                    </Label>
                   </div>
                 </RadioGroup>
                 <Button onClick={handleInvite} className="w-full">
@@ -163,25 +179,41 @@ export function ContractHeader({
               Send
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-[300px]">
-            <div className="space-y-4 py-2">
+          <PopoverContent align="end" className="w-[300px] p-4">
+            <div className="space-y-4">
               <RadioGroup 
                 value={sendOption} 
                 onValueChange={(value: 'contract-tenant' | 'tenant-list' | 'custom-email') => setSendOption(value)}
+                className="space-y-3"
               >
                 {tenantEmail && (
-                  <div className="flex items-center space-x-3 py-1.5">
+                  <div className="flex items-center space-x-3">
                     <RadioGroupItem value="contract-tenant" id="send-contract-tenant" />
-                    <Label htmlFor="send-contract-tenant">Contract Tenant ({tenantEmail})</Label>
+                    <Label 
+                      htmlFor="send-contract-tenant"
+                      className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Contract Tenant ({tenantEmail})
+                    </Label>
                   </div>
                 )}
-                <div className="flex items-center space-x-3 py-1.5">
+                <div className="flex items-center space-x-3">
                   <RadioGroupItem value="tenant-list" id="send-tenant-list" />
-                  <Label htmlFor="send-tenant-list">Select from Tenant List</Label>
+                  <Label 
+                    htmlFor="send-tenant-list"
+                    className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Select from Tenant List
+                  </Label>
                 </div>
-                <div className="flex items-center space-x-3 py-1.5">
+                <div className="flex items-center space-x-3">
                   <RadioGroupItem value="custom-email" id="send-custom-email" />
-                  <Label htmlFor="send-custom-email">Custom Email</Label>
+                  <Label 
+                    htmlFor="send-custom-email"
+                    className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Custom Email
+                  </Label>
                 </div>
               </RadioGroup>
               <Button onClick={handleSend} className="w-full">
