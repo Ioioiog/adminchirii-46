@@ -1,4 +1,3 @@
-
 import { FormData } from "@/types/contract";
 import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -29,8 +28,13 @@ export function ContractSignatures({
   const { userRole, userId } = useUserRole();
   const { toast } = useToast();
   const [signatureName, setSignatureName] = useState("");
+  const [localFormData, setLocalFormData] = useState(formData);
   const signaturePadRef = useRef<SignaturePad>(null);
   const [contractStatus, setContractStatus] = useState<ContractStatus>('draft');
+
+  useEffect(() => {
+    setLocalFormData(formData);
+  }, [formData]);
 
   useEffect(() => {
     const fetchContractStatus = async () => {
@@ -103,7 +107,7 @@ export function ContractSignatures({
 
         // Update contract metadata
         let updatedMetadata = {
-          ...formData
+          ...localFormData
         };
 
         if (isLandlord) {
@@ -117,11 +121,11 @@ export function ContractSignatures({
         }
 
         let newStatus: ContractStatus = contractStatus;
-        if (isLandlord && !formData.tenantSignatureName) {
+        if (isLandlord && !localFormData.tenantSignatureName) {
           newStatus = 'pending_signature';
-        } else if (!isLandlord && formData.ownerSignatureName) {
+        } else if (!isLandlord && localFormData.ownerSignatureName) {
           newStatus = 'signed';
-        } else if (isLandlord && formData.tenantSignatureName) {
+        } else if (isLandlord && localFormData.tenantSignatureName) {
           newStatus = 'signed';
         }
 
@@ -135,7 +139,8 @@ export function ContractSignatures({
 
         if (contractError) throw contractError;
 
-        // Update local form data through the callback
+        // Update both local state and parent component
+        setLocalFormData(updatedMetadata);
         if (onFieldChange) {
           if (isLandlord) {
             onFieldChange('ownerSignatureDate', signatureDate);
@@ -155,8 +160,7 @@ export function ContractSignatures({
 
         setSignatureName("");
         signaturePadRef.current?.clear();
-
-        window.location.reload();
+        setContractStatus(newStatus);
       } catch (error: any) {
         console.error('Error signing contract:', error);
         toast({
@@ -180,33 +184,33 @@ export function ContractSignatures({
 
   const canSignAsLandlord = userRole === 'landlord' && 
     (contractStatus === 'draft' || 
-    (contractStatus === 'pending_signature' && formData.tenantSignatureName && !formData.ownerSignatureName));
+    (contractStatus === 'pending_signature' && localFormData.tenantSignatureName && !localFormData.ownerSignatureName));
     
   const canSignAsTenant = userRole === 'tenant' && 
     contractStatus === 'pending_signature' && 
-    !formData.tenantSignatureName;
+    !localFormData.tenantSignatureName;
   
   console.log('Render conditions:', {
     userRole,
     contractStatus,
     canSignAsLandlord,
     canSignAsTenant,
-    ownerSignature: formData.ownerSignatureName,
-    tenantSignature: formData.tenantSignatureName
+    ownerSignature: localFormData.ownerSignatureName,
+    tenantSignature: localFormData.tenantSignatureName
   });
 
   return (
     <div className="grid grid-cols-2 gap-8 mt-16">
       <div>
         <p className="font-bold mb-2">PROPRIETAR,</p>
-        <p className="mb-2">Data: {formData.ownerSignatureDate || '_____'}</p>
+        <p className="mb-2">Data: {localFormData.ownerSignatureDate || '_____'}</p>
         <p className="mb-2">Nume în clar și semnătură:</p>
-        {formData.ownerSignatureName ? (
+        {localFormData.ownerSignatureName ? (
           <>
-            <p>{formData.ownerSignatureName}</p>
-            {formData.ownerSignatureImage && (
+            <p>{localFormData.ownerSignatureName}</p>
+            {localFormData.ownerSignatureImage && (
               <img 
-                src={formData.ownerSignatureImage} 
+                src={localFormData.ownerSignatureImage} 
                 alt="Owner Signature" 
                 className="mt-2 max-w-[200px]"
               />
@@ -251,14 +255,14 @@ export function ContractSignatures({
       </div>
       <div>
         <p className="font-bold mb-2">CHIRIAȘ,</p>
-        <p className="mb-2">Data: {formData.tenantSignatureDate || '_____'}</p>
+        <p className="mb-2">Data: {localFormData.tenantSignatureDate || '_____'}</p>
         <p className="mb-2">Nume în clar și semnătură:</p>
-        {formData.tenantSignatureName ? (
+        {localFormData.tenantSignatureName ? (
           <>
-            <p>{formData.tenantSignatureName}</p>
-            {formData.tenantSignatureImage && (
+            <p>{localFormData.tenantSignatureName}</p>
+            {localFormData.tenantSignatureImage && (
               <img 
-                src={formData.tenantSignatureImage} 
+                src={localFormData.tenantSignatureImage} 
                 alt="Tenant Signature" 
                 className="mt-2 max-w-[200px]"
               />
