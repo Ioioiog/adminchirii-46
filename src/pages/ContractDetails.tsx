@@ -118,13 +118,10 @@ function ContractDetailsContent() {
       
       console.log('User profile:', userProfile);
       
-      const [contractResponse, { data: signatures, error: signaturesError }] = await Promise.all([
+      const [contractResponse, signaturesResponse] = await Promise.all([
         supabase
           .from('contracts')
-          .select(`
-            *,
-            properties(name)
-          `)
+          .select('*, properties(name)')
           .eq('id', id)
           .maybeSingle(),
         supabase
@@ -132,12 +129,6 @@ function ContractDetailsContent() {
           .select('*')
           .eq('contract_id', id)
       ]);
-
-      if (signaturesError) {
-        console.error('Error fetching signatures:', signaturesError);
-      }
-
-      console.log('Raw signatures response:', { signatures, error: signaturesError });
 
       if (contractResponse.error) {
         console.error('Contract fetch error:', contractResponse.error);
@@ -170,26 +161,27 @@ function ContractDetailsContent() {
       }
 
       const metadata = contractResponse.data.metadata as unknown as { [key: string]: string | Asset[] };
+      const signatures = signaturesResponse.data || [];
       
-      console.log('Raw signatures from database:', signatures);
-      
-      const tenantSignature = signatures?.find(s => s.signer_role === 'tenant');
-      const ownerSignature = signatures?.find(s => s.signer_role === 'landlord');
-
-      console.log('Found signatures:', { tenantSignature, ownerSignature });
+      const tenantSignature = signatures.find(s => s.signer_role === 'tenant');
+      const ownerSignature = signatures.find(s => s.signer_role === 'landlord');
 
       const typedMetadata: FormData = {
         ...defaultFormData,
         ...(metadata as any),
-        tenantSignatureName: tenantSignature?.signature_data || '',
-        tenantSignatureImage: tenantSignature?.signature_image || '',
-        tenantSignatureDate: tenantSignature?.signed_at?.split('T')[0] || '',
-        ownerSignatureName: ownerSignature?.signature_data || '',
-        ownerSignatureImage: ownerSignature?.signature_image || '',
-        ownerSignatureDate: ownerSignature?.signed_at?.split('T')[0] || ''
+        tenantSignatureName: tenantSignature?.signature_data || metadata.tenantSignatureName || '',
+        tenantSignatureImage: tenantSignature?.signature_image || metadata.tenantSignatureImage || '',
+        tenantSignatureDate: tenantSignature?.signed_at?.split('T')[0] || metadata.tenantSignatureDate || '',
+        ownerSignatureName: ownerSignature?.signature_data || metadata.ownerSignatureName || '',
+        ownerSignatureImage: ownerSignature?.signature_image || metadata.ownerSignatureImage || '',
+        ownerSignatureDate: ownerSignature?.signed_at?.split('T')[0] || metadata.ownerSignatureDate || ''
       };
       
-      console.log('Final mapped metadata:', typedMetadata);
+      console.log('Mapped signatures:', { 
+        tenantSignature, 
+        ownerSignature,
+        typedMetadata
+      });
       
       setFormData(typedMetadata);
 
