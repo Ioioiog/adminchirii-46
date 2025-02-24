@@ -1,3 +1,4 @@
+
 import { FormData } from "@/types/contract";
 import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -34,11 +35,9 @@ export function ContractSignatures({
   const [contractStatus, setContractStatus] = useState<ContractStatus>('draft');
 
   const { data: signatures, refetch: refetchSignatures, error: signatureError } = useQuery({
-    queryKey: ['contract-signatures', contractId],
+    queryKey: ['contract-signatures', contractId, userId, userRole],
     queryFn: async () => {
       console.log('Fetching signatures for contract:', contractId);
-      
-      const { userRole, userId } = useUserRole();
       console.log('Current user:', { userRole, userId });
 
       const { data: contract, error: contractError } = await supabase
@@ -91,7 +90,8 @@ export function ContractSignatures({
 
       return data || [];
     },
-    retry: 1
+    retry: 1,
+    enabled: !!userId && !!contractId // Only run query when we have both userId and contractId
   });
 
   useEffect(() => {
