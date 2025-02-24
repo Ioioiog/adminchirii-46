@@ -59,19 +59,9 @@ function Documents() {
     queryFn: async () => {
       console.log("Fetching contracts for:", { userId, userRole });
       
-      let query = supabase
-        .from("contracts")
-        .select(`
-          id,
-          contract_type,
-          status,
-          valid_from,
-          valid_until,
-          tenant_id,
-          landlord_id,
-          properties(name),
-          metadata
-        `);
+      if (!userId) {
+        throw new Error("No user ID available");
+      }
 
       if (userRole === "tenant") {
         const { data: { session } } = await supabase.auth.getSession();
@@ -81,27 +71,84 @@ function Documents() {
           .eq('id', session?.user?.id)
           .single();
 
-        if (userProfile?.email) {
-          query = query.or(
-            `tenant_id.eq.${session?.user?.id},` +
-            `and(status.eq.pending_signature,metadata->>tenantEmail.eq."${userProfile.email}")`
-          );
-        } else {
-          query = query.eq("tenant_id", session?.user?.id);
+        console.log("Tenant profile:", userProfile);
+
+        // First try to get contracts by tenant_id
+        const { data: assignedContracts, error: assignedError } = await supabase
+          .from('contracts')
+          .select(`
+            id,
+            contract_type,
+            status,
+            valid_from,
+            valid_until,
+            tenant_id,
+            landlord_id,
+            properties(name),
+            metadata
+          `)
+          .eq('tenant_id', userId);
+
+        if (assignedError) {
+          console.error("Error fetching assigned contracts:", assignedError);
+          throw assignedError;
         }
+
+        // Then get pending contracts by email
+        const { data: pendingContracts, error: pendingError } = await supabase
+          .from('contracts')
+          .select(`
+            id,
+            contract_type,
+            status,
+            valid_from,
+            valid_until,
+            tenant_id,
+            landlord_id,
+            properties(name),
+            metadata
+          `)
+          .eq('status', 'pending_signature')
+          .filter('metadata->tenantEmail', 'eq', userProfile?.email);
+
+        if (pendingError) {
+          console.error("Error fetching pending contracts:", pendingError);
+          throw pendingError;
+        }
+
+        console.log("Found contracts:", {
+          assigned: assignedContracts,
+          pending: pendingContracts
+        });
+
+        // Combine both results
+        return [...(assignedContracts || []), ...(pendingContracts || [])];
+
       } else if (userRole === "landlord") {
-        query = query.eq("landlord_id", userId);
+        const { data, error } = await supabase
+          .from("contracts")
+          .select(`
+            id,
+            contract_type,
+            status,
+            valid_from,
+            valid_until,
+            tenant_id,
+            landlord_id,
+            properties(name),
+            metadata
+          `)
+          .eq("landlord_id", userId);
+
+        if (error) {
+          console.error("Error fetching landlord contracts:", error);
+          throw error;
+        }
+
+        return data;
       }
 
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error("Error fetching contracts:", error);
-        throw error;
-      }
-
-      console.log("Contracts fetched:", data);
-      return data;
+      return [];
     },
     enabled: !!userId && !!userRole
   });
