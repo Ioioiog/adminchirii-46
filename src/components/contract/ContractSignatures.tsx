@@ -34,20 +34,59 @@ export function ContractSignatures({
   const signaturePadRef = useRef<SignaturePad>(null);
   const [contractStatus, setContractStatus] = useState<ContractStatus>('draft');
 
-  // Query to fetch signatures
-  const { data: signatures, refetch: refetchSignatures } = useQuery({
+  // Query to fetch signatures with better error handling and logging
+  const { data: signatures, refetch: refetchSignatures, error: signatureError } = useQuery({
     queryKey: ['contract-signatures', contractId],
     queryFn: async () => {
+      console.log('Fetching signatures for contract:', contractId);
+      
+      // First verify the contract exists and user has access
+      const { data: contract, error: contractError } = await supabase
+        .from('contracts')
+        .select('id, tenant_id, landlord_id, status')
+        .eq('id', contractId)
+        .maybeSingle();
+
+      if (contractError) {
+        console.error('Error fetching contract:', contractError);
+        throw contractError;
+      }
+
+      if (!contract) {
+        console.error('Contract not found:', contractId);
+        throw new Error('Contract not found');
+      }
+
+      console.log('Found contract:', contract);
+
+      // Then fetch signatures
       const { data, error } = await supabase
         .from('contract_signatures')
         .select('*')
         .eq('contract_id', contractId);
 
+      if (error) {
+        console.error('Error fetching signatures:', error);
+        throw error;
+      }
+
       console.log('Fetched signatures:', data);
-      if (error) throw error;
       return data || [];
-    }
+    },
+    retry: 1
   });
+
+  // Log any query errors
+  useEffect(() => {
+    if (signatureError) {
+      console.error('Signature query error:', signatureError);
+      toast({
+        title: "Error",
+        description: "Failed to load signatures. Please try refreshing the page.",
+        variant: "destructive"
+      });
+    }
+  }, [signatureError, toast]);
 
   // Update local form data when signatures change
   useEffect(() => {
@@ -82,21 +121,38 @@ export function ContractSignatures({
     }
   }, [signatures, formData]);
 
+  // Fetch initial contract status
   useEffect(() => {
     const fetchContractStatus = async () => {
-      const { data, error } = await supabase
-        .from('contracts')
-        .select('status')
-        .eq('id', contractId)
-        .single();
-      
-      if (data) {
-        setContractStatus(data.status as ContractStatus);
+      try {
+        console.log('Fetching contract status for:', contractId);
+        const { data, error } = await supabase
+          .from('contracts')
+          .select('status')
+          .eq('id', contractId)
+          .maybeSingle();
+        
+        if (error) {
+          console.error('Error fetching contract status:', error);
+          throw error;
+        }
+
+        console.log('Contract status:', data?.status);
+        if (data) {
+          setContractStatus(data.status as ContractStatus);
+        }
+      } catch (error) {
+        console.error('Failed to fetch contract status:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load contract status",
+          variant: "destructive"
+        });
       }
     };
 
     fetchContractStatus();
-  }, [contractId]);
+  }, [contractId, toast]);
 
   const handleSign = async () => {
     console.log('Starting signing process:', {
@@ -123,9 +179,11 @@ export function ContractSignatures({
         const signerRole = isLandlord ? 'landlord' : 'tenant';
 
         console.log('Saving signature:', {
+          contractId,
           signerRole,
           signatureName,
-          signatureDate
+          signatureDate,
+          userId
         });
 
         // Save signature to contract_signatures table
@@ -141,7 +199,10 @@ export function ContractSignatures({
             ip_address: await fetch('https://api.ipify.org?format=json').then(res => res.json()).then(data => data.ip)
           });
 
-        if (signatureError) throw signatureError;
+        if (signatureError) {
+          console.error('Error saving signature:', signatureError);
+          throw signatureError;
+        }
 
         console.log('Signature saved successfully');
 
@@ -165,7 +226,10 @@ export function ContractSignatures({
           .update({ status: newStatus })
           .eq('id', contractId);
 
-        if (contractError) throw contractError;
+        if (contractError) {
+          console.error('Error updating contract status:', contractError);
+          throw contractError;
+        }
 
         toast({
           title: "Success",
