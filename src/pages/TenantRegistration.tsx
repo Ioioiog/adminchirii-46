@@ -30,23 +30,40 @@ const TenantRegistration = () => {
 
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      // If user is already authenticated and has no token, redirect to contract page
-      if (session && !token && contractId) {
-        navigate(`/documents/contracts/${contractId}`);
-        return;
-      }
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log("Current session:", session?.user?.id);
+        
+        if (session) {
+          // If user is authenticated and trying to access directly
+          if (!token && id) {
+            // Check if user has access to this contract
+            const { data: contractData, error: contractError } = await supabase
+              .from('contracts')
+              .select('tenant_id, status')
+              .eq('id', id)
+              .maybeSingle();
 
-      // If user is not authenticated and there's no token, redirect to auth
-      if (!session && !token) {
-        navigate('/auth');
-        return;
+            if (!contractError && contractData && contractData.tenant_id === session.user.id) {
+              // User has access, redirect to contract page
+              navigate(`/documents/contracts/${id}`);
+              return;
+            }
+          }
+        }
+
+        // If not authenticated with valid session, require registration/login
+        if (!session && !token) {
+          navigate('/auth');
+          return;
+        }
+      } catch (error) {
+        console.error("Session check error:", error);
       }
     };
 
     checkSession();
-  }, [navigate, token, contractId]);
+  }, [navigate, token, id]);
 
   useEffect(() => {
     const verifyToken = async () => {
@@ -192,6 +209,8 @@ const TenantRegistration = () => {
 
     if (token) {
       verifyToken();
+    } else {
+      setIsLoading(false);
     }
   }, [token, contractId, navigate, toast]);
 
@@ -223,7 +242,7 @@ const TenantRegistration = () => {
               .insert({
                 property_id: contract.property_id,
                 tenant_id: session.user.id,
-                start_date: (contract.metadata as any).startDate || new Date().toISOString(),
+                start_date: contract.metadata.startDate || new Date().toISOString(),
                 status: 'pending'
               });
 
