@@ -1,4 +1,3 @@
-
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { QueryClient, QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,7 +80,7 @@ function ContractDetailsContent() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  const token = searchParams.get('invitation_token');
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [showDashboard, setShowDashboard] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -96,7 +95,7 @@ function ContractDetailsContent() {
   });
 
   const { data: contract, isLoading, error } = useQuery({
-    queryKey: ['contract', id],
+    queryKey: ['contract', id, token],
     queryFn: async () => {
       if (!id) throw new Error('Contract ID is required');
       
@@ -110,13 +109,20 @@ function ContractDetailsContent() {
         setShowDashboard(false);
       }
 
-      const { data: contractData, error: contractError } = await query.single();
+      const { data: contractData, error: contractError } = await query.maybeSingle();
 
-      if (contractError) throw contractError;
-      if (!contractData) throw new Error('Contract not found');
+      if (contractError) {
+        console.error('Contract fetch error:', contractError);
+        throw contractError;
+      }
+      
+      if (!contractData) {
+        console.error('Contract not found with ID:', id, 'and token:', token);
+        throw new Error('Contract not found');
+      }
 
-      // For token access, verify it's in a signable state
       if (token && !['pending', 'pending_signature'].includes(contractData.status)) {
+        console.error('Invalid contract status for signing:', contractData.status);
         throw new Error('This contract is no longer available for signing');
       }
 
@@ -210,14 +216,12 @@ function ContractDetailsContent() {
       queryClient.invalidateQueries({ queryKey: ['contract', id] });
       setIsEditing(false);
       
-      // If signed via token, show completion message and redirect
       if (token) {
         toast({
           title: "Thank you!",
           description: "The contract has been signed successfully. You can now close this window.",
         });
-        // Optionally redirect to a completion page
-        // navigate('/contract-signed');
+        navigate('/contract-signed');
       }
     },
     onError: (error) => {
@@ -299,7 +303,7 @@ function ContractDetailsContent() {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session && token) {
-        navigate(`/tenant-registration?token=${token}&contractId=${id}`);
+        navigate(`/tenant-registration/${id}?invitation_token=${token}`);
       }
     };
 

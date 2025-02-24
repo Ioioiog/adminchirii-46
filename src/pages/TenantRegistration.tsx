@@ -77,7 +77,7 @@ const TenantRegistration = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   
-  const token = searchParams.get('token');
+  const token = searchParams.get('invitation_token');
   const contractId = id || '';
   
   const [isLoading, setIsLoading] = useState(true);
