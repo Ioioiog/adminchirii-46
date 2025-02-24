@@ -1,7 +1,6 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, ChevronDown, Building2, MapPin, User, Calendar, DollarSign, Home, LayoutGrid, Table as TableIcon } from "lucide-react";
+import { Plus, ChevronDown, Building2, MapPin, User, Calendar, DollarSign, Home, LayoutGrid, Table as TableIcon, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PropertyDialog } from "@/components/properties/PropertyDialog";
 import { PropertyFilters } from "@/components/properties/PropertyFilters";
@@ -18,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const Properties = () => {
   const navigate = useNavigate();
@@ -61,6 +61,35 @@ const Properties = () => {
       return false;
     }
   };
+
+  const deletePropertyMutation = useMutation({
+    mutationFn: async (propertyId: string) => {
+      const { error } = await supabase
+        .from('properties')
+        .delete()
+        .eq('id', propertyId);
+      
+      if (error) {
+        console.error("Error deleting property:", error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Property deleted successfully"
+      });
+      window.location.reload();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete property. It may have active tenants or related records.",
+        variant: "destructive"
+      });
+      console.error("Delete error:", error);
+    },
+  });
 
   const filteredProperties = properties?.filter(property => {
     const matchesSearch = property.name.toLowerCase().includes(searchTerm.toLowerCase()) || property.address.toLowerCase().includes(searchTerm.toLowerCase());
@@ -199,6 +228,35 @@ const Properties = () => {
                         </div>
                         <Separator className="my-4" />
                         <div className="flex items-center justify-end gap-2 pt-2">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                className="border-red-200 text-red-600 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete the property
+                                  and all associated data.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <Button 
+                                  variant="destructive"
+                                  onClick={() => deletePropertyMutation.mutate(property.id)}
+                                >
+                                  Delete
+                                </Button>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                           <Button 
                             variant="outline" 
                             onClick={() => handlePropertyDetails(property.id)}
