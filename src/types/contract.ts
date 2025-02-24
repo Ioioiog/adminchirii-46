@@ -1,3 +1,4 @@
+
 import { Json } from "@/integrations/supabase/types/json";
 
 export interface Asset {
