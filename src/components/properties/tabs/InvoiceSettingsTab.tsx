@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { FormData } from "@/types/contract";
+import { Json } from "@/integrations/supabase/types/json";
 
 interface InvoiceSettings {
   apply_vat: boolean;
@@ -23,6 +24,7 @@ interface InvoiceSettings {
   tenant_company_address: string;
   tenant_registration_number: string;
   tenant_vat_number: string;
+  [key: string]: string | number | boolean; // Add index signature for Json compatibility
 }
 
 interface InvoiceSettingsTabProps {
@@ -60,7 +62,17 @@ export function InvoiceSettingsTab({ propertyId, userId }: InvoiceSettingsTabPro
         .maybeSingle();
       
       if (error) throw error;
-      return data?.metadata as FormData | null;
+      
+      // Safe type casting
+      const metadata = data?.metadata as { [key: string]: any } | null;
+      if (!metadata) return null;
+      
+      return {
+        tenantName: metadata.tenantName as string,
+        tenantAddress: metadata.tenantAddress as string,
+        tenantReg: metadata.tenantReg as string,
+        tenantFiscal: metadata.tenantFiscal as string,
+      };
     }
   });
 
@@ -74,10 +86,22 @@ export function InvoiceSettingsTab({ propertyId, userId }: InvoiceSettingsTabPro
         .single();
 
       if (profile?.invoice_info) {
-        const invoiceInfo = profile.invoice_info as InvoiceSettings;
+        // Safe type casting of invoice_info
+        const invoiceInfo = profile.invoice_info as { [key: string]: any };
         setSettings(prevSettings => ({
           ...prevSettings,
-          ...invoiceInfo
+          apply_vat: Boolean(invoiceInfo.apply_vat),
+          auto_generate: Boolean(invoiceInfo.auto_generate),
+          generate_day: Number(invoiceInfo.generate_day) || 1,
+          company_name: String(invoiceInfo.company_name || ''),
+          company_address: String(invoiceInfo.company_address || ''),
+          bank_name: String(invoiceInfo.bank_name || ''),
+          bank_account_number: String(invoiceInfo.bank_account_number || ''),
+          additional_notes: String(invoiceInfo.additional_notes || ''),
+          tenant_company_name: String(invoiceInfo.tenant_company_name || ''),
+          tenant_company_address: String(invoiceInfo.tenant_company_address || ''),
+          tenant_registration_number: String(invoiceInfo.tenant_registration_number || ''),
+          tenant_vat_number: String(invoiceInfo.tenant_vat_number || ''),
         }));
       }
     };
@@ -100,10 +124,26 @@ export function InvoiceSettingsTab({ propertyId, userId }: InvoiceSettingsTabPro
 
   const handleSave = async () => {
     try {
+      // Convert settings to a JSON-compatible object
+      const jsonSettings: { [key: string]: Json } = {
+        apply_vat: settings.apply_vat,
+        auto_generate: settings.auto_generate,
+        generate_day: settings.generate_day,
+        company_name: settings.company_name,
+        company_address: settings.company_address,
+        bank_name: settings.bank_name,
+        bank_account_number: settings.bank_account_number,
+        additional_notes: settings.additional_notes,
+        tenant_company_name: settings.tenant_company_name,
+        tenant_company_address: settings.tenant_company_address,
+        tenant_registration_number: settings.tenant_registration_number,
+        tenant_vat_number: settings.tenant_vat_number,
+      };
+
       const { error } = await supabase
         .from('profiles')
         .update({
-          invoice_info: settings
+          invoice_info: jsonSettings
         })
         .eq('id', userId);
 
