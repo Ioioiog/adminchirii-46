@@ -8,6 +8,7 @@ import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import SignaturePad from 'react-signature-canvas';
 import { Card } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
 
 type ContractStatus = 'draft' | 'pending_signature' | 'signed' | 'expired' | 'cancelled';
 
@@ -33,47 +34,44 @@ export function ContractSignatures({
   const signaturePadRef = useRef<SignaturePad>(null);
   const [contractStatus, setContractStatus] = useState<ContractStatus>('draft');
 
-  useEffect(() => {
-    setLocalFormData(formData);
-  }, [formData]);
-
-  useEffect(() => {
-    const checkSignaturesAndUpdateStatus = async () => {
-      // First get all signatures for this contract
-      const { data: signatures, error: signaturesError } = await supabase
+  // Query to fetch signatures
+  const { data: signatures, refetch: refetchSignatures } = useQuery({
+    queryKey: ['contract-signatures', contractId],
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from('contract_signatures')
         .select('*')
         .eq('contract_id', contractId);
 
-      if (signaturesError) {
-        console.error('Error checking signatures:', signaturesError);
-        return;
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // Update local form data when signatures change
+  useEffect(() => {
+    if (signatures) {
+      const tenantSignature = signatures.find(s => s.signer_role === 'tenant');
+      const ownerSignature = signatures.find(s => s.signer_role === 'landlord');
+
+      const updatedFormData = {
+        ...formData,
+        tenantSignatureName: tenantSignature?.signature_data || '',
+        tenantSignatureImage: tenantSignature?.signature_image || '',
+        tenantSignatureDate: tenantSignature?.signed_at?.split('T')[0] || '',
+        ownerSignatureName: ownerSignature?.signature_data || '',
+        ownerSignatureImage: ownerSignature?.signature_image || '',
+        ownerSignatureDate: ownerSignature?.signed_at?.split('T')[0] || ''
+      };
+
+      setLocalFormData(updatedFormData);
+
+      // Update contract status if both signatures exist
+      if (tenantSignature && ownerSignature) {
+        setContractStatus('signed');
       }
-
-      console.log('Checking signatures:', signatures);
-
-      const hasLandlordSignature = signatures?.some(s => s.signer_role === 'landlord');
-      const hasTenantSignature = signatures?.some(s => s.signer_role === 'tenant');
-
-      // If both signatures exist, update contract status to signed
-      if (hasLandlordSignature && hasTenantSignature) {
-        const { error: updateError } = await supabase
-          .from('contracts')
-          .update({ status: 'signed' })
-          .eq('id', contractId);
-
-        if (updateError) {
-          console.error('Error updating contract status:', updateError);
-        } else {
-          console.log('Contract status updated to signed');
-          setContractStatus('signed');
-        }
-      }
-    };
-
-    // Check signatures when component mounts and after new signatures are added
-    checkSignaturesAndUpdateStatus();
-  }, [contractId]);
+    }
+  }, [signatures, formData]);
 
   useEffect(() => {
     const fetchContractStatus = async () => {
@@ -85,7 +83,6 @@ export function ContractSignatures({
       
       if (data) {
         setContractStatus(data.status as ContractStatus);
-        console.log('Contract status:', data.status);
       }
     };
 
@@ -93,8 +90,6 @@ export function ContractSignatures({
   }, [contractId]);
 
   const handleSign = async () => {
-    console.log('Signing attempt - Role:', userRole);
-
     if (!userId || !userRole) {
       toast({
         title: "Error",
@@ -112,93 +107,39 @@ export function ContractSignatures({
         const signerRole = isLandlord ? 'landlord' : 'tenant';
 
         // Save signature to contract_signatures table
-        const { data: existingSignatures } = await supabase
+        const { error: signatureError } = await supabase
           .from('contract_signatures')
-          .select('*')
-          .eq('contract_id', contractId)
-          .eq('signer_role', signerRole);
+          .insert({
+            contract_id: contractId,
+            signer_id: userId,
+            signer_role: signerRole,
+            signature_data: signatureName,
+            signature_image: signatureImage,
+            signed_at: new Date().toISOString(),
+            ip_address: await fetch('https://api.ipify.org?format=json').then(res => res.json()).then(data => data.ip)
+          });
 
-        if (existingSignatures && existingSignatures.length > 0) {
-          const { error: updateError } = await supabase
-            .from('contract_signatures')
-            .update({
-              signature_data: signatureName,
-              signature_image: signatureImage,
-              signed_at: new Date().toISOString()
-            })
-            .eq('id', existingSignatures[0].id);
+        if (signatureError) throw signatureError;
 
-          if (updateError) throw updateError;
-        } else {
-          const { error } = await supabase
-            .from('contract_signatures')
-            .insert({
-              contract_id: contractId,
-              signer_id: userId,
-              signer_role: signerRole,
-              signature_data: signatureName,
-              signature_image: signatureImage,
-              signed_at: new Date().toISOString(),
-              ip_address: await fetch('https://api.ipify.org?format=json').then(res => res.json()).then(data => data.ip)
-            });
+        // Refetch signatures to update the display
+        await refetchSignatures();
 
-          if (error) throw error;
-        }
+        // Update contract status based on signatures
+        const newStatus = 
+          (signatures?.some(s => s.signer_role === 'landlord') && signerRole === 'tenant') ||
+          (signatures?.some(s => s.signer_role === 'tenant') && signerRole === 'landlord')
+            ? 'signed'
+            : isLandlord
+              ? 'pending_signature'
+              : contractStatus;
 
-        // Update form data with signature
-        let updatedMetadata = {
-          ...localFormData
-        };
-
-        if (isLandlord) {
-          updatedMetadata.ownerSignatureDate = signatureDate;
-          updatedMetadata.ownerSignatureName = signatureName;
-          updatedMetadata.ownerSignatureImage = signatureImage;
-        } else {
-          updatedMetadata.tenantSignatureDate = signatureDate;
-          updatedMetadata.tenantSignatureName = signatureName;
-          updatedMetadata.tenantSignatureImage = signatureImage;
-        }
-
-        // Check if both signatures now exist
-        const { data: signatures } = await supabase
-          .from('contract_signatures')
-          .select('*')
-          .eq('contract_id', contractId);
-
-        const hasLandlordSignature = signatures?.some(s => s.signer_role === 'landlord');
-        const hasTenantSignature = signatures?.some(s => s.signer_role === 'tenant');
-
-        let newStatus: ContractStatus = contractStatus;
-        if (hasLandlordSignature && hasTenantSignature) {
-          newStatus = 'signed';
-        } else if (isLandlord && !hasTenantSignature) {
-          newStatus = 'pending_signature';
-        }
-
-        // Update contract status and metadata
+        // Update contract status
         const { error: contractError } = await supabase
           .from('contracts')
-          .update({
-            metadata: updatedMetadata,
-            status: newStatus
-          })
+          .update({ status: newStatus })
           .eq('id', contractId);
 
         if (contractError) throw contractError;
-
-        setLocalFormData(updatedMetadata);
-        if (onFieldChange) {
-          if (isLandlord) {
-            onFieldChange('ownerSignatureDate', signatureDate);
-            onFieldChange('ownerSignatureName', signatureName);
-            onFieldChange('ownerSignatureImage', signatureImage);
-          } else {
-            onFieldChange('tenantSignatureDate', signatureDate);
-            onFieldChange('tenantSignatureName', signatureName);
-            onFieldChange('tenantSignatureImage', signatureImage);
-          }
-        }
 
         toast({
           title: "Success",
@@ -232,15 +173,6 @@ export function ContractSignatures({
   const canSignAsTenant = userRole === 'tenant' && 
     contractStatus === 'pending_signature' && 
     !localFormData.tenantSignatureName;
-  
-  console.log('Render conditions:', {
-    userRole,
-    contractStatus,
-    canSignAsLandlord,
-    canSignAsTenant,
-    ownerSignature: localFormData.ownerSignatureName,
-    tenantSignature: localFormData.tenantSignatureName
-  });
 
   return (
     <div className="grid grid-cols-2 gap-8 mt-16">
