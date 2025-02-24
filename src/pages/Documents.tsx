@@ -109,7 +109,7 @@ function Documents() {
             metadata
           `)
           .eq('status', 'pending_signature')
-          .containsObject('metadata', { tenantEmail: userProfile?.email });
+          .eq('metadata->tenantEmail', userProfile?.email);
 
         if (pendingError) {
           console.error("Error fetching pending contracts:", pendingError);
