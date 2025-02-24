@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Grid, List, Plus, FileText, CreditCard, Trash2 } from "lucide-react";
@@ -27,6 +28,18 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+interface Contract {
+  id: string;
+  contract_type: string;
+  status: string;
+  valid_from: string | null;
+  valid_until: string | null;
+  tenant_id: string | null;
+  landlord_id: string;
+  properties: { name: string } | null;
+  metadata: Record<string, any>;
+}
+
 function Documents() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -54,7 +67,7 @@ function Documents() {
     enabled: userRole === "landlord"
   });
 
-  const { data: contracts, isLoading: isLoadingContracts } = useQuery({
+  const { data: contracts, isLoading: isLoadingContracts } = useQuery<Contract[]>({
     queryKey: ["contracts", userId, userRole],
     queryFn: async () => {
       console.log("Fetching contracts for:", { userId, userRole });
@@ -122,7 +135,6 @@ function Documents() {
           tenantEmail: userProfile?.email
         });
 
-        // Combine both results
         return [...(assignedContracts || []), ...(pendingContracts || [])];
 
       } else if (userRole === "landlord") {
