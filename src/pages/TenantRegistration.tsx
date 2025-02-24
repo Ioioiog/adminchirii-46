@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { Auth } from "@supabase/auth-ui-react";
@@ -15,6 +16,61 @@ interface Contract {
   metadata: FormData;
   status: 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled' | 'pending_signature';
 }
+
+const transformMetadataToFormData = (metadata: any): FormData => {
+  return {
+    contractNumber: metadata?.contractNumber || '',
+    contractDate: metadata?.contractDate || '',
+    ownerName: metadata?.ownerName || '',
+    ownerReg: metadata?.ownerReg || '',
+    ownerFiscal: metadata?.ownerFiscal || '',
+    ownerAddress: metadata?.ownerAddress || '',
+    ownerBank: metadata?.ownerBank || '',
+    ownerBankName: metadata?.ownerBankName || '',
+    ownerEmail: metadata?.ownerEmail || '',
+    ownerPhone: metadata?.ownerPhone || '',
+    ownerCounty: metadata?.ownerCounty || '',
+    ownerCity: metadata?.ownerCity || '',
+    ownerRepresentative: metadata?.ownerRepresentative || '',
+    tenantName: metadata?.tenantName || '',
+    tenantReg: metadata?.tenantReg || '',
+    tenantFiscal: metadata?.tenantFiscal || '',
+    tenantAddress: metadata?.tenantAddress || '',
+    tenantBank: metadata?.tenantBank || '',
+    tenantBankName: metadata?.tenantBankName || '',
+    tenantEmail: metadata?.tenantEmail || '',
+    tenantPhone: metadata?.tenantPhone || '',
+    tenantCounty: metadata?.tenantCounty || '',
+    tenantCity: metadata?.tenantCity || '',
+    tenantRepresentative: metadata?.tenantRepresentative || '',
+    propertyAddress: metadata?.propertyAddress || '',
+    rentAmount: metadata?.rentAmount || '',
+    vatIncluded: metadata?.vatIncluded || '',
+    contractDuration: metadata?.contractDuration || '',
+    paymentDay: metadata?.paymentDay || '',
+    roomCount: metadata?.roomCount || '',
+    startDate: metadata?.startDate || '',
+    lateFee: metadata?.lateFee || '',
+    renewalPeriod: metadata?.renewalPeriod || '',
+    unilateralNotice: metadata?.unilateralNotice || '',
+    terminationNotice: metadata?.terminationNotice || '',
+    earlyTerminationFee: metadata?.earlyTerminationFee || '',
+    latePaymentTermination: metadata?.latePaymentTermination || '',
+    securityDeposit: metadata?.securityDeposit || '',
+    depositReturnPeriod: metadata?.depositReturnPeriod || '',
+    waterColdMeter: metadata?.waterColdMeter || '',
+    waterHotMeter: metadata?.waterHotMeter || '',
+    electricityMeter: metadata?.electricityMeter || '',
+    gasMeter: metadata?.gasMeter || '',
+    ownerSignatureDate: metadata?.ownerSignatureDate || '',
+    ownerSignatureName: metadata?.ownerSignatureName || '',
+    ownerSignatureImage: metadata?.ownerSignatureImage,
+    tenantSignatureDate: metadata?.tenantSignatureDate || '',
+    tenantSignatureName: metadata?.tenantSignatureName || '',
+    tenantSignatureImage: metadata?.tenantSignatureImage,
+    assets: Array.isArray(metadata?.assets) ? metadata.assets : []
+  };
+};
 
 const TenantRegistration = () => {
   const navigate = useNavigate();
@@ -89,10 +145,9 @@ const TenantRegistration = () => {
           return;
         }
 
-        const metadata = data.metadata as Record<string, any>;
-        const tenantEmail = metadata.tenantEmail;
-
-        if (!tenantEmail) {
+        const formData = transformMetadataToFormData(data.metadata);
+        
+        if (!formData.tenantEmail) {
           showError("Invalid Contract", "Contract is missing tenant information.");
           return;
         }
@@ -100,11 +155,19 @@ const TenantRegistration = () => {
         const { data: existingUser } = await supabase
           .from('profiles')
           .select('id')
-          .eq('email', tenantEmail)
+          .eq('email', formData.tenantEmail)
           .maybeSingle();
 
+        const transformedContract: Contract = {
+          id: data.id,
+          properties: data.properties,
+          property_id: data.property_id,
+          metadata: formData,
+          status: data.status
+        };
+
         setIsExistingUser(!!existingUser);
-        setContract(data as Contract);
+        setContract(transformedContract);
         
       } catch (error) {
         console.error("Contract verification error:", error);
