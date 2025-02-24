@@ -71,6 +71,7 @@ interface Contract {
   properties?: { name: string };
   contract_type: string;
   tenant_id?: string | null;
+  landlord_id?: string | null;
   status: 'draft' | 'pending_signature' | 'signed' | 'expired' | 'cancelled';
   valid_from: string | null;
   valid_until: string | null;
@@ -105,6 +106,7 @@ function ContractDetailsContent() {
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        console.error('No active session');
         throw new Error('Authentication required');
       }
 
@@ -126,10 +128,16 @@ function ContractDetailsContent() {
         throw new Error('Contract not found');
       }
 
-      if (contractData.tenant_id && contractData.tenant_id !== session.user.id) {
-        console.error('Unauthorized access attempt');
+      if (contractData.tenant_id !== session.user.id && contractData.landlord_id !== session.user.id) {
+        console.error('Unauthorized access attempt:', {
+          userId: session.user.id,
+          tenantId: contractData.tenant_id,
+          landlordId: contractData.landlord_id
+        });
         throw new Error('You do not have permission to view this contract');
       }
+
+      console.log('Contract data loaded:', contractData);
 
       const metadata = contractData.metadata as unknown as { [key: string]: string | Asset[] };
       const typedMetadata: FormData = {
@@ -199,6 +207,11 @@ function ContractDetailsContent() {
     const checkAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        console.log('Auth check result:', { 
+          hasSession: !!session, 
+          hasToken: !!token,
+          contractId: id
+        });
         
         if (!session) {
           if (token) {
@@ -314,9 +327,31 @@ function ContractDetailsContent() {
     inviteTenantMutation.mutate(email);
   };
 
-  if (isLoading) return <div>Loading...</div>;
-  if (error) return <ContractError showDashboard={showDashboard} error={error} onBack={() => navigate('/documents')} />;
-  if (!contract) return <div>Contract not found</div>;
+  if (isLoading) {
+    return (
+      <div className="flex bg-[#F8F9FC] min-h-screen">
+        <DashboardSidebar />
+        <main className="flex-1 p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="animate-pulse space-y-4">
+              <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+              <div className="h-32 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (error) {
+    console.error('Rendering error state:', error);
+    return <ContractError showDashboard={showDashboard} error={error} onBack={() => navigate('/documents')} />;
+  }
+
+  if (!contract) {
+    console.error('No contract data available');
+    return <ContractError showDashboard={showDashboard} error={new Error('Contract not found')} onBack={() => navigate('/documents')} />;
+  }
 
   const canSign = contract.tenant_id === contract.tenant_id && contract.status === 'pending_signature';
   const canEdit = contract.status === 'draft';
