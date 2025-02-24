@@ -71,7 +71,7 @@ interface Contract {
   properties?: { name: string };
   contract_type: string;
   tenant_id?: string | null;
-  status: 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled' | 'pending_signature';
+  status: 'draft' | 'pending_signature' | 'signed' | 'expired' | 'cancelled';
   valid_from: string | null;
   valid_until: string | null;
   metadata: FormData;
@@ -229,7 +229,7 @@ function ContractDetailsContent() {
         .from('contracts')
         .update({ 
           metadata: jsonMetadata,
-          status: 'signed'
+          status: 'signed' as const 
         })
         .eq('id', id);
 
@@ -275,7 +275,7 @@ function ContractDetailsContent() {
       });
       supabase
         .from('contracts')
-        .update({ status: 'pending_signature' })
+        .update({ status: 'pending_signature' as const })
         .eq('id', id)
         .then(() => {
           queryClient.invalidateQueries({ queryKey: ['contract', id] });
