@@ -81,19 +81,30 @@ const TenantRegistration = () => {
       try {
         console.log("Verifying contract invitation token");
         
-        // First, verify if the contract exists and is in the correct status
+        // First, check if the contract exists
         const { data: contractData, error: contractError } = await supabase
           .from('contracts')
           .select('*, properties(*)')
           .eq('id', contractId)
-          .eq('invitation_token', token)
-          .maybeSingle();
+          .single();
 
         if (contractError || !contractData) {
           console.error("Contract verification error:", contractError);
           toast({
-            title: "Invalid Contract Invitation",
-            description: "This contract invitation link is invalid or has expired.",
+            title: "Invalid Contract",
+            description: "This contract does not exist or has been deleted.",
+            variant: "destructive",
+          });
+          navigate("/auth");
+          return;
+        }
+
+        // Then verify the invitation token
+        if (contractData.invitation_token !== token) {
+          console.error("Invalid invitation token");
+          toast({
+            title: "Invalid Invitation",
+            description: "This invitation link is invalid or has expired.",
             variant: "destructive",
           });
           navigate("/auth");
