@@ -74,16 +74,19 @@ const transformMetadataToFormData = (metadata: any): FormData => {
 
 const TenantRegistration = () => {
   const navigate = useNavigate();
+  const { id } = useParams(); // Get ID from URL params
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   
-  // Extract params from the URL
+  // Extract params from either the URL params or search params
   const token = searchParams.get('token') || '';
-  const contractId = searchParams.get('contractId') || '';
+  const contractId = id || searchParams.get('contractId') || '';
   
   const [isLoading, setIsLoading] = useState(true);
   const [isExistingUser, setIsExistingUser] = useState<boolean | null>(null);
   const [contract, setContract] = useState<Contract | null>(null);
+
+  console.log("Contract verification params:", { contractId, token });
 
   const showError = (title: string, description: string) => {
     toast({ title, description, variant: "destructive" });
@@ -122,12 +125,13 @@ const TenantRegistration = () => {
 
   useEffect(() => {
     const verifyContract = async () => {
-      if (!token || !contractId) {
-        showError("Invalid Invitation", "This invitation link is invalid or has expired.");
+      if (!contractId) {
+        showError("Invalid Contract", "No contract ID provided.");
         return;
       }
 
       try {
+        console.log("Verifying contract:", contractId);
         const { data, error } = await supabase
           .from('contracts')
           .select(`
@@ -138,16 +142,20 @@ const TenantRegistration = () => {
           .maybeSingle();
 
         if (error || !data) {
+          console.error("Contract fetch error:", error);
           showError("Invalid Contract", "This contract does not exist or has been deleted.");
           return;
         }
         
-        if (data.invitation_token !== token) {
+        // If token is provided, verify it
+        if (token && data.invitation_token !== token) {
+          console.error("Token mismatch:", { provided: token, expected: data.invitation_token });
           showError("Invalid Invitation", "This invitation link is invalid or has expired.");
           return;
         }
         
         if (!['pending', 'pending_signature'].includes(data.status)) {
+          console.error("Invalid contract status:", data.status);
           showError("Invalid Contract Status", "This contract is no longer available for signing.");
           return;
         }
@@ -159,6 +167,7 @@ const TenantRegistration = () => {
           return;
         }
 
+        console.log("Checking for existing user with email:", formData.tenantEmail);
         const { data: existingUser } = await supabase
           .from('profiles')
           .select('id')
@@ -175,6 +184,7 @@ const TenantRegistration = () => {
 
         setIsExistingUser(!!existingUser);
         setContract(transformedContract);
+        console.log("Contract verification complete:", { isExisting: !!existingUser });
         
       } catch (error) {
         console.error("Contract verification error:", error);
@@ -184,7 +194,7 @@ const TenantRegistration = () => {
       }
     };
 
-    if (token && contractId) {
+    if (contractId) {
       verifyContract();
     } else {
       setIsLoading(false);
@@ -267,7 +277,7 @@ const TenantRegistration = () => {
     );
   }
 
-  if (!contract && !token) {
+  if (!contract) {
     return null;
   }
 
