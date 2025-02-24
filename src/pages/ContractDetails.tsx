@@ -118,35 +118,41 @@ function ContractDetailsContent() {
       
       console.log('User profile:', userProfile);
       
-      const { data: contractData, error: contractError } = await supabase
-        .from('contracts')
-        .select('*, properties(name)')
-        .eq('id', id)
-        .maybeSingle();
+      const [contractResponse, signaturesResponse] = await Promise.all([
+        supabase
+          .from('contracts')
+          .select('*, properties(name)')
+          .eq('id', id)
+          .maybeSingle(),
+        supabase
+          .from('contract_signatures')
+          .select('*')
+          .eq('contract_id', id)
+      ]);
 
-      if (contractError) {
-        console.error('Contract fetch error:', contractError);
-        throw contractError;
+      if (contractResponse.error) {
+        console.error('Contract fetch error:', contractResponse.error);
+        throw contractResponse.error;
       }
       
-      if (!contractData) {
+      if (!contractResponse.data) {
         console.error('Contract not found:', { id });
         throw new Error('Contract not found');
       }
 
       const hasPermission = 
-        contractData.tenant_id === session.user.id || 
-        contractData.landlord_id === session.user.id ||
-        (contractData.status === 'pending_signature' && 
-         contractData.invitation_email === userProfile?.email);
+        contractResponse.data.tenant_id === session.user.id || 
+        contractResponse.data.landlord_id === session.user.id ||
+        (contractResponse.data.status === 'pending_signature' && 
+         contractResponse.data.invitation_email === userProfile?.email);
 
       console.log('Permission check:', {
         userId: session.user.id,
-        tenantId: contractData.tenant_id,
-        landlordId: contractData.landlord_id,
+        tenantId: contractResponse.data.tenant_id,
+        landlordId: contractResponse.data.landlord_id,
         hasPermission,
-        status: contractData.status,
-        invitationEmail: contractData.invitation_email,
+        status: contractResponse.data.status,
+        invitationEmail: contractResponse.data.invitation_email,
         userEmail: userProfile?.email
       });
 
@@ -154,64 +160,33 @@ function ContractDetailsContent() {
         throw new Error('You do not have permission to view this contract');
       }
 
-      const metadata = contractData.metadata as unknown as { [key: string]: string | Asset[] };
+      const metadata = contractResponse.data.metadata as unknown as { [key: string]: string | Asset[] };
+      const signatures = signaturesResponse.data || [];
+      
+      const tenantSignature = signatures.find(s => s.signer_role === 'tenant');
+      const ownerSignature = signatures.find(s => s.signer_role === 'landlord');
+
       const typedMetadata: FormData = {
-        contractNumber: metadata.contractNumber as string || '',
-        contractDate: metadata.contractDate as string || '',
-        ownerName: metadata.ownerName as string || '',
-        ownerReg: metadata.ownerReg as string || '',
-        ownerFiscal: metadata.ownerFiscal as string || '',
-        ownerAddress: metadata.ownerAddress as string || '',
-        ownerBank: metadata.ownerBank as string || '',
-        ownerBankName: metadata.ownerBankName as string || '',
-        ownerEmail: metadata.ownerEmail as string || '',
-        ownerPhone: metadata.ownerPhone as string || '',
-        ownerCounty: metadata.ownerCounty as string || '',
-        ownerCity: metadata.ownerCity as string || '',
-        ownerRepresentative: metadata.ownerRepresentative as string || '',
-        tenantName: metadata.tenantName as string || '',
-        tenantReg: metadata.tenantReg as string || '',
-        tenantFiscal: metadata.tenantFiscal as string || '',
-        tenantAddress: metadata.tenantAddress as string || '',
-        tenantBank: metadata.tenantBank as string || '',
-        tenantBankName: metadata.tenantBankName as string || '',
-        tenantEmail: metadata.tenantEmail as string || '',
-        tenantPhone: metadata.tenantPhone as string || '',
-        tenantCounty: metadata.tenantCounty as string || '',
-        tenantCity: metadata.tenantCity as string || '',
-        tenantRepresentative: metadata.tenantRepresentative as string || '',
-        propertyAddress: metadata.propertyAddress as string || '',
-        rentAmount: metadata.rentAmount as string || '',
-        vatIncluded: metadata.vatIncluded as string || '',
-        contractDuration: metadata.contractDuration as string || '',
-        paymentDay: metadata.paymentDay as string || '',
-        roomCount: metadata.roomCount as string || '',
-        startDate: metadata.startDate as string || '',
-        lateFee: metadata.lateFee as string || '',
-        renewalPeriod: metadata.renewalPeriod as string || '',
-        unilateralNotice: metadata.unilateralNotice as string || '',
-        terminationNotice: metadata.terminationNotice as string || '',
-        earlyTerminationFee: metadata.earlyTerminationFee as string || '',
-        latePaymentTermination: metadata.latePaymentTermination as string || '',
-        securityDeposit: metadata.securityDeposit as string || '',
-        depositReturnPeriod: metadata.depositReturnPeriod as string || '',
-        waterColdMeter: metadata.waterColdMeter as string || '',
-        waterHotMeter: metadata.waterHotMeter as string || '',
-        electricityMeter: metadata.electricityMeter as string || '',
-        gasMeter: metadata.gasMeter as string || '',
-        ownerSignatureDate: metadata.ownerSignatureDate as string || '',
-        ownerSignatureName: metadata.ownerSignatureName as string || '',
-        ownerSignatureImage: metadata.ownerSignatureImage as string || undefined,
-        tenantSignatureDate: metadata.tenantSignatureDate as string || '',
-        tenantSignatureName: metadata.tenantSignatureName as string || '',
-        tenantSignatureImage: metadata.tenantSignatureImage as string || undefined,
-        assets: (metadata.assets || []) as Asset[],
+        ...defaultFormData,
+        ...(metadata as any),
+        tenantSignatureName: tenantSignature?.signature_data || metadata.tenantSignatureName || '',
+        tenantSignatureImage: tenantSignature?.signature_image || metadata.tenantSignatureImage || '',
+        tenantSignatureDate: tenantSignature?.signed_at?.split('T')[0] || metadata.tenantSignatureDate || '',
+        ownerSignatureName: ownerSignature?.signature_data || metadata.ownerSignatureName || '',
+        ownerSignatureImage: ownerSignature?.signature_image || metadata.ownerSignatureImage || '',
+        ownerSignatureDate: ownerSignature?.signed_at?.split('T')[0] || metadata.ownerSignatureDate || ''
       };
+      
+      console.log('Mapped signatures:', { 
+        tenantSignature, 
+        ownerSignature,
+        typedMetadata
+      });
       
       setFormData(typedMetadata);
 
       return {
-        ...contractData,
+        ...contractResponse.data,
         metadata: typedMetadata,
       } as Contract;
     },
