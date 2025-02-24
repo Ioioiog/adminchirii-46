@@ -93,21 +93,43 @@ const Documents = () => {
 
   const deleteContractMutation = useMutation({
     mutationFn: async (contractId: string) => {
-      // First delete all signatures for this contract
-      const { error: signaturesError } = await supabase
-        .from("contract_signatures")
-        .delete()
-        .eq("contract_id", contractId);
-      
-      if (signaturesError) throw signaturesError;
+      try {
+        // First, verify if there are any signatures
+        const { data: signatures } = await supabase
+          .from("contract_signatures")
+          .select('id')
+          .eq("contract_id", contractId);
 
-      // Then delete the contract itself
-      const { error: contractError } = await supabase
-        .from("contracts")
-        .delete()
-        .eq("id", contractId);
-      
-      if (contractError) throw contractError;
+        if (signatures && signatures.length > 0) {
+          // Delete all signatures for this contract
+          const { error: signaturesError } = await supabase
+            .from("contract_signatures")
+            .delete()
+            .eq("contract_id", contractId);
+          
+          if (signaturesError) {
+            console.error("Error deleting signatures:", signaturesError);
+            throw signaturesError;
+          }
+
+          // Add a small delay to ensure deletion is complete
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        // Then delete the contract itself
+        const { error: contractError } = await supabase
+          .from("contracts")
+          .delete()
+          .eq("id", contractId);
+        
+        if (contractError) {
+          console.error("Error deleting contract:", contractError);
+          throw contractError;
+        }
+      } catch (error) {
+        console.error("Deletion error:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
@@ -119,7 +141,7 @@ const Documents = () => {
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to delete contract",
+        description: "Failed to delete contract. Please try again.",
         variant: "destructive",
       });
       console.error("Delete error:", error);
