@@ -1,3 +1,4 @@
+
 import { FormData } from "@/types/contract";
 import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -8,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import SignaturePad from 'react-signature-canvas';
 import { Card } from "@/components/ui/card";
 
-type ContractStatus = 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled' | 'pending_signature';
+type ContractStatus = 'draft' | 'pending_signature' | 'signed' | 'expired' | 'cancelled';
 
 interface ContractSignaturesProps {
   formData: FormData;
