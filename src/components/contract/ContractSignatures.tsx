@@ -1,4 +1,3 @@
-
 import { FormData } from "@/types/contract";
 import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -34,17 +33,14 @@ export function ContractSignatures({
   const signaturePadRef = useRef<SignaturePad>(null);
   const [contractStatus, setContractStatus] = useState<ContractStatus>('draft');
 
-  // Query to fetch signatures with better error handling and logging
   const { data: signatures, refetch: refetchSignatures, error: signatureError } = useQuery({
     queryKey: ['contract-signatures', contractId],
     queryFn: async () => {
       console.log('Fetching signatures for contract:', contractId);
       
-      // First verify we have the user's role
       const { userRole, userId } = useUserRole();
       console.log('Current user:', { userRole, userId });
 
-      // First verify the contract exists and user has access
       const { data: contract, error: contractError } = await supabase
         .from('contracts')
         .select('id, tenant_id, landlord_id, status')
@@ -63,29 +59,24 @@ export function ContractSignatures({
 
       console.log('Found contract:', contract);
 
-      // Debug query before executing
-      const signaturesQuery = supabase
+      console.log('Executing signatures query for:', {
+        contractId,
+        userRole,
+        userId
+      });
+
+      const { data, error } = await supabase
         .from('contract_signatures')
         .select('*')
         .eq('contract_id', contractId);
-
-      console.log('Executing signatures query:', {
-        contractId,
-        query: signaturesQuery.toSQL?.() // Log the SQL if available
-      });
-
-      // Then fetch signatures
-      const { data, error } = await signaturesQuery;
 
       if (error) {
         console.error('Error fetching signatures:', error);
         throw error;
       }
 
-      // Log the raw response
       console.log('Raw signatures response:', data);
 
-      // Log each signature found
       if (data && data.length > 0) {
         data.forEach((sig, index) => {
           console.log(`Signature ${index + 1}:`, {
@@ -103,7 +94,6 @@ export function ContractSignatures({
     retry: 1
   });
 
-  // Log any query errors
   useEffect(() => {
     if (signatureError) {
       console.error('Signature query error:', signatureError);
@@ -115,7 +105,6 @@ export function ContractSignatures({
     }
   }, [signatureError, toast]);
 
-  // Update local form data when signatures change
   useEffect(() => {
     if (signatures) {
       const tenantSignature = signatures.find(s => s.signer_role === 'tenant');
@@ -140,7 +129,6 @@ export function ContractSignatures({
       console.log('Updated form data:', updatedFormData);
       setLocalFormData(updatedFormData);
 
-      // Update contract status if both signatures exist
       if (tenantSignature && ownerSignature) {
         console.log('Both signatures present, setting status to signed');
         setContractStatus('signed');
@@ -148,7 +136,6 @@ export function ContractSignatures({
     }
   }, [signatures, formData]);
 
-  // Fetch initial contract status
   useEffect(() => {
     const fetchContractStatus = async () => {
       try {
@@ -213,7 +200,6 @@ export function ContractSignatures({
           userId
         });
 
-        // Save signature to contract_signatures table
         const { error: signatureError } = await supabase
           .from('contract_signatures')
           .insert({
@@ -233,10 +219,8 @@ export function ContractSignatures({
 
         console.log('Signature saved successfully');
 
-        // Refetch signatures to update the display
         await refetchSignatures();
 
-        // Update contract status based on signatures
         const newStatus = 
           (signatures?.some(s => s.signer_role === 'landlord') && signerRole === 'tenant') ||
           (signatures?.some(s => s.signer_role === 'tenant') && signerRole === 'landlord')
@@ -247,7 +231,6 @@ export function ContractSignatures({
 
         console.log('Updating contract status to:', newStatus);
 
-        // Update contract status
         const { error: contractError } = await supabase
           .from('contracts')
           .update({ status: newStatus })
