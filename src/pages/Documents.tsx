@@ -84,6 +84,8 @@ function Documents() {
         .eq('id', session?.user?.id)
         .single();
 
+      console.log("Tenant profile:", userProfile);
+
       const { data: assignedContracts, error: assignedError } = await supabase
         .from('contracts')
         .select(`
@@ -99,7 +101,10 @@ function Documents() {
         `)
         .eq('tenant_id', userId);
 
-      if (assignedError) throw assignedError;
+      if (assignedError) {
+        console.error("Error fetching assigned contracts:", assignedError);
+        throw assignedError;
+      }
 
       const { data: pendingContracts, error: pendingError } = await supabase
         .from('contracts')
@@ -115,9 +120,18 @@ function Documents() {
           metadata
         `)
         .eq('status', 'pending_signature')
-        .eq('metadata->tenantEmail', userProfile?.email);
+        .contains('metadata', { tenantEmail: userProfile?.email });
 
-      if (pendingError) throw pendingError;
+      if (pendingError) {
+        console.error("Error fetching pending contracts:", pendingError);
+        throw pendingError;
+      }
+
+      console.log("Found contracts:", {
+        assigned: assignedContracts,
+        pending: pendingContracts,
+        tenantEmail: userProfile?.email
+      });
 
       return [...(assignedContracts || []), ...(pendingContracts || [])] as Contract[];
     }
@@ -138,7 +152,11 @@ function Documents() {
         `)
         .eq("landlord_id", userId);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching landlord contracts:", error);
+        throw error;
+      }
+
       return (data || []) as Contract[];
     }
 
