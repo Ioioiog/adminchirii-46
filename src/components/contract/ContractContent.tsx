@@ -50,15 +50,21 @@ export function ContractContent({
       <h1 className="text-2xl text-center font-bold mb-8">Contract de Închiriere</h1>
       
       <div className="mb-8">
-        <p className="mb-2">Contract nr. {renderField("Contract Number", "contractNumber")}</p>
-        <p>Data: {renderField("Contract Date", "contractDate")}</p>
+        <div className="flex gap-2">
+          <span>Contract nr.</span>
+          {renderField("Contract Number", "contractNumber")}
+        </div>
+        <div className="flex gap-2">
+          <span>Data:</span>
+          {renderField("Contract Date", "contractDate")}
+        </div>
       </div>
 
       <div className="mb-8">
         <h2 className="text-lg font-semibold mb-4">I. Părțile contractante</h2>
         
         <div className="mb-4 space-y-4">
-          <p className="mb-2 font-medium">1.1. Owner Details:</p>
+          <div className="font-medium">1.1. Owner Details:</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Name:</label>
@@ -107,12 +113,10 @@ export function ContractContent({
           </div>
         </div>
 
-        <div>
-          <p>și</p>
-        </div>
+        <div className="my-4">și</div>
 
         <div className="mb-4 space-y-4">
-          <p className="mb-2 font-medium">1.2. Tenant Details:</p>
+          <div className="font-medium">1.2. Tenant Details:</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Name:</label>
