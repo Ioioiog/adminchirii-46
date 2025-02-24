@@ -82,7 +82,10 @@ function Documents() {
           .single();
 
         if (userProfile?.email) {
-          query = query.or(`tenant_id.eq.${session?.user?.id},and(status.eq.pending_signature,metadata->tenantEmail.eq.${userProfile.email})`);
+          query = query.or(
+            `tenant_id.eq.${session?.user?.id},` +
+            `and(status.eq.pending_signature,metadata->>tenantEmail.eq."${userProfile.email}")`
+          );
         } else {
           query = query.eq("tenant_id", session?.user?.id);
         }
