@@ -121,7 +121,10 @@ function ContractDetailsContent() {
       const [contractResponse, signaturesResponse] = await Promise.all([
         supabase
           .from('contracts')
-          .select('*, properties(name)')
+          .select(`
+            *,
+            properties(name)
+          `)
           .eq('id', id)
           .maybeSingle(),
         supabase
@@ -162,26 +165,26 @@ function ContractDetailsContent() {
 
       const metadata = contractResponse.data.metadata as unknown as { [key: string]: string | Asset[] };
       const signatures = signaturesResponse.data || [];
+
+      console.log('Raw signatures from database:', signatures);
       
       const tenantSignature = signatures.find(s => s.signer_role === 'tenant');
       const ownerSignature = signatures.find(s => s.signer_role === 'landlord');
 
+      console.log('Found signatures:', { tenantSignature, ownerSignature });
+
       const typedMetadata: FormData = {
         ...defaultFormData,
         ...(metadata as any),
-        tenantSignatureName: tenantSignature?.signature_data || metadata.tenantSignatureName || '',
-        tenantSignatureImage: tenantSignature?.signature_image || metadata.tenantSignatureImage || '',
-        tenantSignatureDate: tenantSignature?.signed_at?.split('T')[0] || metadata.tenantSignatureDate || '',
-        ownerSignatureName: ownerSignature?.signature_data || metadata.ownerSignatureName || '',
-        ownerSignatureImage: ownerSignature?.signature_image || metadata.ownerSignatureImage || '',
-        ownerSignatureDate: ownerSignature?.signed_at?.split('T')[0] || metadata.ownerSignatureDate || ''
+        tenantSignatureName: tenantSignature?.signature_data || '',
+        tenantSignatureImage: tenantSignature?.signature_image || '',
+        tenantSignatureDate: tenantSignature?.signed_at?.split('T')[0] || '',
+        ownerSignatureName: ownerSignature?.signature_data || '',
+        ownerSignatureImage: ownerSignature?.signature_image || '',
+        ownerSignatureDate: ownerSignature?.signed_at?.split('T')[0] || ''
       };
       
-      console.log('Mapped signatures:', { 
-        tenantSignature, 
-        ownerSignature,
-        typedMetadata
-      });
+      console.log('Final mapped metadata:', typedMetadata);
       
       setFormData(typedMetadata);
 
