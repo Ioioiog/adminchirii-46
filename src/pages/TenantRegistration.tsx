@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { Auth } from "@supabase/auth-ui-react";
@@ -78,7 +77,7 @@ const TenantRegistration = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   
-  const token = searchParams.get('token') || '';
+  const token = searchParams.get('token');
   const contractId = id || '';
   
   const [isLoading, setIsLoading] = useState(true);
@@ -129,14 +128,18 @@ const TenantRegistration = () => {
 
       try {
         console.log("Verifying contract:", contractId);
-        const { data, error } = await supabase
+        let query = supabase
           .from('contracts')
-          .select(`
-            *,
-            properties(name)
-          `)
-          .eq('id', contractId)
-          .maybeSingle();
+          .select('*, properties(name)')
+          .eq('id', contractId);
+
+        if (token) {
+          query = query
+            .eq('invitation_token', token)
+            .eq('status', 'pending_signature');
+        }
+
+        const { data, error } = await query.maybeSingle();
 
         if (error || !data) {
           console.error("Contract fetch error:", error);
@@ -175,7 +178,7 @@ const TenantRegistration = () => {
         setIsExistingUser(!!existingUser);
         setContract(transformedContract);
         setIsLoading(false);
-        console.log("Contract verification complete:", { isExisting: !!existingUser });
+        console.log("Contract verification complete:", { isExisting: !!existingUser, contract: transformedContract });
         
       } catch (error) {
         console.error("Contract verification error:", error);
@@ -184,7 +187,7 @@ const TenantRegistration = () => {
     };
 
     verifyContract();
-  }, [contractId, navigate, toast]);
+  }, [contractId, token, navigate, toast]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
