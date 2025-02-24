@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Grid, List, Plus, FileText, CreditCard, Trash2 } from "lucide-react";
@@ -17,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { ContractDetailsDialog } from "@/components/contracts/ContractDetailsDialog";
+import { Json } from "@/integrations/supabase/types/json";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -28,16 +28,18 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+type ContractStatus = 'draft' | 'pending_signature' | 'signed' | 'expired' | 'cancelled';
+
 interface Contract {
   id: string;
   contract_type: string;
-  status: string;
+  status: ContractStatus;
   valid_from: string | null;
   valid_until: string | null;
   tenant_id: string | null;
   landlord_id: string;
   properties: { name: string } | null;
-  metadata: Record<string, any>;
+  metadata: Json;
 }
 
 function Documents() {
@@ -67,7 +69,7 @@ function Documents() {
     enabled: userRole === "landlord"
   });
 
-  const { data: contracts, isLoading: isLoadingContracts } = useQuery<Contract[]>({
+  const { data: contracts = [], isLoading: isLoadingContracts } = useQuery({
     queryKey: ["contracts", userId, userRole],
     queryFn: async () => {
       console.log("Fetching contracts for:", { userId, userRole });
@@ -135,7 +137,7 @@ function Documents() {
           tenantEmail: userProfile?.email
         });
 
-        return [...(assignedContracts || []), ...(pendingContracts || [])];
+        return [...(assignedContracts || []), ...(pendingContracts || [])] as Contract[];
 
       } else if (userRole === "landlord") {
         const { data, error } = await supabase
@@ -158,10 +160,10 @@ function Documents() {
           throw error;
         }
 
-        return data;
+        return data as Contract[];
       }
 
-      return [];
+      return [] as Contract[];
     },
     enabled: !!userId && !!userRole
   });
