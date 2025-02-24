@@ -8,6 +8,22 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
+import { FormData } from "@/types/contract";
+
+interface InvoiceSettings {
+  apply_vat: boolean;
+  auto_generate: boolean;
+  generate_day: number;
+  company_name: string;
+  company_address: string;
+  bank_name: string;
+  bank_account_number: string;
+  additional_notes: string;
+  tenant_company_name: string;
+  tenant_company_address: string;
+  tenant_registration_number: string;
+  tenant_vat_number: string;
+}
 
 interface InvoiceSettingsTabProps {
   propertyId: string;
@@ -16,7 +32,7 @@ interface InvoiceSettingsTabProps {
 
 export function InvoiceSettingsTab({ propertyId, userId }: InvoiceSettingsTabProps) {
   const { toast } = useToast();
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<InvoiceSettings>({
     apply_vat: false,
     auto_generate: false,
     generate_day: 1,
@@ -37,14 +53,14 @@ export function InvoiceSettingsTab({ propertyId, userId }: InvoiceSettingsTabPro
     queryFn: async () => {
       const { data, error } = await supabase
         .from('contracts')
-        .select('*')
+        .select('metadata')
         .eq('property_id', propertyId)
         .eq('status', 'signed')
         .order('created_at', { ascending: false })
         .maybeSingle();
       
       if (error) throw error;
-      return data;
+      return data?.metadata as FormData | null;
     }
   });
 
@@ -58,9 +74,10 @@ export function InvoiceSettingsTab({ propertyId, userId }: InvoiceSettingsTabPro
         .single();
 
       if (profile?.invoice_info) {
+        const invoiceInfo = profile.invoice_info as InvoiceSettings;
         setSettings(prevSettings => ({
           ...prevSettings,
-          ...profile.invoice_info
+          ...invoiceInfo
         }));
       }
     };
@@ -70,13 +87,13 @@ export function InvoiceSettingsTab({ propertyId, userId }: InvoiceSettingsTabPro
 
   // Update settings when contract is loaded
   useEffect(() => {
-    if (contract?.metadata) {
+    if (contract) {
       setSettings(prevSettings => ({
         ...prevSettings,
-        tenant_company_name: contract.metadata.tenantName || '',
-        tenant_company_address: contract.metadata.tenantAddress || '',
-        tenant_registration_number: contract.metadata.tenantReg || '',
-        tenant_vat_number: contract.metadata.tenantFiscal || '',
+        tenant_company_name: contract.tenantName || '',
+        tenant_company_address: contract.tenantAddress || '',
+        tenant_registration_number: contract.tenantReg || '',
+        tenant_vat_number: contract.tenantFiscal || '',
       }));
     }
   }, [contract]);
