@@ -1,3 +1,4 @@
+
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { QueryClient, QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -80,7 +81,7 @@ function ContractDetailsContent() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
-  const { token } = Object.fromEntries(searchParams);
+  const token = searchParams.get('token');
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [showDashboard, setShowDashboard] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -99,13 +100,13 @@ function ContractDetailsContent() {
     queryFn: async () => {
       if (!id) throw new Error('Contract ID is required');
       
-      const query = supabase
+      let query = supabase
         .from('contracts')
         .select('*, properties(name)')
         .eq('id', id);
 
       if (token) {
-        query.eq('invitation_token', token);
+        query = query.eq('invitation_token', token);
         setShowDashboard(false);
       }
 
@@ -113,8 +114,10 @@ function ContractDetailsContent() {
 
       if (contractError) throw contractError;
       if (!contractData) throw new Error('Contract not found');
-      if (token && contractData.status !== 'pending' && contractData.status !== 'pending_signature') {
-        throw new Error('This contract invitation has expired or been used');
+
+      // For token access, verify it's in a signable state
+      if (token && !['pending', 'pending_signature'].includes(contractData.status)) {
+        throw new Error('This contract is no longer available for signing');
       }
 
       const metadata = contractData.metadata as unknown as { [key: string]: string | Asset[] };
@@ -191,7 +194,10 @@ function ContractDetailsContent() {
       
       const { error } = await supabase
         .from('contracts')
-        .update({ metadata: jsonMetadata })
+        .update({ 
+          metadata: jsonMetadata,
+          status: token ? 'signed' : 'draft' // Update status to signed if accessed via token
+        })
         .eq('id', id);
 
       if (error) throw error;
@@ -199,15 +205,25 @@ function ContractDetailsContent() {
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Contract updated successfully",
+        description: token ? "Contract signed successfully" : "Contract updated successfully",
       });
       queryClient.invalidateQueries({ queryKey: ['contract', id] });
       setIsEditing(false);
+      
+      // If signed via token, show completion message and redirect
+      if (token) {
+        toast({
+          title: "Thank you!",
+          description: "The contract has been signed successfully. You can now close this window.",
+        });
+        // Optionally redirect to a completion page
+        // navigate('/contract-signed');
+      }
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to update contract",
+        description: token ? "Failed to sign contract" : "Failed to update contract",
         variant: "destructive",
       });
       console.error('Update error:', error);
@@ -294,7 +310,7 @@ function ContractDetailsContent() {
   if (error) return <ContractError showDashboard={showDashboard} error={error} onBack={() => navigate('/documents')} />;
   if (!contract) return <div>Contract not found</div>;
 
-  const canEdit = contract.status === 'draft';
+  const canEdit = contract.status === 'draft' || (!!token && contract.status === 'pending_signature');
 
   return (
     <div className="flex bg-[#F8F9FC] min-h-screen">
@@ -309,22 +325,31 @@ function ContractDetailsContent() {
             onBack={() => navigate('/documents')}
             onPreview={() => setIsPreviewModalOpen(true)}
             onPrint={() => contract && handlePrint()}
-            onEmail={() => {}} // Implement email functionality later
-            canEdit={contract?.status === 'draft'}
+            onEmail={() => {}}
+            canEdit={canEdit}
             isEditing={isEditing}
             onEdit={() => setIsEditing(true)}
             onSave={handleSave}
             onInviteTenant={handleInviteTenant}
             contractStatus={contract?.status || 'draft'}
             formData={formData}
+            showActions={!token}
           />
 
           <ContractContent 
             formData={formData} 
             isEditing={isEditing} 
             onFieldChange={handleFieldChange}
+            readOnly={!!token && !canEdit}
           />
-          <ContractSignatures formData={formData} contractId={id!} />
+          
+          <ContractSignatures 
+            formData={formData} 
+            contractId={id!} 
+            canSign={!!token}
+            onFieldChange={handleFieldChange}
+            readOnly={!canEdit}
+          />
 
           <ContractPreviewDialog
             isOpen={isPreviewModalOpen}
