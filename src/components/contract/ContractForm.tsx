@@ -39,6 +39,10 @@ export function ContractForm({
     const selectedProperty = properties.find(p => p.id === propertyId);
     if (selectedProperty) {
       onInputChange('propertyAddress', selectedProperty.address);
+      // Also update other relevant fields from the selected property
+      if (selectedProperty.monthly_rent) {
+        onInputChange('rentAmount', selectedProperty.monthly_rent.toString());
+      }
     }
   };
 
@@ -62,18 +66,17 @@ export function ContractForm({
         }))
       };
 
-      const { data: propertyData, error: propertyError } = await supabase
-        .from('properties')
-        .insert({
-          name: formData.propertyAddress,
-          address: formData.propertyAddress,
-          landlord_id: user.id,
-          monthly_rent: parseFloat(formData.rentAmount) || 0
-        })
-        .select()
-        .single();
-
-      if (propertyError) throw propertyError;
+      // Get the selected property ID from the properties list
+      const selectedProperty = properties.find(p => p.address === formData.propertyAddress);
+      
+      if (!selectedProperty) {
+        toast({
+          title: "Error",
+          description: "Please select a valid property",
+          variant: "destructive"
+        });
+        return;
+      }
 
       const { data, error } = await supabase
         .from('contracts')
@@ -81,7 +84,7 @@ export function ContractForm({
           contract_type: 'lease',
           status: 'draft',
           landlord_id: user.id,
-          property_id: propertyData.id,
+          property_id: selectedProperty.id,
           content: {} as Json,
           metadata: metadataJson,
           valid_from: formData.startDate || null,
@@ -111,6 +114,10 @@ export function ContractForm({
       });
     }
   };
+
+  if (isLoadingProperties) {
+    return <div>Loading properties...</div>;
+  }
 
   return (
     <div className="edit-form bg-white rounded-lg shadow-sm p-6 print:hidden">
@@ -346,6 +353,7 @@ export function ContractForm({
               type="text" 
               id="property-address" 
               value={formData.propertyAddress}
+              readOnly
               onChange={(e) => onInputChange('propertyAddress', e.target.value)}
             />
           </div>
