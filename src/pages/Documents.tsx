@@ -244,7 +244,7 @@ const Documents = () => {
                         >
                           View Details
                         </Button>
-                        {userRole === 'landlord' && contract.status !== 'signed' && (
+                        {userRole === 'landlord' && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button
