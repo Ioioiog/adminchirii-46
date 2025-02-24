@@ -1,4 +1,3 @@
-
 import { FormData } from "@/types/contract";
 import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -8,7 +7,6 @@ import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import SignaturePad from 'react-signature-canvas';
 import { Card } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
 
 type ContractStatus = 'draft' | 'pending_signature' | 'signed' | 'expired' | 'cancelled';
 
@@ -34,45 +32,9 @@ export function ContractSignatures({
   const signaturePadRef = useRef<SignaturePad>(null);
   const [contractStatus, setContractStatus] = useState<ContractStatus>('draft');
 
-  // Query to fetch signatures
-  const { data: signatures } = useQuery({
-    queryKey: ['contract-signatures', contractId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('contract_signatures')
-        .select('*')
-        .eq('contract_id', contractId);
-
-      if (error) {
-        console.error('Error fetching signatures:', error);
-        throw error;
-      }
-
-      console.log('Fetched signatures:', data);
-      return data;
-    }
-  });
-
   useEffect(() => {
-    if (signatures) {
-      const tenantSignature = signatures.find(s => s.signer_role === 'tenant');
-      const ownerSignature = signatures.find(s => s.signer_role === 'landlord');
-
-      console.log('Processing signatures:', { tenantSignature, ownerSignature });
-
-      const updatedFormData = {
-        ...formData,
-        tenantSignatureName: tenantSignature?.signature_data || '',
-        tenantSignatureImage: tenantSignature?.signature_image || '',
-        tenantSignatureDate: tenantSignature?.signed_at?.split('T')[0] || '',
-        ownerSignatureName: ownerSignature?.signature_data || '',
-        ownerSignatureImage: ownerSignature?.signature_image || '',
-        ownerSignatureDate: ownerSignature?.signed_at?.split('T')[0] || ''
-      };
-
-      setLocalFormData(updatedFormData);
-    }
-  }, [signatures, formData]);
+    setLocalFormData(formData);
+  }, [formData]);
 
   useEffect(() => {
     const fetchContractStatus = async () => {
@@ -279,13 +241,13 @@ export function ContractSignatures({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => signaturePadRef.current?.clear()}
+                onClick={clearSignature}
                 className="mt-2"
               >
                 Clear
               </Button>
             </Card>
-            <Button onClick={() => handleSign()} className="w-full">
+            <Button onClick={handleSign} className="w-full">
               Sign as Landlord
             </Button>
           </div>
@@ -331,13 +293,13 @@ export function ContractSignatures({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => signaturePadRef.current?.clear()}
+                onClick={clearSignature}
                 className="mt-2"
               >
                 Clear
               </Button>
             </Card>
-            <Button onClick={() => handleSign()} className="w-full">
+            <Button onClick={handleSign} className="w-full">
               Sign as Tenant
             </Button>
           </div>
