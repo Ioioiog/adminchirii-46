@@ -94,7 +94,7 @@ function Documents() {
           throw assignedError;
         }
 
-        // Then get pending contracts by email
+        // Then get pending contracts that match the tenant's email
         const { data: pendingContracts, error: pendingError } = await supabase
           .from('contracts')
           .select(`
@@ -109,7 +109,7 @@ function Documents() {
             metadata
           `)
           .eq('status', 'pending_signature')
-          .filter('metadata->tenantEmail', 'eq', userProfile?.email);
+          .containsObject('metadata', { tenantEmail: userProfile?.email });
 
         if (pendingError) {
           console.error("Error fetching pending contracts:", pendingError);
@@ -118,7 +118,8 @@ function Documents() {
 
         console.log("Found contracts:", {
           assigned: assignedContracts,
-          pending: pendingContracts
+          pending: pendingContracts,
+          tenantEmail: userProfile?.email
         });
 
         // Combine both results
