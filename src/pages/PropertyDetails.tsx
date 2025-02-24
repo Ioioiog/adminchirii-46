@@ -22,6 +22,7 @@ const PropertyDetails = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("property");
+  const [userId, setUserId] = useState<string | null>(null);
   const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>({
     apply_vat: false,
     auto_generate: true,
@@ -32,6 +33,14 @@ const PropertyDetails = () => {
     bank_account_number: '',
     additional_notes: ''
   });
+
+  useEffect(() => {
+    const fetchUserId = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+    };
+    fetchUserId();
+  }, []);
 
   useEffect(() => {
     const fetchInvoiceSettings = async () => {
@@ -235,10 +244,6 @@ const PropertyDetails = () => {
   ];
 
   const activeTenants = property.tenancies?.filter((t: any) => t.status === 'active') || [];
-
-  // Get current user ID
-  const { data: { user } } = await supabase.auth.getUser();
-  const userId = user?.id;
 
   if (!userId) {
     return null; // or some loading/error state
