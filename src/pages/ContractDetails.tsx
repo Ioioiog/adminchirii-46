@@ -1,3 +1,4 @@
+
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { QueryClient, QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -70,6 +71,7 @@ interface Contract {
   id: string;
   properties?: { name: string };
   contract_type: string;
+  tenant_id?: string | null;
   status: 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled' | 'pending_signature';
   valid_from: string | null;
   valid_until: string | null;
