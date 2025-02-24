@@ -27,7 +27,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-const Documents = () => {
+function Documents() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -68,11 +68,24 @@ const Documents = () => {
           valid_from,
           valid_until,
           tenant_id,
-          properties(name)
+          landlord_id,
+          properties(name),
+          metadata
         `);
 
       if (userRole === "tenant") {
-        query = query.eq("tenant_id", userId);
+        const { data: { session } } = await supabase.auth.getSession();
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('id', session?.user?.id)
+          .single();
+
+        if (userProfile?.email) {
+          query = query.or(`tenant_id.eq.${session?.user?.id},and(status.eq.pending_signature,metadata->tenantEmail.eq.${userProfile.email})`);
+        } else {
+          query = query.eq("tenant_id", session?.user?.id);
+        }
       } else if (userRole === "landlord") {
         query = query.eq("landlord_id", userId);
       }
@@ -121,32 +134,35 @@ const Documents = () => {
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        console.log("No active session found, redirecting to auth");
-        navigate("/auth");
-        return;
-      }
-      setUserId(session.user.id);
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", session.user.id)
-        .maybeSingle();
-      if (profile?.role) {
-        setUserRole(profile.role as "landlord" | "tenant");
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          console.log("No active session found, redirecting to auth");
+          navigate("/auth");
+          return;
+        }
+        setUserId(session.user.id);
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role, email")
+          .eq("id", session.user.id)
+          .maybeSingle();
+        
+        if (profile?.role) {
+          setUserRole(profile.role as "landlord" | "tenant");
+          console.log("User role set:", profile.role);
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load user data",
+          variant: "destructive"
+        });
       }
     };
 
     checkUser();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) {
-        navigate("/auth");
-      }
-    });
-
-    return () => subscription.unsubscribe();
   }, [navigate, toast]);
 
   if (!userId || !userRole) return null;
@@ -209,7 +225,9 @@ const Documents = () => {
                 ) : contracts?.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-4">
-                      No contracts found
+                      {userRole === 'tenant' 
+                        ? 'No contracts available for you yet'
+                        : 'No contracts found'}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -306,7 +324,9 @@ const Documents = () => {
                   </h1>
                 </div>
                 <p className="text-gray-500">
-                  Manage and track all your property-related documents and contracts.
+                  {userRole === 'tenant' 
+                    ? 'View and sign your rental contracts'
+                    : 'Manage and track all your property-related documents and contracts'}
                 </p>
               </div>
 
@@ -333,7 +353,17 @@ const Documents = () => {
             </div>
             
             <div className="mt-6">
-              {renderSection()}
+              {isLoadingContracts ? (
+                <div className="text-center py-4">Loading contracts...</div>
+              ) : contracts?.length === 0 ? (
+                <div className="text-center py-4 text-gray-500">
+                  {userRole === 'tenant' 
+                    ? 'No contracts available for you yet'
+                    : 'No contracts found'}
+                </div>
+              ) : (
+                renderSection()
+              )}
             </div>
           </div>
         </div>
@@ -353,6 +383,6 @@ const Documents = () => {
       />
     </div>
   );
-};
+}
 
 export default Documents;
