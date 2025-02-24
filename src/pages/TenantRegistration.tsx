@@ -19,11 +19,10 @@ interface Contract {
 
 const TenantRegistration = () => {
   const navigate = useNavigate();
-  const { id } = useParams(); // Get contract ID from URL if available
+  const { id } = useParams();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const token = searchParams.get('token');
-  const contractId = id || searchParams.get('contractId');
+  const token = searchParams.get('token') || '';
   const [isLoading, setIsLoading] = useState(true);
   const [isExistingUser, setIsExistingUser] = useState<boolean | null>(null);
   const [contract, setContract] = useState<Contract | null>(null);
@@ -67,8 +66,8 @@ const TenantRegistration = () => {
 
   useEffect(() => {
     const verifyToken = async () => {
-      if (!token || !contractId) {
-        console.log("Missing token or contractId", { token, contractId });
+      if (!token || !id) {
+        console.log("Missing token or id", { token, id });
         toast({
           title: "Invalid Invitation",
           description: "This invitation link is invalid or has expired.",
@@ -85,7 +84,7 @@ const TenantRegistration = () => {
         const { data: contractData, error: contractError } = await supabase
           .from('contracts')
           .select('*, properties(*)')
-          .eq('id', contractId)
+          .eq('id', id)
           .single();
 
         if (contractError || !contractData) {
@@ -223,7 +222,7 @@ const TenantRegistration = () => {
     } else {
       setIsLoading(false);
     }
-  }, [token, contractId, navigate, toast]);
+  }, [token, id, navigate, toast]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -241,7 +240,7 @@ const TenantRegistration = () => {
                 tenant_id: session.user.id,
                 status: 'pending_signature'
               })
-              .eq('id', contractId);
+              .eq('id', id);
 
             if (contractError) {
               throw contractError;
@@ -267,7 +266,7 @@ const TenantRegistration = () => {
             });
 
             // Redirect to the contract page with token parameter
-            navigate(`/documents/contracts/${contractId}?token=${token}`);
+            navigate(`/documents/contracts/${id}?token=${token}`);
             
           } catch (error: any) {
             console.error("Error setting up tenant:", error);
@@ -282,7 +281,7 @@ const TenantRegistration = () => {
     );
 
     return () => subscription.unsubscribe();
-  }, [contract, contractId, isExistingUser, navigate, toast, token]);
+  }, [contract, id, isExistingUser, navigate, toast, token]);
 
   if (isLoading) {
     return (
