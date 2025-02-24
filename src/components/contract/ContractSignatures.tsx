@@ -40,6 +40,10 @@ export function ContractSignatures({
     queryFn: async () => {
       console.log('Fetching signatures for contract:', contractId);
       
+      // First verify we have the user's role
+      const { userRole, userId } = useUserRole();
+      console.log('Current user:', { userRole, userId });
+
       // First verify the contract exists and user has access
       const { data: contract, error: contractError } = await supabase
         .from('contracts')
@@ -59,18 +63,41 @@ export function ContractSignatures({
 
       console.log('Found contract:', contract);
 
-      // Then fetch signatures
-      const { data, error } = await supabase
+      // Debug query before executing
+      const signaturesQuery = supabase
         .from('contract_signatures')
         .select('*')
         .eq('contract_id', contractId);
+
+      console.log('Executing signatures query:', {
+        contractId,
+        query: signaturesQuery.toSQL?.() // Log the SQL if available
+      });
+
+      // Then fetch signatures
+      const { data, error } = await signaturesQuery;
 
       if (error) {
         console.error('Error fetching signatures:', error);
         throw error;
       }
 
-      console.log('Fetched signatures:', data);
+      // Log the raw response
+      console.log('Raw signatures response:', data);
+
+      // Log each signature found
+      if (data && data.length > 0) {
+        data.forEach((sig, index) => {
+          console.log(`Signature ${index + 1}:`, {
+            signerRole: sig.signer_role,
+            signerId: sig.signer_id,
+            signedAt: sig.signed_at
+          });
+        });
+      } else {
+        console.log('No signatures found for contract');
+      }
+
       return data || [];
     },
     retry: 1
