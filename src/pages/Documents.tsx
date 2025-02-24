@@ -120,7 +120,7 @@ function Documents() {
           metadata
         `)
         .eq('status', 'pending_signature')
-        .contains('metadata', { tenantEmail: userProfile?.email });
+        .eq('invitation_email', userProfile?.email);
 
       if (pendingError) {
         console.error("Error fetching pending contracts:", pendingError);
@@ -130,7 +130,8 @@ function Documents() {
       console.log("Found contracts:", {
         assigned: assignedContracts,
         pending: pendingContracts,
-        tenantEmail: userProfile?.email
+        tenantEmail: userProfile?.email,
+        invitationEmailQuery: `invitation_email=${userProfile?.email}`
       });
 
       return [...(assignedContracts || []), ...(pendingContracts || [])] as Contract[];
