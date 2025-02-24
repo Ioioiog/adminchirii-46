@@ -26,37 +26,31 @@ const TenantRegistration = () => {
   const [isExistingUser, setIsExistingUser] = useState<boolean | null>(null);
   const [contract, setContract] = useState<Contract | null>(null);
 
+  const showError = (title: string, description: string) => {
+    toast({ title, description, variant: "destructive" });
+    navigate("/auth");
+  };
+
   useEffect(() => {
     const checkSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        console.log("Current session:", session?.user?.id);
-        
-        if (session) {
-          // If user is authenticated and trying to access directly
-          if (!token && id) {
-            // Check if user has access to this contract
-            const { data: contractData, error: contractError } = await supabase
-              .from('contracts')
-              .select('tenant_id, status')
-              .eq('id', id)
-              .maybeSingle();
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log("Current session:", session?.user?.id);
+      
+      if (session?.user) {
+        if (!token && id) {
+          const { data } = await supabase
+            .from('contracts')
+            .select('tenant_id')
+            .eq('id', id)
+            .maybeSingle();
 
-            if (!contractError && contractData && contractData.tenant_id === session.user.id) {
-              // User has access, redirect to contract page
-              navigate(`/documents/contracts/${id}`);
-              return;
-            }
+          if (data?.tenant_id === session.user.id) {
+            navigate(`/documents/contracts/${id}`);
+            return;
           }
         }
-
-        // If not authenticated with valid session, require registration/login
-        if (!session && !token) {
-          navigate('/auth');
-          return;
-        }
-      } catch (error) {
-        console.error("Session check error:", error);
+      } else if (!token) {
+        navigate('/auth');
       }
     };
 
@@ -64,162 +58,64 @@ const TenantRegistration = () => {
   }, [navigate, token, id]);
 
   useEffect(() => {
-    const verifyToken = async () => {
+    const verifyContract = async () => {
       if (!token || !id) {
-        console.log("Missing token or id", { token, id });
-        toast({
-          title: "Invalid Invitation",
-          description: "This invitation link is invalid or has expired.",
-          variant: "destructive",
-        });
-        navigate("/auth");
+        showError("Invalid Invitation", "This invitation link is invalid or has expired.");
         return;
       }
 
       try {
-        console.log("Verifying contract invitation token");
-        
-        // Get the contract first
-        const { data: contracts, error: contractError } = await supabase
+        const { data, error } = await supabase
           .from('contracts')
-          .select('*, properties(*)')
-          .eq('id', id);
+          .select(`
+            *,
+            properties(*)
+          `)
+          .eq('id', id)
+          .maybeSingle();
 
-        if (contractError || !contracts || contracts.length === 0) {
-          console.error("Contract fetch error:", contractError);
-          toast({
-            title: "Invalid Contract",
-            description: "This contract does not exist or has been deleted.",
-            variant: "destructive",
-          });
-          navigate("/auth");
+        if (error || !data) {
+          showError("Invalid Contract", "This contract does not exist or has been deleted.");
+          return;
+        }
+        
+        if (data.invitation_token !== token) {
+          showError("Invalid Invitation", "This invitation link is invalid or has expired.");
+          return;
+        }
+        
+        if (!['pending', 'pending_signature'].includes(data.status)) {
+          showError("Invalid Contract Status", "This contract is no longer available for signing.");
           return;
         }
 
-        const contractData = contracts[0];
+        const metadata = data.metadata as Record<string, any>;
+        const tenantEmail = metadata.tenantEmail;
 
-        // Verify the invitation token separately
-        if (contractData.invitation_token !== token) {
-          console.error("Invalid invitation token");
-          toast({
-            title: "Invalid Invitation",
-            description: "This invitation link is invalid or has expired.",
-            variant: "destructive",
-          });
-          navigate("/auth");
-          return;
-        }
-
-        // Check contract status
-        if (contractData.status !== 'pending' && contractData.status !== 'pending_signature') {
-          toast({
-            title: "Invalid Contract Status",
-            description: "This contract is no longer available for signing.",
-            variant: "destructive",
-          });
-          navigate("/auth");
-          return;
-        }
-
-        // Safely cast the metadata to FormData
-        const metadata = contractData.metadata as Record<string, any>;
-        const typedMetadata: FormData = {
-          contractNumber: metadata.contractNumber || '',
-          contractDate: metadata.contractDate || '',
-          ownerName: metadata.ownerName || '',
-          ownerReg: metadata.ownerReg || '',
-          ownerFiscal: metadata.ownerFiscal || '',
-          ownerAddress: metadata.ownerAddress || '',
-          ownerBank: metadata.ownerBank || '',
-          ownerBankName: metadata.ownerBankName || '',
-          ownerEmail: metadata.ownerEmail || '',
-          ownerPhone: metadata.ownerPhone || '',
-          ownerCounty: metadata.ownerCounty || '',
-          ownerCity: metadata.ownerCity || '',
-          ownerRepresentative: metadata.ownerRepresentative || '',
-          tenantName: metadata.tenantName || '',
-          tenantReg: metadata.tenantReg || '',
-          tenantFiscal: metadata.tenantFiscal || '',
-          tenantAddress: metadata.tenantAddress || '',
-          tenantBank: metadata.tenantBank || '',
-          tenantBankName: metadata.tenantBankName || '',
-          tenantEmail: metadata.tenantEmail || '',
-          tenantPhone: metadata.tenantPhone || '',
-          tenantCounty: metadata.tenantCounty || '',
-          tenantCity: metadata.tenantCity || '',
-          tenantRepresentative: metadata.tenantRepresentative || '',
-          propertyAddress: metadata.propertyAddress || '',
-          rentAmount: metadata.rentAmount || '',
-          vatIncluded: metadata.vatIncluded || '',
-          contractDuration: metadata.contractDuration || '',
-          paymentDay: metadata.paymentDay || '',
-          roomCount: metadata.roomCount || '',
-          startDate: metadata.startDate || '',
-          lateFee: metadata.lateFee || '',
-          renewalPeriod: metadata.renewalPeriod || '',
-          unilateralNotice: metadata.unilateralNotice || '',
-          terminationNotice: metadata.terminationNotice || '',
-          earlyTerminationFee: metadata.earlyTerminationFee || '',
-          latePaymentTermination: metadata.latePaymentTermination || '',
-          securityDeposit: metadata.securityDeposit || '',
-          depositReturnPeriod: metadata.depositReturnPeriod || '',
-          waterColdMeter: metadata.waterColdMeter || '',
-          waterHotMeter: metadata.waterHotMeter || '',
-          electricityMeter: metadata.electricityMeter || '',
-          gasMeter: metadata.gasMeter || '',
-          ownerSignatureDate: metadata.ownerSignatureDate || '',
-          ownerSignatureName: metadata.ownerSignatureName || '',
-          ownerSignatureImage: metadata.ownerSignatureImage,
-          tenantSignatureDate: metadata.tenantSignatureDate || '',
-          tenantSignatureName: metadata.tenantSignatureName || '',
-          tenantSignatureImage: metadata.tenantSignatureImage,
-          assets: Array.isArray(metadata.assets) ? metadata.assets : []
-        };
-
-        const typedContract: Contract = {
-          ...contractData,
-          metadata: typedMetadata,
-          status: contractData.status
-        };
-
-        console.log("Found contract:", typedContract);
-        setContract(typedContract);
-
-        const tenantEmail = typedMetadata.tenantEmail;
         if (!tenantEmail) {
-          console.error("No tenant email found in contract metadata");
-          throw new Error("Invalid contract configuration");
+          showError("Invalid Contract", "Contract is missing tenant information.");
+          return;
         }
 
-        // Check if user exists
-        const { data: existingUser, error: userError } = await supabase
+        const { data: existingUser } = await supabase
           .from('profiles')
           .select('id')
           .eq('email', tenantEmail)
-          .single();
-
-        if (userError && userError.code !== 'PGRST116') {
-          throw userError;
-        }
+          .maybeSingle();
 
         setIsExistingUser(!!existingUser);
-        console.log("User status:", existingUser ? "Existing user" : "New user");
-
-      } catch (error: any) {
-        console.error("Error verifying invitation:", error);
-        toast({
-          title: "Error",
-          description: "Failed to verify invitation. Please try again.",
-          variant: "destructive",
-        });
-        navigate("/auth");
+        setContract(data as Contract);
+        
+      } catch (error) {
+        console.error("Contract verification error:", error);
+        showError("Error", "Failed to verify invitation. Please try again.");
       } finally {
         setIsLoading(false);
       }
     };
 
     if (token) {
-      verifyToken();
+      verifyContract();
     } else {
       setIsLoading(false);
     }
@@ -234,7 +130,6 @@ const TenantRegistration = () => {
           try {
             console.log("Processing new tenant registration");
             
-            // Update contract with tenant's user ID
             const { error: contractError } = await supabase
               .from('contracts')
               .update({
@@ -247,7 +142,6 @@ const TenantRegistration = () => {
               throw contractError;
             }
 
-            // Create tenancy
             const { error: tenancyError } = await supabase
               .from('tenancies')
               .insert({
@@ -266,7 +160,6 @@ const TenantRegistration = () => {
               description: "You can now review and sign the contract.",
             });
 
-            // Redirect to the contract page with token parameter
             navigate(`/documents/contracts/${id}?token=${token}`);
             
           } catch (error: any) {
