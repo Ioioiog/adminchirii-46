@@ -74,10 +74,13 @@ const transformMetadataToFormData = (metadata: any): FormData => {
 
 const TenantRegistration = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  
+  // Extract params from the URL
   const token = searchParams.get('token') || '';
+  const contractId = searchParams.get('contractId') || '';
+  
   const [isLoading, setIsLoading] = useState(true);
   const [isExistingUser, setIsExistingUser] = useState<boolean | null>(null);
   const [contract, setContract] = useState<Contract | null>(null);
@@ -89,33 +92,37 @@ const TenantRegistration = () => {
 
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log("Current session:", session?.user?.id);
-      
-      if (session?.user) {
-        if (!token && id) {
-          const { data } = await supabase
-            .from('contracts')
-            .select('tenant_id')
-            .eq('id', id)
-            .maybeSingle();
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log("Current session:", session?.user?.id);
+        
+        if (session?.user) {
+          if (!token && contractId) {
+            const { data } = await supabase
+              .from('contracts')
+              .select('tenant_id')
+              .eq('id', contractId)
+              .maybeSingle();
 
-          if (data?.tenant_id === session.user.id) {
-            navigate(`/documents/contracts/${id}`);
-            return;
+            if (data?.tenant_id === session.user.id) {
+              navigate(`/documents/contracts/${contractId}`);
+              return;
+            }
           }
+        } else if (!token) {
+          navigate('/auth');
         }
-      } else if (!token) {
-        navigate('/auth');
+      } catch (error) {
+        console.error("Session check error:", error);
       }
     };
 
     checkSession();
-  }, [navigate, token, id]);
+  }, [navigate, token, contractId]);
 
   useEffect(() => {
     const verifyContract = async () => {
-      if (!token || !id) {
+      if (!token || !contractId) {
         showError("Invalid Invitation", "This invitation link is invalid or has expired.");
         return;
       }
@@ -127,7 +134,7 @@ const TenantRegistration = () => {
             *,
             properties(*)
           `)
-          .eq('id', id)
+          .eq('id', contractId)
           .maybeSingle();
 
         if (error || !data) {
@@ -177,12 +184,12 @@ const TenantRegistration = () => {
       }
     };
 
-    if (token) {
+    if (token && contractId) {
       verifyContract();
     } else {
       setIsLoading(false);
     }
-  }, [token, id, navigate, toast]);
+  }, [token, contractId, navigate, toast]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -199,7 +206,7 @@ const TenantRegistration = () => {
                 tenant_id: session.user.id,
                 status: 'pending_signature'
               })
-              .eq('id', id);
+              .eq('id', contractId);
 
             if (contractError) {
               throw contractError;
@@ -223,7 +230,7 @@ const TenantRegistration = () => {
               description: "You can now review and sign the contract.",
             });
 
-            navigate(`/documents/contracts/${id}?token=${token}`);
+            navigate(`/documents/contracts/${contractId}?token=${token}`);
             
           } catch (error: any) {
             console.error("Error setting up tenant:", error);
@@ -238,7 +245,7 @@ const TenantRegistration = () => {
     );
 
     return () => subscription.unsubscribe();
-  }, [contract, id, isExistingUser, navigate, toast, token]);
+  }, [contract, contractId, isExistingUser, navigate, toast, token]);
 
   if (isLoading) {
     return (
