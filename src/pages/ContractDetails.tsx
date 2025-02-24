@@ -110,7 +110,13 @@ function ContractDetailsContent() {
         throw new Error('Authentication required');
       }
 
-      console.log('Fetching contract:', { id, userId: session.user.id });
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('email, role')
+        .eq('id', session.user.id)
+        .single();
+      
+      console.log('User profile:', userProfile);
       
       const { data: contractData, error: contractError } = await supabase
         .from('contracts')
@@ -128,16 +134,25 @@ function ContractDetailsContent() {
         throw new Error('Contract not found');
       }
 
-      if (contractData.tenant_id !== session.user.id && contractData.landlord_id !== session.user.id) {
-        console.error('Unauthorized access attempt:', {
-          userId: session.user.id,
-          tenantId: contractData.tenant_id,
-          landlordId: contractData.landlord_id
-        });
+      const hasPermission = 
+        contractData.tenant_id === session.user.id || 
+        contractData.landlord_id === session.user.id ||
+        (contractData.status === 'pending_signature' && 
+         contractData.invitation_email === userProfile?.email);
+
+      console.log('Permission check:', {
+        userId: session.user.id,
+        tenantId: contractData.tenant_id,
+        landlordId: contractData.landlord_id,
+        hasPermission,
+        status: contractData.status,
+        invitationEmail: contractData.invitation_email,
+        userEmail: userProfile?.email
+      });
+
+      if (!hasPermission) {
         throw new Error('You do not have permission to view this contract');
       }
-
-      console.log('Contract data loaded:', contractData);
 
       const metadata = contractData.metadata as unknown as { [key: string]: string | Asset[] };
       const typedMetadata: FormData = {
