@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, ChevronDown, Building2, MapPin, User, Calendar, DollarSign, Home, LayoutGrid, Table as TableIcon, Trash2 } from "lucide-react";
@@ -95,7 +94,7 @@ const Properties = () => {
   });
 
   const filteredProperties = properties?.filter(property => {
-    const matchesSearch = property.name.toLowerCase().includes(searchTerm.toLowerCase()) || property.address.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = property.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || property.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -193,7 +192,6 @@ const Properties = () => {
                             </div>
                             <div>
                               <h3 className="font-medium text-lg text-gray-900">{property.name}</h3>
-                              <p className="text-sm text-gray-500">{property.address}</p>
                             </div>
                           </div>
                           <Badge className={`${getStatusColor(property.status)} transition-all duration-300`}>
