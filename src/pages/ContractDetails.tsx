@@ -118,7 +118,7 @@ function ContractDetailsContent() {
       
       console.log('User profile:', userProfile);
       
-      const [contractResponse, signaturesResponse] = await Promise.all([
+      const [contractResponse, { data: signatures, error: signaturesError }] = await Promise.all([
         supabase
           .from('contracts')
           .select(`
@@ -132,6 +132,12 @@ function ContractDetailsContent() {
           .select('*')
           .eq('contract_id', id)
       ]);
+
+      if (signaturesError) {
+        console.error('Error fetching signatures:', signaturesError);
+      }
+
+      console.log('Raw signatures response:', { signatures, error: signaturesError });
 
       if (contractResponse.error) {
         console.error('Contract fetch error:', contractResponse.error);
@@ -164,12 +170,11 @@ function ContractDetailsContent() {
       }
 
       const metadata = contractResponse.data.metadata as unknown as { [key: string]: string | Asset[] };
-      const signatures = signaturesResponse.data || [];
-
+      
       console.log('Raw signatures from database:', signatures);
       
-      const tenantSignature = signatures.find(s => s.signer_role === 'tenant');
-      const ownerSignature = signatures.find(s => s.signer_role === 'landlord');
+      const tenantSignature = signatures?.find(s => s.signer_role === 'tenant');
+      const ownerSignature = signatures?.find(s => s.signer_role === 'landlord');
 
       console.log('Found signatures:', { tenantSignature, ownerSignature });
 
