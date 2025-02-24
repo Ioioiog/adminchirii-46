@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Grid, List, Plus, FileText, CreditCard, Trash2 } from "lucide-react";
@@ -92,6 +93,7 @@ const Documents = () => {
 
   const deleteContractMutation = useMutation({
     mutationFn: async (contractId: string) => {
+      // First delete all signatures for this contract
       const { error: signaturesError } = await supabase
         .from("contract_signatures")
         .delete()
@@ -99,6 +101,7 @@ const Documents = () => {
       
       if (signaturesError) throw signaturesError;
 
+      // Then delete the contract itself
       const { error: contractError } = await supabase
         .from("contracts")
         .delete()
