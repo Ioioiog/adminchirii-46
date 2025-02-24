@@ -97,18 +97,16 @@ const TenantRegistration = () => {
         const { data: { session } } = await supabase.auth.getSession();
         console.log("Current session:", session?.user?.id);
         
-        if (session?.user) {
-          if (contractId) {
-            const { data } = await supabase
-              .from('contracts')
-              .select('tenant_id')
-              .eq('id', contractId)
-              .maybeSingle();
+        if (session?.user && contractId) {
+          const { data } = await supabase
+            .from('contracts')
+            .select('tenant_id, status')
+            .eq('id', contractId)
+            .maybeSingle();
 
-            if (data?.tenant_id === session.user.id) {
-              navigate(`/documents/contracts/${contractId}`);
-              return;
-            }
+          if (data?.tenant_id === session.user.id) {
+            navigate(`/documents/contracts/${contractId}`);
+            return;
           }
         }
       } catch (error) {
@@ -121,35 +119,30 @@ const TenantRegistration = () => {
 
   useEffect(() => {
     const verifyContract = async () => {
-      if (!contractId) {
-        showError("Invalid Contract", "No contract ID provided.");
+      if (!contractId || !token) {
+        showError("Invalid Contract", "Missing contract ID or invitation token.");
         return;
       }
 
       try {
-        console.log("Verifying contract:", contractId);
-        let query = supabase
+        console.log("Verifying contract:", { contractId, token });
+        const { data, error } = await supabase
           .from('contracts')
           .select('*, properties(name)')
-          .eq('id', contractId);
-
-        if (token) {
-          query = query
-            .eq('invitation_token', token)
-            .eq('status', 'pending_signature');
-        }
-
-        const { data, error } = await query.maybeSingle();
+          .eq('id', contractId)
+          .eq('invitation_token', token)
+          .eq('status', 'pending_signature')
+          .maybeSingle();
 
         if (error || !data) {
           console.error("Contract fetch error:", error);
-          showError("Invalid Contract", "This contract does not exist or has been deleted.");
+          showError("Invalid Contract", "This contract does not exist or has expired.");
           return;
         }
-        
+
         if (!['pending', 'pending_signature'].includes(data.status)) {
           console.error("Invalid contract status:", data.status);
-          showError("Invalid Contract Status", "This contract is no longer available for signing.");
+          showError("Invalid Contract", "This contract is no longer available for signing.");
           return;
         }
 
@@ -178,7 +171,10 @@ const TenantRegistration = () => {
         setIsExistingUser(!!existingUser);
         setContract(transformedContract);
         setIsLoading(false);
-        console.log("Contract verification complete:", { isExisting: !!existingUser, contract: transformedContract });
+        console.log("Contract verification complete:", { 
+          isExisting: !!existingUser, 
+          contract: transformedContract 
+        });
         
       } catch (error) {
         console.error("Contract verification error:", error);

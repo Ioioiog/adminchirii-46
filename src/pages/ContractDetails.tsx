@@ -94,10 +94,17 @@ function ContractDetailsContent() {
     contractNumber: formData.contractNumber
   });
 
+  console.log('Contract access parameters:', { id, token, showDashboard });
+
   const { data: contract, isLoading, error } = useQuery({
     queryKey: ['contract', id, token],
     queryFn: async () => {
-      if (!id) throw new Error('Contract ID is required');
+      if (!id) {
+        console.error('No contract ID provided');
+        throw new Error('Contract ID is required');
+      }
+
+      console.log('Fetching contract:', { id, token });
       
       let query = supabase
         .from('contracts')
@@ -105,6 +112,7 @@ function ContractDetailsContent() {
         .eq('id', id);
 
       if (token) {
+        console.log('Adding invitation token to query:', token);
         query = query.eq('invitation_token', token);
         setShowDashboard(false);
       }
@@ -117,12 +125,18 @@ function ContractDetailsContent() {
       }
       
       if (!contractData) {
-        console.error('Contract not found with ID:', id, 'and token:', token);
+        console.error('Contract not found:', { id, token });
         throw new Error('Contract not found');
       }
 
+      console.log('Contract data retrieved:', {
+        status: contractData.status,
+        hasToken: !!token,
+        isValidStatus: ['pending', 'pending_signature'].includes(contractData.status)
+      });
+
       if (token && !['pending', 'pending_signature'].includes(contractData.status)) {
-        console.error('Invalid contract status for signing:', contractData.status);
+        console.error('Invalid contract status:', contractData.status);
         throw new Error('This contract is no longer available for signing');
       }
 
@@ -186,8 +200,48 @@ function ContractDetailsContent() {
         ...contractData,
         metadata: typedMetadata,
       } as Contract;
-    }
+    },
+    retry: false
   });
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        console.log('Checking authentication for contract access');
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session && token) {
+          console.log('No session found, redirecting to registration:', {
+            contractId: id,
+            token
+          });
+          navigate(`/tenant-registration/${id}?invitation_token=${token}`);
+          return;
+        }
+
+        if (session && token && contract) {
+          console.log('Verifying tenant access:', {
+            userId: session.user.id,
+            contractTenantId: contract.tenant_id
+          });
+          
+          if (contract.tenant_id && contract.tenant_id !== session.user.id) {
+            console.error('Unauthorized tenant access attempt');
+            toast({
+              title: "Unauthorized",
+              description: "You don't have permission to view this contract",
+              variant: "destructive"
+            });
+            navigate('/');
+          }
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+      }
+    };
+
+    checkAuth();
+  }, [token, id, contract, navigate, toast]);
 
   const updateContractMutation = useMutation({
     mutationFn: async (updatedData: FormData) => {
@@ -298,17 +352,6 @@ function ContractDetailsContent() {
     }
     inviteTenantMutation.mutate(email);
   };
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session && token) {
-        navigate(`/tenant-registration/${id}?invitation_token=${token}`);
-      }
-    };
-
-    checkAuth();
-  }, [token, id, navigate]);
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <ContractError showDashboard={showDashboard} error={error} onBack={() => navigate('/documents')} />;
