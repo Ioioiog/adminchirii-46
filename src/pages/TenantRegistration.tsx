@@ -7,17 +7,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FormData } from "@/types/contract";
 
 interface Contract {
   id: string;
   properties?: { name: string };
   property_id: string;
-  metadata: FormData;
+  metadata: any;
   status: 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled' | 'pending_signature';
 }
 
-const transformMetadataToFormData = (metadata: any): FormData => {
+const transformMetadataToFormData = (metadata: any) => {
   return {
     contractNumber: metadata?.contractNumber || '',
     contractDate: metadata?.contractDate || '',
@@ -92,32 +91,6 @@ const TenantRegistration = () => {
     toast({ title, description, variant: "destructive" });
     navigate("/auth");
   };
-
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log("Current session:", session?.user?.id);
-        
-        if (session?.user && contractId) {
-          const { data } = await supabase
-            .from('contracts')
-            .select('tenant_id, status')
-            .eq('id', contractId)
-            .maybeSingle();
-
-          if (data?.tenant_id === session.user.id) {
-            navigate(`/documents/contracts/${contractId}`);
-            return;
-          }
-        }
-      } catch (error) {
-        console.error("Session check error:", error);
-      }
-    };
-
-    checkSession();
-  }, [navigate, contractId]);
 
   useEffect(() => {
     const verifyContract = async () => {
