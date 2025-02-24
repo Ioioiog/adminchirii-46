@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Grid, List, Plus, FileText, CreditCard } from "lucide-react";
@@ -19,9 +20,7 @@ import { ContractDetailsDialog } from "@/components/contracts/ContractDetailsDia
 
 const Documents = () => {
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const [userId, setUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<"landlord" | "tenant" | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -29,78 +28,88 @@ const Documents = () => {
   const [typeFilter, setTypeFilter] = useState<"all" | DocumentType>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
-  const [activeTab, setActiveTab] = useState("documents");
+  const [activeTab, setActiveTab] = useState("contracts");
   const [selectedContract, setSelectedContract] = useState(null);
   const [showContractDetails, setShowContractDetails] = useState(false);
 
-  const {
-    data: properties
-  } = useQuery({
+  const { data: properties } = useQuery({
     queryKey: ["properties"],
     queryFn: async () => {
-      const {
-        data,
-        error
-      } = await supabase.from("properties").select("id, name");
+      const { data, error } = await supabase
+        .from("properties")
+        .select("id, name");
       if (error) throw error;
       return data;
     },
     enabled: userRole === "landlord"
   });
 
-  const {
-    data: contracts
-  } = useQuery({
-    queryKey: ["contracts"],
+  const { data: contracts, isLoading: isLoadingContracts } = useQuery({
+    queryKey: ["contracts", userId, userRole],
     queryFn: async () => {
-      const {
-        data,
-        error
-      } = await supabase.from("contracts").select(`
+      console.log("Fetching contracts for:", { userId, userRole });
+      
+      let query = supabase
+        .from("contracts")
+        .select(`
           id,
           contract_type,
           status,
           valid_from,
           valid_until,
+          tenant_id,
           properties(name)
         `);
-      if (error) throw error;
+
+      // For tenants, only show their contracts
+      if (userRole === "tenant") {
+        query = query.eq("tenant_id", userId);
+      }
+      // For landlords, show contracts for their properties
+      else if (userRole === "landlord") {
+        query = query.eq("landlord_id", userId);
+      }
+
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error("Error fetching contracts:", error);
+        throw error;
+      }
+
+      console.log("Contracts fetched:", data);
       return data;
     },
-    enabled: userRole === "landlord"
+    enabled: !!userId && !!userRole
   });
 
   useEffect(() => {
     const checkUser = async () => {
-      const {
-        data: {
-          session
-        }
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         console.log("No active session found, redirecting to auth");
         navigate("/auth");
         return;
       }
       setUserId(session.user.id);
-      const {
-        data: profile
-      } = await supabase.from("profiles").select("role").eq("id", session.user.id).maybeSingle();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .maybeSingle();
       if (profile?.role) {
         setUserRole(profile.role as "landlord" | "tenant");
       }
     };
+
     checkUser();
-    const {
-      data: {
-        subscription
-      }
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Documents page auth state changed:", event);
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) {
         navigate("/auth");
       }
     });
+
     return () => subscription.unsubscribe();
   }, [navigate, toast]);
 
@@ -119,12 +128,30 @@ const Documents = () => {
   const renderSection = () => {
     switch (activeTab) {
       case 'documents':
-        return <div className="space-y-4">
-            <DocumentFilters searchTerm={searchTerm} setSearchTerm={setSearchTerm} typeFilter={typeFilter} setTypeFilter={setTypeFilter} propertyFilter={propertyFilter} setPropertyFilter={setPropertyFilter} properties={properties} />
-            <DocumentList userId={userId} userRole={userRole} propertyFilter={propertyFilter} typeFilter={typeFilter} searchTerm={searchTerm} viewMode={viewMode} />
-          </div>;
+        return (
+          <div className="space-y-4">
+            <DocumentFilters
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              typeFilter={typeFilter}
+              setTypeFilter={setTypeFilter}
+              propertyFilter={propertyFilter}
+              setPropertyFilter={setPropertyFilter}
+              properties={properties}
+            />
+            <DocumentList
+              userId={userId}
+              userRole={userRole}
+              propertyFilter={propertyFilter}
+              typeFilter={typeFilter}
+              searchTerm={searchTerm}
+              viewMode={viewMode}
+            />
+          </div>
+        );
       case 'contracts':
-        return <div className="rounded-md border">
+        return (
+          <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -137,37 +164,69 @@ const Documents = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {contracts?.map(contract => <TableRow key={contract.id}>
-                    <TableCell>{contract.properties?.name || 'Untitled Property'}</TableCell>
-                    <TableCell className="capitalize">{contract.contract_type}</TableCell>
-                    <TableCell className="bg-zinc-50">
-                      <Badge variant="secondary" className={contract.status === 'signed' ? 'bg-green-100 text-green-800' : contract.status === 'draft' ? 'bg-gray-100 text-gray-800' : 'bg-yellow-100 text-yellow-800'}>
-                        {contract.status}
-                      </Badge>
+                {isLoadingContracts ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-4">
+                      Loading contracts...
                     </TableCell>
-                    <TableCell>{contract.valid_from ? format(new Date(contract.valid_from), 'MMM d, yyyy') : '-'}</TableCell>
-                    <TableCell>{contract.valid_until ? format(new Date(contract.valid_until), 'MMM d, yyyy') : '-'}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="sm" onClick={() => {
-                    navigate(`/documents/contracts/${contract.id}`);
-                  }}>
-                        View Details
-                      </Button>
+                  </TableRow>
+                ) : contracts?.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-4">
+                      No contracts found
                     </TableCell>
-                  </TableRow>)}
+                  </TableRow>
+                ) : (
+                  contracts?.map(contract => (
+                    <TableRow key={contract.id}>
+                      <TableCell>{contract.properties?.name || 'Untitled Property'}</TableCell>
+                      <TableCell className="capitalize">{contract.contract_type}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className={
+                          contract.status === 'signed' ? 'bg-green-100 text-green-800' : 
+                          contract.status === 'draft' ? 'bg-gray-100 text-gray-800' : 
+                          'bg-yellow-100 text-yellow-800'
+                        }>
+                          {contract.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {contract.valid_from ? format(new Date(contract.valid_from), 'MMM d, yyyy') : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {contract.valid_until ? format(new Date(contract.valid_until), 'MMM d, yyyy') : '-'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => navigate(`/documents/contracts/${contract.id}`)}
+                        >
+                          View Details
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
-          </div>;
+          </div>
+        );
       default:
         return null;
     }
   };
 
-  return <div className="flex bg-[#F8F9FC] min-h-screen">
+  return (
+    <div className="flex bg-[#F8F9FC] min-h-screen">
       <DashboardSidebar />
       <main className="flex-1 p-8">
         <div className="max-w-7xl mx-auto space-y-6">
-          <NavigationTabs tabs={navigationItems} activeTab={activeTab} onTabChange={id => setActiveTab(id)} />
+          <NavigationTabs 
+            tabs={navigationItems} 
+            activeTab={activeTab} 
+            onTabChange={id => setActiveTab(id)} 
+          />
           
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between mb-8">
@@ -185,16 +244,26 @@ const Documents = () => {
                 </p>
               </div>
 
-              {userRole === "landlord" && <div className="flex gap-2">
-                  <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowAddModal(true)}>
+              {userRole === "landlord" && (
+                <div className="flex gap-2">
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700" 
+                    onClick={() => setShowAddModal(true)}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     {activeTab === 'contracts' ? 'Upload Contract' : 'Upload Document'}
                   </Button>
-                  {activeTab === "contracts" && <Button onClick={() => navigate("/generate-contract")} className="bg-green-600 hover:bg-green-700">
+                  {activeTab === "contracts" && (
+                    <Button 
+                      onClick={() => navigate("/generate-contract")} 
+                      className="bg-green-600 hover:bg-green-700"
+                    >
                       <Plus className="h-4 w-4 mr-2" />
                       Create Contract
-                    </Button>}
-                </div>}
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
             
             <div className="mt-6">
@@ -204,10 +273,20 @@ const Documents = () => {
         </div>
       </main>
 
-      <DocumentDialog open={showAddModal} onOpenChange={setShowAddModal} userId={userId} userRole={userRole} />
+      <DocumentDialog 
+        open={showAddModal} 
+        onOpenChange={setShowAddModal} 
+        userId={userId} 
+        userRole={userRole} 
+      />
 
-      <ContractDetailsDialog open={showContractDetails} onOpenChange={setShowContractDetails} contract={selectedContract} />
-    </div>;
+      <ContractDetailsDialog 
+        open={showContractDetails} 
+        onOpenChange={setShowContractDetails} 
+        contract={selectedContract} 
+      />
+    </div>
+  );
 };
 
 export default Documents;
