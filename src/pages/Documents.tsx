@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { ContractDetailsDialog } from "@/components/contracts/ContractDetailsDialog";
+import { Json } from "@/integrations/supabase/types/json";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -26,6 +27,22 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+
+type ContractStatus = 'draft' | 'pending_signature' | 'signed' | 'expired' | 'cancelled';
+
+interface Contract {
+  id: string;
+  contract_type: string;
+  status: ContractStatus;
+  valid_from: string | null;
+  valid_until: string | null;
+  tenant_id: string | null;
+  landlord_id: string;
+  properties: { name: string } | null;
+  metadata: Json;
+}
+
+type QueryResult = Contract[];
 
 function Documents() {
   const navigate = useNavigate();
@@ -54,103 +71,101 @@ function Documents() {
     enabled: userRole === "landlord"
   });
 
-  const { data: contracts, isLoading: isLoadingContracts } = useQuery({
-    queryKey: ["contracts", userId, userRole],
-    queryFn: async () => {
-      console.log("Fetching contracts for:", { userId, userRole });
-      
-      if (!userId) {
-        throw new Error("No user ID available");
+  const fetchContracts = async (): Promise<QueryResult> => {
+    if (!userId) {
+      throw new Error("No user ID available");
+    }
+
+    if (userRole === "tenant") {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', session?.user?.id)
+        .single();
+
+      console.log("Tenant profile:", userProfile);
+
+      const { data: assignedContracts, error: assignedError } = await supabase
+        .from('contracts')
+        .select(`
+          id,
+          contract_type,
+          status,
+          valid_from,
+          valid_until,
+          tenant_id,
+          landlord_id,
+          properties(name),
+          metadata
+        `)
+        .eq('tenant_id', userId);
+
+      if (assignedError) {
+        console.error("Error fetching assigned contracts:", assignedError);
+        throw assignedError;
       }
 
-      if (userRole === "tenant") {
-        const { data: { session } } = await supabase.auth.getSession();
-        const { data: userProfile } = await supabase
-          .from('profiles')
-          .select('email')
-          .eq('id', session?.user?.id)
-          .single();
+      const { data: pendingContracts, error: pendingError } = await supabase
+        .from('contracts')
+        .select(`
+          id,
+          contract_type,
+          status,
+          valid_from,
+          valid_until,
+          tenant_id,
+          landlord_id,
+          properties(name),
+          metadata
+        `)
+        .eq('status', 'pending_signature')
+        .contains('metadata', { tenantEmail: userProfile?.email });
 
-        console.log("Tenant profile:", userProfile);
-
-        // First try to get contracts by tenant_id
-        const { data: assignedContracts, error: assignedError } = await supabase
-          .from('contracts')
-          .select(`
-            id,
-            contract_type,
-            status,
-            valid_from,
-            valid_until,
-            tenant_id,
-            landlord_id,
-            properties(name),
-            metadata
-          `)
-          .eq('tenant_id', userId);
-
-        if (assignedError) {
-          console.error("Error fetching assigned contracts:", assignedError);
-          throw assignedError;
-        }
-
-        // Then get pending contracts that match the tenant's email
-        const { data: pendingContracts, error: pendingError } = await supabase
-          .from('contracts')
-          .select(`
-            id,
-            contract_type,
-            status,
-            valid_from,
-            valid_until,
-            tenant_id,
-            landlord_id,
-            properties(name),
-            metadata
-          `)
-          .eq('status', 'pending_signature')
-          .containsObject('metadata', { tenantEmail: userProfile?.email });
-
-        if (pendingError) {
-          console.error("Error fetching pending contracts:", pendingError);
-          throw pendingError;
-        }
-
-        console.log("Found contracts:", {
-          assigned: assignedContracts,
-          pending: pendingContracts,
-          tenantEmail: userProfile?.email
-        });
-
-        // Combine both results
-        return [...(assignedContracts || []), ...(pendingContracts || [])];
-
-      } else if (userRole === "landlord") {
-        const { data, error } = await supabase
-          .from("contracts")
-          .select(`
-            id,
-            contract_type,
-            status,
-            valid_from,
-            valid_until,
-            tenant_id,
-            landlord_id,
-            properties(name),
-            metadata
-          `)
-          .eq("landlord_id", userId);
-
-        if (error) {
-          console.error("Error fetching landlord contracts:", error);
-          throw error;
-        }
-
-        return data;
+      if (pendingError) {
+        console.error("Error fetching pending contracts:", pendingError);
+        throw pendingError;
       }
 
-      return [];
-    },
+      console.log("Found contracts:", {
+        assigned: assignedContracts,
+        pending: pendingContracts,
+        tenantEmail: userProfile?.email
+      });
+
+      return [...(assignedContracts || []), ...(pendingContracts || [])] as Contract[];
+    }
+
+    if (userRole === "landlord") {
+      const { data, error } = await supabase
+        .from("contracts")
+        .select(`
+          id,
+          contract_type,
+          status,
+          valid_from,
+          valid_until,
+          tenant_id,
+          landlord_id,
+          properties(name),
+          metadata
+        `)
+        .eq("landlord_id", userId);
+
+      if (error) {
+        console.error("Error fetching landlord contracts:", error);
+        throw error;
+      }
+
+      return (data || []) as Contract[];
+    }
+
+    return [];
+  };
+
+  const { data: contracts = [], isLoading: isLoadingContracts } = useQuery({
+    queryKey: ["contracts", userId, userRole] as const,
+    queryFn: fetchContracts,
     enabled: !!userId && !!userRole
   });
 
