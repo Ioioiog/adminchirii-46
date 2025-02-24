@@ -1,4 +1,3 @@
-
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { QueryClient, QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,7 +80,7 @@ function ContractDetailsContent() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  const { token } = Object.fromEntries(searchParams);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [showDashboard, setShowDashboard] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
