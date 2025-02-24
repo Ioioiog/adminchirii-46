@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { Auth } from "@supabase/auth-ui-react";
@@ -74,13 +73,12 @@ const transformMetadataToFormData = (metadata: any): FormData => {
 
 const TenantRegistration = () => {
   const navigate = useNavigate();
-  const { id } = useParams(); // Get ID from URL params
+  const { id } = useParams();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   
-  // Extract params from either the URL params or search params
   const token = searchParams.get('token') || '';
-  const contractId = id || searchParams.get('contractId') || '';
+  const contractId = id || '';
   
   const [isLoading, setIsLoading] = useState(true);
   const [isExistingUser, setIsExistingUser] = useState<boolean | null>(null);
@@ -100,7 +98,7 @@ const TenantRegistration = () => {
         console.log("Current session:", session?.user?.id);
         
         if (session?.user) {
-          if (!token && contractId) {
+          if (contractId) {
             const { data } = await supabase
               .from('contracts')
               .select('tenant_id')
@@ -112,8 +110,6 @@ const TenantRegistration = () => {
               return;
             }
           }
-        } else if (!token) {
-          navigate('/auth');
         }
       } catch (error) {
         console.error("Session check error:", error);
@@ -121,7 +117,7 @@ const TenantRegistration = () => {
     };
 
     checkSession();
-  }, [navigate, token, contractId]);
+  }, [navigate, contractId]);
 
   useEffect(() => {
     const verifyContract = async () => {
@@ -144,13 +140,6 @@ const TenantRegistration = () => {
         if (error || !data) {
           console.error("Contract fetch error:", error);
           showError("Invalid Contract", "This contract does not exist or has been deleted.");
-          return;
-        }
-        
-        // If token is provided, verify it
-        if (token && data.invitation_token !== token) {
-          console.error("Token mismatch:", { provided: token, expected: data.invitation_token });
-          showError("Invalid Invitation", "This invitation link is invalid or has expired.");
           return;
         }
         
@@ -184,22 +173,17 @@ const TenantRegistration = () => {
 
         setIsExistingUser(!!existingUser);
         setContract(transformedContract);
+        setIsLoading(false);
         console.log("Contract verification complete:", { isExisting: !!existingUser });
         
       } catch (error) {
         console.error("Contract verification error:", error);
         showError("Error", "Failed to verify invitation. Please try again.");
-      } finally {
-        setIsLoading(false);
       }
     };
 
-    if (contractId) {
-      verifyContract();
-    } else {
-      setIsLoading(false);
-    }
-  }, [token, contractId, navigate, toast]);
+    verifyContract();
+  }, [contractId, navigate, toast]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -240,7 +224,7 @@ const TenantRegistration = () => {
               description: "You can now review and sign the contract.",
             });
 
-            navigate(`/documents/contracts/${contractId}?token=${token}`);
+            navigate(`/documents/contracts/${contractId}`);
             
           } catch (error: any) {
             console.error("Error setting up tenant:", error);
@@ -255,7 +239,7 @@ const TenantRegistration = () => {
     );
 
     return () => subscription.unsubscribe();
-  }, [contract, contractId, isExistingUser, navigate, toast, token]);
+  }, [contract, contractId, isExistingUser, navigate, toast]);
 
   if (isLoading) {
     return (
