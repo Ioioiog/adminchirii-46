@@ -92,12 +92,19 @@ const Documents = () => {
 
   const deleteContractMutation = useMutation({
     mutationFn: async (contractId: string) => {
-      const { error } = await supabase
+      const { error: signaturesError } = await supabase
+        .from("contract_signatures")
+        .delete()
+        .eq("contract_id", contractId);
+      
+      if (signaturesError) throw signaturesError;
+
+      const { error: contractError } = await supabase
         .from("contracts")
         .delete()
         .eq("id", contractId);
       
-      if (error) throw error;
+      if (contractError) throw contractError;
     },
     onSuccess: () => {
       toast({
