@@ -1,3 +1,4 @@
+
 import { FormData } from "@/types/contract";
 import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -35,6 +36,44 @@ export function ContractSignatures({
   useEffect(() => {
     setLocalFormData(formData);
   }, [formData]);
+
+  useEffect(() => {
+    const checkSignaturesAndUpdateStatus = async () => {
+      // First get all signatures for this contract
+      const { data: signatures, error: signaturesError } = await supabase
+        .from('contract_signatures')
+        .select('*')
+        .eq('contract_id', contractId);
+
+      if (signaturesError) {
+        console.error('Error checking signatures:', signaturesError);
+        return;
+      }
+
+      console.log('Checking signatures:', signatures);
+
+      const hasLandlordSignature = signatures?.some(s => s.signer_role === 'landlord');
+      const hasTenantSignature = signatures?.some(s => s.signer_role === 'tenant');
+
+      // If both signatures exist, update contract status to signed
+      if (hasLandlordSignature && hasTenantSignature) {
+        const { error: updateError } = await supabase
+          .from('contracts')
+          .update({ status: 'signed' })
+          .eq('id', contractId);
+
+        if (updateError) {
+          console.error('Error updating contract status:', updateError);
+        } else {
+          console.log('Contract status updated to signed');
+          setContractStatus('signed');
+        }
+      }
+    };
+
+    // Check signatures when component mounts and after new signatures are added
+    checkSignaturesAndUpdateStatus();
+  }, [contractId]);
 
   useEffect(() => {
     const fetchContractStatus = async () => {
@@ -99,13 +138,14 @@ export function ContractSignatures({
               signer_role: signerRole,
               signature_data: signatureName,
               signature_image: signatureImage,
+              signed_at: new Date().toISOString(),
               ip_address: await fetch('https://api.ipify.org?format=json').then(res => res.json()).then(data => data.ip)
             });
 
           if (error) throw error;
         }
 
-        // Update contract metadata
+        // Update form data with signature
         let updatedMetadata = {
           ...localFormData
         };
@@ -120,15 +160,23 @@ export function ContractSignatures({
           updatedMetadata.tenantSignatureImage = signatureImage;
         }
 
+        // Check if both signatures now exist
+        const { data: signatures } = await supabase
+          .from('contract_signatures')
+          .select('*')
+          .eq('contract_id', contractId);
+
+        const hasLandlordSignature = signatures?.some(s => s.signer_role === 'landlord');
+        const hasTenantSignature = signatures?.some(s => s.signer_role === 'tenant');
+
         let newStatus: ContractStatus = contractStatus;
-        if (isLandlord && !localFormData.tenantSignatureName) {
+        if (hasLandlordSignature && hasTenantSignature) {
+          newStatus = 'signed';
+        } else if (isLandlord && !hasTenantSignature) {
           newStatus = 'pending_signature';
-        } else if (!isLandlord && localFormData.ownerSignatureName) {
-          newStatus = 'signed';
-        } else if (isLandlord && localFormData.tenantSignatureName) {
-          newStatus = 'signed';
         }
 
+        // Update contract status and metadata
         const { error: contractError } = await supabase
           .from('contracts')
           .update({
@@ -139,7 +187,6 @@ export function ContractSignatures({
 
         if (contractError) throw contractError;
 
-        // Update both local state and parent component
         setLocalFormData(updatedMetadata);
         if (onFieldChange) {
           if (isLandlord) {
@@ -176,10 +223,6 @@ export function ContractSignatures({
         variant: "destructive"
       });
     }
-  };
-
-  const clearSignature = () => {
-    signaturePadRef.current?.clear();
   };
 
   const canSignAsLandlord = userRole === 'landlord' && 
@@ -241,7 +284,7 @@ export function ContractSignatures({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={clearSignature}
+                onClick={() => signaturePadRef.current?.clear()}
                 className="mt-2"
               >
                 Clear
@@ -293,7 +336,7 @@ export function ContractSignatures({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={clearSignature}
+                onClick={() => signaturePadRef.current?.clear()}
                 className="mt-2"
               >
                 Clear
