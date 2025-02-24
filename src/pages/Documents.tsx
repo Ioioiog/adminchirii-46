@@ -95,17 +95,21 @@ const Documents = () => {
     mutationFn: async (contractId: string) => {
       try {
         // First, verify if there are any signatures
-        const { data: signatures } = await supabase
-          .from("contract_signatures")
+        const { data: signatures, error: signatureCheckError } = await supabase
+          .from('contract_signatures')
           .select('id')
-          .eq("contract_id", contractId);
+          .eq('contract_id', contractId);
+
+        if (signatureCheckError) {
+          throw signatureCheckError;
+        }
 
         if (signatures && signatures.length > 0) {
           // Delete all signatures for this contract
           const { error: signaturesError } = await supabase
-            .from("contract_signatures")
+            .from('contract_signatures')
             .delete()
-            .eq("contract_id", contractId);
+            .eq('contract_id', contractId);
           
           if (signaturesError) {
             console.error("Error deleting signatures:", signaturesError);
@@ -118,15 +122,15 @@ const Documents = () => {
 
         // Then delete the contract itself
         const { error: contractError } = await supabase
-          .from("contracts")
+          .from('contracts')
           .delete()
-          .eq("id", contractId);
+          .eq('id', contractId);
         
         if (contractError) {
           console.error("Error deleting contract:", contractError);
           throw contractError;
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Deletion error:", error);
         throw error;
       }
