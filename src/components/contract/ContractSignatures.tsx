@@ -1,4 +1,3 @@
-
 import { FormData } from "@/types/contract";
 import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -34,29 +33,29 @@ export function ContractSignatures({
   const signaturePadRef = useRef<SignaturePad>(null);
   const [contractStatus, setContractStatus] = useState<ContractStatus>('draft');
 
-  const { data: signatures, refetch: refetchSignatures, error: signatureError } = useQuery({
-    queryKey: ['contract-signatures', contractId, userId, userRole],
+  const { data: contract } = useQuery({
+    queryKey: ['contract', contractId],
     queryFn: async () => {
-      console.log('Fetching signatures for contract:', contractId);
-      console.log('Current user:', { userRole, userId });
-
-      const { data: contract, error: contractError } = await supabase
+      const { data, error } = await supabase
         .from('contracts')
         .select('id, tenant_id, landlord_id, status')
         .eq('id', contractId)
         .maybeSingle();
 
-      if (contractError) {
-        console.error('Error fetching contract:', contractError);
-        throw contractError;
-      }
+      if (error) throw error;
+      if (!data) throw new Error('Contract not found');
+      
+      console.log('Contract details:', data);
+      setContractStatus(data.status as ContractStatus);
+      return data;
+    },
+    enabled: !!contractId
+  });
 
-      if (!contract) {
-        console.error('Contract not found:', contractId);
-        throw new Error('Contract not found');
-      }
-
-      console.log('Found contract:', contract);
+  const { data: signatures, refetch: refetchSignatures, error: signatureError } = useQuery({
+    queryKey: ['contract-signatures', contractId],
+    queryFn: async () => {
+      console.log('Fetching signatures for contract:', contractId);
 
       const { data, error } = await supabase
         .from('contract_signatures')
@@ -68,24 +67,11 @@ export function ContractSignatures({
         throw error;
       }
 
-      console.log('Raw signatures response:', data);
-
-      if (data && data.length > 0) {
-        data.forEach((sig, index) => {
-          console.log(`Signature ${index + 1}:`, {
-            signerRole: sig.signer_role,
-            signerId: sig.signer_id,
-            signedAt: sig.signed_at
-          });
-        });
-      } else {
-        console.log('No signatures found for contract');
-      }
-
+      console.log('Signatures found:', data);
       return data || [];
     },
     retry: 1,
-    enabled: !!userId && !!contractId
+    enabled: !!contractId
   });
 
   useEffect(() => {
@@ -107,7 +93,8 @@ export function ContractSignatures({
       console.log('Processing signatures:', {
         tenantSignature,
         ownerSignature,
-        currentFormData: formData
+        currentFormData: formData,
+        allSignatures: signatures
       });
 
       const updatedFormData = {
@@ -126,41 +113,21 @@ export function ContractSignatures({
       if (tenantSignature && ownerSignature) {
         console.log('Both signatures present, setting status to signed');
         setContractStatus('signed');
+        
+        if (contract?.status !== 'signed') {
+          supabase
+            .from('contracts')
+            .update({ status: 'signed' })
+            .eq('id', contractId)
+            .then(({ error }) => {
+              if (error) {
+                console.error('Error updating contract status:', error);
+              }
+            });
+        }
       }
     }
-  }, [signatures, formData]);
-
-  useEffect(() => {
-    const fetchContractStatus = async () => {
-      try {
-        console.log('Fetching contract status for:', contractId);
-        const { data, error } = await supabase
-          .from('contracts')
-          .select('status')
-          .eq('id', contractId)
-          .maybeSingle();
-        
-        if (error) {
-          console.error('Error fetching contract status:', error);
-          throw error;
-        }
-
-        console.log('Contract status:', data?.status);
-        if (data) {
-          setContractStatus(data.status as ContractStatus);
-        }
-      } catch (error) {
-        console.error('Failed to fetch contract status:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load contract status",
-          variant: "destructive"
-        });
-      }
-    };
-
-    fetchContractStatus();
-  }, [contractId, toast]);
+  }, [signatures, formData, contractId, contract?.status]);
 
   const handleSign = async () => {
     console.log('Starting signing process:', {
