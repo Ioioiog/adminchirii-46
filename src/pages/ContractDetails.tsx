@@ -1,4 +1,3 @@
-
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { QueryClient, QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -110,16 +109,19 @@ function ContractDetailsContent() {
       
       let query = supabase
         .from('contracts')
-        .select('*, properties(name)')
-        .eq('id', id);
+        .select('*, properties(name)');
+
+      let { data: contractData, error: contractError } = await query
+        .eq('id', id)
+        .maybeSingle();
 
       if (token) {
-        console.log('Adding invitation token to query:', token);
-        query = query.eq('invitation_token', token);
+        if (!contractData || contractData.invitation_token !== token) {
+          console.error('Invalid invitation token');
+          throw new Error('Invalid invitation token');
+        }
         setShowDashboard(false);
       }
-
-      const { data: contractData, error: contractError } = await query.maybeSingle();
 
       if (contractError) {
         console.error('Contract fetch error:', contractError);
@@ -134,7 +136,8 @@ function ContractDetailsContent() {
       console.log('Contract data retrieved:', {
         status: contractData.status,
         hasToken: !!token,
-        isValidStatus: ['pending', 'pending_signature'].includes(contractData.status)
+        isValidStatus: ['pending', 'pending_signature'].includes(contractData.status),
+        invitation_token: contractData.invitation_token
       });
 
       if (token && !['pending', 'pending_signature'].includes(contractData.status)) {
