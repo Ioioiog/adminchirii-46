@@ -1,7 +1,6 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Grid, List, Plus, FileText, CreditCard } from "lucide-react";
+import { Grid, List, Plus, FileText, CreditCard, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { Button } from "@/components/ui/button";
@@ -10,17 +9,28 @@ import { DocumentList } from "@/components/documents/DocumentList";
 import { DocumentDialog } from "@/components/documents/DocumentDialog";
 import { DocumentType } from "@/integrations/supabase/types/document-types";
 import { DocumentFilters } from "@/components/documents/DocumentFilters";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { NavigationTabs } from "@/components/layout/NavigationTabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { ContractDetailsDialog } from "@/components/contracts/ContractDetailsDialog";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const Documents = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [userId, setUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<"landlord" | "tenant" | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -61,12 +71,9 @@ const Documents = () => {
           properties(name)
         `);
 
-      // For tenants, only show their contracts
       if (userRole === "tenant") {
         query = query.eq("tenant_id", userId);
-      }
-      // For landlords, show contracts for their properties
-      else if (userRole === "landlord") {
+      } else if (userRole === "landlord") {
         query = query.eq("landlord_id", userId);
       }
 
@@ -81,6 +88,32 @@ const Documents = () => {
       return data;
     },
     enabled: !!userId && !!userRole
+  });
+
+  const deleteContractMutation = useMutation({
+    mutationFn: async (contractId: string) => {
+      const { error } = await supabase
+        .from("contracts")
+        .delete()
+        .eq("id", contractId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Contract deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["contracts"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete contract",
+        variant: "destructive",
+      });
+      console.error("Delete error:", error);
+    },
   });
 
   useEffect(() => {
@@ -196,7 +229,7 @@ const Documents = () => {
                       <TableCell>
                         {contract.valid_until ? format(new Date(contract.valid_until), 'MMM d, yyyy') : '-'}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right space-x-2">
                         <Button 
                           variant="outline" 
                           size="sm" 
@@ -204,6 +237,36 @@ const Documents = () => {
                         >
                           View Details
                         </Button>
+                        {userRole === 'landlord' && contract.status === 'draft' && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-red-200 text-red-600 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete the contract.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <Button 
+                                  variant="destructive"
+                                  onClick={() => deleteContractMutation.mutate(contract.id)}
+                                >
+                                  Delete
+                                </Button>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
