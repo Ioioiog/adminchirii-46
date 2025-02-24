@@ -64,12 +64,16 @@ export function ContractSignatures({
     if (!signaturePadRef.current?.isEmpty() && signatureName) {
       try {
         const signatureImage = signaturePadRef.current?.getTrimmedCanvas().toDataURL('image/png');
+        const signatureDate = new Date().toISOString().split('T')[0];
+        const isLandlord = userRole === 'landlord';
+        const signerRole = isLandlord ? 'landlord' : 'tenant';
 
+        // Save signature to contract_signatures table
         const { data: existingSignatures } = await supabase
           .from('contract_signatures')
           .select('*')
           .eq('contract_id', contractId)
-          .eq('signer_role', userRole === 'landlord' ? 'landlord' : 'tenant');
+          .eq('signer_role', signerRole);
 
         if (existingSignatures && existingSignatures.length > 0) {
           const { error: updateError } = await supabase
@@ -88,7 +92,7 @@ export function ContractSignatures({
             .insert({
               contract_id: contractId,
               signer_id: userId,
-              signer_role: userRole === 'landlord' ? 'landlord' : 'tenant',
+              signer_role: signerRole,
               signature_data: signatureName,
               signature_image: signatureImage,
               ip_address: await fetch('https://api.ipify.org?format=json').then(res => res.json()).then(data => data.ip)
@@ -97,20 +101,27 @@ export function ContractSignatures({
           if (error) throw error;
         }
 
-        const signatureDate = new Date().toISOString().split('T')[0];
-        const updatedMetadata = {
-          ...formData,
-          [`${userRole === 'landlord' ? 'owner' : 'tenant'}SignatureDate`]: signatureDate,
-          [`${userRole === 'landlord' ? 'owner' : 'tenant'}SignatureName`]: signatureName,
-          [`${userRole === 'landlord' ? 'owner' : 'tenant'}SignatureImage`]: signatureImage
+        // Update contract metadata
+        let updatedMetadata = {
+          ...formData
         };
 
+        if (isLandlord) {
+          updatedMetadata.ownerSignatureDate = signatureDate;
+          updatedMetadata.ownerSignatureName = signatureName;
+          updatedMetadata.ownerSignatureImage = signatureImage;
+        } else {
+          updatedMetadata.tenantSignatureDate = signatureDate;
+          updatedMetadata.tenantSignatureName = signatureName;
+          updatedMetadata.tenantSignatureImage = signatureImage;
+        }
+
         let newStatus: ContractStatus = contractStatus;
-        if (userRole === 'landlord' && !formData.tenantSignatureName) {
+        if (isLandlord && !formData.tenantSignatureName) {
           newStatus = 'pending_signature';
-        } else if (userRole === 'tenant' && formData.ownerSignatureName) {
+        } else if (!isLandlord && formData.ownerSignatureName) {
           newStatus = 'signed';
-        } else if (userRole === 'landlord' && formData.tenantSignatureName) {
+        } else if (isLandlord && formData.tenantSignatureName) {
           newStatus = 'signed';
         }
 
@@ -123,6 +134,19 @@ export function ContractSignatures({
           .eq('id', contractId);
 
         if (contractError) throw contractError;
+
+        // Update local form data through the callback
+        if (onFieldChange) {
+          if (isLandlord) {
+            onFieldChange('ownerSignatureDate', signatureDate);
+            onFieldChange('ownerSignatureName', signatureName);
+            onFieldChange('ownerSignatureImage', signatureImage);
+          } else {
+            onFieldChange('tenantSignatureDate', signatureDate);
+            onFieldChange('tenantSignatureName', signatureName);
+            onFieldChange('tenantSignatureImage', signatureImage);
+          }
+        }
 
         toast({
           title: "Success",
