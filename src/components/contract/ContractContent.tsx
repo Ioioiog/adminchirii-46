@@ -6,13 +6,18 @@ interface ContractContentProps {
   formData: FormData;
   isEditing?: boolean;
   onFieldChange?: (field: keyof FormData, value: string) => void;
+  readOnly?: boolean;
 }
 
-export function ContractContent({ formData, isEditing = false, onFieldChange }: ContractContentProps) {
+export function ContractContent({ 
+  formData, 
+  isEditing = false, 
+  onFieldChange,
+  readOnly = false 
+}: ContractContentProps) {
   const renderField = (label: string, field: keyof FormData) => {
     const value = formData[field];
     
-    // Special handling for assets array
     if (field === 'assets' && Array.isArray(value)) {
       return (
         <div className="space-y-2">
@@ -25,14 +30,14 @@ export function ContractContent({ formData, isEditing = false, onFieldChange }: 
       );
     }
 
-    // Regular field handling
-    if (isEditing && onFieldChange) {
+    if (isEditing && onFieldChange && !readOnly) {
       return (
         <Input
           type="text"
           value={value as string}
           onChange={(e) => onFieldChange(field, e.target.value)}
           className="w-full"
+          readOnly={readOnly}
         />
       );
     }

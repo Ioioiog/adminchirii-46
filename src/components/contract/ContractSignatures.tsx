@@ -1,4 +1,3 @@
-
 import { FormData } from "@/types/contract";
 import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -14,9 +13,18 @@ type ContractStatus = 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled' |
 interface ContractSignaturesProps {
   formData: FormData;
   contractId: string;
+  canSign?: boolean;
+  onFieldChange?: (field: keyof FormData, value: string) => void;
+  readOnly?: boolean;
 }
 
-export function ContractSignatures({ formData, contractId }: ContractSignaturesProps) {
+export function ContractSignatures({ 
+  formData, 
+  contractId, 
+  canSign = false,
+  onFieldChange,
+  readOnly = false 
+}: ContractSignaturesProps) {
   const { userRole, userId } = useUserRole();
   const { toast } = useToast();
   const [signatureName, setSignatureName] = useState("");

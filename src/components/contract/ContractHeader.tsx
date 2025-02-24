@@ -9,6 +9,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTenants } from "@/hooks/useTenants";
+import type { FormData } from "@/types/contract";
 
 interface ContractHeaderProps {
   onBack: () => void;
@@ -21,7 +22,8 @@ interface ContractHeaderProps {
   onSave: () => void;
   onInviteTenant: (email: string) => void;
   contractStatus: ContractStatus;
-  formData: { tenantEmail: string };
+  formData: FormData;
+  showActions?: boolean;
 }
 
 export function ContractHeader({
@@ -35,7 +37,8 @@ export function ContractHeader({
   onSave,
   onInviteTenant,
   contractStatus,
-  formData
+  formData,
+  showActions = true
 }: ContractHeaderProps) {
   const { data: tenants = [] } = useTenants();
   const [inviteOption, setInviteOption] = useState<'contract-tenant' | 'tenant-list' | 'custom-email'>(
