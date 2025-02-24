@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { Auth } from "@supabase/auth-ui-react";
@@ -77,8 +78,9 @@ const TenantRegistration = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   
-  const token = searchParams.get('invitation_token');
-  const contractId = id || '';
+  // Handle both URL formats
+  const token = searchParams.get('invitation_token') || searchParams.get('token');
+  const contractId = id || searchParams.get('contractId');
   
   const [isLoading, setIsLoading] = useState(true);
   const [isExistingUser, setIsExistingUser] = useState<boolean | null>(null);
@@ -224,7 +226,7 @@ const TenantRegistration = () => {
               description: "You can now review and sign the contract.",
             });
 
-            navigate(`/documents/contracts/${contractId}`);
+            navigate(`/documents/contracts/${contractId}?invitation_token=${token}`);
             
           } catch (error: any) {
             console.error("Error setting up tenant:", error);
@@ -239,7 +241,7 @@ const TenantRegistration = () => {
     );
 
     return () => subscription.unsubscribe();
-  }, [contract, contractId, isExistingUser, navigate, toast]);
+  }, [contract, contractId, isExistingUser, navigate, toast, token]);
 
   if (isLoading) {
     return (
