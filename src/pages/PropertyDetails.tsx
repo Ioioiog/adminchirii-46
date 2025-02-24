@@ -236,6 +236,14 @@ const PropertyDetails = () => {
 
   const activeTenants = property.tenancies?.filter((t: any) => t.status === 'active') || [];
 
+  // Get current user ID
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id;
+
+  if (!userId) {
+    return null; // or some loading/error state
+  }
+
   return (
     <div className="flex bg-[#F8F9FC] min-h-screen">
       <DashboardSidebar />
@@ -281,9 +289,8 @@ const PropertyDetails = () => {
               )}
               {activeTab === "invoice" && (
                 <InvoiceSettingsTab
-                  property={property}
-                  invoiceSettings={invoiceSettings}
-                  handleInvoiceSettingChange={handleInvoiceSettingChange}
+                  propertyId={id || ''}
+                  userId={userId}
                 />
               )}
             </div>
