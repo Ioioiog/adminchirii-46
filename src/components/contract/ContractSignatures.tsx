@@ -58,12 +58,6 @@ export function ContractSignatures({
 
       console.log('Found contract:', contract);
 
-      console.log('Executing signatures query for:', {
-        contractId,
-        userRole,
-        userId
-      });
-
       const { data, error } = await supabase
         .from('contract_signatures')
         .select('*')
@@ -91,7 +85,7 @@ export function ContractSignatures({
       return data || [];
     },
     retry: 1,
-    enabled: !!userId && !!contractId // Only run query when we have both userId and contractId
+    enabled: !!userId && !!contractId
   });
 
   useEffect(() => {
