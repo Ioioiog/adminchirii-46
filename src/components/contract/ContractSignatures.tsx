@@ -43,6 +43,7 @@ export function ContractSignatures({
         .select('*')
         .eq('contract_id', contractId);
 
+      console.log('Fetched signatures:', data);
       if (error) throw error;
       return data || [];
     }
@@ -54,6 +55,12 @@ export function ContractSignatures({
       const tenantSignature = signatures.find(s => s.signer_role === 'tenant');
       const ownerSignature = signatures.find(s => s.signer_role === 'landlord');
 
+      console.log('Processing signatures:', {
+        tenantSignature,
+        ownerSignature,
+        currentFormData: formData
+      });
+
       const updatedFormData = {
         ...formData,
         tenantSignatureName: tenantSignature?.signature_data || '',
@@ -64,10 +71,12 @@ export function ContractSignatures({
         ownerSignatureDate: ownerSignature?.signed_at?.split('T')[0] || ''
       };
 
+      console.log('Updated form data:', updatedFormData);
       setLocalFormData(updatedFormData);
 
       // Update contract status if both signatures exist
       if (tenantSignature && ownerSignature) {
+        console.log('Both signatures present, setting status to signed');
         setContractStatus('signed');
       }
     }
@@ -90,6 +99,13 @@ export function ContractSignatures({
   }, [contractId]);
 
   const handleSign = async () => {
+    console.log('Starting signing process:', {
+      userRole,
+      userId,
+      contractStatus,
+      currentSignatures: signatures
+    });
+
     if (!userId || !userRole) {
       toast({
         title: "Error",
@@ -106,6 +122,12 @@ export function ContractSignatures({
         const isLandlord = userRole === 'landlord';
         const signerRole = isLandlord ? 'landlord' : 'tenant';
 
+        console.log('Saving signature:', {
+          signerRole,
+          signatureName,
+          signatureDate
+        });
+
         // Save signature to contract_signatures table
         const { error: signatureError } = await supabase
           .from('contract_signatures')
@@ -121,6 +143,8 @@ export function ContractSignatures({
 
         if (signatureError) throw signatureError;
 
+        console.log('Signature saved successfully');
+
         // Refetch signatures to update the display
         await refetchSignatures();
 
@@ -132,6 +156,8 @@ export function ContractSignatures({
             : isLandlord
               ? 'pending_signature'
               : contractStatus;
+
+        console.log('Updating contract status to:', newStatus);
 
         // Update contract status
         const { error: contractError } = await supabase
