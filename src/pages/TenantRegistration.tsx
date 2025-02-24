@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { Auth } from "@supabase/auth-ui-react";
@@ -80,15 +79,14 @@ const TenantRegistration = () => {
       try {
         console.log("Verifying contract invitation token");
         
-        // First, check if the contract exists
-        const { data: contractData, error: contractError } = await supabase
+        // Get the contract first
+        const { data: contracts, error: contractError } = await supabase
           .from('contracts')
           .select('*, properties(*)')
-          .eq('id', id)
-          .single();
+          .eq('id', id);
 
-        if (contractError || !contractData) {
-          console.error("Contract verification error:", contractError);
+        if (contractError || !contracts || contracts.length === 0) {
+          console.error("Contract fetch error:", contractError);
           toast({
             title: "Invalid Contract",
             description: "This contract does not exist or has been deleted.",
@@ -98,7 +96,9 @@ const TenantRegistration = () => {
           return;
         }
 
-        // Then verify the invitation token
+        const contractData = contracts[0];
+
+        // Verify the invitation token separately
         if (contractData.invitation_token !== token) {
           console.error("Invalid invitation token");
           toast({
@@ -110,7 +110,7 @@ const TenantRegistration = () => {
           return;
         }
 
-        // Check if contract status is valid for tenant registration
+        // Check contract status
         if (contractData.status !== 'pending' && contractData.status !== 'pending_signature') {
           toast({
             title: "Invalid Contract Status",
@@ -191,6 +191,7 @@ const TenantRegistration = () => {
           throw new Error("Invalid contract configuration");
         }
 
+        // Check if user exists
         const { data: existingUser, error: userError } = await supabase
           .from('profiles')
           .select('id')
