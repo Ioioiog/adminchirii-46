@@ -1,4 +1,3 @@
-
 import { Json } from "@/integrations/supabase/types/json";
 
 export interface Asset {
@@ -8,7 +7,67 @@ export interface Asset {
   condition: string;
 }
 
-export type ContractStatus = 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled' | 'pending_signature';
+export type ContractStatus = 'draft' | 'pending_signature' | 'signed' | 'expired' | 'cancelled';
+
+export interface ContractStatusTransition {
+  from: ContractStatus;
+  to: ContractStatus;
+  role: 'landlord' | 'tenant';
+  action: string;
+}
+
+export const CONTRACT_STATUS_TRANSITIONS: ContractStatusTransition[] = [
+  {
+    from: 'draft',
+    to: 'pending_signature',
+    role: 'landlord',
+    action: 'send_invite'
+  },
+  {
+    from: 'pending_signature',
+    to: 'signed',
+    role: 'tenant',
+    action: 'sign'
+  },
+  {
+    from: 'pending_signature',
+    to: 'cancelled',
+    role: 'landlord',
+    action: 'cancel'
+  }
+];
+
+export const CONTRACT_STATUS_BADGES: Record<ContractStatus, {
+  label: string;
+  variant: 'default' | 'secondary' | 'destructive' | 'outline';
+  className?: string;
+}> = {
+  draft: {
+    label: 'Draft',
+    variant: 'outline',
+    className: 'bg-gray-100 text-gray-800'
+  },
+  pending_signature: {
+    label: 'Pending Signature',
+    variant: 'secondary',
+    className: 'bg-yellow-100 text-yellow-800'
+  },
+  signed: {
+    label: 'Signed',
+    variant: 'default',
+    className: 'bg-green-100 text-green-800'
+  },
+  expired: {
+    label: 'Expired',
+    variant: 'destructive',
+    className: 'bg-red-100 text-red-800'
+  },
+  cancelled: {
+    label: 'Cancelled',
+    variant: 'destructive',
+    className: 'bg-gray-100 text-gray-800'
+  }
+};
 
 export interface FormData {
   contractNumber: string;
