@@ -41,7 +41,7 @@ export function AppRoutes({ isAuthenticated }: AppRoutesProps) {
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/update-password" element={<UpdatePassword />} />
-      <Route path="/tenant-registration" element={<TenantRegistration />} />
+      <Route path="/tenant-registration/:id" element={<TenantRegistration />} />
       <Route path="/info" element={<Info />} />
       
       {/* Protected Routes */}

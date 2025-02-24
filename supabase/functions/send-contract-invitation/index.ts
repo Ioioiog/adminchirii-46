@@ -25,12 +25,14 @@ serve(async (req) => {
     // Generate invitation token
     const token = crypto.randomUUID();
 
-    // Update contract with invitation token
+    // Update contract with invitation token and email
     const { error: updateError } = await supabaseClient
       .from('contracts')
       .update({
         invitation_token: token,
-        status: 'pending_signature'
+        invitation_email: email,
+        status: 'pending_signature',
+        invitation_sent_at: new Date().toISOString()
       })
       .eq('id', contractId);
 
