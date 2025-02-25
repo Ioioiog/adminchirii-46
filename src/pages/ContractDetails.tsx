@@ -317,6 +317,45 @@ function ContractDetailsContent() {
     inviteTenantMutation.mutate(email);
   };
 
+  const handleEmail = async () => {
+    if (!id) {
+      console.error('No contract ID provided');
+      return;
+    }
+
+    console.log('Initiating contract send process...');
+
+    try {
+      const { error } = await supabase.functions.invoke('send-contract', {
+        body: { contractId: id }
+      });
+
+      if (error) {
+        console.error('Error sending contract:', error);
+        toast({
+          title: "Error",
+          description: "Failed to send contract. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('Contract sent successfully');
+      toast({
+        title: "Success",
+        description: "Contract sent successfully",
+      });
+
+    } catch (err) {
+      console.error('Unexpected error sending contract:', err);
+      toast({
+        title: "Error",
+        description: "Failed to send contract. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex bg-[#F8F9FC] min-h-screen">
@@ -357,7 +396,7 @@ function ContractDetailsContent() {
             onBack={() => navigate('/documents')}
             onPreview={() => setIsPreviewModalOpen(true)}
             onPrint={() => contract && handlePrint()}
-            onEmail={() => {}}
+            onEmail={handleEmail}
             canEdit={canEdit}
             isEditing={isEditing}
             onEdit={() => setIsEditing(true)}
