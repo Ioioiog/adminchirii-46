@@ -46,14 +46,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch contract details
+    // First fetch the contract with property details
     const { data: contract, error: contractError } = await supabase
       .from('contracts')
       .select(`
         *,
-        properties(name),
-        landlord:profiles!contracts_landlord_id_fkey(email, first_name, last_name),
-        tenant:profiles!contracts_tenant_id_fkey(email, first_name, last_name)
+        properties(name)
       `)
       .eq('id', contractId)
       .single();
@@ -71,20 +69,52 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Contract property details not found');
     }
 
+    // Fetch landlord details separately
+    const { data: landlord } = await supabase
+      .from('profiles')
+      .select('email, first_name, last_name')
+      .eq('id', contract.landlord_id)
+      .single();
+
+    // Fetch tenant details separately if tenant_id exists
+    let tenant = null;
+    if (contract.tenant_id) {
+      const { data: tenantData } = await supabase
+        .from('profiles')
+        .select('email, first_name, last_name')
+        .eq('id', contract.tenant_id)
+        .single();
+      tenant = tenantData;
+    }
+
     console.log('Sending contract email to:', recipientEmail);
+    
+    // Prepare email content with available information
+    let emailContent = `
+      <h1>Contract Details</h1>
+      <p>Property: ${contract.properties.name}</p>
+      <p>Status: ${contract.status}</p>
+    `;
+
+    if (landlord) {
+      emailContent += `<p>Landlord: ${landlord.first_name} ${landlord.last_name}</p>`;
+    }
+
+    if (tenant) {
+      emailContent += `<p>Tenant: ${tenant.first_name} ${tenant.last_name}</p>`;
+    }
+
+    emailContent += `
+      <p>You can view and sign the contract by logging into your account.</p>
+      <p>Link: ${Deno.env.get('PUBLIC_SITE_URL') || ''}/documents/contracts/${contract.id}</p>
+    `;
 
     // Send email using Resend
     const emailResponse = await resend.emails.send({
       from: 'Contract System <onboarding@resend.dev>',
       to: [recipientEmail],
       subject: `Contract for ${contract.properties.name}`,
-      html: `
-        <h1>Contract Details</h1>
-        <p>Property: ${contract.properties.name}</p>
-        <p>Status: ${contract.status}</p>
-        <p>You can view and sign the contract by logging into your account.</p>
-        <p>Link: ${Deno.env.get('PUBLIC_SITE_URL')}/documents/contracts/${contract.id}</p>
-      `,
+      html: emailContent,
     });
 
     console.log('Email sent successfully:', emailResponse);
