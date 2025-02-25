@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Grid, List, Plus, FileText, CreditCard, Trash2 } from "lucide-react";
@@ -76,40 +77,91 @@ function Documents() {
       throw new Error("No user ID available");
     }
 
-    try {
-      let query = supabase
-        .from('contracts')
-        .select(`
-          id,
-          contract_type,
-          status,
-          valid_from,
-          valid_until,
-          tenant_id,
-          landlord_id,
-          properties(name),
-          metadata
-        `);
+    if (userRole === "tenant") {
+      try {
+        // First get the user's email
+        const { data: userProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('id', userId)
+          .single();
 
-      if (userRole === "tenant") {
-        query = query.eq('tenant_id', userId);
-      } else if (userRole === "landlord") {
-        query = query.eq('landlord_id', userId);
+        if (profileError) {
+          console.error("Error fetching user profile:", profileError);
+          throw profileError;
+        }
+
+        if (!userProfile?.email) {
+          console.error("No email found for user");
+          throw new Error("User email not found");
+        }
+
+        console.log("Found user profile:", userProfile);
+
+        const query = supabase
+          .from('contracts')
+          .select(`
+            id,
+            contract_type,
+            status,
+            valid_from,
+            valid_until,
+            tenant_id,
+            landlord_id,
+            properties(name),
+            metadata
+          `);
+
+        // Using .or() with explicit filter objects for better security and clarity
+        const { data: contracts, error: contractsError } = await query.or(
+          `tenant_id.eq.${userId},invitation_email.eq.${userProfile.email}`
+        );
+
+        if (contractsError) {
+          console.error("Error fetching contracts:", contractsError);
+          throw contractsError;
+        }
+
+        console.log("Found contracts for tenant:", contracts);
+        return (contracts || []) as Contract[];
+
+      } catch (error) {
+        console.error("Error in fetchContracts:", error);
+        throw error;
       }
-
-      const { data: contracts, error: contractsError } = await query;
-
-      if (contractsError) {
-        console.error("Error fetching contracts:", contractsError);
-        throw contractsError;
-      }
-
-      console.log("Found contracts:", contracts);
-      return (contracts || []) as Contract[];
-    } catch (error) {
-      console.error("Error in fetchContracts:", error);
-      throw error;
     }
+
+    if (userRole === "landlord") {
+      try {
+        const { data: contracts, error: contractsError } = await supabase
+          .from("contracts")
+          .select(`
+            id,
+            contract_type,
+            status,
+            valid_from,
+            valid_until,
+            tenant_id,
+            landlord_id,
+            properties(name),
+            metadata
+          `)
+          .eq("landlord_id", userId);
+
+        if (contractsError) {
+          console.error("Error fetching landlord contracts:", contractsError);
+          throw contractsError;
+        }
+
+        console.log("Found contracts for landlord:", contracts);
+        return (contracts || []) as Contract[];
+      } catch (error) {
+        console.error("Error fetching landlord contracts:", error);
+        throw error;
+      }
+    }
+
+    return [];
   };
 
   const { data: contracts = [], isLoading: isLoadingContracts } = useQuery({
@@ -159,7 +211,7 @@ function Documents() {
         setUserId(session.user.id);
         const { data: profile } = await supabase
           .from("profiles")
-          .select("role")
+          .select("role, email")
           .eq("id", session.user.id)
           .maybeSingle();
         
@@ -367,7 +419,19 @@ function Documents() {
               )}
             </div>
             
-            {renderSection()}
+            <div className="mt-6">
+              {isLoadingContracts ? (
+                <div className="text-center py-4">Loading contracts...</div>
+              ) : contracts?.length === 0 ? (
+                <div className="text-center py-4 text-gray-500">
+                  {userRole === 'tenant' 
+                    ? 'No contracts available for you yet'
+                    : 'No contracts found'}
+                </div>
+              ) : (
+                renderSection()
+              )}
+            </div>
           </div>
         </div>
       </main>
