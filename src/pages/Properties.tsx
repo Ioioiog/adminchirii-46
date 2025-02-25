@@ -38,6 +38,22 @@ const Properties = () => {
     userRole: "landlord"
   });
 
+  const { data: propertyContracts = [] } = useQuery({
+    queryKey: ["property-contracts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('contracts')
+        .select('property_id, status')
+        .eq('status', 'signed');
+
+      if (error) {
+        console.error("Error fetching contracts:", error);
+        throw error;
+      }
+      return data;
+    }
+  });
+
   const handleAddProperty = async (formData: any) => {
     try {
       const {
@@ -94,22 +110,6 @@ const Properties = () => {
     },
   });
 
-  const { data: propertyContracts = [] } = useQuery({
-    queryKey: ["property-contracts"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('contracts')
-        .select('property_id, status')
-        .eq('status', 'signed');
-
-      if (error) {
-        console.error("Error fetching contracts:", error);
-        throw error;
-      }
-      return data;
-    }
-  });
-
   const filteredProperties = properties?.filter(property => {
     if (!property) return false;
     
@@ -118,7 +118,8 @@ const Properties = () => {
       contract => contract.property_id === property.id
     );
     
-    const propertyStatus = hasContract ? 'occupied' : property.status;
+    // Update status to 'occupied' if the property has a signed contract
+    const propertyStatus = hasContract ? 'occupied' as PropertyStatus : property.status;
 
     const matchesSearch = 
       property.name.toLowerCase().includes(searchString) ||
@@ -211,93 +212,100 @@ const Properties = () => {
 
               {viewMode === "grid" ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
-                  {filteredProperties?.map(property => (
-                    <Card key={property.id} className="group bg-white/80 backdrop-blur-sm border border-white/20 shadow-soft-md hover:shadow-soft-lg transition-all duration-300 overflow-hidden">
-                      <CardHeader className="p-6">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className="p-2 bg-blue-50 rounded-lg group-hover:scale-110 transition-transform duration-300">
-                              <Home className="h-5 w-5 text-blue-600" />
+                  {filteredProperties?.map(property => {
+                    const hasContract = propertyContracts.some(
+                      contract => contract.property_id === property.id
+                    );
+                    const displayStatus = hasContract ? 'occupied' as PropertyStatus : property.status;
+
+                    return (
+                      <Card key={property.id} className="group bg-white/80 backdrop-blur-sm border border-white/20 shadow-soft-md hover:shadow-soft-lg transition-all duration-300 overflow-hidden">
+                        <CardHeader className="p-6">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="p-2 bg-blue-50 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                                <Home className="h-5 w-5 text-blue-600" />
+                              </div>
+                              <div>
+                                <h3 className="font-medium text-lg text-gray-900">{property.name}</h3>
+                              </div>
                             </div>
-                            <div>
-                              <h3 className="font-medium text-lg text-gray-900">{property.name}</h3>
+                            <Badge className={`${getStatusColor(displayStatus)} transition-all duration-300`}>
+                              {displayStatus || 'N/A'}
+                            </Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="p-6 pt-0">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div className="flex items-center gap-3 group-hover:transform group-hover:translate-y-[-2px] transition-all duration-300">
+                              <MapPin className="h-5 w-5 text-gray-400" />
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">Address</p>
+                                <p className="text-sm text-gray-500">{property.address}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 group-hover:transform group-hover:translate-y-[-2px] transition-all duration-300">
+                              <User className="h-5 w-5 text-gray-400" />
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">Tenants</p>
+                                <p className="text-sm text-gray-500">
+                                  {property.tenant_count || 0} Active
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 group-hover:transform group-hover:translate-y-[-2px] transition-all duration-300">
+                              <DollarSign className="h-5 w-5 text-gray-400" />
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">Monthly Rent</p>
+                                <p className="text-sm text-gray-500">
+                                  ${property.monthly_rent?.toLocaleString() || 0}
+                                </p>
+                              </div>
                             </div>
                           </div>
-                          <Badge className={`${getStatusColor(property.status)} transition-all duration-300`}>
-                            {property.status || 'N/A'}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="p-6 pt-0">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                          <div className="flex items-center gap-3 group-hover:transform group-hover:translate-y-[-2px] transition-all duration-300">
-                            <MapPin className="h-5 w-5 text-gray-400" />
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">Address</p>
-                              <p className="text-sm text-gray-500">{property.address}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 group-hover:transform group-hover:translate-y-[-2px] transition-all duration-300">
-                            <User className="h-5 w-5 text-gray-400" />
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">Tenants</p>
-                              <p className="text-sm text-gray-500">
-                                {property.tenant_count || 0} Active
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 group-hover:transform group-hover:translate-y-[-2px] transition-all duration-300">
-                            <DollarSign className="h-5 w-5 text-gray-400" />
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">Monthly Rent</p>
-                              <p className="text-sm text-gray-500">
-                                ${property.monthly_rent?.toLocaleString() || 0}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        <Separator className="my-4" />
-                        <div className="flex items-center justify-end gap-2 pt-2">
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button 
-                                variant="outline" 
-                                className="border-red-200 text-red-600 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                Delete
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This action cannot be undone. This will permanently delete the property
-                                  and all associated data.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <Separator className="my-4" />
+                          <div className="flex items-center justify-end gap-2 pt-2">
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
                                 <Button 
-                                  variant="destructive"
-                                  onClick={() => deletePropertyMutation.mutate(property.id)}
+                                  variant="outline" 
+                                  className="border-red-200 text-red-600 hover:bg-red-50"
                                 >
+                                  <Trash2 className="h-4 w-4" />
                                   Delete
                                 </Button>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                          <Button 
-                            variant="outline" 
-                            onClick={() => handlePropertyDetails(property.id)}
-                            className="hover:bg-blue-50 transition-colors duration-300"
-                          >
-                            View Details
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the property
+                                    and all associated data.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <Button 
+                                    variant="destructive"
+                                    onClick={() => deletePropertyMutation.mutate(property.id)}
+                                  >
+                                    Delete
+                                  </Button>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                            <Button 
+                              variant="outline" 
+                              onClick={() => handlePropertyDetails(property.id)}
+                              className="hover:bg-blue-50 transition-colors duration-300"
+                            >
+                              View Details
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                   {filteredProperties?.length === 0 && (
                     <div className="col-span-full text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl shadow-soft-md border border-white/20">
                       <Building2 className="mx-auto h-12 w-12 text-gray-400" />
@@ -331,28 +339,35 @@ const Properties = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredProperties?.map((property) => (
-                        <TableRow key={property.id} className="group hover:bg-blue-50/50">
-                          <TableCell className="font-medium">{property.name}</TableCell>
-                          <TableCell>{property.address}</TableCell>
-                          <TableCell>${property.monthly_rent?.toLocaleString() || 0}</TableCell>
-                          <TableCell>{property.tenant_count || 0} Active</TableCell>
-                          <TableCell>
-                            <Badge className={`${getStatusColor(property.status)}`}>
-                              {property.status || 'N/A'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="outline"
-                              onClick={() => handlePropertyDetails(property.id)}
-                              className="hover:bg-blue-50 transition-colors duration-300"
-                            >
-                              View Details
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {filteredProperties?.map((property) => {
+                        const hasContract = propertyContracts.some(
+                          contract => contract.property_id === property.id
+                        );
+                        const displayStatus = hasContract ? 'occupied' as PropertyStatus : property.status;
+
+                        return (
+                          <TableRow key={property.id} className="group hover:bg-blue-50/50">
+                            <TableCell className="font-medium">{property.name}</TableCell>
+                            <TableCell>{property.address}</TableCell>
+                            <TableCell>${property.monthly_rent?.toLocaleString() || 0}</TableCell>
+                            <TableCell>{property.tenant_count || 0} Active</TableCell>
+                            <TableCell>
+                              <Badge className={`${getStatusColor(displayStatus)}`}>
+                                {displayStatus || 'N/A'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="outline"
+                                onClick={() => handlePropertyDetails(property.id)}
+                                className="hover:bg-blue-50 transition-colors duration-300"
+                              >
+                                View Details
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                       {filteredProperties?.length === 0 && (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center py-8">
