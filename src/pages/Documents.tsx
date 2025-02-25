@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Grid, List, Plus, FileText, CreditCard, Trash2 } from "lucide-react";
@@ -86,6 +87,7 @@ function Documents() {
 
       console.log("Tenant profile:", userProfile);
 
+      // First fetch contracts where user is assigned as tenant
       const { data: assignedContracts, error: assignedError } = await supabase
         .from('contracts')
         .select(`
@@ -106,6 +108,7 @@ function Documents() {
         throw assignedError;
       }
 
+      // Then fetch contracts where user's email matches invitation_email
       const { data: pendingContracts, error: pendingError } = await supabase
         .from('contracts')
         .select(`
@@ -119,8 +122,8 @@ function Documents() {
           properties(name),
           metadata
         `)
-        .eq('status', 'pending_signature')
-        .eq('invitation_email', userProfile?.email);
+        .eq('invitation_email', userProfile?.email)
+        .neq('status', 'signed');
 
       if (pendingError) {
         console.error("Error fetching pending contracts:", pendingError);
@@ -130,11 +133,16 @@ function Documents() {
       console.log("Found contracts:", {
         assigned: assignedContracts,
         pending: pendingContracts,
-        tenantEmail: userProfile?.email,
-        invitationEmailQuery: `invitation_email=${userProfile?.email}`
+        tenantEmail: userProfile?.email
       });
 
-      return [...(assignedContracts || []), ...(pendingContracts || [])] as Contract[];
+      // Combine both results, removing duplicates by ID
+      const allContracts = [...(assignedContracts || []), ...(pendingContracts || [])];
+      const uniqueContracts = allContracts.filter((contract, index, self) =>
+        index === self.findIndex((c) => c.id === contract.id)
+      );
+
+      return uniqueContracts as Contract[];
     }
 
     if (userRole === "landlord") {
