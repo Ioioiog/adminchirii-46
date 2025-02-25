@@ -1,3 +1,4 @@
+
 import { FormData } from "@/types/contract";
 import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -128,8 +129,15 @@ export function ContractSignatures({
           contractId,
           signerRole,
           signatureName,
+          userId,
           userRole
         });
+
+        // First, get the current user's auth session
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error('No active session found');
+        }
 
         const { data: newSignature, error: signatureError } = await supabase
           .from('contract_signatures')
