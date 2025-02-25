@@ -9,13 +9,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tenant } from "@/types/tenant";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TenantListHeader } from "./TenantListHeader";
 import { TenantCard } from "./TenantCard";
 import { TenantRow } from "./TenantRow";
-import { useQuery } from "@tanstack/react-query";
 
 interface TenantListProps {
   tenants: Tenant[];
@@ -65,6 +64,50 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
       if (contractsError) {
         console.error("Error fetching contracts:", contractsError);
         throw contractsError;
+      }
+
+      // For each signed contract, ensure there's a corresponding tenancy record
+      for (const contract of contractsData || []) {
+        if (contract.status === 'signed' && contract.tenant_id) {
+          // Check if tenancy already exists
+          const { data: existingTenancy, error: tenancyCheckError } = await supabase
+            .from('tenancies')
+            .select('id')
+            .eq('tenant_id', contract.tenant_id)
+            .eq('property_id', contract.property_id)
+            .single();
+
+          if (tenancyCheckError && tenancyCheckError.code !== 'PGRST116') {
+            console.error("Error checking tenancy:", tenancyCheckError);
+            continue;
+          }
+
+          // If no tenancy exists, create one
+          if (!existingTenancy) {
+            const { error: createError } = await supabase
+              .from('tenancies')
+              .insert({
+                tenant_id: contract.tenant_id,
+                property_id: contract.property_id,
+                start_date: contract.valid_from,
+                end_date: contract.valid_until,
+                status: 'active'
+              });
+
+            if (createError) {
+              console.error("Error creating tenancy:", createError);
+              toast({
+                title: "Error",
+                description: "Failed to create tenancy record for contract tenant",
+                variant: "destructive",
+              });
+            } else {
+              console.log("Created new tenancy record for contract tenant");
+              // Invalidate queries to refresh the data
+              queryClient.invalidateQueries({ queryKey: ["tenants"] });
+            }
+          }
+        }
       }
 
       // Then, get tenants from tenancies
