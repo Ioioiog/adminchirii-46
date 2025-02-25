@@ -1,12 +1,12 @@
-
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { serve } from "std/server";
+import { createClient } from '@supabase/supabase-js';
 import { Resend } from "npm:resend@2.0.0";
-import puppeteer from "npm:puppeteer@21.5.2";
+import puppeteer from "puppeteer";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 interface SendContractRequest {
@@ -223,19 +223,27 @@ const generatePDF = async (contract: any) => {
 };
 
 const handler = async (req: Request): Promise<Response> => {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders,
+    });
   }
 
   try {
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     if (!resendApiKey) {
-      console.error('Missing RESEND_API_KEY environment variable');
       throw new Error('Email service configuration is missing');
     }
 
     const resend = new Resend(resendApiKey);
-    const { contractId, recipientEmail }: SendContractRequest = await req.json();
+    const { contractId, recipientEmail } = await req.json();
     
     if (!contractId || !recipientEmail) {
       throw new Error('Contract ID and recipient email are required');
@@ -247,6 +255,11 @@ const handler = async (req: Request): Promise<Response> => {
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Database configuration is missing');
     }
+
+    console.log('Initializing Supabase client with:', {
+      url: supabaseUrl,
+      hasKey: !!supabaseServiceKey
+    });
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -265,47 +278,64 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Failed to fetch contract details');
     }
 
-    console.log('Contract data:', contract);
-    
+    console.log('Successfully fetched contract:', { 
+      id: contract.id,
+      property: contract.properties?.name,
+      hasMetadata: !!contract.metadata
+    });
+
     // Generate PDF
-    console.log('Generating PDF for contract:', contractId);
     const pdfBuffer = await generatePDF(contract);
     const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBuffer)));
 
-    // Send email
+    const siteUrl = Deno.env.get('PUBLIC_SITE_URL') || 'https://www.adminchirii.ro';
     const emailContent = `
-      <h1>Contract for ${contract.properties?.name || 'Property'}</h1>
-      <p>Please find attached the rental contract document. You can also view and sign it online using the link below:</p>
-      <p><a href="${Deno.env.get('PUBLIC_SITE_URL') || ''}/documents/contracts/${contract.id}">View Contract Online</a></p>
+      <h1>Contract pentru ${contract.properties?.name || 'Proprietate'}</h1>
+      <p>Găsiți atașat documentul contractului de închiriere.</p>
+      <p>Puteți vizualiza și semna contractul online accesând următorul link:</p>
+      <p><a href="${siteUrl}/documents/contracts/${contract.id}">Vizualizare Contract Online</a></p>
     `;
 
     const emailResponse = await resend.emails.send({
       from: 'Contract System <onboarding@resend.dev>',
       to: [recipientEmail],
-      subject: `Rental Contract - ${contract.properties?.name || 'Property'}`,
+      subject: `Contract de închiriere - ${contract.properties?.name || 'Proprietate'}`,
       html: emailContent,
       attachments: [{
-        filename: `rental-contract-${contract.metadata?.contractNumber || contractId}.pdf`,
+        filename: `contract-${contract.metadata?.contractNumber || contractId}.pdf`,
         content: pdfBase64,
       }],
     });
 
-    console.log('Email sent successfully:', emailResponse);
-
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        ...corsHeaders,
-      },
+    console.log('Email sent successfully:', { 
+      id: emailResponse.id,
+      recipient: recipientEmail
     });
+
+    return new Response(
+      JSON.stringify({ success: true }),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
+      }
+    );
   } catch (error) {
     console.error('Error in send-contract function:', error);
+    
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'An unexpected error occurred' }),
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'An unexpected error occurred',
+        details: error instanceof Error ? error.stack : undefined
+      }),
       {
         status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
       }
     );
   }
