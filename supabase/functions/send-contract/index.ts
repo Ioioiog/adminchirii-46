@@ -1,4 +1,3 @@
-
 import { serve } from "std/server";
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from "npm:resend@2.0.0";
@@ -12,6 +11,12 @@ const corsHeaders = {
 const generateContractHtml = (contract: any) => {
   const metadata = contract.metadata || {};
   const assets = metadata.assets || [];
+
+  const ownerSignatureImg = metadata.ownerSignatureImage ? 
+    `<img src="${metadata.ownerSignatureImage}" alt="Owner Signature" class="signature-image" style="max-width: 200px; margin-top: 8px;"/>` : '';
+  
+  const tenantSignatureImg = metadata.tenantSignatureImage ? 
+    `<img src="${metadata.tenantSignatureImage}" alt="Tenant Signature" class="signature-image" style="max-width: 200px; margin-top: 8px;"/>` : '';
 
   return `
     <!DOCTYPE html>
@@ -275,13 +280,7 @@ const generateContractHtml = (contract: any) => {
             <p>Data: ${metadata.ownerSignatureDate || '_____'}</p>
             <p>Nume și semnătură:</p>
             <p>${metadata.ownerSignatureName || '_____'}</p>
-            ${metadata.ownerSignatureImage ? `
-              <img 
-                src="${metadata.ownerSignatureImage}" 
-                alt="Owner Signature" 
-                class="signature-image"
-              />
-            ` : ''}
+            ${ownerSignatureImg}
           </div>
           
           <div class="signature-block">
@@ -289,13 +288,7 @@ const generateContractHtml = (contract: any) => {
             <p>Data: ${metadata.tenantSignatureDate || '_____'}</p>
             <p>Nume și semnătură:</p>
             <p>${metadata.tenantSignatureName || '_____'}</p>
-            ${metadata.tenantSignatureImage ? `
-              <img 
-                src="${metadata.tenantSignatureImage}" 
-                alt="Tenant Signature" 
-                class="signature-image"
-              />
-            ` : ''}
+            ${tenantSignatureImg}
           </div>
         </div>
       </body>
