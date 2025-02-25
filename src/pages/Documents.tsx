@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Grid, List, Plus, FileText, CreditCard, Trash2 } from "lucide-react";
@@ -77,75 +76,36 @@ function Documents() {
       throw new Error("No user ID available");
     }
 
-    if (userRole === "tenant") {
-      try {
-        // First get the user's email
-        const { data: userProfile, error: profileError } = await supabase
-          .from('profiles')
-          .select('email')
-          .eq('id', userId)
-          .single();
+    try {
+      const query = supabase
+        .from('contracts')
+        .select(`
+          id,
+          contract_type,
+          status,
+          valid_from,
+          valid_until,
+          tenant_id,
+          landlord_id,
+          properties(name),
+          metadata
+        `);
 
-        if (profileError) {
-          console.error("Error fetching user profile:", profileError);
-          throw profileError;
-        }
-
-        if (!userProfile?.email) {
-          console.error("No email found for user");
-          throw new Error("User email not found");
-        }
-
-        console.log("Found user profile:", userProfile);
-
-        const query = supabase
-          .from('contracts')
-          .select(`
-            id,
-            contract_type,
-            status,
-            valid_from,
-            valid_until,
-            tenant_id,
-            landlord_id,
-            properties(name),
-            metadata
-          `);
-
-        // Using .or() with explicit filter objects for better security and clarity
-        const { data: contracts, error: contractsError } = await query.or(
-          `tenant_id.eq.${userId},invitation_email.eq.${userProfile.email}`
-        );
+      if (userRole === "tenant") {
+        const { data: contracts, error: contractsError } = await query
+          .or(`tenant_id.eq.${userId}`);
 
         if (contractsError) {
-          console.error("Error fetching contracts:", contractsError);
+          console.error("Error fetching tenant contracts:", contractsError);
           throw contractsError;
         }
 
         console.log("Found contracts for tenant:", contracts);
         return (contracts || []) as Contract[];
-
-      } catch (error) {
-        console.error("Error in fetchContracts:", error);
-        throw error;
       }
-    }
 
-    if (userRole === "landlord") {
-      try {
-        const { data: contracts, error: contractsError } = await supabase
-          .from("contracts")
-          .select(`
-            id,
-            contract_type,
-            status,
-            valid_from,
-            valid_until,
-            tenant_id,
-            landlord_id,
-            properties(name),
-            metadata
-          `)
+      if (userRole === "landlord") {
+        const { data: contracts, error: contractsError } = await query
           .eq("landlord_id", userId);
 
         if (contractsError) {
@@ -155,13 +115,13 @@ function Documents() {
 
         console.log("Found contracts for landlord:", contracts);
         return (contracts || []) as Contract[];
-      } catch (error) {
-        console.error("Error fetching landlord contracts:", error);
-        throw error;
       }
-    }
 
-    return [];
+      return [];
+    } catch (error) {
+      console.error("Error in fetchContracts:", error);
+      throw error;
+    }
   };
 
   const { data: contracts = [], isLoading: isLoadingContracts } = useQuery({
@@ -211,7 +171,7 @@ function Documents() {
         setUserId(session.user.id);
         const { data: profile } = await supabase
           .from("profiles")
-          .select("role, email")
+          .select("role")
           .eq("id", session.user.id)
           .maybeSingle();
         
