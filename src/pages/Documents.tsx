@@ -92,7 +92,7 @@ function Documents() {
             properties(name),
             metadata
           `)
-          .or('tenant_id.eq.' + userId + ',invitation_email.eq.' + userId);
+          .or(`tenant_id.eq.${userId},and(tenant_id.is.null,invitation_email.eq.${userId})`);
 
         if (contractsError) {
           console.error("Error fetching contracts:", contractsError);
