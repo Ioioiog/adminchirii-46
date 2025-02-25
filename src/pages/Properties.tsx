@@ -93,9 +93,37 @@ const Properties = () => {
     },
   });
 
+  const { data: propertyContracts = [] } = useQuery({
+    queryKey: ["property-contracts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('contracts')
+        .select('property_id, status')
+        .in('status', ['signed', 'active']);
+
+      if (error) {
+        console.error("Error fetching contracts:", error);
+        throw error;
+      }
+      return data;
+    }
+  });
+
   const filteredProperties = properties?.filter(property => {
-    const matchesSearch = property.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || property.status === statusFilter;
+    if (!property) return false;
+    
+    const searchString = searchTerm.toLowerCase();
+    const hasContract = propertyContracts.some(
+      contract => contract.property_id === property.id
+    );
+    
+    const propertyStatus = hasContract ? 'occupied' : property.status;
+
+    const matchesSearch = 
+      property.name.toLowerCase().includes(searchString) ||
+      property.address.toLowerCase().includes(searchString);
+    const matchesStatus = statusFilter === "all" || propertyStatus === statusFilter;
+
     return matchesSearch && matchesStatus;
   });
 
