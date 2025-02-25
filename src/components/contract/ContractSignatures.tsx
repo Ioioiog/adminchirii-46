@@ -1,4 +1,3 @@
-
 import { FormData } from "@/types/contract";
 import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -37,6 +36,7 @@ export function ContractSignatures({
   const { data: contract } = useQuery({
     queryKey: ['contract', contractId],
     queryFn: async () => {
+      console.log('Fetching contract details for:', contractId);
       const { data, error } = await supabase
         .from('contracts')
         .select('id, tenant_id, landlord_id, status')
@@ -56,13 +56,12 @@ export function ContractSignatures({
     enabled: !!contractId
   });
 
-  // Then fetch all signatures for this contract
   const { data: signatures, refetch: refetchSignatures } = useQuery({
     queryKey: ['contract-signatures', contractId],
     queryFn: async () => {
       console.log('Fetching signatures for contract:', contractId);
-
-      const { data, error } = await supabase
+      
+      const { data: signaturesData, error } = await supabase
         .from('contract_signatures')
         .select('*')
         .eq('contract_id', contractId);
@@ -72,24 +71,22 @@ export function ContractSignatures({
         throw error;
       }
 
-      console.log('Raw signatures from database:', data);
-      return data || [];
+      console.log('Raw signatures data:', signaturesData);
+      return signaturesData;
     },
-    enabled: !!contractId,
-    retry: 2
+    enabled: !!contractId
   });
 
   useEffect(() => {
-    if (signatures) {
-      console.log('Processing signatures, total count:', signatures.length);
-      
+    if (signatures && signatures.length > 0) {
+      console.log('Processing signatures:', signatures);
+
       const tenantSignature = signatures.find(s => s.signer_role === 'tenant');
       const ownerSignature = signatures.find(s => s.signer_role === 'landlord');
 
       console.log('Found signatures:', {
         tenant: tenantSignature,
-        owner: ownerSignature,
-        allSignatures: signatures
+        owner: ownerSignature
       });
 
       const updatedFormData = {
@@ -102,45 +99,16 @@ export function ContractSignatures({
         ownerSignatureDate: ownerSignature?.signed_at?.split('T')[0] || ''
       };
 
-      console.log('Setting form data with signatures:', {
-        currentFormData: formData,
-        updatedFormData: updatedFormData,
-        tenantSignature: {
-          name: tenantSignature?.signature_data,
-          date: tenantSignature?.signed_at,
-          image: tenantSignature?.signature_image ? 'present' : 'missing'
-        }
-      });
-
+      console.log('Setting updated form data:', updatedFormData);
       setLocalFormData(updatedFormData);
 
       if (tenantSignature && ownerSignature) {
-        console.log('Both signatures present, updating contract status to signed');
         setContractStatus('signed');
-        
-        if (contract?.status !== 'signed') {
-          supabase
-            .from('contracts')
-            .update({ status: 'signed' })
-            .eq('id', contractId)
-            .then(({ error }) => {
-              if (error) {
-                console.error('Error updating contract status:', error);
-              }
-            });
-        }
       }
     }
-  }, [signatures, formData, contractId, contract?.status]);
+  }, [signatures, formData]);
 
   const handleSign = async () => {
-    console.log('Starting signing process:', {
-      userRole,
-      userId,
-      contractStatus,
-      currentSignatures: signatures
-    });
-
     if (!userId || !userRole) {
       toast({
         title: "Error",
@@ -153,16 +121,13 @@ export function ContractSignatures({
     if (!signaturePadRef.current?.isEmpty() && signatureName) {
       try {
         const signatureImage = signaturePadRef.current?.getTrimmedCanvas().toDataURL('image/png');
-        const signatureDate = new Date().toISOString().split('T')[0];
         const isLandlord = userRole === 'landlord';
         const signerRole = isLandlord ? 'landlord' : 'tenant';
 
         console.log('Saving signature:', {
           contractId,
           signerRole,
-          signatureName,
-          signatureDate,
-          userId
+          signatureName
         });
 
         const { error: signatureError } = await supabase
@@ -178,31 +143,19 @@ export function ContractSignatures({
           });
 
         if (signatureError) {
-          console.error('Error saving signature:', signatureError);
           throw signatureError;
         }
 
-        console.log('Signature saved successfully');
-
         await refetchSignatures();
 
-        const newStatus = 
-          (signatures?.some(s => s.signer_role === 'landlord') && signerRole === 'tenant') ||
-          (signatures?.some(s => s.signer_role === 'tenant') && signerRole === 'landlord')
-            ? 'signed'
-            : isLandlord
-              ? 'pending_signature'
-              : contractStatus;
-
-        console.log('Updating contract status to:', newStatus);
-
+        const newStatus = (signatures?.length === 1) ? 'signed' : 'pending_signature';
+        
         const { error: contractError } = await supabase
           .from('contracts')
           .update({ status: newStatus })
           .eq('id', contractId);
 
         if (contractError) {
-          console.error('Error updating contract status:', contractError);
           throw contractError;
         }
 
