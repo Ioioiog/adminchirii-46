@@ -127,10 +127,11 @@ export function ContractSignatures({
         console.log('Saving signature:', {
           contractId,
           signerRole,
-          signatureName
+          signatureName,
+          userRole
         });
 
-        const { error: signatureError } = await supabase
+        const { data: newSignature, error: signatureError } = await supabase
           .from('contract_signatures')
           .insert({
             contract_id: contractId,
@@ -140,24 +141,50 @@ export function ContractSignatures({
             signature_image: signatureImage,
             signed_at: new Date().toISOString(),
             ip_address: await fetch('https://api.ipify.org?format=json').then(res => res.json()).then(data => data.ip)
-          });
+          })
+          .select()
+          .single();
 
         if (signatureError) {
+          console.error('Error saving signature:', signatureError);
           throw signatureError;
         }
 
-        await refetchSignatures();
+        const { data: allSignatures, error: fetchError } = await supabase
+          .from('contract_signatures')
+          .select('*')
+          .eq('contract_id', contractId);
 
-        const newStatus = (signatures?.length === 1) ? 'signed' : 'pending_signature';
+        if (fetchError) {
+          console.error('Error fetching signatures:', fetchError);
+          throw fetchError;
+        }
+
+        console.log('Current signatures:', allSignatures);
+
+        const hasLandlordSignature = allSignatures?.some(s => s.signer_role === 'landlord');
+        const hasTenantSignature = allSignatures?.some(s => s.signer_role === 'tenant');
         
+        const newStatus = hasLandlordSignature && hasTenantSignature 
+          ? 'signed' 
+          : 'pending_signature';
+
+        console.log('Updating contract status to:', newStatus);
+
         const { error: contractError } = await supabase
           .from('contracts')
-          .update({ status: newStatus })
+          .update({ 
+            status: newStatus,
+            tenant_id: signerRole === 'tenant' ? userId : undefined
+          })
           .eq('id', contractId);
 
         if (contractError) {
+          console.error('Error updating contract:', contractError);
           throw contractError;
         }
+
+        await refetchSignatures();
 
         toast({
           title: "Success",
