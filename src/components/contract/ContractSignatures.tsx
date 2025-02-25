@@ -36,17 +36,10 @@ export function ContractSignatures({
   const [contractStatus, setContractStatus] = useState<ContractStatus>('draft');
   const [isInitialized, setIsInitialized] = useState(false);
 
-  console.log("ContractSignatures component mounted with:", {
-    contractId,
-    userRole,
-    userId,
-    formData
-  });
-
   // Query to get contract details
   const { data: contract, isLoading: isContractLoading } = useQuery({
     queryKey: ['contract', contractId],
-    enabled: !!userId, // Only run query when userId is available
+    enabled: !!userId,
     queryFn: async () => {
       console.log('Fetching contract details for:', contractId);
       const { data, error } = await supabase
@@ -68,12 +61,12 @@ export function ContractSignatures({
     }
   });
 
-  // Query to get signatures
+  // Query to get signatures with detailed logging
   const { data: signatures, isLoading: isSignaturesLoading, error: signaturesError } = useQuery({
     queryKey: ['contract-signatures', contractId],
-    enabled: !!userId, // Only run query when userId is available
+    enabled: !!userId,
     queryFn: async () => {
-      console.log('Fetching signatures for contract:', contractId);
+      console.log('Starting signature fetch for contract:', contractId);
       
       const { data, error } = await supabase
         .from('contract_signatures')
@@ -85,33 +78,50 @@ export function ContractSignatures({
         throw error;
       }
 
-      console.log('Signatures data:', data);
+      console.log('Raw signatures data:', data);
+
+      // Log each signature's details
+      if (data) {
+        data.forEach(sig => {
+          console.log('Signature details:', {
+            signer_role: sig.signer_role,
+            signer_id: sig.signer_id,
+            signed_at: sig.signed_at,
+            has_image: !!sig.signature_image,
+            has_data: !!sig.signature_data
+          });
+        });
+      }
+
       return data || [];
     }
   });
 
   useEffect(() => {
-    // Wait for both userRole and userId to be available
     if (userRole && userId && !isInitialized) {
+      console.log('Component initialized with:', { userRole, userId });
       setIsInitialized(true);
     }
   }, [userRole, userId, isInitialized]);
 
   useEffect(() => {
-    console.log('Processing signatures effect:', {
-      signatures,
-      signaturesError,
-      isSignaturesLoading
-    });
-
     if (signatures && signatures.length > 0) {
       const tenantSignature = signatures.find(s => s.signer_role === 'tenant');
       const ownerSignature = signatures.find(s => s.signer_role === 'landlord');
 
-      console.log('Found signatures:', {
-        tenantSignature,
-        ownerSignature,
-        status: contractStatus
+      console.log('Processing signatures:', {
+        foundTenantSignature: !!tenantSignature,
+        foundOwnerSignature: !!ownerSignature,
+        tenantDetails: tenantSignature ? {
+          date: tenantSignature.signed_at,
+          hasImage: !!tenantSignature.signature_image,
+          hasName: !!tenantSignature.signature_data
+        } : null,
+        ownerDetails: ownerSignature ? {
+          date: ownerSignature.signed_at,
+          hasImage: !!ownerSignature.signature_image,
+          hasName: !!ownerSignature.signature_data
+        } : null
       });
 
       const updatedFormData = {
@@ -123,6 +133,15 @@ export function ContractSignatures({
         ownerSignatureImage: ownerSignature?.signature_image || '',
         ownerSignatureDate: ownerSignature?.signed_at?.split('T')[0] || ''
       };
+
+      console.log('Updated form data with signatures:', {
+        hasOwnerSig: !!updatedFormData.ownerSignatureName,
+        hasOwnerImage: !!updatedFormData.ownerSignatureImage,
+        hasOwnerDate: !!updatedFormData.ownerSignatureDate,
+        hasTenantSig: !!updatedFormData.tenantSignatureName,
+        hasTenantImage: !!updatedFormData.tenantSignatureImage,
+        hasTenantDate: !!updatedFormData.tenantSignatureDate
+      });
 
       setLocalFormData(updatedFormData);
     }
@@ -256,14 +275,6 @@ export function ContractSignatures({
 
   const canSignAsLandlord = userRole === 'landlord' && contractStatus === 'draft';
   const canSignAsTenant = userRole === 'tenant' && contractStatus === 'pending_signature';
-
-  console.log('Rendering signatures with state:', {
-    canSignAsLandlord,
-    canSignAsTenant,
-    contractStatus,
-    localFormData,
-    isInitialized
-  });
 
   if (!isInitialized) {
     return <div>Loading signatures...</div>;
