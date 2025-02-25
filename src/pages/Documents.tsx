@@ -137,11 +137,11 @@ function Documents() {
           tenantEmail: userProfile?.email
         });
 
-        // Combine both results, removing duplicates by ID
+        // Combine both results, removing duplicates by ID and ensure correct typing
         const allContracts = [...(assignedContracts || []), ...(pendingContracts || [])];
         const uniqueContracts = allContracts.filter((contract, index, self) =>
           index === self.findIndex((c) => c.id === contract.id)
-        );
+        ) as Contract[];
 
         return uniqueContracts;
       } catch (error) {
@@ -171,7 +171,7 @@ function Documents() {
         throw error;
       }
 
-      return data || [];
+      return (data || []) as Contract[];
     }
 
     return [];
