@@ -71,7 +71,7 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
           status,
           metadata,
           invitation_email,
-          tenant:profiles!tenant_id(
+          tenant:profiles(
             id,
             first_name,
             last_name,
@@ -84,19 +84,26 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
             address
           )
         `)
-        .not('status', 'eq', 'cancelled'); // Include all non-cancelled contracts
+        .not('status', 'eq', 'cancelled');
 
       if (error) {
         console.error("Error fetching contracts:", error);
         throw error;
       }
 
-      console.log("Raw contracts data:", contractsData);
+      console.log("Raw contracts data (full):", JSON.stringify(contractsData, null, 2));
+      
+      if (!contractsData || contractsData.length === 0) {
+        console.log("No contracts found in the database");
+        return [];
+      }
 
       // Transform contract data into tenant format
       const transformedTenants = (contractsData || []).map((contract: any) => {
-        console.log("Processing contract:", contract);
+        console.log("Processing individual contract:", JSON.stringify(contract, null, 2));
+        
         const metadata = contract.metadata as { tenantSignatureName?: string } | null;
+        console.log("Contract metadata:", metadata);
         
         // Determine the tenancy status based on contract status
         let tenancyStatus = 'active';
@@ -106,7 +113,15 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
           tenancyStatus = 'inactive';
         }
         
-        return {
+        console.log("Tenant information from contract:", {
+          contractId: contract.id,
+          tenantId: contract.tenant?.id,
+          tenantInfo: contract.tenant,
+          email: contract.tenant?.email || contract.invitation_email,
+          status: tenancyStatus
+        });
+
+        const transformedTenant = {
           id: contract.tenant?.id || contract.id,
           first_name: contract.tenant?.first_name || (metadata?.tenantSignatureName?.split(' ')[0]) || 'Unknown',
           last_name: contract.tenant?.last_name || (metadata?.tenantSignatureName?.split(' ').slice(1).join(' ')) || 'Tenant',
@@ -127,9 +142,12 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
             status: tenancyStatus,
           },
         } as Tenant;
+
+        console.log("Transformed tenant:", transformedTenant);
+        return transformedTenant;
       });
 
-      console.log("Transformed tenants:", transformedTenants);
+      console.log("All transformed tenants:", transformedTenants);
       return transformedTenants;
     },
   });
