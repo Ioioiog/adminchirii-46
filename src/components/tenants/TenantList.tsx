@@ -22,6 +22,30 @@ interface TenantListProps {
   isLandlord?: boolean;
 }
 
+// Define a type for the contract response
+interface ContractWithRelations {
+  id: string;
+  tenant_id: string | null;
+  valid_from: string;
+  valid_until: string | null;
+  status: string;
+  metadata: {
+    tenantSignatureName?: string;
+  } | null;
+  invitation_email: string | null;
+  tenant?: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    email: string | null;
+  } | null;
+  property?: {
+    id: string;
+    name: string;
+    address: string;
+  } | null;
+}
+
 export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
@@ -44,13 +68,14 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
           status,
           metadata,
           invitation_email,
-          tenant:tenant_id (
+          tenant:profiles!contracts_tenant_id_fkey (
             id,
             first_name,
             last_name,
-            email
+            email,
+            phone
           ),
-          property:property_id (
+          property:properties!contracts_property_id_fkey (
             id,
             name,
             address
@@ -61,11 +86,12 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
       if (error) throw error;
 
       // Transform contract data into tenant format
-      return (data || []).map(contract => ({
+      return (data as ContractWithRelations[] || []).map(contract => ({
         id: contract.tenant?.id || contract.id,
-        first_name: contract.tenant?.first_name || contract.metadata?.tenantSignatureName?.split(' ')[0] || 'Unknown',
-        last_name: contract.tenant?.last_name || contract.metadata?.tenantSignatureName?.split(' ').slice(1).join(' ') || 'Tenant',
+        first_name: contract.tenant?.first_name || (contract.metadata?.tenantSignatureName?.split(' ')[0]) || 'Unknown',
+        last_name: contract.tenant?.last_name || (contract.metadata?.tenantSignatureName?.split(' ').slice(1).join(' ')) || 'Tenant',
         email: contract.tenant?.email || contract.invitation_email || '',
+        phone: contract.tenant?.phone || null,
         role: 'tenant',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
