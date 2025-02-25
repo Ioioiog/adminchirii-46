@@ -30,7 +30,7 @@ export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
           valid_from,
           valid_until,
           invitation_email,
-          tenant:tenant_id (
+          tenant:profiles(
             first_name,
             last_name,
             email
