@@ -22,32 +22,6 @@ interface TenantListProps {
   isLandlord?: boolean;
 }
 
-// Define a type for the contract response
-interface ContractWithRelations {
-  id: string;
-  tenant_id: string | null;
-  property_id: string;
-  valid_from: string;
-  valid_until: string | null;
-  status: 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled' | 'pending_signature';
-  metadata: {
-    tenantSignatureName?: string;
-  } | null;
-  invitation_email: string | null;
-  tenant: {
-    id: string;
-    first_name: string | null;
-    last_name: string | null;
-    email: string | null;
-    phone: string | null;
-  } | null;
-  property: {
-    id: string;
-    name: string;
-    address: string;
-  } | null;
-}
-
 export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
@@ -55,12 +29,14 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
   const [showInactive, setShowInactive] = useState(false);
   const { toast } = useToast();
 
-  // Fetch tenants from contracts
+  // Fetch tenants from both contracts and tenancies
   const { data: contractTenants = [] } = useQuery({
     queryKey: ["contract-tenants"],
     queryFn: async () => {
-      console.log("Fetching contract tenants...");
-      const { data: contractsData, error } = await supabase
+      console.log("Fetching contract and tenancy-based tenants...");
+      
+      // First, get tenants from contracts
+      const { data: contractsData, error: contractsError } = await supabase
         .from('contracts')
         .select(`
           id,
@@ -71,7 +47,7 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
           status,
           metadata,
           invitation_email,
-          tenant:profiles!tenant_id(
+          tenant:profiles(
             id,
             first_name,
             last_name,
@@ -86,42 +62,56 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
         `)
         .not('status', 'eq', 'cancelled');
 
-      if (error) {
-        console.error("Error fetching contracts:", error);
-        throw error;
+      if (contractsError) {
+        console.error("Error fetching contracts:", contractsError);
+        throw contractsError;
       }
 
-      console.log("Raw contracts data (full):", JSON.stringify(contractsData, null, 2));
-      
-      if (!contractsData || contractsData.length === 0) {
-        console.log("No contracts found in the database");
-        return [];
+      // Then, get tenants from tenancies
+      const { data: tenanciesData, error: tenanciesError } = await supabase
+        .from('tenancies')
+        .select(`
+          id,
+          tenant_id,
+          property_id,
+          start_date,
+          end_date,
+          status,
+          tenant:profiles(
+            id,
+            first_name,
+            last_name,
+            email,
+            phone
+          ),
+          property:properties(
+            id,
+            name,
+            address
+          )
+        `)
+        .eq('status', 'active');
+
+      if (tenanciesError) {
+        console.error("Error fetching tenancies:", tenanciesError);
+        throw tenanciesError;
       }
 
-      // Transform contract data into tenant format
-      const transformedTenants = (contractsData || []).map((contract: any) => {
-        console.log("Processing individual contract:", JSON.stringify(contract, null, 2));
-        
+      console.log("Raw contracts data:", contractsData);
+      console.log("Raw tenancies data:", tenanciesData);
+
+      // Transform contracts data
+      const contractTenants = (contractsData || []).map((contract: any) => {
         const metadata = contract.metadata as { tenantSignatureName?: string } | null;
-        console.log("Contract metadata:", metadata);
         
-        // Determine the tenancy status based on contract status
         let tenancyStatus = 'active';
         if (contract.status === 'draft' || contract.status === 'pending_signature') {
           tenancyStatus = 'pending';
         } else if (contract.status === 'expired') {
           tenancyStatus = 'inactive';
         }
-        
-        console.log("Tenant information from contract:", {
-          contractId: contract.id,
-          tenantId: contract.tenant?.id,
-          tenantInfo: contract.tenant,
-          email: contract.tenant?.email || contract.invitation_email,
-          status: tenancyStatus
-        });
 
-        const transformedTenant = {
+        return {
           id: contract.tenant?.id || contract.id,
           first_name: contract.tenant?.first_name || (metadata?.tenantSignatureName?.split(' ')[0]) || 'Unknown',
           last_name: contract.tenant?.last_name || (metadata?.tenantSignatureName?.split(' ').slice(1).join(' ')) || 'Tenant',
@@ -142,13 +132,39 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
             status: tenancyStatus,
           },
         } as Tenant;
-
-        console.log("Transformed tenant:", transformedTenant);
-        return transformedTenant;
       });
 
-      console.log("All transformed tenants:", transformedTenants);
-      return transformedTenants;
+      // Transform tenancies data
+      const tenancyTenants = (tenanciesData || []).map((tenancy: any) => ({
+        id: tenancy.tenant?.id || tenancy.tenant_id,
+        first_name: tenancy.tenant?.first_name || 'Unknown',
+        last_name: tenancy.tenant?.last_name || 'Tenant',
+        email: tenancy.tenant?.email || '',
+        phone: tenancy.tenant?.phone || null,
+        role: 'tenant',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        property: {
+          id: tenancy.property?.id || '',
+          name: tenancy.property?.name || '',
+          address: tenancy.property?.address || '',
+        },
+        tenancy: {
+          id: tenancy.id,
+          start_date: tenancy.start_date,
+          end_date: tenancy.end_date,
+          status: tenancy.status,
+        },
+      }));
+
+      // Combine and deduplicate tenants based on tenant_id
+      const allTenants = [...contractTenants, ...tenancyTenants];
+      const uniqueTenants = Array.from(new Map(allTenants.map(tenant => 
+        [tenant.id, tenant]
+      )).values());
+
+      console.log("Combined unique tenants:", uniqueTenants);
+      return uniqueTenants;
     },
   });
 
