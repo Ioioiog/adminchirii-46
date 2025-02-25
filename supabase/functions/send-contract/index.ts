@@ -1,4 +1,3 @@
-
 import { serve } from "std/server";
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from "npm:resend@2.0.0";
@@ -8,7 +7,7 @@ import puppeteer from 'puppeteer-core';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
 
 interface SendContractRequest {
@@ -219,13 +218,19 @@ const generatePDF = async (contract: any) => {
   try {
     console.log('Starting PDF generation...');
     
+    const executablePath = await chromium.executablePath;
+    
+    if (!executablePath) {
+      throw new Error('Chrome executable path not found');
+    }
+
     const browser = await puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath,
-      headless: true,
+      executablePath,
+      headless: chromium.headless,
     });
-    
+
     console.log('Browser launched');
     const page = await browser.newPage();
     console.log('New page created');
@@ -319,7 +324,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const resend = new Resend(resendApiKey);
     const siteUrl = Deno.env.get('PUBLIC_SITE_URL') || 'https://www.adminchirii.ro';
-
+    
     console.log('Sending email...');
     const emailResponse = await resend.emails.send({
       from: 'Contract System <onboarding@resend.dev>',
