@@ -2,7 +2,8 @@
 import { serve } from "std/server";
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from "npm:resend@2.0.0";
-import puppeteer from "puppeteer";
+import chromium from 'chrome-aws-lambda';
+import puppeteer from 'puppeteer-core';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -217,20 +218,20 @@ const generateContractContent = (contract: any) => {
 const generatePDF = async (contract: any) => {
   try {
     console.log('Starting PDF generation...');
+    
     const browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath,
+      headless: true,
     });
+    
     console.log('Browser launched');
-
     const page = await browser.newPage();
     console.log('New page created');
 
     const content = generateContractContent(contract);
-    console.log('Contract content generated');
-
-    await page.setContent(content, {
-      waitUntil: 'networkidle0'
-    });
+    await page.setContent(content, { waitUntil: 'networkidle0' });
     console.log('Content set to page');
 
     const pdf = await page.pdf({
@@ -247,7 +248,7 @@ const generatePDF = async (contract: any) => {
 
     await browser.close();
     console.log('Browser closed');
-
+    
     return pdf;
   } catch (error) {
     console.error('Error in PDF generation:', error);
@@ -256,7 +257,6 @@ const generatePDF = async (contract: any) => {
 };
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
@@ -266,7 +266,7 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     console.log('Starting contract send process...');
-    const { contractId, recipientEmail }: SendContractRequest = await req.json();
+    const { contractId, recipientEmail } = await req.json();
     
     if (!contractId || !recipientEmail) {
       throw new Error('Contract ID and recipient email are required');
@@ -297,7 +297,11 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Failed to fetch contract details');
     }
 
-    console.log('Contract data fetched successfully');
+    console.log('Contract data fetched successfully:', {
+      id: contract.id,
+      propertyName: contract.properties?.name,
+      hasMetadata: !!contract.metadata
+    });
 
     // Generate PDF
     console.log('Starting PDF generation process...');
@@ -333,7 +337,10 @@ const handler = async (req: Request): Promise<Response> => {
       }]
     });
 
-    console.log('Email sent successfully:', emailResponse);
+    console.log('Email sent successfully:', {
+      emailId: emailResponse.id,
+      recipient: recipientEmail
+    });
 
     return new Response(
       JSON.stringify({ success: true }),

@@ -2,7 +2,8 @@
 {
   "imports": {
     "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.0",
-    "puppeteer": "https://deno.land/x/puppeteer@16.2.0/mod.ts",
-    "std/server": "https://deno.land/std@0.177.0/http/server.ts"
+    "std/server": "https://deno.land/std@0.177.0/http/server.ts",
+    "chrome-aws-lambda": "https://esm.sh/chrome-aws-lambda@10.1.0",
+    "puppeteer-core": "https://esm.sh/puppeteer-core@10.1.0"
   }
 }
