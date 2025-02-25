@@ -83,7 +83,8 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
             name,
             address
           )
-        `);
+        `)
+        .not('status', 'eq', 'cancelled'); // Include all non-cancelled contracts
 
       if (error) {
         console.error("Error fetching contracts:", error);
@@ -96,6 +97,14 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
       const transformedTenants = (contractsData || []).map((contract: any) => {
         console.log("Processing contract:", contract);
         const metadata = contract.metadata as { tenantSignatureName?: string } | null;
+        
+        // Determine the tenancy status based on contract status
+        let tenancyStatus = 'active';
+        if (contract.status === 'draft' || contract.status === 'pending_signature') {
+          tenancyStatus = 'pending';
+        } else if (contract.status === 'expired') {
+          tenancyStatus = 'inactive';
+        }
         
         return {
           id: contract.tenant?.id || contract.id,
@@ -115,7 +124,7 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
             id: contract.id,
             start_date: contract.valid_from,
             end_date: contract.valid_until,
-            status: 'active',
+            status: tenancyStatus,
           },
         } as Tenant;
       });
