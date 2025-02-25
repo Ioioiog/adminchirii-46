@@ -143,6 +143,20 @@ export function ContractSignatures({
           throw new Error('Tenants can only sign contracts in pending signature status');
         }
 
+        // First update the contract if signing as tenant
+        if (!isLandlord) {
+          const { error: contractUpdateError } = await supabase
+            .from('contracts')
+            .update({ tenant_id: userId })
+            .eq('id', contractId);
+
+          if (contractUpdateError) {
+            console.error('Error updating contract with tenant_id:', contractUpdateError);
+            throw contractUpdateError;
+          }
+        }
+
+        // Then save the signature
         const { data: newSignature, error: signatureError } = await supabase
           .from('contract_signatures')
           .insert({
@@ -185,10 +199,7 @@ export function ContractSignatures({
 
         const { error: contractError } = await supabase
           .from('contracts')
-          .update({ 
-            status: newStatus,
-            tenant_id: signerRole === 'tenant' ? userId : undefined
-          })
+          .update({ status: newStatus })
           .eq('id', contractId);
 
         if (contractError) {
