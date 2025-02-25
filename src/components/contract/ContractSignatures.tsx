@@ -34,6 +34,7 @@ export function ContractSignatures({
   const [localFormData, setLocalFormData] = useState(formData);
   const signaturePadRef = useRef<SignaturePad>(null);
   const [contractStatus, setContractStatus] = useState<ContractStatus>('draft');
+  const [isInitialized, setIsInitialized] = useState(false);
 
   console.log("ContractSignatures component mounted with:", {
     contractId,
@@ -45,6 +46,7 @@ export function ContractSignatures({
   // Query to get contract details
   const { data: contract, isLoading: isContractLoading } = useQuery({
     queryKey: ['contract', contractId],
+    enabled: !!userId, // Only run query when userId is available
     queryFn: async () => {
       console.log('Fetching contract details for:', contractId);
       const { data, error } = await supabase
@@ -69,17 +71,10 @@ export function ContractSignatures({
   // Query to get signatures
   const { data: signatures, isLoading: isSignaturesLoading, error: signaturesError } = useQuery({
     queryKey: ['contract-signatures', contractId],
+    enabled: !!userId, // Only run query when userId is available
     queryFn: async () => {
       console.log('Fetching signatures for contract:', contractId);
       
-      // First check if we can access the contract_signatures table at all
-      const { data: testData, error: testError } = await supabase
-        .from('contract_signatures')
-        .select('count(*)')
-        .limit(1);
-        
-      console.log('Test query result:', { testData, testError });
-
       const { data, error } = await supabase
         .from('contract_signatures')
         .select('*')
@@ -94,6 +89,13 @@ export function ContractSignatures({
       return data || [];
     }
   });
+
+  useEffect(() => {
+    // Wait for both userRole and userId to be available
+    if (userRole && userId && !isInitialized) {
+      setIsInitialized(true);
+    }
+  }, [userRole, userId, isInitialized]);
 
   useEffect(() => {
     console.log('Processing signatures effect:', {
@@ -259,8 +261,13 @@ export function ContractSignatures({
     canSignAsLandlord,
     canSignAsTenant,
     contractStatus,
-    localFormData
+    localFormData,
+    isInitialized
   });
+
+  if (!isInitialized) {
+    return <div>Loading signatures...</div>;
+  }
 
   return (
     <div className="grid grid-cols-2 gap-8 mt-16">
