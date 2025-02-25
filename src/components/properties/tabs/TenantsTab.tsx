@@ -29,12 +29,18 @@ export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
           metadata,
           valid_from,
           valid_until,
-          invitation_email
+          invitation_email,
+          tenant:tenant_id (
+            first_name,
+            last_name,
+            email
+          )
         `)
         .eq('property_id', property.id)
         .eq('status', 'signed');
 
       if (error) throw error;
+      console.log('Fetched contracts:', data); // Debug log
       return data || [];
     }
   });
@@ -96,10 +102,19 @@ export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
   };
 
   const renderContractTenantCard = (contract: any) => {
+    console.log('Contract data:', contract); // Debug log
+    console.log('Contract metadata:', contract.metadata); // Debug metadata
+
     const startDate = contract.valid_from ? format(new Date(contract.valid_from), 'PPP') : 'Not specified';
     const endDate = contract.valid_until ? format(new Date(contract.valid_until), 'PPP') : 'Ongoing';
-    const tenantName = contract.metadata?.tenantSignatureName || 'Not specified';
-    const tenantEmail = contract.invitation_email || 'Not specified';
+    
+    // Try to get tenant name from different sources in order of preference
+    const tenantName = contract.tenant 
+      ? `${contract.tenant.first_name} ${contract.tenant.last_name}`
+      : contract.metadata?.tenantSignatureName 
+      || 'Not specified';
+      
+    const tenantEmail = contract.tenant?.email || contract.invitation_email || 'Not specified';
     
     return (
       <div key={contract.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
