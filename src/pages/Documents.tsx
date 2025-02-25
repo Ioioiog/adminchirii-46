@@ -79,6 +79,18 @@ function Documents() {
 
     if (userRole === "tenant") {
       try {
+        // First get the user's email
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('id', userId)
+          .single();
+
+        if (!userProfile?.email) {
+          console.error("No email found for user");
+          throw new Error("User email not found");
+        }
+
         const { data: contracts, error: contractsError } = await supabase
           .from('contracts')
           .select(`
@@ -92,7 +104,7 @@ function Documents() {
             properties(name),
             metadata
           `)
-          .or(`tenant_id.eq.${userId},and(tenant_id.is.null,invitation_email.eq.${userId})`);
+          .or(`tenant_id.eq.${userId},and(tenant_id.is.null,invitation_email.eq.${userProfile.email})`);
 
         if (contractsError) {
           console.error("Error fetching contracts:", contractsError);
