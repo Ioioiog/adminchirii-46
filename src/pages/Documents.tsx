@@ -80,18 +80,25 @@ function Documents() {
     if (userRole === "tenant") {
       try {
         // First get the user's email
-        const { data: userProfile } = await supabase
+        const { data: userProfile, error: profileError } = await supabase
           .from('profiles')
           .select('email')
           .eq('id', userId)
           .single();
+
+        if (profileError) {
+          console.error("Error fetching user profile:", profileError);
+          throw profileError;
+        }
 
         if (!userProfile?.email) {
           console.error("No email found for user");
           throw new Error("User email not found");
         }
 
-        const { data: contracts, error: contractsError } = await supabase
+        console.log("Found user profile:", userProfile);
+
+        const query = supabase
           .from('contracts')
           .select(`
             id,
@@ -103,15 +110,19 @@ function Documents() {
             landlord_id,
             properties(name),
             metadata
-          `)
-          .or(`tenant_id.eq.${userId},and(tenant_id.is.null,invitation_email.eq.${userProfile.email})`);
+          `);
+
+        // Using .or() with explicit filter objects for better security and clarity
+        const { data: contracts, error: contractsError } = await query.or(
+          `tenant_id.eq.${userId},invitation_email.eq.${userProfile.email}`
+        );
 
         if (contractsError) {
           console.error("Error fetching contracts:", contractsError);
           throw contractsError;
         }
 
-        console.log("Found contracts:", contracts);
+        console.log("Found contracts for tenant:", contracts);
         return (contracts || []) as Contract[];
 
       } catch (error) {
@@ -121,27 +132,33 @@ function Documents() {
     }
 
     if (userRole === "landlord") {
-      const { data, error } = await supabase
-        .from("contracts")
-        .select(`
-          id,
-          contract_type,
-          status,
-          valid_from,
-          valid_until,
-          tenant_id,
-          landlord_id,
-          properties(name),
-          metadata
-        `)
-        .eq("landlord_id", userId);
+      try {
+        const { data: contracts, error: contractsError } = await supabase
+          .from("contracts")
+          .select(`
+            id,
+            contract_type,
+            status,
+            valid_from,
+            valid_until,
+            tenant_id,
+            landlord_id,
+            properties(name),
+            metadata
+          `)
+          .eq("landlord_id", userId);
 
-      if (error) {
+        if (contractsError) {
+          console.error("Error fetching landlord contracts:", contractsError);
+          throw contractsError;
+        }
+
+        console.log("Found contracts for landlord:", contracts);
+        return (contracts || []) as Contract[];
+      } catch (error) {
         console.error("Error fetching landlord contracts:", error);
         throw error;
       }
-
-      return (data || []) as Contract[];
     }
 
     return [];
