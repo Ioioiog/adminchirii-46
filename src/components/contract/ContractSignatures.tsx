@@ -111,130 +111,130 @@ export function ContractSignatures({
   }, [signatures, formData]);
 
   const handleSign = async () => {
-    if (!userId || !userRole) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to sign the contract",
-        variant: "destructive"
+  if (!userId || !userRole) {
+    toast({
+      title: "Error",
+      description: "You must be logged in to sign the contract",
+      variant: "destructive"
+    });
+    return;
+  }
+
+  if (!signaturePadRef.current?.isEmpty() && signatureName) {
+    try {
+      const signatureImage = signaturePadRef.current?.getTrimmedCanvas().toDataURL('image/png');
+      const isLandlord = userRole === 'landlord';
+      const signerRole = isLandlord ? 'landlord' : 'tenant';
+
+      console.log('Saving signature:', {
+        contractId,
+        signerRole,
+        signatureName,
+        userId,
+        userRole,
+        contractStatus
       });
-      return;
-    }
 
-    if (!signaturePadRef.current?.isEmpty() && signatureName) {
-      try {
-        const signatureImage = signaturePadRef.current?.getTrimmedCanvas().toDataURL('image/png');
-        const isLandlord = userRole === 'landlord';
-        const signerRole = isLandlord ? 'landlord' : 'tenant';
-
-        console.log('Saving signature:', {
-          contractId,
-          signerRole,
-          signatureName,
-          userId,
-          userRole,
-          contractStatus
-        });
-
-        // Verify contract status matches role
-        if (isLandlord && contractStatus !== 'draft') {
-          throw new Error('Landlords can only sign contracts in draft status');
-        }
-        if (!isLandlord && contractStatus !== 'pending_signature') {
-          throw new Error('Tenants can only sign contracts in pending signature status');
-        }
-
-        // Save the signature first
-        const { data: newSignature, error: signatureError } = await supabase
-          .from('contract_signatures')
-          .insert({
-            contract_id: contractId,
-            signer_id: userId,
-            signer_role: signerRole,
-            signature_data: signatureName,
-            signature_image: signatureImage,
-            signed_at: new Date().toISOString(),
-            ip_address: await fetch('https://api.ipify.org?format=json').then(res => res.json()).then(data => data.ip)
-          })
-          .select()
-          .single();
-
-        if (signatureError) {
-          console.error('Error saving signature:', signatureError);
-          throw signatureError;
-        }
-
-        // Then update the contract
-        const updateData: {
-          status?: ContractStatus;
-          tenant_id?: string | null;
-        } = {};
-
-        // If tenant is signing, update their ID
-        if (!isLandlord) {
-          updateData.tenant_id = userId;
-        }
-
-        // Check if we should update the status
-        const { data: allSignatures, error: fetchError } = await supabase
-          .from('contract_signatures')
-          .select('*')
-          .eq('contract_id', contractId);
-
-        if (fetchError) {
-          console.error('Error fetching signatures:', fetchError);
-          throw fetchError;
-        }
-
-        const hasLandlordSignature = allSignatures?.some(s => s.signer_role === 'landlord');
-        const hasTenantSignature = allSignatures?.some(s => s.signer_role === 'tenant');
-        
-        if (hasLandlordSignature && hasTenantSignature) {
-          updateData.status = 'signed';
-        } else if (isLandlord) {
-          updateData.status = 'pending_signature';
-        }
-
-        if (Object.keys(updateData).length > 0) {
-          console.log('Updating contract with:', updateData);
-          const { error: contractError } = await supabase
-            .from('contracts')
-            .update(updateData)
-            .eq('id', contractId);
-
-          if (contractError) {
-            console.error('Error updating contract:', contractError);
-            throw contractError;
-          }
-        }
-
-        await refetchSignatures();
-
-        toast({
-          title: "Success",
-          description: "Contract signed successfully",
-        });
-
-        setSignatureName("");
-        signaturePadRef.current?.clear();
-        if (updateData.status) {
-          setContractStatus(updateData.status);
-        }
-      } catch (error: any) {
-        console.error('Error signing contract:', error);
-        toast({
-          title: "Error",
-          description: error.message || "Failed to sign the contract",
-          variant: "destructive"
-        });
+      // Verify contract status matches role
+      if (isLandlord && contractStatus !== 'draft') {
+        throw new Error('Landlords can only sign contracts in draft status');
       }
-    } else {
+      if (!isLandlord && contractStatus !== 'pending_signature') {
+        throw new Error('Tenants can only sign contracts in pending signature status');
+      }
+
+      // Save the signature first
+      const { data: newSignature, error: signatureError } = await supabase
+        .from('contract_signatures')
+        .insert({
+          contract_id: contractId,
+          signer_id: userId,
+          signer_role: signerRole,
+          signature_data: signatureName,
+          signature_image: signatureImage,
+          signed_at: new Date().toISOString(),
+          ip_address: await fetch('https://api.ipify.org?format=json').then(res => res.json()).then(data => data.ip)
+        })
+        .select()
+        .single();
+
+      if (signatureError) {
+        console.error('Error saving signature:', signatureError);
+        throw signatureError;
+      }
+
+      // Then update the contract
+      const updateData: {
+        status?: ContractStatus;
+        tenant_id?: string | null;
+      } = {};
+
+      // If tenant is signing, update their ID
+      if (!isLandlord) {
+        updateData.tenant_id = userId;
+      }
+
+      // Check if we should update the status
+      const { data: allSignatures, error: fetchError } = await supabase
+        .from('contract_signatures')
+        .select('*')
+        .eq('contract_id', contractId);
+
+      if (fetchError) {
+        console.error('Error fetching signatures:', fetchError);
+        throw fetchError;
+      }
+
+      const hasLandlordSignature = allSignatures?.some(s => s.signer_role === 'landlord');
+      const hasTenantSignature = allSignatures?.some(s => s.signer_role === 'tenant');
+      
+      if (hasLandlordSignature && hasTenantSignature) {
+        updateData.status = 'signed';
+      } else if (isLandlord) {
+        updateData.status = 'pending_signature';
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        console.log('Updating contract with:', updateData);
+        const { error: contractError } = await supabase
+          .from('contracts')
+          .update(updateData)
+          .eq('id', contractId);
+
+        if (contractError) {
+          console.error('Error updating contract:', contractError);
+          throw contractError;
+        }
+      }
+
+      await refetchSignatures();
+
+      toast({
+        title: "Success",
+        description: "Contract signed successfully",
+      });
+
+      setSignatureName("");
+      signaturePadRef.current?.clear();
+      if (updateData.status) {
+        setContractStatus(updateData.status);
+      }
+    } catch (error: any) {
+      console.error('Error signing contract:', error);
       toast({
         title: "Error",
-        description: "Please provide both your name and signature",
+        description: error.message || "Failed to sign the contract",
         variant: "destructive"
       });
     }
-  };
+  } else {
+    toast({
+      title: "Error",
+      description: "Please provide both your name and signature",
+      variant: "destructive"
+    });
+  }
+};
 
   const canSignAsLandlord = userRole === 'landlord' && 
     (contractStatus === 'draft' || 
