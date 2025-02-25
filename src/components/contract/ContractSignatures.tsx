@@ -34,6 +34,7 @@ export function ContractSignatures({
   const signaturePadRef = useRef<SignaturePad>(null);
   const [contractStatus, setContractStatus] = useState<ContractStatus>('draft');
 
+  // Query to get contract details
   const { data: contract } = useQuery({
     queryKey: ['contract', contractId],
     queryFn: async () => {
@@ -130,13 +131,16 @@ export function ContractSignatures({
           signerRole,
           signatureName,
           userId,
-          userRole
+          userRole,
+          contractStatus
         });
 
-        // First, get the current user's auth session
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          throw new Error('No active session found');
+        // Verify contract status matches role
+        if (isLandlord && contractStatus !== 'draft') {
+          throw new Error('Landlords can only sign contracts in draft status');
+        }
+        if (!isLandlord && contractStatus !== 'pending_signature') {
+          throw new Error('Tenants can only sign contracts in pending signature status');
         }
 
         const { data: newSignature, error: signatureError } = await supabase
