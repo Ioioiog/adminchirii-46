@@ -52,7 +52,7 @@ export function ContractSignatures({
     enabled: !!contractId
   });
 
-  const { data: signatures, refetch: refetchSignatures, error: signatureError } = useQuery({
+  const { data: signatures, refetch: refetchSignatures } = useQuery({
     queryKey: ['contract-signatures', contractId],
     queryFn: async () => {
       console.log('Fetching signatures for contract:', contractId);
@@ -67,63 +67,53 @@ export function ContractSignatures({
         throw error;
       }
 
-      console.log('Signatures found:', data);
+      console.log('Raw signatures from database:', data);
       return data || [];
     },
-    retry: 1,
     enabled: !!contractId
   });
 
   useEffect(() => {
-    if (signatureError) {
-      console.error('Signature query error:', signatureError);
-      toast({
-        title: "Error",
-        description: "Failed to load signatures. Please try refreshing the page.",
-        variant: "destructive"
-      });
-    }
-  }, [signatureError, toast]);
-
-  useEffect(() => {
-    if (signatures) {
+    if (signatures && signatures.length > 0) {
+      console.log('Processing signatures array:', signatures);
+      
       const tenantSignature = signatures.find(s => s.signer_role === 'tenant');
       const ownerSignature = signatures.find(s => s.signer_role === 'landlord');
 
-      console.log('Processing signatures:', {
+      console.log('Found signatures:', {
         tenantSignature,
-        ownerSignature,
-        currentFormData: formData,
-        allSignatures: signatures
+        ownerSignature
       });
 
-      const updatedFormData = {
-        ...formData,
-        tenantSignatureName: tenantSignature?.signature_data || '',
-        tenantSignatureImage: tenantSignature?.signature_image || '',
-        tenantSignatureDate: tenantSignature?.signed_at?.split('T')[0] || '',
-        ownerSignatureName: ownerSignature?.signature_data || '',
-        ownerSignatureImage: ownerSignature?.signature_image || '',
-        ownerSignatureDate: ownerSignature?.signed_at?.split('T')[0] || ''
-      };
+      if (tenantSignature || ownerSignature) {
+        const updatedFormData = {
+          ...formData,
+          tenantSignatureName: tenantSignature?.signature_data || '',
+          tenantSignatureImage: tenantSignature?.signature_image || '',
+          tenantSignatureDate: tenantSignature?.signed_at?.split('T')[0] || '',
+          ownerSignatureName: ownerSignature?.signature_data || '',
+          ownerSignatureImage: ownerSignature?.signature_image || '',
+          ownerSignatureDate: ownerSignature?.signed_at?.split('T')[0] || ''
+        };
 
-      console.log('Updated form data:', updatedFormData);
-      setLocalFormData(updatedFormData);
+        console.log('Setting updated form data with signatures:', updatedFormData);
+        setLocalFormData(updatedFormData);
 
-      if (tenantSignature && ownerSignature) {
-        console.log('Both signatures present, setting status to signed');
-        setContractStatus('signed');
-        
-        if (contract?.status !== 'signed') {
-          supabase
-            .from('contracts')
-            .update({ status: 'signed' })
-            .eq('id', contractId)
-            .then(({ error }) => {
-              if (error) {
-                console.error('Error updating contract status:', error);
-              }
-            });
+        if (tenantSignature && ownerSignature) {
+          console.log('Both signatures present, updating contract status to signed');
+          setContractStatus('signed');
+          
+          if (contract?.status !== 'signed') {
+            supabase
+              .from('contracts')
+              .update({ status: 'signed' })
+              .eq('id', contractId)
+              .then(({ error }) => {
+                if (error) {
+                  console.error('Error updating contract status:', error);
+                }
+              });
+          }
         }
       }
     }
