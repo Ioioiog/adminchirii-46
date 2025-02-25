@@ -317,17 +317,20 @@ function ContractDetailsContent() {
     inviteTenantMutation.mutate(email);
   };
 
-  const handleEmail = async () => {
+  const handleEmail = async (email: string) => {
     if (!id) {
       console.error('No contract ID provided');
       return;
     }
 
-    console.log('Initiating contract send process...');
+    console.log('Initiating contract send process to:', email);
 
     try {
       const { error } = await supabase.functions.invoke('send-contract', {
-        body: { contractId: id }
+        body: { 
+          contractId: id,
+          recipientEmail: email
+        }
       });
 
       if (error) {
@@ -340,7 +343,7 @@ function ContractDetailsContent() {
         return;
       }
 
-      console.log('Contract sent successfully');
+      console.log('Contract sent successfully to:', email);
       toast({
         title: "Success",
         description: "Contract sent successfully",
@@ -406,7 +409,7 @@ function ContractDetailsContent() {
             formData={formData}
             showActions={true}
           />
-
+          
           <ContractContent 
             formData={formData} 
             isEditing={isEditing} 

@@ -12,6 +12,7 @@ const corsHeaders = {
 
 interface SendContractRequest {
   contractId: string;
+  recipientEmail: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -21,8 +22,8 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { contractId }: SendContractRequest = await req.json();
-    console.log('Received request to send contract:', contractId);
+    const { contractId, recipientEmail }: SendContractRequest = await req.json();
+    console.log('Received request to send contract:', { contractId, recipientEmail });
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -51,21 +52,12 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Failed to fetch contract details');
     }
 
-    console.log('Contract details:', {
-      id: contract.id,
-      status: contract.status,
-      property: contract.properties?.name,
-      hasLandlord: !!contract.landlord,
-      hasTenant: !!contract.tenant
-    });
-
-    // Generate PDF version of contract (you'll need to implement this)
-    // For now, we'll just send an email with a link
+    console.log('Sending contract email to:', recipientEmail);
 
     // Send email using Resend
     const emailResponse = await resend.emails.send({
       from: 'Contract System <onboarding@resend.dev>',
-      to: [contract.tenant?.email || contract.invitation_email].filter(Boolean) as string[],
+      to: [recipientEmail],
       subject: `Contract for ${contract.properties?.name}`,
       html: `
         <h1>Contract Details</h1>

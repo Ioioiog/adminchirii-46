@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Eye, Printer, Mail, Edit, Save, Send } from "lucide-react";
 import type { ContractStatus } from "@/types/contract";
@@ -16,7 +15,7 @@ interface ContractHeaderProps {
   onBack: () => void;
   onPreview: () => void;
   onPrint: () => void;
-  onEmail: () => void;
+  onEmail: (email: string) => void;
   canEdit: boolean;
   isEditing: boolean;
   onEdit: () => void;
@@ -82,7 +81,28 @@ export function ContractHeader({
 
   const handleSend = () => {
     console.log('Send option selected:', sendOption);
-    onEmail();
+    
+    let emailToSend = '';
+    
+    switch (sendOption) {
+      case 'contract-tenant':
+        emailToSend = formData.tenantEmail || '';
+        break;
+      case 'tenant-list':
+        emailToSend = selectedTenantEmail;
+        break;
+      case 'custom-email':
+        emailToSend = customEmail;
+        break;
+    }
+
+    if (!emailToSend) {
+      console.error('No email address selected for sending');
+      return;
+    }
+
+    console.log('Sending contract to:', emailToSend);
+    onEmail(emailToSend);
   };
 
   const renderExtraFields = () => {
