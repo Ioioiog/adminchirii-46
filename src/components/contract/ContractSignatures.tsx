@@ -62,7 +62,7 @@ export function ContractSignatures({
   });
 
   // Query to get signatures with detailed logging
-  const { data: signatures, isLoading: isSignaturesLoading, error: signaturesError } = useQuery({
+  const { data: signatures, isLoading: isSignaturesLoading } = useQuery({
     queryKey: ['contract-signatures', contractId],
     enabled: !!userId,
     queryFn: async () => {
@@ -275,6 +275,10 @@ export function ContractSignatures({
 
   const canSignAsLandlord = userRole === 'landlord' && contractStatus === 'draft';
   const canSignAsTenant = userRole === 'tenant' && contractStatus === 'pending_signature';
+  
+  // Check if current user has already signed
+  const hasSignedAsLandlord = signatures?.some(s => s.signer_role === 'landlord' && s.signer_id === userId);
+  const hasSignedAsTenant = signatures?.some(s => s.signer_role === 'tenant' && s.signer_id === userId);
 
   if (!isInitialized) {
     return <div>Loading signatures...</div>;
@@ -300,7 +304,7 @@ export function ContractSignatures({
         ) : (
           <p>___________________________</p>
         )}
-        {canSignAsLandlord && (
+        {canSignAsLandlord && !hasSignedAsLandlord && (
           <div className="mt-4">
             <Input
               type="text"
@@ -352,7 +356,7 @@ export function ContractSignatures({
         ) : (
           <p>___________________________</p>
         )}
-        {canSignAsTenant && (
+        {canSignAsTenant && !hasSignedAsTenant && (
           <div className="mt-4">
             <Input
               type="text"
@@ -389,3 +393,4 @@ export function ContractSignatures({
     </div>
   );
 }
+
