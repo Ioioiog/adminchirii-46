@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Table,
@@ -14,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { TenantListHeader } from "./TenantListHeader";
 import { TenantCard } from "./TenantCard";
 import { TenantRow } from "./TenantRow";
+import { useQuery } from "@tanstack/react-query";
 
 interface TenantListProps {
   tenants: Tenant[];
@@ -26,6 +28,61 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [showInactive, setShowInactive] = useState(false);
   const { toast } = useToast();
+
+  // Fetch tenants from contracts
+  const { data: contractTenants = [] } = useQuery({
+    queryKey: ["contract-tenants"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('contracts')
+        .select(`
+          id,
+          tenant_id,
+          property_id,
+          valid_from,
+          valid_until,
+          status,
+          metadata,
+          invitation_email,
+          tenant:tenant_id (
+            id,
+            first_name,
+            last_name,
+            email
+          ),
+          property:property_id (
+            id,
+            name,
+            address
+          )
+        `)
+        .eq('status', 'signed');
+
+      if (error) throw error;
+
+      // Transform contract data into tenant format
+      return (data || []).map(contract => ({
+        id: contract.tenant?.id || contract.id,
+        first_name: contract.tenant?.first_name || contract.metadata?.tenantSignatureName?.split(' ')[0] || 'Unknown',
+        last_name: contract.tenant?.last_name || contract.metadata?.tenantSignatureName?.split(' ').slice(1).join(' ') || 'Tenant',
+        email: contract.tenant?.email || contract.invitation_email || '',
+        role: 'tenant',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        property: {
+          id: contract.property?.id || '',
+          name: contract.property?.name || '',
+          address: contract.property?.address || '',
+        },
+        tenancy: {
+          id: contract.id,
+          start_date: contract.valid_from,
+          end_date: contract.valid_until,
+          status: 'active',
+        },
+      }));
+    },
+  });
 
   const handleTenantUpdate = () => {
     queryClient.invalidateQueries({ queryKey: ["tenants"] });
@@ -83,7 +140,10 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
     return `${tenant.first_name || ''} ${tenant.last_name || ''}`.trim();
   };
 
-  const filteredTenants = tenants.filter((tenant) => {
+  // Combine regular tenants with contract tenants
+  const allTenants = [...tenants, ...contractTenants];
+
+  const filteredTenants = allTenants.filter((tenant) => {
     if (!tenant) return false;
     
     const searchString = searchTerm.toLowerCase();
