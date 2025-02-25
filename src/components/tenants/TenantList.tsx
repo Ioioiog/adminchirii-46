@@ -66,46 +66,63 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
         throw contractsError;
       }
 
+      // First get the authenticated user's ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("No authenticated user found");
+      }
+
       // For each signed contract, ensure there's a corresponding tenancy record
       for (const contract of contractsData || []) {
         if (contract.status === 'signed' && contract.tenant_id) {
-          // Check if tenancy already exists
-          const { data: existingTenancy, error: tenancyCheckError } = await supabase
-            .from('tenancies')
-            .select('id')
-            .eq('tenant_id', contract.tenant_id)
-            .eq('property_id', contract.property_id)
-            .single();
-
-          if (tenancyCheckError && tenancyCheckError.code !== 'PGRST116') {
-            console.error("Error checking tenancy:", tenancyCheckError);
-            continue;
-          }
-
-          // If no tenancy exists, create one
-          if (!existingTenancy) {
-            const { error: createError } = await supabase
+          try {
+            // Check if tenancy already exists
+            const { data: existingTenancy, error: tenancyCheckError } = await supabase
               .from('tenancies')
-              .insert({
-                tenant_id: contract.tenant_id,
-                property_id: contract.property_id,
-                start_date: contract.valid_from,
-                end_date: contract.valid_until,
-                status: 'active'
-              });
+              .select('id')
+              .eq('tenant_id', contract.tenant_id)
+              .eq('property_id', contract.property_id)
+              .single();
 
-            if (createError) {
-              console.error("Error creating tenancy:", createError);
-              toast({
-                title: "Error",
-                description: "Failed to create tenancy record for contract tenant",
-                variant: "destructive",
-              });
-            } else {
-              console.log("Created new tenancy record for contract tenant");
-              // Invalidate queries to refresh the data
-              queryClient.invalidateQueries({ queryKey: ["tenants"] });
+            if (tenancyCheckError && tenancyCheckError.code !== 'PGRST116') {
+              console.error("Error checking tenancy:", tenancyCheckError);
+              continue;
             }
+
+            // If no tenancy exists, create one
+            if (!existingTenancy) {
+              const { error: createError } = await supabase
+                .from('tenancies')
+                .insert({
+                  tenant_id: contract.tenant_id,
+                  property_id: contract.property_id,
+                  start_date: contract.valid_from,
+                  end_date: contract.valid_until,
+                  status: 'active',
+                  created_by: user.id // Add the authenticated user ID as creator
+                });
+
+              if (createError) {
+                console.error("Error creating tenancy:", createError);
+                // Show error toast but continue with the rest of the execution
+                toast({
+                  title: "Warning",
+                  description: "Some tenancy records could not be created automatically. Please check the system logs.",
+                  variant: "destructive",
+                });
+              } else {
+                console.log("Created new tenancy record for contract tenant");
+                // Invalidate queries to refresh the data
+                queryClient.invalidateQueries({ queryKey: ["tenants"] });
+              }
+            }
+          } catch (error) {
+            console.error("Error in tenancy creation process:", error);
+            toast({
+              title: "Error",
+              description: "Failed to process tenancy record",
+              variant: "destructive",
+            });
           }
         }
       }
