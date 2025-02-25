@@ -12,11 +12,27 @@ const generateContractHtml = (contract: any) => {
   const metadata = contract.metadata || {};
   const assets = metadata.assets || [];
 
+  // Ensure base64 images have the correct data URL prefix
+  const formatSignatureImage = (base64String: string | undefined) => {
+    if (!base64String) return '';
+    // If it already starts with data:image, use it as is
+    if (base64String.startsWith('data:image')) {
+      return base64String;
+    }
+    // Otherwise, add the proper prefix
+    return `data:image/png;base64,${base64String}`;
+  };
+
   const ownerSignatureImg = metadata.ownerSignatureImage ? 
-    `<img src="${metadata.ownerSignatureImage}" alt="Owner Signature" class="signature-image" style="max-width: 200px; margin-top: 8px;"/>` : '';
+    `<img src="${formatSignatureImage(metadata.ownerSignatureImage)}" alt="Owner Signature" class="signature-image" style="max-width: 200px; margin-top: 8px;"/>` : '';
   
   const tenantSignatureImg = metadata.tenantSignatureImage ? 
-    `<img src="${metadata.tenantSignatureImage}" alt="Tenant Signature" class="signature-image" style="max-width: 200px; margin-top: 8px;"/>` : '';
+    `<img src="${formatSignatureImage(metadata.tenantSignatureImage)}" alt="Tenant Signature" class="signature-image" style="max-width: 200px; margin-top: 8px;"/>` : '';
+
+  console.log('Processing signatures:', {
+    hasOwnerSignature: !!metadata.ownerSignatureImage,
+    hasTenantSignature: !!metadata.tenantSignatureImage
+  });
 
   return `
     <!DOCTYPE html>
@@ -340,7 +356,9 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Contract data fetched successfully:', {
       id: contract.id,
       propertyName: contract.properties?.name,
-      hasMetadata: !!contract.metadata
+      hasMetadata: !!contract.metadata,
+      hasOwnerSignature: !!contract.metadata?.ownerSignatureImage,
+      hasTenantSignature: !!contract.metadata?.tenantSignatureImage
     });
 
     const contractHtml = generateContractHtml(contract);
@@ -353,7 +371,6 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const resend = new Resend(resendApiKey);
-    const siteUrl = Deno.env.get('PUBLIC_SITE_URL') || 'https://www.adminchirii.ro';
     
     console.log('Sending email...');
     const emailResponse = await resend.emails.send({
