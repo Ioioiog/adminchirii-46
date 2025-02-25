@@ -3,8 +3,6 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { Resend } from "npm:resend@2.0.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -22,15 +20,28 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendApiKey) {
+      console.error('Missing RESEND_API_KEY environment variable');
+      throw new Error('Email service configuration is missing');
+    }
+
+    const resend = new Resend(resendApiKey);
+
     const { contractId, recipientEmail }: SendContractRequest = await req.json();
     console.log('Received request to send contract:', { contractId, recipientEmail });
+
+    if (!contractId || !recipientEmail) {
+      throw new Error('Contract ID and recipient email are required');
+    }
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing Supabase environment variables');
+      console.error('Missing Supabase environment variables');
+      throw new Error('Database configuration is missing');
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -47,9 +58,17 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('id', contractId)
       .single();
 
-    if (contractError || !contract) {
+    if (contractError) {
       console.error('Error fetching contract:', contractError);
       throw new Error('Failed to fetch contract details');
+    }
+
+    if (!contract) {
+      throw new Error('Contract not found');
+    }
+
+    if (!contract.properties?.name) {
+      throw new Error('Contract property details not found');
     }
 
     console.log('Sending contract email to:', recipientEmail);
@@ -58,10 +77,10 @@ const handler = async (req: Request): Promise<Response> => {
     const emailResponse = await resend.emails.send({
       from: 'Contract System <onboarding@resend.dev>',
       to: [recipientEmail],
-      subject: `Contract for ${contract.properties?.name}`,
+      subject: `Contract for ${contract.properties.name}`,
       html: `
         <h1>Contract Details</h1>
-        <p>Property: ${contract.properties?.name}</p>
+        <p>Property: ${contract.properties.name}</p>
         <p>Status: ${contract.status}</p>
         <p>You can view and sign the contract by logging into your account.</p>
         <p>Link: ${Deno.env.get('PUBLIC_SITE_URL')}/documents/contracts/${contract.id}</p>
@@ -79,11 +98,16 @@ const handler = async (req: Request): Promise<Response> => {
     });
   } catch (error) {
     console.error('Error in send-contract function:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       {
         status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        },
       }
     );
   }
