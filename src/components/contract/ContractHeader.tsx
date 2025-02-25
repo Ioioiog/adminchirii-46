@@ -1,5 +1,6 @@
+
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Eye, Printer, Mail, Edit, Save, Send } from "lucide-react";
+import { ArrowLeft, Eye, Printer, Edit, Save, Send } from "lucide-react";
 import type { ContractStatus } from "@/types/contract";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -30,7 +31,6 @@ export function ContractHeader({
   onBack,
   onPreview,
   onPrint,
-  onEmail,
   canEdit,
   isEditing,
   onEdit,
@@ -47,9 +47,6 @@ export function ContractHeader({
   );
   const [selectedTenantEmail, setSelectedTenantEmail] = useState<string>("");
   const [customEmail, setCustomEmail] = useState<string>("");
-  const [sendOption, setSendOption] = useState<'contract-tenant' | 'tenant-list' | 'custom-email'>(
-    userRole === 'tenant' ? 'custom-email' : (formData.tenantEmail ? 'contract-tenant' : 'tenant-list')
-  );
 
   const showInviteButton = userRole === 'landlord' && 
     (contractStatus === 'draft' || contractStatus === 'pending_signature') && 
@@ -77,32 +74,6 @@ export function ContractHeader({
 
     console.log('Inviting tenant with email:', emailToUse);
     onInviteTenant(emailToUse);
-  };
-
-  const handleSend = () => {
-    console.log('Send option selected:', sendOption);
-    
-    let emailToSend = '';
-    
-    switch (sendOption) {
-      case 'contract-tenant':
-        emailToSend = formData.tenantEmail || '';
-        break;
-      case 'tenant-list':
-        emailToSend = selectedTenantEmail;
-        break;
-      case 'custom-email':
-        emailToSend = customEmail;
-        break;
-    }
-
-    if (!emailToSend) {
-      console.error('No email address selected for sending');
-      return;
-    }
-
-    console.log('Sending contract to:', emailToSend);
-    onEmail(emailToSend);
   };
 
   const renderExtraFields = () => {
@@ -163,105 +134,6 @@ export function ContractHeader({
       default:
         return null;
     }
-  };
-
-  const renderSendOptions = () => {
-    if (userRole === 'tenant') {
-      return (
-        <div className="space-y-4">
-          <Input
-            type="email"
-            placeholder="Enter email address"
-            value={customEmail}
-            onChange={(e) => setCustomEmail(e.target.value)}
-          />
-          <Button onClick={handleSend} className="w-full">
-            Send Contract
-          </Button>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-4">
-        <RadioGroup 
-          value={sendOption} 
-          onValueChange={(value: 'contract-tenant' | 'tenant-list' | 'custom-email') => {
-            setSendOption(value);
-            setSelectedTenantEmail("");
-            setCustomEmail("");
-          }}
-          className="gap-3"
-        >
-          {formData.tenantEmail && (
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="contract-tenant" id="send-contract-tenant" />
-              <Label htmlFor="send-contract-tenant">Contract Tenant ({formData.tenantEmail})</Label>
-            </div>
-          )}
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="tenant-list" id="send-tenant-list" />
-            <Label htmlFor="send-tenant-list">Select from Tenant List</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="custom-email" id="send-custom-email" />
-            <Label htmlFor="send-custom-email">Custom Email</Label>
-          </div>
-        </RadioGroup>
-
-        {sendOption === 'contract-tenant' && formData.tenantEmail && (
-          <div className="mt-2 space-y-2">
-            <Label className="text-sm text-gray-500">Contract Tenant Email</Label>
-            <Input
-              type="email"
-              value={formData.tenantEmail}
-              readOnly
-              className="bg-gray-50"
-            />
-          </div>
-        )}
-
-        {sendOption === 'tenant-list' && (
-          <Select value={selectedTenantEmail} onValueChange={setSelectedTenantEmail}>
-            <SelectTrigger className="w-full mt-2">
-              <SelectValue placeholder="Select a tenant" />
-            </SelectTrigger>
-            <SelectContent>
-              {tenants.map((tenant, index) => {
-                const uniqueKey = `${tenant.id}-${index}`;
-                return (
-                  <SelectItem key={uniqueKey} value={tenant.email || ''}>
-                    {tenant.first_name} {tenant.last_name} ({tenant.email})
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-        )}
-
-        {sendOption === 'custom-email' && (
-          <Input
-            type="email"
-            placeholder="Enter email address"
-            value={customEmail}
-            onChange={(e) => setCustomEmail(e.target.value)}
-            className="mt-2"
-          />
-        )}
-
-        <Button 
-          onClick={handleSend} 
-          className="w-full mt-4"
-          disabled={
-            (sendOption === 'tenant-list' && !selectedTenantEmail) ||
-            (sendOption === 'custom-email' && !customEmail) ||
-            (sendOption === 'contract-tenant' && !formData.tenantEmail)
-          }
-        >
-          Send Contract
-        </Button>
-      </div>
-    );
   };
 
   return (
@@ -378,22 +250,6 @@ export function ContractHeader({
           <Printer className="h-4 w-4 mr-2" />
           Print
         </Button>
-
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="hover:bg-white hover:text-primary-600"
-            >
-              <Mail className="h-4 w-4 mr-2" />
-              Send
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80">
-            {renderSendOptions()}
-          </PopoverContent>
-        </Popover>
       </div>
     </div>
   );
