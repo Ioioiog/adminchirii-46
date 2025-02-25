@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Grid, List, Plus, FileText, CreditCard, Trash2 } from "lucide-react";
@@ -91,7 +92,7 @@ function Documents() {
             properties(name),
             metadata
           `)
-          .or(`tenant_id.eq.${userId},invitation_email.eq.${userId}`);
+          .or('tenant_id.eq.' + userId + ',invitation_email.eq.' + userId);
 
         if (contractsError) {
           console.error("Error fetching contracts:", contractsError);
