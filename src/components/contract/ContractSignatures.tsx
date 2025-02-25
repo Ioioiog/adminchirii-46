@@ -1,3 +1,4 @@
+
 import { FormData } from "@/types/contract";
 import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -55,7 +56,7 @@ export function ContractSignatures({
     enabled: !!contractId
   });
 
-  const { data: signatures } = useQuery({
+  const { data: signatures, refetch: refetchSignatures } = useQuery({
     queryKey: ['contract-signatures', contractId],
     queryFn: async () => {
       console.log('Fetching signatures for contract:', contractId);
