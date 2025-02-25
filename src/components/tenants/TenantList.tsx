@@ -26,9 +26,10 @@ interface TenantListProps {
 interface ContractWithRelations {
   id: string;
   tenant_id: string | null;
+  property_id: string;
   valid_from: string;
   valid_until: string | null;
-  status: string;
+  status: 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled' | 'pending_signature';
   metadata: {
     tenantSignatureName?: string;
   } | null;
@@ -38,8 +39,9 @@ interface ContractWithRelations {
     first_name: string | null;
     last_name: string | null;
     email: string | null;
+    phone: string | null;
   } | null;
-  property?: {
+  property: {
     id: string;
     name: string;
     address: string;
@@ -57,7 +59,7 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
   const { data: contractTenants = [] } = useQuery({
     queryKey: ["contract-tenants"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: contractsData, error } = await supabase
         .from('contracts')
         .select(`
           id,
@@ -68,14 +70,14 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
           status,
           metadata,
           invitation_email,
-          tenant:profiles!contracts_tenant_id_fkey (
+          tenant:profiles (
             id,
             first_name,
             last_name,
             email,
             phone
           ),
-          property:properties!contracts_property_id_fkey (
+          property:properties (
             id,
             name,
             address
@@ -86,7 +88,7 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
       if (error) throw error;
 
       // Transform contract data into tenant format
-      return (data as ContractWithRelations[] || []).map(contract => ({
+      return (contractsData as unknown as ContractWithRelations[]).map(contract => ({
         id: contract.tenant?.id || contract.id,
         first_name: contract.tenant?.first_name || (contract.metadata?.tenantSignatureName?.split(' ')[0]) || 'Unknown',
         last_name: contract.tenant?.last_name || (contract.metadata?.tenantSignatureName?.split(' ').slice(1).join(' ')) || 'Tenant',
