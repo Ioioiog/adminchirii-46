@@ -28,7 +28,7 @@ export const CONTRACT_STATUS_TRANSITIONS: ContractStatusTransition[] = [
     from: 'pending_signature',
     to: 'signed',
     role: 'tenant',
-    action: 'sign'
+    action: 'signed'
   },
   {
     from: 'pending_signature',
