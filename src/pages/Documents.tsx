@@ -78,71 +78,76 @@ function Documents() {
     }
 
     if (userRole === "tenant") {
-      const { data: { session } } = await supabase.auth.getSession();
-      const { data: userProfile } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('id', session?.user?.id)
-        .single();
+      try {
+        // Get user's email from profiles table instead of auth.users
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('id', userId)
+          .single();
 
-      console.log("Tenant profile:", userProfile);
+        console.log("Tenant profile:", userProfile);
 
-      // First fetch contracts where user is assigned as tenant
-      const { data: assignedContracts, error: assignedError } = await supabase
-        .from('contracts')
-        .select(`
-          id,
-          contract_type,
-          status,
-          valid_from,
-          valid_until,
-          tenant_id,
-          landlord_id,
-          properties(name),
-          metadata
-        `)
-        .eq('tenant_id', userId);
+        // First fetch contracts where user is assigned as tenant
+        const { data: assignedContracts, error: assignedError } = await supabase
+          .from('contracts')
+          .select(`
+            id,
+            contract_type,
+            status,
+            valid_from,
+            valid_until,
+            tenant_id,
+            landlord_id,
+            properties(name),
+            metadata
+          `)
+          .eq('tenant_id', userId);
 
-      if (assignedError) {
-        console.error("Error fetching assigned contracts:", assignedError);
-        throw assignedError;
+        if (assignedError) {
+          console.error("Error fetching assigned contracts:", assignedError);
+          throw assignedError;
+        }
+
+        // Then fetch contracts where user's email matches invitation_email
+        const { data: pendingContracts, error: pendingError } = await supabase
+          .from('contracts')
+          .select(`
+            id,
+            contract_type,
+            status,
+            valid_from,
+            valid_until,
+            tenant_id,
+            landlord_id,
+            properties(name),
+            metadata
+          `)
+          .eq('invitation_email', userProfile?.email)
+          .neq('status', 'signed');
+
+        if (pendingError) {
+          console.error("Error fetching pending contracts:", pendingError);
+          throw pendingError;
+        }
+
+        console.log("Found contracts:", {
+          assigned: assignedContracts,
+          pending: pendingContracts,
+          tenantEmail: userProfile?.email
+        });
+
+        // Combine both results, removing duplicates by ID
+        const allContracts = [...(assignedContracts || []), ...(pendingContracts || [])];
+        const uniqueContracts = allContracts.filter((contract, index, self) =>
+          index === self.findIndex((c) => c.id === contract.id)
+        );
+
+        return uniqueContracts;
+      } catch (error) {
+        console.error("Error in fetchContracts:", error);
+        throw error;
       }
-
-      // Then fetch contracts where user's email matches invitation_email
-      const { data: pendingContracts, error: pendingError } = await supabase
-        .from('contracts')
-        .select(`
-          id,
-          contract_type,
-          status,
-          valid_from,
-          valid_until,
-          tenant_id,
-          landlord_id,
-          properties(name),
-          metadata
-        `)
-        .eq('invitation_email', userProfile?.email)
-        .neq('status', 'signed');
-
-      if (pendingError) {
-        console.error("Error fetching pending contracts:", pendingError);
-        throw pendingError;
-      }
-
-      console.log("Found contracts:", {
-        assigned: assignedContracts,
-        pending: pendingContracts,
-        tenantEmail: userProfile?.email
-      });
-
-      // Combine both results, removing duplicates by ID
-      const allContracts = [...(assignedContracts || []), ...(pendingContracts || [])];
-      const uniqueContracts = allContracts.filter((contract, index, self) =>
-        index === self.findIndex((c) => c.id === contract.id)
-      );
-
-      return uniqueContracts as Contract[];
     }
 
     if (userRole === "landlord") {
@@ -166,7 +171,7 @@ function Documents() {
         throw error;
       }
 
-      return (data || []) as Contract[];
+      return data || [];
     }
 
     return [];
