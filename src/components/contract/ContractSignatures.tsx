@@ -143,20 +143,7 @@ export function ContractSignatures({
           throw new Error('Tenants can only sign contracts in pending signature status');
         }
 
-        // First update the contract if signing as tenant
-        if (!isLandlord) {
-          const { error: contractUpdateError } = await supabase
-            .from('contracts')
-            .update({ tenant_id: userId })
-            .eq('id', contractId);
-
-          if (contractUpdateError) {
-            console.error('Error updating contract with tenant_id:', contractUpdateError);
-            throw contractUpdateError;
-          }
-        }
-
-        // Then save the signature
+        // Save the signature first
         const { data: newSignature, error: signatureError } = await supabase
           .from('contract_signatures')
           .insert({
@@ -176,6 +163,18 @@ export function ContractSignatures({
           throw signatureError;
         }
 
+        // Then update the contract
+        const updateData: {
+          status?: ContractStatus;
+          tenant_id?: string | null;
+        } = {};
+
+        // If tenant is signing, update their ID
+        if (!isLandlord) {
+          updateData.tenant_id = userId;
+        }
+
+        // Check if we should update the status
         const { data: allSignatures, error: fetchError } = await supabase
           .from('contract_signatures')
           .select('*')
@@ -186,25 +185,26 @@ export function ContractSignatures({
           throw fetchError;
         }
 
-        console.log('Current signatures:', allSignatures);
-
         const hasLandlordSignature = allSignatures?.some(s => s.signer_role === 'landlord');
         const hasTenantSignature = allSignatures?.some(s => s.signer_role === 'tenant');
         
-        const newStatus = hasLandlordSignature && hasTenantSignature 
-          ? 'signed' 
-          : 'pending_signature';
+        if (hasLandlordSignature && hasTenantSignature) {
+          updateData.status = 'signed';
+        } else if (isLandlord) {
+          updateData.status = 'pending_signature';
+        }
 
-        console.log('Updating contract status to:', newStatus);
+        if (Object.keys(updateData).length > 0) {
+          console.log('Updating contract with:', updateData);
+          const { error: contractError } = await supabase
+            .from('contracts')
+            .update(updateData)
+            .eq('id', contractId);
 
-        const { error: contractError } = await supabase
-          .from('contracts')
-          .update({ status: newStatus })
-          .eq('id', contractId);
-
-        if (contractError) {
-          console.error('Error updating contract:', contractError);
-          throw contractError;
+          if (contractError) {
+            console.error('Error updating contract:', contractError);
+            throw contractError;
+          }
         }
 
         await refetchSignatures();
@@ -216,7 +216,9 @@ export function ContractSignatures({
 
         setSignatureName("");
         signaturePadRef.current?.clear();
-        setContractStatus(newStatus);
+        if (updateData.status) {
+          setContractStatus(updateData.status);
+        }
       } catch (error: any) {
         console.error('Error signing contract:', error);
         toast({
@@ -351,3 +353,4 @@ export function ContractSignatures({
     </div>
   );
 }
+
