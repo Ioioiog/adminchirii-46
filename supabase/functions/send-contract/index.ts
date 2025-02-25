@@ -1,8 +1,7 @@
 import { serve } from "std/server";
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from "npm:resend@2.0.0";
-import chromium from 'chrome-aws-lambda';
-import puppeteer from 'puppeteer-core';
+import puppeteer from "puppeteer";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -217,20 +216,10 @@ const generateContractContent = (contract: any) => {
 const generatePDF = async (contract: any) => {
   try {
     console.log('Starting PDF generation...');
-    
-    const executablePath = await chromium.executablePath;
-    
-    if (!executablePath) {
-      throw new Error('Chrome executable path not found');
-    }
-
     const browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath,
-      headless: chromium.headless,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
-
+    
     console.log('Browser launched');
     const page = await browser.newPage();
     console.log('New page created');
