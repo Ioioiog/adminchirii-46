@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTenants } from "@/hooks/useTenants";
 import type { FormData } from "@/types/contract";
+import { useUserRole } from "@/hooks/use-user-role";
 
 interface ContractHeaderProps {
   onBack: () => void;
@@ -41,6 +42,7 @@ export function ContractHeader({
   showActions = true
 }: ContractHeaderProps) {
   const { data: tenants = [] } = useTenants();
+  const { userRole } = useUserRole();
   const [inviteOption, setInviteOption] = useState<'contract-tenant' | 'tenant-list' | 'custom-email'>(
     formData.tenantEmail ? 'contract-tenant' : 'tenant-list'
   );
@@ -50,7 +52,9 @@ export function ContractHeader({
     formData.tenantEmail ? 'contract-tenant' : 'tenant-list'
   );
 
-  const showInviteButton = (contractStatus === 'draft' || contractStatus === 'pending_signature') && !isEditing;
+  const showInviteButton = userRole === 'landlord' && 
+    (contractStatus === 'draft' || contractStatus === 'pending_signature') && 
+    !isEditing;
 
   const handleInvite = () => {
     let emailToUse = "";
