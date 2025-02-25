@@ -56,6 +56,7 @@ export function ContractSignatures({
     enabled: !!contractId
   });
 
+  // Then fetch all signatures for this contract
   const { data: signatures, refetch: refetchSignatures } = useQuery({
     queryKey: ['contract-signatures', contractId],
     queryFn: async () => {
