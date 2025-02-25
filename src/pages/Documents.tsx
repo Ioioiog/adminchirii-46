@@ -77,7 +77,7 @@ function Documents() {
     }
 
     try {
-      const query = supabase
+      let query = supabase
         .from('contracts')
         .select(`
           id,
@@ -92,32 +92,20 @@ function Documents() {
         `);
 
       if (userRole === "tenant") {
-        const { data: contracts, error: contractsError } = await query
-          .or(`tenant_id.eq.${userId}`);
-
-        if (contractsError) {
-          console.error("Error fetching tenant contracts:", contractsError);
-          throw contractsError;
-        }
-
-        console.log("Found contracts for tenant:", contracts);
-        return (contracts || []) as Contract[];
+        query = query.eq('tenant_id', userId);
+      } else if (userRole === "landlord") {
+        query = query.eq('landlord_id', userId);
       }
 
-      if (userRole === "landlord") {
-        const { data: contracts, error: contractsError } = await query
-          .eq("landlord_id", userId);
+      const { data: contracts, error: contractsError } = await query;
 
-        if (contractsError) {
-          console.error("Error fetching landlord contracts:", contractsError);
-          throw contractsError;
-        }
-
-        console.log("Found contracts for landlord:", contracts);
-        return (contracts || []) as Contract[];
+      if (contractsError) {
+        console.error("Error fetching contracts:", contractsError);
+        throw contractsError;
       }
 
-      return [];
+      console.log("Found contracts:", contracts);
+      return (contracts || []) as Contract[];
     } catch (error) {
       console.error("Error in fetchContracts:", error);
       throw error;
@@ -379,19 +367,7 @@ function Documents() {
               )}
             </div>
             
-            <div className="mt-6">
-              {isLoadingContracts ? (
-                <div className="text-center py-4">Loading contracts...</div>
-              ) : contracts?.length === 0 ? (
-                <div className="text-center py-4 text-gray-500">
-                  {userRole === 'tenant' 
-                    ? 'No contracts available for you yet'
-                    : 'No contracts found'}
-                </div>
-              ) : (
-                renderSection()
-              )}
-            </div>
+            {renderSection()}
           </div>
         </div>
       </main>
