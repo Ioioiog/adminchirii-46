@@ -183,10 +183,14 @@ export function ContractHeader({
     }
 
     return (
-      <>
+      <div className="space-y-4">
         <RadioGroup 
           value={sendOption} 
-          onValueChange={(value: 'contract-tenant' | 'tenant-list' | 'custom-email') => setSendOption(value)}
+          onValueChange={(value: 'contract-tenant' | 'tenant-list' | 'custom-email') => {
+            setSendOption(value);
+            setSelectedTenantEmail("");
+            setCustomEmail("");
+          }}
           className="gap-3"
         >
           {formData.tenantEmail && (
@@ -204,10 +208,59 @@ export function ContractHeader({
             <Label htmlFor="send-custom-email">Custom Email</Label>
           </div>
         </RadioGroup>
-        <Button onClick={handleSend} className="w-full mt-4">
+
+        {sendOption === 'contract-tenant' && formData.tenantEmail && (
+          <div className="mt-2 space-y-2">
+            <Label className="text-sm text-gray-500">Contract Tenant Email</Label>
+            <Input
+              type="email"
+              value={formData.tenantEmail}
+              readOnly
+              className="bg-gray-50"
+            />
+          </div>
+        )}
+
+        {sendOption === 'tenant-list' && (
+          <Select value={selectedTenantEmail} onValueChange={setSelectedTenantEmail}>
+            <SelectTrigger className="w-full mt-2">
+              <SelectValue placeholder="Select a tenant" />
+            </SelectTrigger>
+            <SelectContent>
+              {tenants.map((tenant, index) => {
+                const uniqueKey = `${tenant.id}-${index}`;
+                return (
+                  <SelectItem key={uniqueKey} value={tenant.email || ''}>
+                    {tenant.first_name} {tenant.last_name} ({tenant.email})
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        )}
+
+        {sendOption === 'custom-email' && (
+          <Input
+            type="email"
+            placeholder="Enter email address"
+            value={customEmail}
+            onChange={(e) => setCustomEmail(e.target.value)}
+            className="mt-2"
+          />
+        )}
+
+        <Button 
+          onClick={handleSend} 
+          className="w-full mt-4"
+          disabled={
+            (sendOption === 'tenant-list' && !selectedTenantEmail) ||
+            (sendOption === 'custom-email' && !customEmail) ||
+            (sendOption === 'contract-tenant' && !formData.tenantEmail)
+          }
+        >
           Send Contract
         </Button>
-      </>
+      </div>
     );
   };
 
