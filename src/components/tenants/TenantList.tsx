@@ -71,7 +71,7 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
           status,
           metadata,
           invitation_email,
-          tenant:profiles(
+          tenant:profiles!tenant_id(
             id,
             first_name,
             last_name,
