@@ -1,4 +1,3 @@
-
 import { FormData } from "@/types/contract";
 import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -36,7 +35,6 @@ export function ContractSignatures({
   const [contractStatus, setContractStatus] = useState<ContractStatus>('draft');
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Query to get contract details
   const { data: contract, isLoading: isContractLoading } = useQuery({
     queryKey: ['contract', contractId],
     enabled: !!userId,
@@ -61,7 +59,6 @@ export function ContractSignatures({
     }
   });
 
-  // Query to get signatures with detailed logging
   const { data: signatures, isLoading: isSignaturesLoading } = useQuery({
     queryKey: ['contract-signatures', contractId],
     enabled: !!userId,
@@ -78,18 +75,27 @@ export function ContractSignatures({
         throw error;
       }
 
-      console.log('Raw signatures data:', data);
-
-      // Log each signature's details
+      console.log('Contract signatures found:', data);
+      console.log('Number of signatures:', data?.length);
+      
       if (data) {
         data.forEach(sig => {
           console.log('Signature details:', {
+            id: sig.id,
             signer_role: sig.signer_role,
             signer_id: sig.signer_id,
             signed_at: sig.signed_at,
             has_image: !!sig.signature_image,
             has_data: !!sig.signature_data
           });
+        });
+
+        const hasLandlordSig = data.some(s => s.signer_role === 'landlord');
+        const hasTenantSig = data.some(s => s.signer_role === 'tenant');
+        console.log('Signature status check:', {
+          hasLandlordSignature: hasLandlordSig,
+          hasTenantSignature: hasTenantSig,
+          shouldBeMarkedAsSigned: hasLandlordSig && hasTenantSig
         });
       }
 
@@ -170,7 +176,6 @@ export function ContractSignatures({
           currentStatus: contractStatus
         });
 
-        // Verify contract status matches role
         if (isLandlord && contractStatus !== 'draft') {
           throw new Error('Landlords can only sign contracts in draft status');
         }
@@ -178,7 +183,6 @@ export function ContractSignatures({
           throw new Error('Tenants can only sign contracts in pending signature status');
         }
 
-        // Save the signature
         const { data: newSignature, error: signatureError } = await supabase
           .from('contract_signatures')
           .insert({
@@ -198,7 +202,6 @@ export function ContractSignatures({
           throw signatureError;
         }
 
-        // Get all signatures after adding the new one
         const { data: currentSignatures, error: fetchError } = await supabase
           .from('contract_signatures')
           .select('*')
@@ -211,11 +214,15 @@ export function ContractSignatures({
 
         console.log('All signatures after adding new one:', currentSignatures);
 
-        // Check signature status
         const hasLandlordSig = currentSignatures?.some(s => s.signer_role === 'landlord');
         const hasTenantSig = currentSignatures?.some(s => s.signer_role === 'tenant');
 
-        // Prepare contract update
+        console.log('Signature verification:', {
+          hasLandlordSig,
+          hasTenantSig,
+          shouldUpdateToSigned: hasLandlordSig && hasTenantSig
+        });
+
         const updateData: {
           status: ContractStatus;
           tenant_id?: string;
@@ -223,25 +230,26 @@ export function ContractSignatures({
           status: hasLandlordSig && hasTenantSig ? 'signed' : 'pending_signature'
         };
 
-        // Set tenant_id if tenant is signing
         if (!isLandlord) {
           updateData.tenant_id = userId;
         }
 
         console.log('Updating contract with:', updateData);
 
-        // Update contract status
-        const { error: updateError } = await supabase
+        const { error: updateError, data: updatedContract } = await supabase
           .from('contracts')
           .update(updateData)
-          .eq('id', contractId);
+          .eq('id', contractId)
+          .select()
+          .single();
 
         if (updateError) {
           console.error('Error updating contract:', updateError);
           throw updateError;
         }
 
-        // Update local state and refetch data
+        console.log('Contract updated successfully:', updatedContract);
+
         setContractStatus(updateData.status);
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['contract', contractId] }),
@@ -276,7 +284,6 @@ export function ContractSignatures({
   const canSignAsLandlord = userRole === 'landlord' && contractStatus === 'draft';
   const canSignAsTenant = userRole === 'tenant' && contractStatus === 'pending_signature';
   
-  // Check if current user has already signed
   const hasSignedAsLandlord = signatures?.some(s => s.signer_role === 'landlord' && s.signer_id === userId);
   const hasSignedAsTenant = signatures?.some(s => s.signer_role === 'tenant' && s.signer_id === userId);
 
@@ -393,4 +400,3 @@ export function ContractSignatures({
     </div>
   );
 }
-
