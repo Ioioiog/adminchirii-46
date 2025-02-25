@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TenantsTabProps {
   property: any;
@@ -13,6 +15,29 @@ interface TenantsTabProps {
 
 export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
   const navigate = useNavigate();
+
+  // Fetch signed contracts for this property
+  const { data: contracts } = useQuery({
+    queryKey: ["property-contracts", property.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('contracts')
+        .select(`
+          id,
+          tenant_id,
+          status,
+          metadata,
+          valid_from,
+          valid_until,
+          invitation_email
+        `)
+        .eq('property_id', property.id)
+        .eq('status', 'signed');
+
+      if (error) throw error;
+      return data || [];
+    }
+  });
 
   const renderTenantCard = (tenancy: any) => {
     const startDate = tenancy.start_date ? format(new Date(tenancy.start_date), 'PPP') : 'Not specified';
@@ -70,6 +95,57 @@ export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
     );
   };
 
+  const renderContractTenantCard = (contract: any) => {
+    const startDate = contract.valid_from ? format(new Date(contract.valid_from), 'PPP') : 'Not specified';
+    const endDate = contract.valid_until ? format(new Date(contract.valid_until), 'PPP') : 'Ongoing';
+    const tenantName = contract.metadata?.tenantSignatureName || 'Not specified';
+    const tenantEmail = contract.invitation_email || 'Not specified';
+    
+    return (
+      <div key={contract.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div className="p-6">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
+                <User className="h-6 w-6 text-gray-600" />
+              </div>
+              <div>
+                <h3 className="font-medium text-gray-900">{tenantName}</h3>
+                <p className="text-sm text-gray-500">{tenantEmail}</p>
+              </div>
+            </div>
+            <Badge variant="secondary" className="rounded-full">
+              Contract Signed
+            </Badge>
+          </div>
+          <div className="mt-6 grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-medium text-gray-500">Start Date</p>
+              <p className="mt-1 text-sm text-gray-900">{startDate}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">End Date</p>
+              <p className="mt-1 text-sm text-gray-900">{endDate}</p>
+            </div>
+          </div>
+          <div className="mt-6">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => navigate(`/contracts/${contract.id}`)}
+            >
+              View Contract
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const hasTenantsOrContracts = (property.tenancies && property.tenancies.length > 0) || 
+                               (contracts && contracts.length > 0);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -88,9 +164,10 @@ export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
         </Button>
       </div>
 
-      {property.tenancies && property.tenancies.length > 0 ? (
+      {hasTenantsOrContracts ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {property.tenancies.map((tenancy: any) => renderTenantCard(tenancy))}
+          {property.tenancies?.map((tenancy: any) => renderTenantCard(tenancy))}
+          {contracts?.map((contract: any) => renderContractTenantCard(contract))}
         </div>
       ) : (
         <div className="text-center py-12">
