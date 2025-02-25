@@ -14,88 +14,119 @@ interface SendContractRequest {
   recipientEmail: string;
 }
 
-const generatePDF = async (contract: any) => {
-  const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
-  const page = await browser.newPage();
+const generateContractContent = (contract: any) => {
+  const metadata = contract.metadata || {};
+  const assets = metadata.assets || [];
 
-  // Construct the HTML content similar to ContractPrintPreview
-  const htmlContent = `
+  return `
     <!DOCTYPE html>
     <html>
       <head>
-        <title>Contract ${contract.metadata?.contractNumber || ''}</title>
+        <title>Contract ${metadata.contractNumber || ''}</title>
         <style>
-          @media print {
-            @page { 
-              size: A4;
-              margin: 20mm;
-            }
-            body { 
-              font-family: Arial, sans-serif;
-              line-height: 1.5;
-            }
-            .mb-2 { margin-bottom: 0.5rem; }
-            .mb-4 { margin-bottom: 1rem; }
-            .mb-8 { margin-bottom: 2rem; }
-            .mt-2 { margin-top: 0.5rem; }
-            .mt-16 { margin-top: 4rem; }
-            .p-8 { padding: 2rem; }
-            .text-center { text-align: center; }
-            .font-bold { font-weight: bold; }
-            .text-3xl { font-size: 1.875rem; }
-            .text-xl { font-size: 1.25rem; }
-            .grid { display: grid; }
-            .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
-            .gap-8 { gap: 2rem; }
-            table { width: 100%; border-collapse: collapse; }
-            th, td { border: 1px solid black; padding: 0.5rem; text-align: left; }
-            .max-w-[200px] { max-width: 200px; }
-            .list-disc { list-style-type: disc; padding-left: 2rem; }
+          body { 
+            font-family: Arial, sans-serif;
+            line-height: 1.5;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+          }
+          table { 
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+          }
+          th, td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+          }
+          .signatures {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+          }
+          .signature-block {
+            width: 45%;
+          }
+          .section {
+            margin-bottom: 20px;
+          }
+          h1 { text-align: center; }
+          h2 { margin-top: 30px; }
+          img.signature {
+            max-width: 200px;
+            margin-top: 10px;
           }
         </style>
       </head>
       <body>
-        <div style="padding: 2rem">
-          <h1 class="text-3xl font-bold text-center mb-8">CONTRACT DE ÎNCHIRIERE A LOCUINȚEI</h1>
-          <p class="mb-4">Nr. ${contract.metadata?.contractNumber || '_____'}</p>
-          <p class="mb-8">Data: ${contract.metadata?.contractDate || '_____'}</p>
+        <h1>CONTRACT DE ÎNCHIRIERE A LOCUINȚEI</h1>
+        
+        <div class="section">
+          <p>Nr. ${metadata.contractNumber || '_____'}</p>
+          <p>Data: ${metadata.contractDate || '_____'}</p>
+        </div>
 
-          <p class="mb-8">Părțile,</p>
+        <div class="section">
+          <p><strong>Părțile,</strong></p>
+          
+          <p><strong>1. Proprietarul:</strong><br>
+          ${metadata.ownerName || ''}, Nr. ordine Reg. com./an: ${metadata.ownerReg || ''}, 
+          Cod fiscal (C.U.I.): ${metadata.ownerFiscal || ''}, cu sediul in ${metadata.ownerAddress || ''}, 
+          cont bancar ${metadata.ownerBank || ''}, deschis la ${metadata.ownerBankName || ''}, 
+          reprezentat: ${metadata.ownerRepresentative || ''}, e-mail: ${metadata.ownerEmail || ''}, 
+          telefon: ${metadata.ownerPhone || ''} în calitate de Proprietar</p>
 
-          <div class="mb-8">
-            ${contract.metadata?.ownerName}, Nr. ordine Reg. com./an: ${contract.metadata?.ownerReg}, 
-            Cod fiscal (C.U.I.): ${contract.metadata?.ownerFiscal}, cu sediul in ${contract.metadata?.ownerAddress}, 
-            cont bancar ${contract.metadata?.ownerBank}, deschis la ${contract.metadata?.ownerBankName},
-            reprezentat: ${contract.metadata?.ownerRepresentative}, e-mail: ${contract.metadata?.ownerEmail}, 
-            telefon: ${contract.metadata?.ownerPhone} în calitate de Proprietar,
-          </div>
+          <p><strong>2. Chiriașul:</strong><br>
+          ${metadata.tenantName || ''}, Nr. ordine Reg. com./an: ${metadata.tenantReg || ''}, 
+          Cod fiscal (C.U.I.): ${metadata.tenantFiscal || ''}, cu domiciliul în ${metadata.tenantAddress || ''}, 
+          cont bancar ${metadata.tenantBank || ''}, deschis la ${metadata.tenantBankName || ''}, 
+          reprezentat: ${metadata.tenantRepresentative || ''}, e-mail: ${metadata.tenantEmail || ''}, 
+          telefon: ${metadata.tenantPhone || ''} în calitate de Chiriaș</p>
+        </div>
 
-          <div class="mb-8">
-            ${contract.metadata?.tenantName}, Nr. ordine Reg. com./an: ${contract.metadata?.tenantReg}, 
-            Cod fiscal (C.U.I.): ${contract.metadata?.tenantFiscal}, cu domiciliul în ${contract.metadata?.tenantAddress}, 
-            cont bancar ${contract.metadata?.tenantBank}, deschis la ${contract.metadata?.tenantBankName},
-            reprezentat: ${contract.metadata?.tenantRepresentative}, e-mail: ${contract.metadata?.tenantEmail}, 
-            telefon: ${contract.metadata?.tenantPhone} în calitate de Chiriaș,
-          </div>
+        <div class="section">
+          <h2>1. OBIECTUL CONTRACTULUI</h2>
+          <p>1.1. Obiectul prezentului contract este închirierea apartamentului situat în ${metadata.propertyAddress || ''}, 
+          compus din ${metadata.roomCount || ''} camere, cu destinația de locuință. Chiriașul va utiliza apartamentul 
+          incepand cu data de ${metadata.startDate || ''} ca locuință pentru familia sa.</p>
+        </div>
 
-          <h2 class="text-xl font-bold mb-4">1. OBIECTUL CONTRACTULUI</h2>
-          <p class="mb-8">
-            1.1. Obiectul prezentului contract este închirierea apartamentului situat în ${contract.metadata?.propertyAddress}, 
-            compus din ${contract.metadata?.roomCount} camere, cu destinația de locuință. Chiriașul va utiliza apartamentul 
-            incepand cu data de ${contract.metadata?.startDate} ca locuință pentru familia sa.
-          </p>
+        <div class="section">
+          <h2>2. PREȚUL CONTRACTULUI</h2>
+          <p>2.1. Părțile convin un cuantum al chiriei lunare la nivelul sumei de ${metadata.rentAmount || ''} EUR 
+          ${metadata.vatIncluded === "nu" ? "+ TVA" : "(TVA inclus)"}. Plata chiriei se realizează în ziua de ${metadata.paymentDay || ''} 
+          a fiecărei luni calendaristice pentru luna calendaristică următoare, în contul bancar al Proprietarului.
+          Plata se realizează în lei, la cursul de schimb euro/leu comunicat de BNR în ziua plății.</p>
+          
+          <p>2.2. În cazul în care data plății este o zi nebancară, plata se va realiza în prima zi bancară care urmează 
+          zilei de ${metadata.paymentDay || ''}.</p>
+          
+          <p>2.3. Părțile convin că întârzierea la plată atrage aplicarea unor penalități în cuantum de ${metadata.lateFee || ''}% pentru fiecare 
+          zi de întârziere.</p>
+        </div>
 
-          <h2 class="text-xl font-bold mb-4">2. PREȚUL CONTRACTULUI</h2>
-          <p class="mb-4">
-            2.1. Părțile convin un cuantum al chiriei lunare la nivelul sumei de ${contract.metadata?.rentAmount} EUR 
-            ${contract.metadata?.vatIncluded === "nu" ? "+ TVA" : "(TVA inclus)"}. Plata chiriei se realizează în ziua de ${contract.metadata?.paymentDay} 
-            a fiecărei luni calendaristice pentru luna calendaristică următoare, în contul bancar al Proprietarului.
-          </p>
+        <div class="section">
+          <h2>3. DURATA CONTRACTULUI</h2>
+          <p>3.1. Părțile convin că încheie prezentul contract pentru o perioadă inițială minimă de ${metadata.contractDuration || ''} luni. 
+          Părțile convin că perioada inițială minimă este de esența contractului.</p>
+        </div>
 
-          <!-- ... Add other contract sections ... -->
+        <div class="section">
+          <h2>7. GARANȚIA</h2>
+          <p>7.1. Chiriașul este de acord să ofere, cu titlu de garanție, suma de ${metadata.securityDeposit || ''} EUR.
+          Această sumă de bani va fi utilizată de Proprietar doar în situația în care Chiriașul nu își îndeplinește 
+          în mod corespunzător obligațiile asumate contractual.</p>
+          
+          <p>7.2. Părțile convin că suma constituită cu titlu de garanție se returnează Chiriașului după încetarea contractului, 
+          după expirarea unui termen de ${metadata.depositReturnPeriod || ''} care să permită Proprietarului să verifice acuratețea 
+          consumurilor declarate.</p>
+        </div>
 
-          <h2 class="text-xl font-bold mb-4">ANEXA 1 - LISTA BUNURI MOBILE/ELECTROCASNICE</h2>
-          <table class="mb-8">
+        <div class="section">
+          <h2>ANEXA 1 - LISTA BUNURI MOBILE/ELECTROCASNICE</h2>
+          <table>
             <thead>
               <tr>
                 <th>Denumire bun</th>
@@ -104,18 +135,20 @@ const generatePDF = async (contract: any) => {
               </tr>
             </thead>
             <tbody>
-              ${(contract.metadata?.assets || []).map((asset: any) => `
+              ${assets.map((asset: any) => `
                 <tr>
-                  <td>${asset.name}</td>
-                  <td>${asset.value}</td>
-                  <td>${asset.condition}</td>
+                  <td>${asset.name || ''}</td>
+                  <td>${asset.value || ''}</td>
+                  <td>${asset.condition || ''}</td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
+        </div>
 
-          <h2 class="text-xl font-bold mb-4">ANEXA 2 - DETALII CONTORIZARE UTILITĂȚI</h2>
-          <table class="mb-8">
+        <div class="section">
+          <h2>ANEXA 2 - DETALII CONTORIZARE UTILITĂȚI</h2>
+          <table>
             <thead>
               <tr>
                 <th>Tip serviciu/utilitate</th>
@@ -125,49 +158,55 @@ const generatePDF = async (contract: any) => {
             <tbody>
               <tr>
                 <td>Apă rece</td>
-                <td>${contract.metadata?.waterColdMeter}</td>
+                <td>${metadata.waterColdMeter || ''}</td>
               </tr>
               <tr>
                 <td>Apă caldă</td>
-                <td>${contract.metadata?.waterHotMeter}</td>
+                <td>${metadata.waterHotMeter || ''}</td>
               </tr>
               <tr>
                 <td>Curent electric</td>
-                <td>${contract.metadata?.electricityMeter}</td>
+                <td>${metadata.electricityMeter || ''}</td>
               </tr>
               <tr>
                 <td>Gaze naturale</td>
-                <td>${contract.metadata?.gasMeter}</td>
+                <td>${metadata.gasMeter || ''}</td>
               </tr>
             </tbody>
           </table>
+        </div>
 
-          <div class="grid grid-cols-2 gap-8 mt-16">
-            <div>
-              <p class="font-bold mb-2">PROPRIETAR,</p>
-              <p>Data: ${contract.metadata?.ownerSignatureDate || '_____'}</p>
-              <p>Nume și semnătură:</p>
-              <p>${contract.metadata?.ownerSignatureName || '___________________________'}</p>
-              ${contract.metadata?.ownerSignatureImage ? `
-                <img src="${contract.metadata.ownerSignatureImage}" alt="Owner Signature" style="max-width: 200px; margin-top: 0.5rem;" />
-              ` : ''}
-            </div>
-            <div>
-              <p class="font-bold mb-2">CHIRIAȘ,</p>
-              <p>Data: ${contract.metadata?.tenantSignatureDate || '_____'}</p>
-              <p>Nume și semnătură:</p>
-              <p>${contract.metadata?.tenantSignatureName || '___________________________'}</p>
-              ${contract.metadata?.tenantSignatureImage ? `
-                <img src="${contract.metadata.tenantSignatureImage}" alt="Tenant Signature" style="max-width: 200px; margin-top: 0.5rem;" />
-              ` : ''}
-            </div>
+        <div class="signatures">
+          <div class="signature-block">
+            <p><strong>PROPRIETAR,</strong></p>
+            <p>Data: ${metadata.ownerSignatureDate || '_____'}</p>
+            <p>Nume și semnătură:</p>
+            <p>${metadata.ownerSignatureName || ''}</p>
+            ${metadata.ownerSignatureImage ? 
+              `<img class="signature" src="${metadata.ownerSignatureImage}" alt="Owner Signature" />` : ''}
+          </div>
+          
+          <div class="signature-block">
+            <p><strong>CHIRIAȘ,</strong></p>
+            <p>Data: ${metadata.tenantSignatureDate || '_____'}</p>
+            <p>Nume și semnătură:</p>
+            <p>${metadata.tenantSignatureName || ''}</p>
+            ${metadata.tenantSignatureImage ? 
+              `<img class="signature" src="${metadata.tenantSignatureImage}" alt="Tenant Signature" />` : ''}
           </div>
         </div>
       </body>
     </html>
   `;
+};
 
+const generatePDF = async (contract: any) => {
+  const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+  const page = await browser.newPage();
+  
+  const htmlContent = generateContractContent(contract);
   await page.setContent(htmlContent);
+  
   const pdf = await page.pdf({ 
     format: 'A4',
     margin: {
@@ -184,7 +223,6 @@ const generatePDF = async (contract: any) => {
 };
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -197,26 +235,22 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const resend = new Resend(resendApiKey);
-
     const { contractId, recipientEmail }: SendContractRequest = await req.json();
-    console.log('Received request to send contract:', { contractId, recipientEmail });
-
+    
     if (!contractId || !recipientEmail) {
       throw new Error('Contract ID and recipient email are required');
     }
 
-    // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Missing Supabase environment variables');
       throw new Error('Database configuration is missing');
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // First fetch the contract with property details
+    // Fetch contract with all necessary data
     const { data: contract, error: contractError } = await supabase
       .from('contracts')
       .select(`
@@ -226,42 +260,32 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('id', contractId)
       .single();
 
-    if (contractError) {
+    if (contractError || !contract) {
       console.error('Error fetching contract:', contractError);
       throw new Error('Failed to fetch contract details');
     }
 
-    if (!contract) {
-      throw new Error('Contract not found');
-    }
-
+    console.log('Contract data:', contract);
+    
     // Generate PDF
     console.log('Generating PDF for contract:', contractId);
     const pdfBuffer = await generatePDF(contract);
-    
-    // Convert Buffer to Base64
     const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBuffer)));
 
-    console.log('Sending contract email to:', recipientEmail);
-    
-    // Prepare email content
+    // Send email
     const emailContent = `
-      <h1>Contract Details</h1>
-      <p>Property: ${contract.properties.name}</p>
-      <p>Status: ${contract.status}</p>
-      <p>Please find the contract document attached to this email.</p>
-      <p>You can also view and sign the contract by logging into your account:</p>
+      <h1>Contract for ${contract.properties?.name || 'Property'}</h1>
+      <p>Please find attached the rental contract document. You can also view and sign it online using the link below:</p>
       <p><a href="${Deno.env.get('PUBLIC_SITE_URL') || ''}/documents/contracts/${contract.id}">View Contract Online</a></p>
     `;
 
-    // Send email using Resend with PDF attachment
     const emailResponse = await resend.emails.send({
       from: 'Contract System <onboarding@resend.dev>',
       to: [recipientEmail],
-      subject: `Contract for ${contract.properties.name}`,
+      subject: `Rental Contract - ${contract.properties?.name || 'Property'}`,
       html: emailContent,
       attachments: [{
-        filename: `contract-${contractId}.pdf`,
+        filename: `rental-contract-${contract.metadata?.contractNumber || contractId}.pdf`,
         content: pdfBase64,
       }],
     });
@@ -277,16 +301,11 @@ const handler = async (req: Request): Promise<Response> => {
     });
   } catch (error) {
     console.error('Error in send-contract function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-    
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'An unexpected error occurred' }),
       {
         status: 500,
-        headers: { 
-          'Content-Type': 'application/json',
-          ...corsHeaders
-        },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
       }
     );
   }
