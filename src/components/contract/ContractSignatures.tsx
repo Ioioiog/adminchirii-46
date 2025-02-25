@@ -35,6 +35,13 @@ export function ContractSignatures({
   const signaturePadRef = useRef<SignaturePad>(null);
   const [contractStatus, setContractStatus] = useState<ContractStatus>('draft');
 
+  console.log("ContractSignatures component mounted with:", {
+    contractId,
+    userRole,
+    userId,
+    formData
+  });
+
   // Query to get contract details
   const { data: contract, isLoading: isContractLoading } = useQuery({
     queryKey: ['contract', contractId],
@@ -42,7 +49,7 @@ export function ContractSignatures({
       console.log('Fetching contract details for:', contractId);
       const { data, error } = await supabase
         .from('contracts')
-        .select('*')
+        .select('*, properties(name)')
         .eq('id', contractId)
         .maybeSingle();
 
@@ -60,10 +67,19 @@ export function ContractSignatures({
   });
 
   // Query to get signatures
-  const { data: signatures, refetch: refetchSignatures } = useQuery({
+  const { data: signatures, isLoading: isSignaturesLoading, error: signaturesError } = useQuery({
     queryKey: ['contract-signatures', contractId],
     queryFn: async () => {
       console.log('Fetching signatures for contract:', contractId);
+      
+      // First check if we can access the contract_signatures table at all
+      const { data: testData, error: testError } = await supabase
+        .from('contract_signatures')
+        .select('count(*)')
+        .limit(1);
+        
+      console.log('Test query result:', { testData, testError });
+
       const { data, error } = await supabase
         .from('contract_signatures')
         .select('*')
@@ -80,11 +96,17 @@ export function ContractSignatures({
   });
 
   useEffect(() => {
+    console.log('Processing signatures effect:', {
+      signatures,
+      signaturesError,
+      isSignaturesLoading
+    });
+
     if (signatures && signatures.length > 0) {
       const tenantSignature = signatures.find(s => s.signer_role === 'tenant');
       const ownerSignature = signatures.find(s => s.signer_role === 'landlord');
 
-      console.log('Processing signatures:', {
+      console.log('Found signatures:', {
         tenantSignature,
         ownerSignature,
         status: contractStatus
@@ -102,7 +124,7 @@ export function ContractSignatures({
 
       setLocalFormData(updatedFormData);
     }
-  }, [signatures, formData]);
+  }, [signatures, formData, contractStatus]);
 
   const handleSign = async () => {
     if (!userId || !userRole) {
@@ -202,7 +224,7 @@ export function ContractSignatures({
         setContractStatus(updateData.status);
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['contract', contractId] }),
-          refetchSignatures()
+          queryClient.invalidateQueries({ queryKey: ['contract-signatures', contractId] })
         ]);
 
         toast({
@@ -232,6 +254,13 @@ export function ContractSignatures({
 
   const canSignAsLandlord = userRole === 'landlord' && contractStatus === 'draft';
   const canSignAsTenant = userRole === 'tenant' && contractStatus === 'pending_signature';
+
+  console.log('Rendering signatures with state:', {
+    canSignAsLandlord,
+    canSignAsTenant,
+    contractStatus,
+    localFormData
+  });
 
   return (
     <div className="grid grid-cols-2 gap-8 mt-16">
