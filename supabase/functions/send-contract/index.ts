@@ -1,3 +1,4 @@
+
 import { serve } from "std/server";
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from "npm:resend@2.0.0";
@@ -22,6 +23,7 @@ const generateContractContent = (contract: any) => {
     <!DOCTYPE html>
     <html>
       <head>
+        <meta charset="UTF-8">
         <title>Contract ${metadata.contractNumber || ''}</title>
         <style>
           body { 
@@ -41,21 +43,24 @@ const generateContractContent = (contract: any) => {
             padding: 8px;
             text-align: left;
           }
-          .signatures {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 40px;
-          }
-          .signature-block {
-            width: 45%;
-          }
           .section {
             margin-bottom: 20px;
           }
           h1 { text-align: center; }
           h2 { margin-top: 30px; }
-          img.signature {
+          .signatures {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-top: 40px;
+          }
+          .signature-block {
+            border-top: 1px solid #ccc;
+            padding-top: 20px;
+          }
+          .signature-img {
             max-width: 200px;
+            height: auto;
             margin-top: 10px;
           }
         </style>
@@ -64,64 +69,73 @@ const generateContractContent = (contract: any) => {
         <h1>CONTRACT DE ÎNCHIRIERE A LOCUINȚEI</h1>
         
         <div class="section">
-          <p>Nr. ${metadata.contractNumber || '_____'}</p>
-          <p>Data: ${metadata.contractDate || '_____'}</p>
+          <p><strong>Nr.</strong> ${metadata.contractNumber || '_____'}</p>
+          <p><strong>Data:</strong> ${metadata.contractDate || '_____'}</p>
         </div>
 
         <div class="section">
-          <p><strong>Părțile,</strong></p>
+          <h2>Părțile,</h2>
           
-          <p><strong>1. Proprietarul:</strong><br>
-          ${metadata.ownerName || ''}, Nr. ordine Reg. com./an: ${metadata.ownerReg || ''}, 
-          Cod fiscal (C.U.I.): ${metadata.ownerFiscal || ''}, cu sediul in ${metadata.ownerAddress || ''}, 
-          cont bancar ${metadata.ownerBank || ''}, deschis la ${metadata.ownerBankName || ''}, 
-          reprezentat: ${metadata.ownerRepresentative || ''}, e-mail: ${metadata.ownerEmail || ''}, 
-          telefon: ${metadata.ownerPhone || ''} în calitate de Proprietar</p>
+          <div class="section">
+            <h3>1. Proprietarul:</h3>
+            <p>${metadata.ownerName || ''}</p>
+            <p>Nr. ordine Reg. com./an: ${metadata.ownerReg || ''}</p>
+            <p>Cod fiscal (C.U.I.): ${metadata.ownerFiscal || ''}</p>
+            <p>Cu sediul in: ${metadata.ownerAddress || ''}</p>
+            <p>Cont bancar: ${metadata.ownerBank || ''}</p>
+            <p>Deschis la: ${metadata.ownerBankName || ''}</p>
+            <p>Reprezentat: ${metadata.ownerRepresentative || ''}</p>
+            <p>Email: ${metadata.ownerEmail || ''}</p>
+            <p>Telefon: ${metadata.ownerPhone || ''}</p>
+            <p><strong>în calitate de Proprietar</strong></p>
+          </div>
 
-          <p><strong>2. Chiriașul:</strong><br>
-          ${metadata.tenantName || ''}, Nr. ordine Reg. com./an: ${metadata.tenantReg || ''}, 
-          Cod fiscal (C.U.I.): ${metadata.tenantFiscal || ''}, cu domiciliul în ${metadata.tenantAddress || ''}, 
-          cont bancar ${metadata.tenantBank || ''}, deschis la ${metadata.tenantBankName || ''}, 
-          reprezentat: ${metadata.tenantRepresentative || ''}, e-mail: ${metadata.tenantEmail || ''}, 
-          telefon: ${metadata.tenantPhone || ''} în calitate de Chiriaș</p>
+          <div class="section">
+            <h3>2. Chiriașul:</h3>
+            <p>${metadata.tenantName || ''}</p>
+            <p>Nr. ordine Reg. com./an: ${metadata.tenantReg || ''}</p>
+            <p>Cod fiscal (C.U.I.): ${metadata.tenantFiscal || ''}</p>
+            <p>Cu domiciliul în: ${metadata.tenantAddress || ''}</p>
+            <p>Cont bancar: ${metadata.tenantBank || ''}</p>
+            <p>Deschis la: ${metadata.tenantBankName || ''}</p>
+            <p>Reprezentat: ${metadata.tenantRepresentative || ''}</p>
+            <p>Email: ${metadata.tenantEmail || ''}</p>
+            <p>Telefon: ${metadata.tenantPhone || ''}</p>
+            <p><strong>în calitate de Chiriaș</strong></p>
+          </div>
         </div>
 
         <div class="section">
           <h2>1. OBIECTUL CONTRACTULUI</h2>
           <p>1.1. Obiectul prezentului contract este închirierea apartamentului situat în ${metadata.propertyAddress || ''}, 
-          compus din ${metadata.roomCount || ''} camere, cu destinația de locuință. Chiriașul va utiliza apartamentul 
-          incepand cu data de ${metadata.startDate || ''} ca locuință pentru familia sa.</p>
+          compus din ${metadata.roomCount || ''} camere, cu destinația de locuință.</p>
+          <p>1.2. Chiriașul va utiliza apartamentul incepand cu data de ${metadata.startDate || ''} ca locuință pentru familia sa.</p>
         </div>
 
         <div class="section">
           <h2>2. PREȚUL CONTRACTULUI</h2>
           <p>2.1. Părțile convin un cuantum al chiriei lunare la nivelul sumei de ${metadata.rentAmount || ''} EUR 
-          ${metadata.vatIncluded === "nu" ? "+ TVA" : "(TVA inclus)"}. Plata chiriei se realizează în ziua de ${metadata.paymentDay || ''} 
-          a fiecărei luni calendaristice pentru luna calendaristică următoare, în contul bancar al Proprietarului.
-          Plata se realizează în lei, la cursul de schimb euro/leu comunicat de BNR în ziua plății.</p>
-          
-          <p>2.2. În cazul în care data plății este o zi nebancară, plata se va realiza în prima zi bancară care urmează 
-          zilei de ${metadata.paymentDay || ''}.</p>
-          
-          <p>2.3. Părțile convin că întârzierea la plată atrage aplicarea unor penalități în cuantum de ${metadata.lateFee || ''}% pentru fiecare 
-          zi de întârziere.</p>
+          ${metadata.vatIncluded === "nu" ? "+ TVA" : "(TVA inclus)"}.</p>
+          <p>2.2. Plata chiriei se realizează în ziua de ${metadata.paymentDay || ''} a fiecărei luni calendaristice pentru luna calendaristică următoare, 
+          în contul bancar al Proprietarului. Plata se realizează în lei, la cursul de schimb euro/leu comunicat de BNR în ziua plății.</p>
+          <p>2.3. În cazul în care data plății este o zi nebancară, plata se va realiza în prima zi bancară care urmează.</p>
+          <p>2.4. Părțile convin că întârzierea la plată atrage aplicarea unor penalități în cuantum de ${metadata.lateFee || ''}% pentru fiecare zi de întârziere.</p>
         </div>
 
         <div class="section">
           <h2>3. DURATA CONTRACTULUI</h2>
-          <p>3.1. Părțile convin că încheie prezentul contract pentru o perioadă inițială minimă de ${metadata.contractDuration || ''} luni. 
-          Părțile convin că perioada inițială minimă este de esența contractului.</p>
+          <p>3.1. Părțile convin că încheie prezentul contract pentru o perioadă inițială minimă de ${metadata.contractDuration || ''} luni.</p>
+          <p>3.2. Părțile convin că perioada inițială minimă este de esența contractului.</p>
+          <p>3.3. La expirarea perioadei inițiale, operează tacita relocațiune, cu perioade succesive de câte ${metadata.renewalPeriod || '12'} luni.</p>
         </div>
 
         <div class="section">
-          <h2>7. GARANȚIA</h2>
-          <p>7.1. Chiriașul este de acord să ofere, cu titlu de garanție, suma de ${metadata.securityDeposit || ''} EUR.
-          Această sumă de bani va fi utilizată de Proprietar doar în situația în care Chiriașul nu își îndeplinește 
+          <h2>4. GARANȚIA</h2>
+          <p>4.1. Chiriașul este de acord să ofere, cu titlu de garanție, suma de ${metadata.securityDeposit || ''} EUR.</p>
+          <p>4.2. Această sumă de bani va fi utilizată de Proprietar doar în situația în care Chiriașul nu își îndeplinește 
           în mod corespunzător obligațiile asumate contractual.</p>
-          
-          <p>7.2. Părțile convin că suma constituită cu titlu de garanție se returnează Chiriașului după încetarea contractului, 
-          după expirarea unui termen de ${metadata.depositReturnPeriod || ''} care să permită Proprietarului să verifice acuratețea 
-          consumurilor declarate.</p>
+          <p>4.3. Părțile convin că suma constituită cu titlu de garanție se returnează Chiriașului după încetarea contractului, 
+          după expirarea unui termen de ${metadata.depositReturnPeriod || ''} zile.</p>
         </div>
 
         <div class="section">
@@ -178,21 +192,21 @@ const generateContractContent = (contract: any) => {
 
         <div class="signatures">
           <div class="signature-block">
-            <p><strong>PROPRIETAR,</strong></p>
+            <p><strong>PROPRIETAR</strong></p>
             <p>Data: ${metadata.ownerSignatureDate || '_____'}</p>
             <p>Nume și semnătură:</p>
             <p>${metadata.ownerSignatureName || ''}</p>
             ${metadata.ownerSignatureImage ? 
-              `<img class="signature" src="${metadata.ownerSignatureImage}" alt="Owner Signature" />` : ''}
+              `<img class="signature-img" src="${metadata.ownerSignatureImage}" alt="Owner Signature" />` : ''}
           </div>
           
           <div class="signature-block">
-            <p><strong>CHIRIAȘ,</strong></p>
+            <p><strong>CHIRIAȘ</strong></p>
             <p>Data: ${metadata.tenantSignatureDate || '_____'}</p>
             <p>Nume și semnătură:</p>
             <p>${metadata.tenantSignatureName || ''}</p>
             ${metadata.tenantSignatureImage ? 
-              `<img class="signature" src="${metadata.tenantSignatureImage}" alt="Tenant Signature" />` : ''}
+              `<img class="signature-img" src="${metadata.tenantSignatureImage}" alt="Tenant Signature" />` : ''}
           </div>
         </div>
       </body>
@@ -201,34 +215,48 @@ const generateContractContent = (contract: any) => {
 };
 
 const generatePDF = async (contract: any) => {
-  const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
-  const page = await browser.newPage();
-  
-  const htmlContent = generateContractContent(contract);
-  await page.setContent(htmlContent);
-  
-  const pdf = await page.pdf({ 
-    format: 'A4',
-    margin: {
-      top: '20mm',
-      bottom: '20mm',
-      left: '20mm',
-      right: '20mm',
-    },
-    printBackground: true
-  });
+  try {
+    console.log('Starting PDF generation...');
+    const browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    console.log('Browser launched');
 
-  await browser.close();
-  return pdf;
+    const page = await browser.newPage();
+    console.log('New page created');
+
+    const content = generateContractContent(contract);
+    console.log('Contract content generated');
+
+    await page.setContent(content, {
+      waitUntil: 'networkidle0'
+    });
+    console.log('Content set to page');
+
+    const pdf = await page.pdf({
+      format: 'A4',
+      margin: {
+        top: '20mm',
+        bottom: '20mm',
+        left: '20mm',
+        right: '20mm',
+      },
+      printBackground: true
+    });
+    console.log('PDF generated');
+
+    await browser.close();
+    console.log('Browser closed');
+
+    return pdf;
+  } catch (error) {
+    console.error('Error in PDF generation:', error);
+    throw error;
+  }
 };
 
 const handler = async (req: Request): Promise<Response> => {
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  };
-
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
@@ -237,13 +265,8 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendApiKey) {
-      throw new Error('Email service configuration is missing');
-    }
-
-    const resend = new Resend(resendApiKey);
-    const { contractId, recipientEmail } = await req.json();
+    console.log('Starting contract send process...');
+    const { contractId, recipientEmail }: SendContractRequest = await req.json();
     
     if (!contractId || !recipientEmail) {
       throw new Error('Contract ID and recipient email are required');
@@ -256,14 +279,10 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Database configuration is missing');
     }
 
-    console.log('Initializing Supabase client with:', {
-      url: supabaseUrl,
-      hasKey: !!supabaseServiceKey
-    });
-
+    console.log('Initializing Supabase client...');
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch contract with all necessary data
+    console.log('Fetching contract data...');
     const { data: contract, error: contractError } = await supabase
       .from('contracts')
       .select(`
@@ -278,39 +297,43 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Failed to fetch contract details');
     }
 
-    console.log('Successfully fetched contract:', { 
-      id: contract.id,
-      property: contract.properties?.name,
-      hasMetadata: !!contract.metadata
-    });
+    console.log('Contract data fetched successfully');
 
     // Generate PDF
+    console.log('Starting PDF generation process...');
     const pdfBuffer = await generatePDF(contract);
+    console.log('PDF generated successfully');
+
     const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBuffer)));
 
-    const siteUrl = Deno.env.get('PUBLIC_SITE_URL') || 'https://www.adminchirii.ro';
-    const emailContent = `
-      <h1>Contract pentru ${contract.properties?.name || 'Proprietate'}</h1>
-      <p>Găsiți atașat documentul contractului de închiriere.</p>
-      <p>Puteți vizualiza și semna contractul online accesând următorul link:</p>
-      <p><a href="${siteUrl}/documents/contracts/${contract.id}">Vizualizare Contract Online</a></p>
-    `;
+    // Send email
+    console.log('Preparing to send email...');
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendApiKey) {
+      throw new Error('Email service configuration is missing');
+    }
 
+    const resend = new Resend(resendApiKey);
+    const siteUrl = Deno.env.get('PUBLIC_SITE_URL') || 'https://www.adminchirii.ro';
+
+    console.log('Sending email...');
     const emailResponse = await resend.emails.send({
       from: 'Contract System <onboarding@resend.dev>',
       to: [recipientEmail],
       subject: `Contract de închiriere - ${contract.properties?.name || 'Proprietate'}`,
-      html: emailContent,
+      html: `
+        <h1>Contract pentru ${contract.properties?.name || 'Proprietate'}</h1>
+        <p>Găsiți atașat documentul contractului de închiriere.</p>
+        <p>Puteți vizualiza și semna contractul online accesând următorul link:</p>
+        <p><a href="${siteUrl}/documents/contracts/${contract.id}">Vizualizare Contract Online</a></p>
+      `,
       attachments: [{
         filename: `contract-${contract.metadata?.contractNumber || contractId}.pdf`,
-        content: pdfBase64,
-      }],
+        content: pdfBase64
+      }]
     });
 
-    console.log('Email sent successfully:', { 
-      id: emailResponse.id,
-      recipient: recipientEmail
-    });
+    console.log('Email sent successfully:', emailResponse);
 
     return new Response(
       JSON.stringify({ success: true }),
@@ -324,11 +347,10 @@ const handler = async (req: Request): Promise<Response> => {
     );
   } catch (error) {
     console.error('Error in send-contract function:', error);
-    
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : 'An unexpected error occurred',
-        details: error instanceof Error ? error.stack : undefined
+        stack: error instanceof Error ? error.stack : undefined
       }),
       {
         status: 500,
