@@ -34,7 +34,7 @@ interface ContractWithRelations {
     tenantSignatureName?: string;
   } | null;
   invitation_email: string | null;
-  tenant?: {
+  tenant: {
     id: string;
     first_name: string | null;
     last_name: string | null;
@@ -71,14 +71,14 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
           status,
           metadata,
           invitation_email,
-          tenant:profiles (
+          tenant:profiles!tenant_id(
             id,
             first_name,
             last_name,
             email,
             phone
           ),
-          property:properties (
+          property:properties(
             id,
             name,
             address
@@ -93,13 +93,14 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
       console.log("Raw contracts data:", contractsData);
 
       // Transform contract data into tenant format
-      const transformedTenants = (contractsData || []).map(contract => {
+      const transformedTenants = (contractsData || []).map((contract: any) => {
         console.log("Processing contract:", contract);
+        const metadata = contract.metadata as { tenantSignatureName?: string } | null;
         
         return {
           id: contract.tenant?.id || contract.id,
-          first_name: contract.tenant?.first_name || (contract.metadata?.tenantSignatureName?.split(' ')[0]) || 'Unknown',
-          last_name: contract.tenant?.last_name || (contract.metadata?.tenantSignatureName?.split(' ').slice(1).join(' ')) || 'Tenant',
+          first_name: contract.tenant?.first_name || (metadata?.tenantSignatureName?.split(' ')[0]) || 'Unknown',
+          last_name: contract.tenant?.last_name || (metadata?.tenantSignatureName?.split(' ').slice(1).join(' ')) || 'Tenant',
           email: contract.tenant?.email || contract.invitation_email || '',
           phone: contract.tenant?.phone || null,
           role: 'tenant',
