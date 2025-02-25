@@ -2,7 +2,6 @@
 {
   "imports": {
     "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.0",
-    "std/server": "https://deno.land/std@0.177.0/http/server.ts",
-    "puppeteer": "https://deno.land/x/puppeteer@16.2.0/mod.ts"
+    "std/server": "https://deno.land/std@0.177.0/http/server.ts"
   }
 }
