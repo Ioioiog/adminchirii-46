@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -6,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/use-user-role";
-import { useMaintenanceRequest } from "@/components/maintenance/hooks/useMaintenanceRequest";
 import {
   AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogHeader,
@@ -70,6 +72,7 @@ export function ContractDetailsDialog({ open, onOpenChange, contract }: Contract
 
   console.log("Current user role:", userRole);
   console.log("Contract status:", contract.status);
+  console.log("Show termination form:", showTerminationForm);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -95,9 +98,12 @@ export function ContractDetailsDialog({ open, onOpenChange, contract }: Contract
                         To cancel this contract, you'll need to provide termination details. Would you like to proceed?
                       </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <Button onClick={() => setShowTerminationForm(true)}>
-                      Continue with Termination
-                    </Button>
+                    <div className="flex justify-end gap-4 mt-4">
+                      <AlertDialogCancel>No, keep contract</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => setShowTerminationForm(true)}>
+                        Yes, proceed to termination
+                      </AlertDialogAction>
+                    </div>
                   </AlertDialogContent>
                 </AlertDialog>
               )}
@@ -257,7 +263,15 @@ export function ContractDetailsDialog({ open, onOpenChange, contract }: Contract
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>Contract Termination Form</DialogTitle>
+              <div className="flex justify-between items-center">
+                <DialogTitle>Contract Termination Form</DialogTitle>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowTerminationForm(false)}
+                >
+                  Back to Details
+                </Button>
+              </div>
             </DialogHeader>
             <ContractTerminationForm 
               contract={contract}
