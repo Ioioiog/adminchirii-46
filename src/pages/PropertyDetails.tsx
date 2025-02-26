@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Home, User, Receipt } from "lucide-react";
+import { ArrowLeft, Home, User, Receipt, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PropertyStatus } from "@/utils/propertyUtils";
 import { useToast } from "@/hooks/use-toast";
 import { InvoiceSettings } from "@/types/invoice";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PropertyTab } from "@/components/properties/tabs/PropertyTab";
 import { TenantsTab } from "@/components/properties/tabs/TenantsTab";
 import { InvoiceSettingsTab } from "@/components/properties/tabs/InvoiceSettingsTab";
 import { NavigationTabs } from "@/components/layout/NavigationTabs";
+import { Card, CardContent } from "@/components/ui/card";
 
 const PropertyDetails = () => {
   const { id } = useParams();
@@ -241,6 +241,7 @@ const PropertyDetails = () => {
     { id: "property", label: "Property Details", icon: Home },
     { id: "tenants", label: "Tenants", icon: User },
     { id: "invoice", label: "Invoice Settings", icon: Receipt },
+    { id: "landlord", label: "Landlord", icon: UserCircle },
   ];
 
   const activeTenants = property.tenancies?.filter((t: any) => t.status === 'active') || [];
@@ -297,6 +298,50 @@ const PropertyDetails = () => {
                   propertyId={id || ''}
                   userId={userId}
                 />
+              )}
+              {activeTab === "landlord" && property && (
+                <div className="space-y-6">
+                  <div className="max-w-3xl mx-auto">
+                    <Card className="bg-gradient-to-br from-white to-gray-50 border-none shadow-md">
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-6">
+                          <div className="p-4 bg-blue-50 rounded-full">
+                            <UserCircle className="w-12 h-12 text-blue-600" />
+                          </div>
+                          <div className="flex-1 space-y-4">
+                            <div>
+                              <h3 className="text-2xl font-semibold text-gray-900">
+                                {property.landlord?.first_name} {property.landlord?.last_name}
+                              </h3>
+                              <p className="text-gray-600">Property Owner</p>
+                            </div>
+                            <div className="grid gap-4 sm:grid-cols-2">
+                              <div>
+                                <p className="text-sm font-medium text-gray-500">Email</p>
+                                <p className="mt-1 text-gray-900">{property.landlord?.email}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-500">Phone</p>
+                                <p className="mt-1 text-gray-900">{property.landlord?.phone || 'Not provided'}</p>
+                              </div>
+                            </div>
+                            <div className="pt-4 border-t border-gray-200">
+                              <h4 className="text-sm font-medium text-gray-500 mb-2">Contact Preferences</h4>
+                              <div className="flex gap-2">
+                                <Button variant="outline" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                                  Send Message
+                                </Button>
+                                <Button variant="outline" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                                  Schedule Call
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
               )}
             </div>
           </div>
