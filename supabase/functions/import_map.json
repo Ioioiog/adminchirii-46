@@ -2,6 +2,7 @@
 {
   "imports": {
     "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.0",
-    "std/server": "https://deno.land/std@0.177.0/http/server.ts"
+    "std/server": "https://deno.land/std@0.177.0/http/server.ts",
+    "stripe": "https://esm.sh/stripe@13.10.0"
   }
 }
