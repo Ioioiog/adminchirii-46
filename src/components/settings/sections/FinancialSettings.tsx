@@ -65,6 +65,7 @@ export function FinancialSettings() {
 
         if (tenancyError) throw tenancyError;
 
+        // Type assertion to ensure contract.metadata is treated as an object
         const { data: contract, error: contractError } = await supabase
           .from('contracts')
           .select(`
@@ -83,6 +84,7 @@ export function FinancialSettings() {
         if (contract) {
           const processedMetadata: SimpleMetadata = {};
           if (contract.metadata && typeof contract.metadata === 'object') {
+            // Ensure we're only processing string values
             Object.entries(contract.metadata as Record<string, unknown>).forEach(([key, value]) => {
               if (typeof value === 'string' || value === null) {
                 processedMetadata[key] = value;
