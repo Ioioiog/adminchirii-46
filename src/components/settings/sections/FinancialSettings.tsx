@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { StripeAccountForm } from "../StripeAccountForm";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -29,24 +28,20 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useCurrency } from "@/hooks/useCurrency";
 
-// Simplified interface definitions to avoid recursive types
-interface ContractMetadata {
-  tenantName?: string;
-  tenantReg?: string;
-  tenantFiscal?: string;
-  tenantAddress?: string;
-  tenantBank?: string;
-  tenantBankName?: string;
-  tenantEmail?: string;
-  tenantPhone?: string;
-  [key: string]: string | undefined;
-}
+type ContractMetadata = Record<string, string>;
 
 interface ContractData {
-  property?: {
-    name: string;
-  };
-  metadata?: ContractMetadata;
+  property: {
+    name: string | null;
+  } | null;
+  metadata: ContractMetadata | null;
+}
+
+interface DatabaseContract {
+  metadata: ContractMetadata | null;
+  property: {
+    name: string | null;
+  } | null;
 }
 
 export function FinancialSettings() {
@@ -58,7 +53,6 @@ export function FinancialSettings() {
   const [balance, setBalance] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch contract data and balance
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -66,7 +60,6 @@ export function FinancialSettings() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // Fetch contract
         const { data: contract, error: contractError } = await supabase
           .from('contracts')
           .select(`
@@ -83,13 +76,13 @@ export function FinancialSettings() {
         if (contractError) throw contractError;
 
         if (contract) {
+          const typedContract = contract as DatabaseContract;
           setContractData({
-            property: contract.property,
-            metadata: contract.metadata as ContractData['metadata']
+            property: typedContract.property,
+            metadata: typedContract.metadata
           });
         }
 
-        // Fetch balance from payments
         const { data: payments, error: paymentsError } = await supabase
           .from('payments')
           .select('amount, status')
