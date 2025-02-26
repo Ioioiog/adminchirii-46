@@ -140,12 +140,12 @@ export function ServiceProviderList() {
           console.log("Provider data:", {
             id: provider.id,
             businessName: provider.business_name,
-            role: provider.profiles?.role,
+            role: provider.profiles?.[0]?.role,
           });
 
           // Check if the provider's profile has the role 'service_provider'
           // If they do, they registered themselves. If not, they were created by a landlord
-          const isRegisteredProvider = provider.profiles?.role === 'service_provider';
+          const isRegisteredProvider = provider.profiles?.[0]?.role === 'service_provider';
 
           return {
             ...provider,
@@ -163,8 +163,8 @@ export function ServiceProviderList() {
 
       console.log("Filtered providers with status:", filteredProviders.map(p => ({
         name: p.business_name,
-        isCustom: !p.profiles?.role === 'service_provider',
-        role: p.profiles?.role
+        isCustom: !Boolean(p.profiles?.[0]?.role === 'service_provider'),
+        role: p.profiles?.[0]?.role
       })));
 
       return filteredProviders.sort((a, b) => {
