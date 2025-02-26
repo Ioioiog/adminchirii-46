@@ -27,7 +27,7 @@ export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormPr
     firstName: "",
     lastName: "",
     phone: "",
-    address: "",
+    // Removed address field
     // Service Provider specific fields
     businessName: "",
     serviceArea: "",
@@ -96,7 +96,6 @@ export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormPr
         phone: formData.phone,
         role: role,
         email: email,
-        address: formData.address
       };
 
       const { error: profileError } = await supabase
@@ -112,6 +111,12 @@ export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormPr
 
       // If user is a service provider, create/update service provider profile
       if (role === 'service_provider') {
+        // Format website URL if provided
+        let websiteUrl = formData.website;
+        if (websiteUrl && !websiteUrl.match(/^https?:\/\//)) {
+          websiteUrl = 'https://' + websiteUrl;
+        }
+
         const { error: spError } = await supabase
           .from('service_provider_profiles')
           .upsert({
@@ -121,7 +126,7 @@ export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormPr
             contact_email: email,
             contact_phone: formData.phone,
             description: formData.businessDescription,
-            website: formData.website
+            website: websiteUrl
           }, {
             onConflict: 'id'
           });
@@ -187,17 +192,6 @@ export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormPr
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="address">Address *</Label>
-        <Input
-          id="address"
-          name="address"
-          value={formData.address}
-          onChange={handleChange}
-          required
-        />
-      </div>
-
       {/* Service Provider specific fields */}
       {role === 'service_provider' && (
         <>
@@ -240,10 +234,9 @@ export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormPr
             <Input
               id="website"
               name="website"
-              type="url"
               value={formData.website}
               onChange={handleChange}
-              placeholder="https://..."
+              placeholder="www.example.com"
             />
           </div>
         </>
