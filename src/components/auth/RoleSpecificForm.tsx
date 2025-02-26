@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import {
   Select,
   SelectContent,
@@ -22,12 +23,12 @@ interface RoleSpecificFormProps {
 
 export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormProps) {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     phone: "",
-    // Removed address field
     // Service Provider specific fields
     businessName: "",
     serviceArea: "",
@@ -142,7 +143,17 @@ export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormPr
         description: "Your profile has been successfully updated.",
       });
 
+      // Call onComplete first to handle any parent component updates
       onComplete();
+
+      // If it's a service provider, navigate to the Services page
+      if (role === 'service_provider') {
+        navigate('/services');
+        toast({
+          title: "Add Your Services",
+          description: "Let's add the services you provide to complete your profile.",
+        });
+      }
     } catch (error: any) {
       console.error('Error updating profile:', error);
       toast({
