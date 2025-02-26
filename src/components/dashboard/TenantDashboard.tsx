@@ -120,10 +120,10 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
             </div>
             <div className="pt-4">
               <Button 
-                onClick={() => navigate('/properties')}
+                onClick={() => navigate('/documents/contracts')}
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
               >
-                View Properties
+                View Contracts
               </Button>
             </div>
           </div>
