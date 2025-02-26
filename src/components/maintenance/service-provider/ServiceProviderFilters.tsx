@@ -5,6 +5,7 @@ import { Search } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { useUserRole } from "@/hooks/use-user-role";
 
 interface Filters {
   search: string;
@@ -19,6 +20,8 @@ interface ServiceProviderFiltersProps {
 }
 
 export function ServiceProviderFilters({ filters, onFiltersChange }: ServiceProviderFiltersProps) {
+  const { userRole } = useUserRole();
+
   return (
     <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
@@ -67,7 +70,9 @@ export function ServiceProviderFilters({ filters, onFiltersChange }: ServiceProv
             checked={filters.createdByMe}
             onCheckedChange={(checked) => onFiltersChange({ ...filters, createdByMe: checked })}
           />
-          <Label htmlFor="created-by-me">Created by my landlord</Label>
+          <Label htmlFor="created-by-me">
+            {userRole === 'landlord' ? 'Created by me' : 'Created by my landlord'}
+          </Label>
         </div>
       </div>
     </div>
