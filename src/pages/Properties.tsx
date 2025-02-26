@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, ChevronDown, Building2, MapPin, User, Calendar, DollarSign, Home, LayoutGrid, Table as TableIcon, Trash2 } from "lucide-react";
@@ -20,22 +19,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useUserRole } from "@/hooks/use-user-role";
 
 const Properties = () => {
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | PropertyStatus>("all");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const { userRole } = useUserRole();
   const {
     properties,
     isLoading
   } = useProperties({
-    userRole: "landlord"
+    userRole: userRole || "tenant"
   });
 
   const { data: propertyContracts = [] } = useQuery({
@@ -118,7 +117,6 @@ const Properties = () => {
       contract => contract.property_id === property.id
     );
     
-    // Update status to 'occupied' if the property has a signed contract
     const propertyStatus = hasContract ? 'occupied' as PropertyStatus : property.status;
 
     const matchesSearch = 
