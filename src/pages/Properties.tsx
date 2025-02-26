@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, ChevronDown, Building2, MapPin, User, Calendar, DollarSign, Home, LayoutGrid, Table as TableIcon, Trash2 } from "lucide-react";
+import { Plus, ChevronDown, Building2, MapPin, User, Calendar, DollarSign, Home, LayoutGrid, Table as TableIcon, Trash2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PropertyDialog } from "@/components/properties/PropertyDialog";
 import { PropertyFilters } from "@/components/properties/PropertyFilters";
@@ -19,7 +19,6 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useUserRole } from "@/hooks/use-user-role";
-import { FileText } from "lucide-react";
 
 const Properties = () => {
   const navigate = useNavigate();
@@ -321,7 +320,7 @@ const Properties = () => {
                           </Button>
                         ) : (
                           <Button 
-                            onClick={() => navigate('/documents/contracts')}
+                            onClick={() => navigate('/documents')}
                             className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white transition-all duration-300 shadow-soft-md hover:shadow-soft-lg"
                           >
                             <FileText className="h-4 w-4 mr-2" />
