@@ -1585,6 +1585,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          invoice_info: Json | null
           is_first_login: boolean | null
           profile_id: string | null
           rating: number | null
@@ -1601,6 +1602,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id: string
+          invoice_info?: Json | null
           is_first_login?: boolean | null
           profile_id?: string | null
           rating?: number | null
@@ -1617,6 +1619,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          invoice_info?: Json | null
           is_first_login?: boolean | null
           profile_id?: string | null
           rating?: number | null

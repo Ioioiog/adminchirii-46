@@ -1,8 +1,6 @@
-
 import { useEffect, useState } from "react";
 import { StripeAccountForm } from "../StripeAccountForm";
 import { useUserRole } from "@/hooks/use-user-role";
-import { Separator } from "@/components/ui/separator";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Building, Receipt } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,19 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-
-interface ServiceProviderInvoiceInfo {
-  companyName: string;
-  companyAddress: string;
-  bankName: string;
-  bankAccountNumber: string;
-  bankSwiftCode: string;
-  vatNumber: string;
-  registrationNumber: string;
-  paymentTerms: string;
-  invoiceNotes: string;
-  applyVat: boolean;
-}
+import { ServiceProviderInvoiceInfo } from "@/integrations/supabase/types/service-provider";
 
 export function FinancialSettings() {
   const { userRole } = useUserRole();
