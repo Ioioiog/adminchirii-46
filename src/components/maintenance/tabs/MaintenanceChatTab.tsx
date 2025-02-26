@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -5,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { MessageSquare } from "lucide-react";
+import { useUserRole } from "@/hooks/use-user-role";
 
 interface ChatMessage {
   id: string;
@@ -28,6 +30,7 @@ export function MaintenanceChatTab({ requestId }: MaintenanceChatTabProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { userRole } = useUserRole();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -144,6 +147,23 @@ export function MaintenanceChatTab({ requestId }: MaintenanceChatTabProps) {
     }
   };
 
+  const getMessageStyle = (role: string) => {
+    switch (role) {
+      case 'tenant':
+        return userRole === 'tenant' 
+          ? 'bg-blue-100 dark:bg-blue-900'
+          : 'bg-gray-100 dark:bg-gray-800';
+      case 'landlord':
+        return userRole === 'landlord'
+          ? 'bg-blue-100 dark:bg-blue-900'
+          : 'bg-gray-100 dark:bg-gray-800';
+      case 'service_provider':
+        return 'bg-purple-100 dark:bg-purple-900';
+      default:
+        return 'bg-gray-100 dark:bg-gray-800';
+    }
+  };
+
   return (
     <>
       <ScrollArea className="h-[400px] p-4 border rounded-lg">
@@ -160,13 +180,7 @@ export function MaintenanceChatTab({ requestId }: MaintenanceChatTabProps) {
               }`}
             >
               <div
-                className={`max-w-[70%] rounded-lg p-3 ${
-                  message.sender?.role === 'tenant'
-                    ? 'bg-blue-100 dark:bg-blue-900'
-                    : message.sender?.role === 'landlord'
-                    ? 'bg-green-100 dark:bg-green-900'
-                    : 'bg-purple-100 dark:bg-purple-900'
-                }`}
+                className={`max-w-[70%] rounded-lg p-3 ${getMessageStyle(message.sender?.role || '')}`}
               >
                 <div className="text-xs font-medium mb-1">
                   {message.sender?.first_name} {message.sender?.last_name} ({message.sender?.role})
