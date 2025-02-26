@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -129,13 +130,17 @@ export function ServiceProviderList() {
           console.log("Provider data:", {
             id: provider.id,
             businessName: provider.business_name,
+            fullName: profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : '',
             role: profile?.role,
           });
 
           const isRegisteredProvider = profile?.role === 'service_provider';
+          const displayName = provider.business_name || 
+            (profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Unknown Provider');
 
           return {
             ...provider,
+            business_name: displayName, // Use the display name as business name
             profiles: [profile || { first_name: null, last_name: null, role: null }],
             isPreferred: preferredIds.has(provider.id),
             isCustomProvider: !isRegisteredProvider
@@ -163,9 +168,7 @@ export function ServiceProviderList() {
 
       return filteredProviders.sort((a, b) => {
         if (a.isPreferred === b.isPreferred) {
-          const aName = a.business_name || `${a.profiles[0]?.first_name} ${a.profiles[0]?.last_name}`;
-          const bName = b.business_name || `${b.profiles[0]?.first_name} ${b.profiles[0]?.last_name}`;
-          return aName.localeCompare(bName);
+          return a.business_name.localeCompare(b.business_name);
         }
         return a.isPreferred ? -1 : 1;
       });
