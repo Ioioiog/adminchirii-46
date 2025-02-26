@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, ChevronDown, Building2, MapPin, User, Calendar, DollarSign, Home, LayoutGrid, Table as TableIcon, Trash2 } from "lucide-react";
@@ -139,6 +138,13 @@ const Properties = () => {
 
     return matchesSearch && matchesStatus;
   });
+
+  const getEmptyStateMessage = () => {
+    if (userRole === 'landlord') {
+      return "Get started by creating a new property.";
+    }
+    return "Once you sign a rental contract with a landlord, your rented properties will appear here.";
+  };
 
   if (isLoading) {
     return <div className="flex h-screen overflow-hidden">
@@ -328,9 +334,7 @@ const Properties = () => {
                       <Building2 className="mx-auto h-12 w-12 text-gray-400" />
                       <h3 className="mt-2 text-sm font-medium text-gray-900">No properties found</h3>
                       <p className="mt-1 text-sm text-gray-500">
-                        {userRole === 'landlord' 
-                          ? "Get started by creating a new property."
-                          : "No properties are currently assigned to you."}
+                        {getEmptyStateMessage()}
                       </p>
                       {userRole === 'landlord' && (
                         <div className="mt-6">
@@ -396,9 +400,7 @@ const Properties = () => {
                               <Building2 className="h-12 w-12 text-gray-400 mb-2" />
                               <h3 className="text-sm font-medium text-gray-900">No properties found</h3>
                               <p className="text-sm text-gray-500 mt-1">
-                                {userRole === 'landlord' 
-                                  ? "Get started by creating a new property."
-                                  : "No properties are currently assigned to you."}
+                                {getEmptyStateMessage()}
                               </p>
                               {userRole === 'landlord' && (
                                 <Button 
