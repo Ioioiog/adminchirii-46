@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
@@ -13,7 +12,7 @@ export function ChatBackground() {
 
     // Scene setup with white background
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xffffff); // Pure white background
+    scene.background = new THREE.Color(0xffffff);
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ 
       antialias: true,
@@ -24,7 +23,7 @@ export function ChatBackground() {
 
     // Controls - Adjusted for better viewing
     const controls = new OrbitControls(camera, renderer.domElement);
-    camera.position.set(2, 0, 12); // Moved camera to the right and back
+    camera.position.set(2, 0, 12);
     controls.update();
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
@@ -34,20 +33,16 @@ export function ChatBackground() {
     controls.autoRotateSpeed = 0.5;
     
     // Limit rotation to keep text readable
-    controls.minPolarAngle = Math.PI / 2.5; // Limit vertical rotation
+    controls.minPolarAngle = Math.PI / 2.5;
     controls.maxPolarAngle = Math.PI / 1.5;
 
-    // Enhanced lighting setup
+    // Simple lighting setup
     const ambientLight = new THREE.AmbientLight(0x404040, 3);
     scene.add(ambientLight);
 
-    const pointLight1 = new THREE.PointLight(0x3b82f6, 1);
-    pointLight1.position.set(5, 5, 5);
-    scene.add(pointLight1);
-
-    const pointLight2 = new THREE.PointLight(0x10b981, 1);
-    pointLight2.position.set(-5, -5, 5);
-    scene.add(pointLight2);
+    const pointLight = new THREE.PointLight(0xffffff, 1);
+    pointLight.position.set(5, 5, 5);
+    scene.add(pointLight);
 
     // Chat conversation messages
     const messages = [
@@ -70,7 +65,7 @@ export function ChatBackground() {
         const group = new THREE.Group();
         const dotGeometry = new THREE.SphereGeometry(0.03, 16, 16);
         const dotMaterial = new THREE.MeshStandardMaterial({ 
-          color: isTenant ? 0xffffff : 0xffffff, // White dots
+          color: 0xcccccc,
           metalness: 0.1,
           roughness: 0.3,
         });
@@ -81,19 +76,10 @@ export function ChatBackground() {
           group.add(dot);
         }
 
-        // Adjust typing indicator position to the right side
         group.position.set(isTenant ? 2 : 6, 2, -2);
         group.visible = false;
         scene.add(group);
         return group;
-      }
-
-      function animateTypingIndicator() {
-        if (!typingIndicator) return;
-        typingIndicator.children.forEach((dot, i) => {
-          const time = Date.now() * 0.003;
-          (dot as THREE.Mesh).position.y = Math.sin(time + i) * 0.05;
-        });
       }
 
       function addMessage(message: { text: string; sender: string }, index: number) {
@@ -101,56 +87,34 @@ export function ChatBackground() {
         const textGeometry = new TextGeometry(message.text, {
           font: font,
           size: 0.15,
-          depth: 0.02,
+          depth: 0.01,
           curveSegments: 12,
-          bevelEnabled: true,
-          bevelThickness: 0.005,
-          bevelSize: 0.005,
-          bevelSegments: 3
+          bevelEnabled: false
         });
         
         textGeometry.computeBoundingBox();
         const textWidth = textGeometry.boundingBox!.max.x - textGeometry.boundingBox!.min.x;
         const textHeight = textGeometry.boundingBox!.max.y - textGeometry.boundingBox!.min.y;
         
-        const bubbleGeometry = new THREE.BoxGeometry(
-          textWidth + 0.4,
-          textHeight + 0.2,
-          0.1
-        );
-        
         const textMaterial = new THREE.MeshStandardMaterial({ 
-          color: 0x000000, // Black text
-          metalness: 0.1,
-          roughness: 0.6,
-        });
-        
-        const bubbleMaterial = new THREE.MeshStandardMaterial({
-          color: 0xffffff, // White bubbles for both tenant and landlord
-          metalness: 0.1,
-          roughness: 0.3,
+          color: 0x000000,
+          metalness: 0,
+          roughness: 1,
         });
 
         const textMesh = new THREE.Mesh(textGeometry, textMaterial);
-        const bubbleMesh = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
-        
         const messageGroup = new THREE.Group();
-        messageGroup.add(bubbleMesh);
         messageGroup.add(textMesh);
         
-        textMesh.position.set(-textWidth/2 + 0.2, -textHeight/2 + 0.1, 0.06);
+        textMesh.position.set(-textWidth/2, -textHeight/2, 0);
         
-        // Adjusted message positioning to the right side
         messageGroup.position.set(
-          (isTenant ? 2 : 6), // Moved messages to the right side
-          4 - index * 1.2, // Increased vertical spacing and moved up
+          (isTenant ? 2 : 6),
+          4 - index * 1.2,
           -2 - index * 0.1
         );
         
-        // Lock rotation for better readability
         messageGroup.rotation.set(0, 0, 0);
-        
-        messageGroup.scale.set(0, 0, 0);
         messageGroup.visible = false;
         scene.add(messageGroup);
         messageGroups.push(messageGroup);
@@ -167,13 +131,8 @@ export function ChatBackground() {
         const showTyping = () => {
           if (typingIndicator) {
             typingIndicator.visible = true;
-            typingIndicator.position.x = message.sender === "tenant" ? 2 : 6; // Adjusted typing indicator position
-            typingIndicator.position.y = 4 - index * 1.2; // Adjusted vertical position
-            typingIndicator.children.forEach(dot => {
-              (dot as THREE.Mesh).material = new THREE.MeshStandardMaterial({
-                color: 0xeeeeee // Light gray dots
-              });
-            });
+            typingIndicator.position.x = message.sender === "tenant" ? 2 : 6;
+            typingIndicator.position.y = 4 - index * 1.2;
           }
         };
 
@@ -188,49 +147,22 @@ export function ChatBackground() {
           hideTyping();
           const messageGroup = messageElements[index];
           messageGroup.visible = true;
-          animateMessage(messageGroup);
+          messageGroup.scale.set(1, 1, 1);
         }, message.delay + 1500);
       });
-
-      function animateMessage(group: THREE.Group) {
-        const duration = 800;
-        const start = Date.now();
-        
-        function updateScale() {
-          const now = Date.now();
-          const progress = Math.min(1, (now - start) / duration);
-          const scale = 1 + Math.sin(progress * Math.PI) * 0.1;
-          group.scale.set(scale, scale, scale);
-          
-          if (progress < 1) {
-            requestAnimationFrame(updateScale);
-          }
-        }
-        
-        updateScale();
-      }
     });
 
-    // Animation loop
+    // Animation loop (only for controls update)
     function animate() {
       requestAnimationFrame(animate);
       
-      // Animate typing indicator
+      // Only animate typing indicator
       if (typingIndicator && typingIndicator.visible) {
         typingIndicator.children.forEach((dot, i) => {
           const time = Date.now() * 0.003;
           (dot as THREE.Mesh).position.y = Math.sin(time + i) * 0.05;
         });
       }
-
-      // Gentle floating animation for messages, without rotation
-      messageGroups.forEach((group) => {
-        if (group.visible) {
-          const time = Date.now() * 0.001;
-          group.position.y += Math.sin(time) * 0.0001;
-          // Removed rotation animations
-        }
-      });
 
       controls.update();
       renderer.render(scene, camera);
@@ -252,7 +184,7 @@ export function ChatBackground() {
       if (containerRef.current) {
         containerRef.current.removeChild(renderer.domElement);
       }
-      // Cleanup meshes and geometries
+      // Cleanup
       messageGroups.forEach(group => {
         group.traverse((child) => {
           if (child instanceof THREE.Mesh) {
