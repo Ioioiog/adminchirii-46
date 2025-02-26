@@ -235,7 +235,7 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
         <DashboardHeader userName={userName} />
       </section>
 
-      <section className="bg-white rounded-xl shadow-sm p-6">
+      <section className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 rounded-xl shadow-md p-8 border border-white/20 backdrop-blur-sm transition-all duration-300 hover:shadow-lg">
         <DashboardMetrics userId={userId} userRole="tenant" />
       </section>
 
