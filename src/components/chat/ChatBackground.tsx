@@ -61,7 +61,9 @@ export function ChatBackground() {
         const textGeometry = new TextGeometry(text, {
           font: font,
           size: 0.3,
-          height: 0.05,
+          depth: 0.05, // Changed from 'height' to 'depth'
+          curveSegments: 12,
+          bevelEnabled: false
         });
         const textMaterial = new THREE.MeshStandardMaterial({ 
           color: 0x3b82f6,
