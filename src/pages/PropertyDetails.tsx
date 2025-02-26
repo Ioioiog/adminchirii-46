@@ -86,6 +86,12 @@ const PropertyDetails = () => {
         .from("properties")
         .select(`
           *,
+          landlord:profiles!properties_landlord_id_fkey (
+            first_name,
+            last_name,
+            email,
+            phone
+          ),
           tenancies(
             id,
             status,
