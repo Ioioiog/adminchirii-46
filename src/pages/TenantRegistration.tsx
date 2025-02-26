@@ -8,11 +8,17 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
+interface ContractMetadata {
+  tenantEmail: string;
+  startDate?: string;
+  [key: string]: any;  // Allow other metadata fields
+}
+
 interface Contract {
   id: string;
   properties?: { name: string };
   property_id: string;
-  metadata: any;
+  metadata: ContractMetadata;
   status: 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled' | 'pending_signature';
 }
 
@@ -79,7 +85,7 @@ const TenantRegistration = () => {
           .maybeSingle();
 
         setIsExistingUser(!!existingUser);
-        setContract(data);
+        setContract(data as Contract);
         setIsLoading(false);
         console.log("Contract verification complete:", { 
           isExisting: !!existingUser, 
