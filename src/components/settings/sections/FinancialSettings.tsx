@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from "react";
+import { loadStripe } from "@stripe/stripe-js";
 import { StripeAccountForm } from "../StripeAccountForm";
 import { useUserRole } from "@/hooks/use-user-role";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
