@@ -83,6 +83,10 @@ export function ServiceProviderList() {
         throw preferredError;
       }
 
+      // First, let's log the current user ID for debugging
+      console.log("Current user ID:", currentUserId);
+
+      // Get service provider profiles
       const { data: providers, error: providersError } = await supabase
         .from("service_provider_profiles")
         .select(`
@@ -108,7 +112,12 @@ export function ServiceProviderList() {
         throw providersError;
       }
 
+      console.log("Raw providers data:", providers);
+
+      // Get profiles data
       const providerIds = providers?.map(p => p.id) || [];
+      console.log("Provider IDs to fetch profiles for:", providerIds);
+
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
         .select("id, first_name, last_name, role")
@@ -119,6 +128,8 @@ export function ServiceProviderList() {
         throw profilesError;
       }
 
+      console.log("Raw profiles data:", profilesData);
+
       const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
 
       const preferredIds = new Set(preferredProviders?.map(p => p.service_provider_id) || []);
@@ -127,20 +138,26 @@ export function ServiceProviderList() {
         .map(provider => {
           const profile = profilesMap.get(provider.id);
           
-          console.log("Provider data:", {
+          const fullName = profile 
+            ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() 
+            : '';
+            
+          console.log("Processing provider:", {
             id: provider.id,
-            businessName: provider.business_name,
-            fullName: profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : '',
-            role: profile?.role,
+            rawBusinessName: provider.business_name,
+            profile: profile,
+            fullName: fullName,
+            role: profile?.role
           });
 
           const isRegisteredProvider = profile?.role === 'service_provider';
-          const displayName = provider.business_name || 
-            (profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Unknown Provider');
+          const displayName = provider.business_name || fullName || 'Unknown Provider';
+
+          console.log("Final display name:", displayName);
 
           return {
             ...provider,
-            business_name: displayName, // Use the display name as business name
+            business_name: displayName,
             profiles: [profile || { first_name: null, last_name: null, role: null }],
             isPreferred: preferredIds.has(provider.id),
             isCustomProvider: !isRegisteredProvider
@@ -160,15 +177,16 @@ export function ServiceProviderList() {
         );
       }
 
-      console.log("Filtered providers with status:", filteredProviders.map(p => ({
-        name: p.business_name,
-        isCustom: !Boolean(p.profiles[0]?.role === 'service_provider'),
-        role: p.profiles[0]?.role
+      console.log("Final filtered providers:", filteredProviders.map(p => ({
+        id: p.id,
+        displayName: p.business_name,
+        profileData: p.profiles[0],
+        isCustom: !Boolean(p.profiles[0]?.role === 'service_provider')
       })));
 
       return filteredProviders.sort((a, b) => {
         if (a.isPreferred === b.isPreferred) {
-          return a.business_name.localeCompare(b.business_name);
+          return (a.business_name || '').localeCompare(b.business_name || '');
         }
         return a.isPreferred ? -1 : 1;
       });
