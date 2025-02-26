@@ -10,6 +10,7 @@ import {
   Droplets, Zap, Flame, Plus, Car, Bed, Bath,
   Square, CalendarRange, Building
 } from "lucide-react";
+import { useUserRole } from "@/hooks/use-user-role";
 
 interface PropertyTabProps {
   property: any;
@@ -32,6 +33,8 @@ export function PropertyTab({
   handleSave,
   getStatusColor,
 }: PropertyTabProps) {
+  const { userRole } = useUserRole();
+  const isTenant = userRole === 'tenant';
   const status = property.tenancies?.some((t: any) => t.status === 'active') ? 'occupied' : 'vacant';
 
   return (
@@ -61,22 +64,24 @@ export function PropertyTab({
           <Badge className={`${getStatusColor(status)} text-sm px-3 py-1 rounded-full font-medium`}>
             {status}
           </Badge>
-          {isEditing ? (
-            <div className="flex gap-3">
-              <Button variant="outline" size="sm" onClick={handleCancel} className="rounded-lg">
-                <X className="h-4 w-4 mr-2" />
-                Cancel
+          {!isTenant && (
+            isEditing ? (
+              <div className="flex gap-3">
+                <Button variant="outline" size="sm" onClick={handleCancel} className="rounded-lg">
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={handleSave} className="rounded-lg bg-blue-600 hover:bg-blue-700">
+                  <Save className="h-4 w-4 mr-2" />
+                  Save
+                </Button>
+              </div>
+            ) : (
+              <Button variant="outline" size="sm" onClick={handleEdit} className="rounded-lg">
+                <Edit2 className="h-4 w-4 mr-2" />
+                Edit
               </Button>
-              <Button size="sm" onClick={handleSave} className="rounded-lg bg-blue-600 hover:bg-blue-700">
-                <Save className="h-4 w-4 mr-2" />
-                Save
-              </Button>
-            </div>
-          ) : (
-            <Button variant="outline" size="sm" onClick={handleEdit} className="rounded-lg">
-              <Edit2 className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
+            )
           )}
         </div>
       </div>
