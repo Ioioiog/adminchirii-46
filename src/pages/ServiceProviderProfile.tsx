@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -104,12 +105,12 @@ export default function ServiceProviderProfile() {
         );
       case 'services':
         return (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Services</CardTitle>
+          <Card className="border-0 shadow-none bg-transparent">
+            <CardHeader className="flex flex-row items-center justify-between px-0">
+              <CardTitle className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">Services</CardTitle>
               <Button onClick={() => setShowServiceForm(true)}>Add Service</Button>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-0">
               <ServiceList onEdit={() => setShowServiceForm(true)} />
             </CardContent>
           </Card>
@@ -125,28 +126,30 @@ export default function ServiceProviderProfile() {
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-dashboard-background to-gray-50">
+    <div className="flex h-screen bg-gradient-to-br from-white via-blue-50/10 to-indigo-50/10">
       <DashboardSidebar />
-      <main className="flex-1 overflow-y-auto">
-        <div className="container mx-auto p-6 space-y-6">
-          <div className="w-full flex gap-4 bg-card p-4 rounded-lg shadow-sm overflow-x-auto">
-            {navigationItems.map((item) => (
-              <Button
-                key={item.id}
-                variant={activeSection === item.id ? 'default' : 'ghost'}
-                className={cn(
-                  "flex-shrink-0 gap-2",
-                  activeSection === item.id && "bg-primary text-primary-foreground"
-                )}
-                onClick={() => setActiveSection(item.id)}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </Button>
-            ))}
+      <main className="flex-1 overflow-y-auto p-8">
+        <div className="max-w-6xl mx-auto space-y-8">
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100/20 p-4 sticky top-4 z-10">
+            <nav className="flex gap-2 overflow-x-auto pb-2">
+              {navigationItems.map((item) => (
+                <Button
+                  key={item.id}
+                  variant={activeSection === item.id ? 'default' : 'ghost'}
+                  className={cn(
+                    "flex-shrink-0 gap-2 transition-all duration-200",
+                    activeSection === item.id && "bg-primary text-primary-foreground shadow-sm"
+                  )}
+                  onClick={() => setActiveSection(item.id)}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </Button>
+              ))}
+            </nav>
           </div>
 
-          <div className="bg-card p-6 rounded-lg shadow-sm">
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100/20 p-6 min-h-[calc(100vh-12rem)] animate-fade-in">
             {renderSection()}
           </div>
         </div>
