@@ -57,7 +57,6 @@ const TenantRegistration = () => {
           .select('*, properties(name)')
           .eq('id', contractId)
           .eq('invitation_token', token)
-          .eq('status', 'pending_signature')
           .maybeSingle();
 
         if (error || !data) {
@@ -109,6 +108,32 @@ const TenantRegistration = () => {
 
     verifyContract();
   }, [contractId, token, navigate, toast]);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Auth check result:', { 
+          hasSession: !!session, 
+          hasToken: !!token,
+          contractId: id
+        });
+        
+        if (!session) {
+          if (token) {
+            navigate(`/tenant-registration/${id}?invitation_token=${token}`);
+          } else {
+            navigate('/auth');
+          }
+          return;
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+      }
+    };
+
+    checkAuth();
+  }, [token, id, navigate]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
