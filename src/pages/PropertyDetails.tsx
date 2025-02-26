@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Home, User, Receipt, Info } from "lucide-react";
+import { ArrowLeft, Home, User, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { PropertyStatus, Property } from "@/utils/propertyUtils";
+import { PropertyStatus } from "@/utils/propertyUtils";
 import { useToast } from "@/hooks/use-toast";
 import { InvoiceSettings } from "@/types/invoice";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,14 +13,6 @@ import { PropertyTab } from "@/components/properties/tabs/PropertyTab";
 import { TenantsTab } from "@/components/properties/tabs/TenantsTab";
 import { InvoiceSettingsTab } from "@/components/properties/tabs/InvoiceSettingsTab";
 import { NavigationTabs } from "@/components/layout/NavigationTabs";
-import { useUserRole } from "@/hooks/use-user-role";
-
-interface LandlordProfile {
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
-  phone: string | null;
-}
 
 const PropertyDetails = () => {
   const { id } = useParams();
@@ -41,7 +33,6 @@ const PropertyDetails = () => {
     bank_account_number: '',
     additional_notes: ''
   });
-  const { userRole } = useUserRole();
 
   useEffect(() => {
     const fetchUserId = async () => {
@@ -93,7 +84,6 @@ const PropertyDetails = () => {
         .from("properties")
         .select(`
           *,
-          landlord:profiles!properties_landlord_id_fkey!inner(first_name, last_name, email, phone),
           tenancies(
             id,
             status,
@@ -109,18 +99,7 @@ const PropertyDetails = () => {
         .single();
 
       if (error) throw error;
-
-      // Get the first (and only) landlord profile since it's a foreign key relationship
-      const landlordProfile = Array.isArray(data.landlord) ? data.landlord[0] : data.landlord;
-
-      const propertyWithComputedFields = {
-        ...data,
-        status: data.tenancies?.some((t: any) => t.status === 'active') ? 'occupied' as const : 'vacant' as const,
-        tenant_count: data.tenancies?.filter((t: any) => t.status === 'active').length || 0,
-        landlord: landlordProfile as LandlordProfile
-      } as Property;
-
-      return propertyWithComputedFields;
+      return data;
     },
   });
 
@@ -260,11 +239,7 @@ const PropertyDetails = () => {
 
   const tabs = [
     { id: "property", label: "Property Details", icon: Home },
-    ...(userRole === 'tenant' ? [
-      { id: "landlord", label: "Landlord Info", icon: User },
-    ] : [
-      { id: "tenants", label: "Tenants", icon: User },
-    ]),
+    { id: "tenants", label: "Tenants", icon: User },
     { id: "invoice", label: "Invoice Settings", icon: Receipt },
   ];
 
@@ -311,51 +286,7 @@ const PropertyDetails = () => {
                   getStatusColor={getStatusColor}
                 />
               )}
-              {activeTab === "landlord" && userRole === 'tenant' && (
-                <div className="space-y-6">
-                  <div className="bg-gradient-to-br from-gray-50 to-white p-6 rounded-xl border border-gray-100">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-4">Landlord Information</h2>
-                    <div className="grid gap-6 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-600">Name</p>
-                        <p className="text-base text-gray-900">
-                          {property?.landlord?.first_name} {property?.landlord?.last_name}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-600">Email</p>
-                        <p className="text-base text-gray-900">{property?.landlord?.email}</p>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-600">Phone</p>
-                        <p className="text-base text-gray-900">{property?.landlord?.phone || 'Not provided'}</p>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-600">Contact Hours</p>
-                        <p className="text-base text-gray-900">9:00 AM - 5:00 PM</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-blue-50 p-6 rounded-xl">
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <Info className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-blue-900">Communication Guidelines</h3>
-                        <ul className="mt-2 space-y-2 text-sm text-blue-700">
-                          <li>• For emergencies, contact immediately via phone</li>
-                          <li>• For regular maintenance, use the maintenance request system</li>
-                          <li>• Allow up to 24 hours for email responses</li>
-                          <li>• Schedule meetings in advance when possible</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {activeTab === "tenants" && userRole === 'landlord' && (
+              {activeTab === "tenants" && (
                 <TenantsTab
                   property={property}
                   activeTenants={activeTenants}

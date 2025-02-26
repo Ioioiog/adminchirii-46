@@ -91,137 +91,139 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
   if (!tenancies?.length) {
     return (
       <div className="p-8 space-y-8 max-w-7xl mx-auto">
-        <section className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm p-6">
+        <section className="mb-8 bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm p-6 border border-gray-100">
           <DashboardHeader userName={userName} />
         </section>
 
-        <section className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md p-10">
-          <div className="max-w-3xl mx-auto space-y-8">
-            <div className="text-center space-y-4">
-              <div className="bg-blue-50 p-4 rounded-full w-16 h-16 mx-auto flex items-center justify-center">
-                <Building2 className="h-8 w-8 text-blue-600" />
-              </div>
-              <h2 className="text-3xl font-semibold text-gray-900 tracking-tight">Welcome to Your Tenant Dashboard</h2>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                You currently don't have any active properties. Here's how you can get started:
-              </p>
-            </div>
-            
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-6 bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-xl border border-blue-100">
-                <h3 className="text-xl font-semibold text-gray-900">Ways to get a property:</h3>
-                <ul className="space-y-4">
-                  {[
-                    "Accept a rental contract invitation from a landlord",
-                    "Sign a rental agreement through the platform",
-                    "Have your existing rental contract registered by your landlord"
-                  ].map((item, index) => (
-                    <li key={index} className="flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-blue-600 text-sm font-medium">{index + 1}</span>
-                      </div>
-                      <span className="text-gray-600">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+        <section className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+          <Card className="col-span-full lg:col-span-2 bg-gradient-to-br from-blue-50 to-indigo-50 border-none shadow-md">
+            <CardContent className="p-8">
+              <div className="max-w-2xl mx-auto space-y-6">
+                <div className="text-center space-y-4">
+                  <div className="bg-white/80 p-4 rounded-full w-16 h-16 mx-auto flex items-center justify-center shadow-sm">
+                    <Building2 className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <h2 className="text-3xl font-semibold text-gray-900 tracking-tight">
+                    Welcome to Your Tenant Dashboard
+                  </h2>
+                  <p className="text-lg text-gray-600">
+                    You currently don't have any active properties. Here's how you can get started:
+                  </p>
+                </div>
 
-              <div className="space-y-6 bg-gradient-to-br from-indigo-50 to-purple-50 p-8 rounded-xl border border-indigo-100">
-                <h3 className="text-xl font-semibold text-gray-900">What happens next:</h3>
-                <ul className="space-y-4">
-                  {[
-                    "Wait for your landlord to send you a contract invitation",
-                    "Once received, review and sign the contract",
-                    "After signing, you'll see your property details here",
-                    "You'll be able to manage your rental, submit maintenance requests, and track payments"
-                  ].map((item, index) => (
-                    <li key={index} className="flex items-start gap-3">
-                      <div className="w-2 h-2 rounded-full bg-indigo-400 mt-2 flex-shrink-0"></div>
-                      <span className="text-gray-600">{item}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <Card className="bg-white/80 backdrop-blur-sm border-none shadow-sm hover:shadow-md transition-all duration-200">
+                    <CardHeader>
+                      <CardTitle className="text-xl font-semibold text-gray-900">Ways to get a property:</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-4">
+                        {[
+                          "Accept a rental contract invitation from a landlord",
+                          "Sign a rental agreement through the platform",
+                          "Have your existing rental contract registered by your landlord"
+                        ].map((item, index) => (
+                          <li key={index} className="flex items-start gap-3">
+                            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <span className="text-blue-600 text-sm font-medium">{index + 1}</span>
+                            </div>
+                            <span className="text-gray-600">{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-white/80 backdrop-blur-sm border-none shadow-sm hover:shadow-md transition-all duration-200">
+                    <CardHeader>
+                      <CardTitle className="text-xl font-semibold text-gray-900">What happens next:</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-4">
+                        {[
+                          "Wait for your landlord to send you a contract invitation",
+                          "Once received, review and sign the contract",
+                          "After signing, you'll see your property details here",
+                          "You'll be able to manage your rental, submit maintenance requests, and track payments"
+                        ].map((item, index) => (
+                          <li key={index} className="flex items-start gap-3">
+                            <div className="w-2 h-2 rounded-full bg-blue-400 mt-2 flex-shrink-0"></div>
+                            <span className="text-gray-600">{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="flex justify-center pt-6">
+                  <Button 
+                    onClick={() => navigate('/documents/contracts')}
+                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-6 h-auto text-lg font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                  >
+                    View Contracts
+                  </Button>
+                </div>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <div className="flex justify-center pt-6">
-              <Button 
-                onClick={() => navigate('/documents/contracts')}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-6 h-auto text-lg font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                View Contracts
-              </Button>
-            </div>
-          </div>
-        </section>
-
-        <section className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md p-8">
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold mb-3">{t('quickActions.title')}</h2>
-            <p className="text-gray-600">Access frequently used features and manage your rental efficiently with these quick actions.</p>
-          </div>
-          <div className="grid md:grid-cols-2 gap-8">
-            {quickActions.map((action, index) => (
-              <Card key={index} className="group hover:shadow-xl transition-all duration-300 border-2 border-gray-100 overflow-hidden">
-                <CardContent className="p-8">
-                  <div className="space-y-6">
-                    <div className="flex items-start gap-6">
-                      <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl group-hover:scale-110 transition-transform duration-300">
-                        <action.icon className="h-7 w-7 text-blue-600" />
+          <Card className="col-span-full lg:col-span-1 bg-gradient-to-br from-indigo-50 to-blue-50 border-none shadow-md">
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold">{t('quickActions.title')}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {quickActions.map((action, index) => (
+                <Card key={index} className="bg-white/80 backdrop-blur-sm border-none shadow-sm hover:shadow-md transition-all duration-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-4">
+                      <div className="p-2 bg-blue-50 rounded-lg">
+                        <action.icon className="h-5 w-5 text-blue-600" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-xl font-semibold mb-2">{action.title}</h3>
-                        <p className="text-gray-600 mb-4">{action.description}</p>
+                        <h3 className="font-medium mb-1">{action.title}</h3>
+                        <p className="text-sm text-gray-600">{action.description}</p>
+                        <Button 
+                          onClick={action.action}
+                          variant="ghost" 
+                          className="mt-2 w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        >
+                          {t('quickActions.viewMore')} →
+                        </Button>
                       </div>
                     </div>
-                    <ul className="space-y-3">
-                      {action.features.map((feature, idx) => (
-                        <li key={idx} className="flex items-center text-gray-600">
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mr-3"></div>
-                          {feature}
+                  </CardContent>
+                </Card>
+              ))}
+
+              <Card className="bg-white/80 backdrop-blur-sm border-none shadow-sm">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-blue-50 rounded-lg">
+                      <Info className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Quick Tips</h4>
+                      <ul className="space-y-2 text-sm text-gray-600">
+                        <li className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>
+                          Click on any action to access its features
                         </li>
-                      ))}
-                    </ul>
-                    <Button 
-                      onClick={action.action} 
-                      className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white h-12 rounded-xl"
-                    >
-                      {t('quickActions.viewMore')}
-                    </Button>
+                        <li className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>
+                          Use maintenance requests for property issues
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>
+                          Track requests in real-time
+                        </li>
+                      </ul>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-          
-          <div className="mt-8 p-6 bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl border border-gray-100">
-            <div className="flex items-start gap-4">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Info className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <h4 className="text-lg font-semibold text-gray-900 mb-3">How to use Quick Actions</h4>
-                <ul className="space-y-2 text-gray-600">
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>
-                    Click on any action card to access its detailed features
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>
-                    Use maintenance requests for any property-related issues
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>
-                    Access documents section for all your paperwork needs
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>
-                    Track the status of your requests in real-time
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </section>
       </div>
     );
