@@ -1,9 +1,18 @@
+
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 interface RoleSpecificFormProps {
   role: string;
@@ -18,14 +27,35 @@ export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormPr
     firstName: "",
     lastName: "",
     phone: "",
+    address: "",
+    // Service Provider specific fields
     businessName: "",
     serviceArea: "",
+    businessDescription: "",
+    website: "",
+    // Landlord specific fields
+    companyName: "",
+    vatNumber: "",
+    registrationNumber: "",
+    // Tenant specific fields
+    occupation: "",
+    employmentStatus: "",
+    currentAddress: "",
+    emergencyContactName: "",
+    emergencyContactPhone: "",
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
+    }));
+  };
+
+  const handleSelectChange = (value: string, field: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
     }));
   };
 
@@ -58,19 +88,20 @@ export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormPr
         throw updateError;
       }
 
-      console.log("Successfully updated user metadata with role:", role);
+      // Then update the profile with common fields
+      const baseProfileData = {
+        id: user.id,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        phone: formData.phone,
+        role: role,
+        email: email,
+        address: formData.address
+      };
 
-      // Then update the profile
       const { error: profileError } = await supabase
         .from('profiles')
-        .upsert({
-          id: user.id,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          phone: formData.phone,
-          role: role,
-          email: email
-        }, {
+        .upsert(baseProfileData, {
           onConflict: 'id'
         });
 
@@ -79,12 +110,8 @@ export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormPr
         throw profileError;
       }
 
-      console.log("Successfully updated profile with role:", role);
-
       // If user is a service provider, create/update service provider profile
       if (role === 'service_provider') {
-        console.log("Creating service provider profile");
-        
         const { error: spError } = await supabase
           .from('service_provider_profiles')
           .upsert({
@@ -92,7 +119,9 @@ export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormPr
             business_name: formData.businessName,
             service_area: [formData.serviceArea],
             contact_email: email,
-            contact_phone: formData.phone
+            contact_phone: formData.phone,
+            description: formData.businessDescription,
+            website: formData.website
           }, {
             onConflict: 'id'
           });
@@ -101,29 +130,6 @@ export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormPr
           console.error("Error updating service provider profile:", spError);
           throw spError;
         }
-
-        console.log("Successfully created service provider profile");
-      }
-
-      // Verify the role was set correctly
-      const { data: verifyProfile, error: verifyError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (verifyError) {
-        console.error("Error verifying profile update:", verifyError);
-      } else {
-        console.log("Verified profile role:", verifyProfile.role);
-      }
-
-      // Refresh the session to ensure role changes are reflected
-      const { error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError) {
-        console.error("Error refreshing session:", refreshError);
-      } else {
-        console.log("Successfully refreshed session");
       }
 
       toast({
@@ -132,11 +138,11 @@ export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormPr
       });
 
       onComplete();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating profile:', error);
       toast({
         title: "Error",
-        description: "There was an error updating your profile. Please try again.",
+        description: error.message || "There was an error updating your profile. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -146,8 +152,9 @@ export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormPr
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Common fields for all roles */}
       <div className="space-y-2">
-        <Label htmlFor="firstName">First Name</Label>
+        <Label htmlFor="firstName">First Name *</Label>
         <Input
           id="firstName"
           name="firstName"
@@ -158,7 +165,7 @@ export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormPr
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="lastName">Last Name</Label>
+        <Label htmlFor="lastName">Last Name *</Label>
         <Input
           id="lastName"
           name="lastName"
@@ -169,7 +176,7 @@ export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormPr
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="phone">Phone Number</Label>
+        <Label htmlFor="phone">Phone Number *</Label>
         <Input
           id="phone"
           name="phone"
@@ -180,10 +187,22 @@ export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormPr
         />
       </div>
 
+      <div className="space-y-2">
+        <Label htmlFor="address">Address *</Label>
+        <Input
+          id="address"
+          name="address"
+          value={formData.address}
+          onChange={handleChange}
+          required
+        />
+      </div>
+
+      {/* Service Provider specific fields */}
       {role === 'service_provider' && (
         <>
           <div className="space-y-2">
-            <Label htmlFor="businessName">Business Name</Label>
+            <Label htmlFor="businessName">Business Name *</Label>
             <Input
               id="businessName"
               name="businessName"
@@ -194,13 +213,140 @@ export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormPr
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="serviceArea">Service Area</Label>
+            <Label htmlFor="serviceArea">Service Area *</Label>
             <Input
               id="serviceArea"
               name="serviceArea"
               value={formData.serviceArea}
               onChange={handleChange}
               placeholder="e.g. New York City"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="businessDescription">Business Description</Label>
+            <Textarea
+              id="businessDescription"
+              name="businessDescription"
+              value={formData.businessDescription}
+              onChange={handleChange}
+              placeholder="Describe your services and expertise..."
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="website">Website</Label>
+            <Input
+              id="website"
+              name="website"
+              type="url"
+              value={formData.website}
+              onChange={handleChange}
+              placeholder="https://..."
+            />
+          </div>
+        </>
+      )}
+
+      {/* Landlord specific fields */}
+      {role === 'landlord' && (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="companyName">Company Name (if applicable)</Label>
+            <Input
+              id="companyName"
+              name="companyName"
+              value={formData.companyName}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="vatNumber">VAT Number (if applicable)</Label>
+            <Input
+              id="vatNumber"
+              name="vatNumber"
+              value={formData.vatNumber}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="registrationNumber">Business Registration Number (if applicable)</Label>
+            <Input
+              id="registrationNumber"
+              name="registrationNumber"
+              value={formData.registrationNumber}
+              onChange={handleChange}
+            />
+          </div>
+        </>
+      )}
+
+      {/* Tenant specific fields */}
+      {role === 'tenant' && (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="occupation">Occupation *</Label>
+            <Input
+              id="occupation"
+              name="occupation"
+              value={formData.occupation}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="employmentStatus">Employment Status *</Label>
+            <Select
+              value={formData.employmentStatus}
+              onValueChange={(value) => handleSelectChange(value, 'employmentStatus')}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select employment status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="employed">Employed</SelectItem>
+                <SelectItem value="self-employed">Self-employed</SelectItem>
+                <SelectItem value="student">Student</SelectItem>
+                <SelectItem value="retired">Retired</SelectItem>
+                <SelectItem value="unemployed">Unemployed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="currentAddress">Current Address *</Label>
+            <Input
+              id="currentAddress"
+              name="currentAddress"
+              value={formData.currentAddress}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="emergencyContactName">Emergency Contact Name *</Label>
+            <Input
+              id="emergencyContactName"
+              name="emergencyContactName"
+              value={formData.emergencyContactName}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="emergencyContactPhone">Emergency Contact Phone *</Label>
+            <Input
+              id="emergencyContactPhone"
+              name="emergencyContactPhone"
+              type="tel"
+              value={formData.emergencyContactPhone}
+              onChange={handleChange}
               required
             />
           </div>
