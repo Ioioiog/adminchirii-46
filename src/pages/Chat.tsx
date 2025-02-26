@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from "react";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { ChatHeader } from "@/components/chat/ChatHeader";
@@ -133,9 +134,9 @@ const Chat = () => {
       </div>;
     }
     if (!conversationId) {
-      return <div className="relative flex-1 flex items-center justify-center p-8 text-center bg-gradient-to-br from-blue-500/5 to-blue-600/5">
+      return <div className="relative flex-1 flex items-center p-8 text-center bg-gradient-to-br from-blue-500/5 to-blue-600/5">
         <ChatBackground />
-        <div className="relative z-10 max-w-md glass-card p-8 rounded-xl backdrop-blur-sm bg-white/80">
+        <div className="relative z-10 max-w-md glass-card p-8 rounded-xl backdrop-blur-sm bg-white/80 ml-8">
           <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl" role="img" aria-label="chat">💬</span>
           </div>
