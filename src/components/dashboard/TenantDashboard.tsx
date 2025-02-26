@@ -1,3 +1,4 @@
+
 import { DashboardHeader } from "./sections/DashboardHeader";
 import { DashboardMetrics } from "./DashboardMetrics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -238,69 +239,72 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
         <DashboardMetrics userId={userId} userRole="tenant" />
       </section>
 
-      <section className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md p-8">
-        <h2 className="text-2xl font-semibold mb-6">{t('propertyInfo')}</h2>
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {tenancies?.map((tenancy) => (
-            <Card key={tenancy.id} className="group hover:shadow-xl transition-all duration-300 border-2 border-gray-100">
-              <CardHeader className="flex flex-row items-center justify-between pb-2 p-6">
-                <CardTitle className="text-xl font-semibold">
-                  {tenancy.property.name}
-                </CardTitle>
-                <div className="p-2 bg-blue-50 rounded-lg group-hover:scale-110 transition-transform duration-300">
-                  <Home className="h-5 w-5 text-blue-600" />
-                </div>
-              </CardHeader>
-              <CardContent className="p-6 pt-4">
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-500">Address</p>
-                    <p className="text-gray-900 font-medium">{tenancy.property.address}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <p className="text-sm text-gray-500">Start Date</p>
-                      <p className="text-gray-900 font-medium">
-                        {format(new Date(tenancy.start_date), 'MMM d, yyyy')}
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm text-gray-500">End Date</p>
-                      <p className="text-gray-900 font-medium">
-                        {tenancy.end_date 
-                          ? format(new Date(tenancy.end_date), 'MMM d, yyyy')
-                          : t('ongoingLease')}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-3">
-                    <Button 
-                      variant="outline" 
-                      className="flex-1 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                      onClick={() => navigate('/maintenance')}
-                    >
-                      {t('quickActions.maintenance')}
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="flex-1 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                      onClick={() => navigate('/documents')}
-                    >
-                      {t('quickActions.documents')}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
       <section className="bg-white rounded-xl shadow-sm p-6">
         <div className="mb-6">
           <h2 className="text-xl font-semibold mb-2">{t('quickActions.title')}</h2>
           <p className="text-gray-600">Access frequently used features and manage your rental efficiently with these quick actions.</p>
         </div>
+        
+        {tenancies?.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-lg font-medium mb-4">Your Properties</h3>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
+              {tenancies?.map((tenancy) => (
+                <Card key={tenancy.id} className="group hover:shadow-xl transition-all duration-300 border-2 border-gray-100">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2 p-6">
+                    <CardTitle className="text-xl font-semibold">
+                      {tenancy.property.name}
+                    </CardTitle>
+                    <div className="p-2 bg-blue-50 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                      <Home className="h-5 w-5 text-blue-600" />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6 pt-4">
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <p className="text-sm text-gray-500">Address</p>
+                        <p className="text-gray-900 font-medium">{tenancy.property.address}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <p className="text-sm text-gray-500">Start Date</p>
+                          <p className="text-gray-900 font-medium">
+                            {format(new Date(tenancy.start_date), 'MMM d, yyyy')}
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-sm text-gray-500">End Date</p>
+                          <p className="text-gray-900 font-medium">
+                            {tenancy.end_date 
+                              ? format(new Date(tenancy.end_date), 'MMM d, yyyy')
+                              : t('ongoingLease')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-3">
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                          onClick={() => navigate('/maintenance')}
+                        >
+                          {t('quickActions.maintenance')}
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                          onClick={() => navigate('/documents')}
+                        >
+                          {t('quickActions.documents')}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid gap-6 md:grid-cols-2">
           {quickActions.map((action, index) => (
             <Card key={index} className="hover:shadow-md transition-shadow border-2 border-gray-100">
