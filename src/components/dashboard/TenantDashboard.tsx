@@ -1,7 +1,8 @@
+
 import { DashboardHeader } from "./sections/DashboardHeader";
 import { DashboardMetrics } from "./DashboardMetrics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Home, Calendar, DollarSign, FileText, Building2 } from "lucide-react";
+import { Home, Calendar, DollarSign, FileText, Building2, Info } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -210,6 +211,46 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
               </CardContent>
             </Card>
           ))}
+        </div>
+      </section>
+
+      {/* Guide Section */}
+      <section className="bg-white rounded-xl shadow-sm p-6">
+        <div className="flex items-start space-x-4">
+          <div className="p-3 bg-blue-50 rounded-lg">
+            <Info className="h-6 w-6 text-blue-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold mb-2">Managing Your Rental</h3>
+            <div className="space-y-4">
+              <p className="text-gray-600">
+                Here are some key features available to help you manage your rental:
+              </p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <h4 className="font-medium text-gray-900">Maintenance</h4>
+                  <ul className="list-disc pl-5 text-sm text-gray-600 space-y-1">
+                    <li>Submit maintenance requests</li>
+                    <li>Track repair status</li>
+                    <li>Communicate with service providers</li>
+                  </ul>
+                </div>
+                <div className="space-y-2">
+                  <h4 className="font-medium text-gray-900">Documents</h4>
+                  <ul className="list-disc pl-5 text-sm text-gray-600 space-y-1">
+                    <li>Access your rental agreement</li>
+                    <li>Store important documents</li>
+                    <li>View payment history</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">Need help?</span> Contact your landlord through the platform or reach out to our support team for assistance.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
