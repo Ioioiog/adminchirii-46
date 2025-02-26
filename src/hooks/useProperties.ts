@@ -20,9 +20,7 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
           return;
         }
 
-        // Different query based on user role
         if (userRole === "tenant") {
-          // For tenants, only fetch properties where they have an active tenancy
           const { data: userData } = await supabase.auth.getUser();
           if (!userData.user) {
             setProperties([]);
@@ -43,6 +41,12 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
               description,
               available_from,
               landlord_id,
+              landlord:profiles!landlord_id (
+                first_name,
+                last_name,
+                email,
+                phone
+              ),
               tenancies!inner (
                 id,
                 status,
