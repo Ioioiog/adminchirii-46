@@ -1,14 +1,71 @@
 
-import { InvoiceInfoForm } from "../InvoiceInfoForm";
+import { useEffect, useState } from "react";
 import { StripeAccountForm } from "../StripeAccountForm";
 import { useUserRole } from "@/hooks/use-user-role";
 import { InvoiceGenerationInfo } from "./InvoiceGenerationInfo";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { CreditCard, Receipt } from "lucide-react";
+import { CreditCard, Receipt, Building } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+interface ContractData {
+  property?: {
+    name: string;
+  };
+  metadata?: {
+    tenantName?: string;
+    tenantReg?: string;
+    tenantFiscal?: string;
+    tenantAddress?: string;
+    tenantBank?: string;
+    tenantBankName?: string;
+    tenantEmail?: string;
+    tenantPhone?: string;
+  };
+}
 
 export function FinancialSettings() {
   const { userRole } = useUserRole();
+  const { toast } = useToast();
+  const [contractData, setContractData] = useState<ContractData | null>(null);
+
+  useEffect(() => {
+    const fetchContractData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: contract, error } = await supabase
+          .from('contracts')
+          .select(`
+            metadata,
+            property:properties (
+              name
+            )
+          `)
+          .eq('tenant_id', user.id)
+          .eq('status', 'signed')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (error) throw error;
+        setContractData(contract);
+      } catch (error) {
+        console.error('Error fetching contract:', error);
+        toast({
+          title: "Error",
+          description: "Could not fetch invoice information",
+          variant: "destructive",
+        });
+      }
+    };
+
+    if (userRole === 'tenant') {
+      fetchContractData();
+    }
+  }, [userRole, toast]);
 
   // For tenants, show payment-related settings
   if (userRole === 'tenant') {
@@ -47,10 +104,73 @@ export function FinancialSettings() {
 
         <Card>
           <CardHeader>
-            <h3 className="text-lg font-medium">Invoice Information</h3>
+            <div className="flex items-center space-x-4">
+              <Building className="h-6 w-6 text-purple-500" />
+              <div>
+                <h3 className="text-lg font-medium">Invoice Information</h3>
+                <p className="text-sm text-muted-foreground">
+                  This information is automatically filled from your rental contract
+                </p>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <InvoiceInfoForm />
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <h4 className="font-medium mb-2">Property</h4>
+                <p className="text-sm text-muted-foreground">
+                  {contractData?.property?.name || 'Not available'}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium mb-2">Tenant Name</h4>
+                <p className="text-sm text-muted-foreground">
+                  {contractData?.metadata?.tenantName || 'Not available'}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium mb-2">Registration Number</h4>
+                <p className="text-sm text-muted-foreground">
+                  {contractData?.metadata?.tenantReg || 'Not available'}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium mb-2">Fiscal Code</h4>
+                <p className="text-sm text-muted-foreground">
+                  {contractData?.metadata?.tenantFiscal || 'Not available'}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium mb-2">Address</h4>
+                <p className="text-sm text-muted-foreground">
+                  {contractData?.metadata?.tenantAddress || 'Not available'}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium mb-2">Bank Account</h4>
+                <p className="text-sm text-muted-foreground">
+                  {contractData?.metadata?.tenantBank || 'Not available'}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium mb-2">Bank Name</h4>
+                <p className="text-sm text-muted-foreground">
+                  {contractData?.metadata?.tenantBankName || 'Not available'}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium mb-2">Contact Email</h4>
+                <p className="text-sm text-muted-foreground">
+                  {contractData?.metadata?.tenantEmail || 'Not available'}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium mb-2">Phone Number</h4>
+                <p className="text-sm text-muted-foreground">
+                  {contractData?.metadata?.tenantPhone || 'Not available'}
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
