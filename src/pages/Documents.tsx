@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Grid, List, Plus, FileText, CreditCard, Trash2 } from "lucide-react";
@@ -237,11 +236,13 @@ function Documents() {
   const navigationItems = [{
     id: 'documents',
     label: 'Documents',
-    icon: FileText
+    icon: FileText,
+    showForTenant: true
   }, {
     id: 'contracts',
     label: 'Contracts',
-    icon: CreditCard
+    icon: CreditCard,
+    showForTenant: true  // Changed this to true so tenants can see contracts
   }];
 
   const renderSection = () => {

@@ -23,8 +23,8 @@ export function NavigationTabs({ tabs, activeTab, onTabChange }: NavigationTabsP
   const { userRole } = useUserRole();
   const isTenant = userRole === 'tenant';
 
-  // Filter out tabs that shouldn't be shown to tenants
-  const visibleTabs = tabs.filter(tab => !isTenant || tab.showForTenant);
+  // Only filter tabs if user is a tenant and tab has showForTenant property defined
+  const visibleTabs = tabs.filter(tab => !isTenant || tab.showForTenant !== false);
 
   return (
     <Card className="p-4 bg-white/80 backdrop-blur-sm border shadow-sm">
