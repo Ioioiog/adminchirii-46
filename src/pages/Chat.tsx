@@ -17,6 +17,7 @@ import { ChatBackground } from "@/components/chat/ChatBackground";
 import { Badge } from "@/components/ui/badge";
 import { useSidebarNotifications } from "@/hooks/use-sidebar-notifications";
 import { supabase } from "@/integrations/supabase/client";
+import { MessageSquare, Video, PaperclipIcon, Smile } from "lucide-react";
 
 const Chat = () => {
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
@@ -141,11 +142,41 @@ const Chat = () => {
           <h3 className="text-lg font-semibold mb-2 text-gray-800">
             {userRole === "landlord" ? "Select a Conversation" : "Chat with Your Landlord"}
           </h3>
-          <p className="text-gray-600">
+          <p className="text-gray-600 mb-6">
             {userRole === "landlord" 
               ? "Choose a tenant from the list to start chatting ✨"
               : "Your landlord will be notified when you send a message ✨"}
           </p>
+          
+          <div className="space-y-6 text-left">
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <h4 className="font-medium text-blue-700 mb-2">Chat Features:</h4>
+              <ul className="space-y-2 text-sm text-blue-600">
+                <li className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" /> Send text messages instantly
+                </li>
+                <li className="flex items-center gap-2">
+                  <Video className="h-4 w-4" /> Start video calls for real-time communication
+                </li>
+                <li className="flex items-center gap-2">
+                  <PaperclipIcon className="h-4 w-4" /> Share images and documents
+                </li>
+                <li className="flex items-center gap-2">
+                  <Smile className="h-4 w-4" /> Express yourself with emojis
+                </li>
+              </ul>
+            </div>
+
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-medium text-gray-700 mb-2">Quick Tips:</h4>
+              <ul className="space-y-2 text-sm text-gray-600">
+                <li>• Messages are delivered instantly</li>
+                <li>• You'll receive notifications for new messages</li>
+                <li>• Video calls require camera and microphone permissions</li>
+                <li>• Files up to 5MB are supported</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>;
     }
