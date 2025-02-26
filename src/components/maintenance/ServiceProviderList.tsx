@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -52,12 +51,7 @@ export function ServiceProviderList() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<ServiceProvider | null>(null);
-  const [filters, setFilters] = useState<{
-    search: string;
-    category: string;
-    rating: string;
-    createdByMe: boolean;
-  }>({
+  const [filters, setFilters] = useState<Filters>({
     search: "",
     category: "all",
     rating: "all",
@@ -88,7 +82,7 @@ export function ServiceProviderList() {
         throw preferredError;
       }
 
-      let query = supabase
+      const { data: providers, error: providersError } = await supabase
         .from("service_provider_profiles")
         .select(`
           id,
@@ -100,12 +94,6 @@ export function ServiceProviderList() {
           service_area,
           rating,
           review_count,
-          is_first_login,
-          profiles!fk_profiles (
-            first_name,
-            last_name,
-            role
-          ),
           services:service_provider_services (
             name,
             category,
@@ -114,42 +102,41 @@ export function ServiceProviderList() {
           )
         `);
 
-      if (filters.search) {
-        query = query.or(`business_name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
-      }
-
-      if (filters.rating !== "all") {
-        query = query.gte("rating", parseInt(filters.rating));
-      }
-
-      if (filters.createdByMe) {
-        query = query.eq('id', currentUserId);
-      }
-
-      const { data: providers, error: providersError } = await query;
-
       if (providersError) {
         console.error("Error fetching providers:", providersError);
         throw providersError;
       }
 
+      const providerIds = providers?.map(p => p.id) || [];
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, role")
+        .in('id', providerIds);
+
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        throw profilesError;
+      }
+
+      const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
+
       const preferredIds = new Set(preferredProviders?.map(p => p.service_provider_id) || []);
 
       let filteredProviders = (providers || [])
         .map(provider => {
+          const profile = profilesMap.get(provider.id);
+          
           console.log("Provider data:", {
             id: provider.id,
             businessName: provider.business_name,
-            role: provider.profiles?.[0]?.role,
+            role: profile?.role,
           });
 
-          // Check if the provider's profile has the role 'service_provider'
-          // If they do, they registered themselves. If not, they were created by a landlord
-          const isRegisteredProvider = provider.profiles?.[0]?.role === 'service_provider';
+          const isRegisteredProvider = profile?.role === 'service_provider';
 
           return {
             ...provider,
-            profiles: Array.isArray(provider.profiles) ? provider.profiles : [provider.profiles],
+            profiles: [profile || { first_name: null, last_name: null, role: null }],
             isPreferred: preferredIds.has(provider.id),
             isCustomProvider: !isRegisteredProvider
           };
@@ -161,10 +148,17 @@ export function ServiceProviderList() {
         );
       }
 
+      if (filters.search) {
+        filteredProviders = filteredProviders.filter(provider => 
+          provider.business_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
+          provider.description?.toLowerCase().includes(filters.search.toLowerCase())
+        );
+      }
+
       console.log("Filtered providers with status:", filteredProviders.map(p => ({
         name: p.business_name,
-        isCustom: !Boolean(p.profiles?.[0]?.role === 'service_provider'),
-        role: p.profiles?.[0]?.role
+        isCustom: !Boolean(p.profiles[0]?.role === 'service_provider'),
+        role: p.profiles[0]?.role
       })));
 
       return filteredProviders.sort((a, b) => {
