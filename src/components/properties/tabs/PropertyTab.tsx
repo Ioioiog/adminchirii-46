@@ -43,6 +43,7 @@ export function PropertyTab({
   const { data: contract } = useQuery({
     queryKey: ['property-contract', property.id],
     queryFn: async () => {
+      console.log('Fetching contract for property:', property.id);
       const { data, error } = await supabase
         .from('contracts')
         .select('*')
@@ -52,12 +53,17 @@ export function PropertyTab({
         .limit(1)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching contract:', error);
+        throw error;
+      }
+      
+      console.log('Contract details:', data);
       return data;
     }
   });
 
-  const landlordInfo = (contract?.metadata as FormData) || {} as FormData;
+  const landlordInfo = (contract?.metadata as unknown as FormData) || {} as FormData;
 
   return (
     <div className="space-y-8">
