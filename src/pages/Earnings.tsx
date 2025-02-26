@@ -1,16 +1,19 @@
+
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuthState } from "@/hooks/useAuthState";
 import { format } from "date-fns";
-import { DollarSign, TrendingUp, Calendar, CheckCircle } from "lucide-react";
+import { DollarSign, TrendingUp, Calendar, CheckCircle, CreditCard, Receipt, Building, Wallet } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface EarningsSummary {
   totalEarnings: number;
   completedJobs: number;
   averageJobValue: number;
+  pendingPayments: number;
   recentPayments: Array<{
     id: string;
     amount: number;
@@ -22,6 +25,7 @@ interface EarningsSummary {
 
 const Earnings = () => {
   const { currentUserId } = useAuthState();
+  const { formatAmount } = useCurrency();
 
   const { data: earningsSummary, isLoading } = useQuery({
     queryKey: ["earnings-summary", currentUserId],
@@ -46,6 +50,10 @@ const Earnings = () => {
         0
       );
 
+      const pendingPayments = maintenanceRequests
+        ?.filter(job => job.payment_status === 'pending')
+        .reduce((sum, job) => sum + (job.service_provider_fee || 0), 0);
+
       const recentPayments = maintenanceRequests?.slice(0, 5).map((job) => ({
         id: job.id,
         amount: job.service_provider_fee || 0,
@@ -61,6 +69,7 @@ const Earnings = () => {
           maintenanceRequests?.length > 0
             ? totalEarnings / maintenanceRequests.length
             : 0,
+        pendingPayments: pendingPayments || 0,
         recentPayments: recentPayments || [],
       };
     },
@@ -87,53 +96,58 @@ const Earnings = () => {
       <div className="container mx-auto p-6 space-y-6">
         <h1 className="text-2xl font-bold">Earnings Dashboard</h1>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Earnings
-              </CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                ${earningsSummary?.totalEarnings.toFixed(2)}
+        <Card>
+          <CardHeader>
+            <h3 className="text-lg font-medium">Earnings Overview</h3>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="p-4 bg-card rounded-lg border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Wallet className="h-4 w-4 text-blue-500" />
+                  <span className="text-sm font-medium">Total Earnings</span>
+                </div>
+                <p className="text-2xl font-bold">
+                  {formatAmount(earningsSummary?.totalEarnings || 0)}
+                </p>
               </div>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Completed Jobs
-              </CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {earningsSummary?.completedJobs}
+              <div className="p-4 bg-card rounded-lg border">
+                <div className="flex items-center gap-2 mb-2">
+                  <CreditCard className="h-4 w-4 text-yellow-500" />
+                  <span className="text-sm font-medium">Pending Payments</span>
+                </div>
+                <p className="text-2xl font-bold">
+                  {formatAmount(earningsSummary?.pendingPayments || 0)}
+                </p>
               </div>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Average Job Value
-              </CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                ${earningsSummary?.averageJobValue.toFixed(2)}
+              <div className="p-4 bg-card rounded-lg border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Building className="h-4 w-4 text-green-500" />
+                  <span className="text-sm font-medium">Completed Jobs</span>
+                </div>
+                <p className="text-2xl font-bold">
+                  {earningsSummary?.completedJobs || 0}
+                </p>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+
+              <div className="p-4 bg-card rounded-lg border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Receipt className="h-4 w-4 text-purple-500" />
+                  <span className="text-sm font-medium">Average Job Value</span>
+                </div>
+                <p className="text-2xl font-bold">
+                  {formatAmount(earningsSummary?.averageJobValue || 0)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl">Recent Payments</CardTitle>
+            <CardTitle>Recent Payments</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -159,7 +173,7 @@ const Earnings = () => {
                       {payment.status}
                     </span>
                     <span className="font-semibold">
-                      ${payment.amount.toFixed(2)}
+                      {formatAmount(payment.amount)}
                     </span>
                   </div>
                 </div>

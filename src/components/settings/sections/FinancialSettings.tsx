@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { StripeAccountForm } from "../StripeAccountForm";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -102,7 +101,6 @@ export function FinancialSettings() {
 
         if (data) {
           const dbContract = data as DatabaseContract;
-          // Convert the data to match our ContractData interface
           const formattedData: ContractData = {
             property: dbContract.property,
             metadata: typeof dbContract.metadata === 'object' ? dbContract.metadata as ContractMetadata : {}
@@ -127,7 +125,6 @@ export function FinancialSettings() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // Fetch maintenance requests data to calculate financials
         const { data: maintenanceData, error: maintenanceError } = await supabase
           .from('maintenance_requests')
           .select('service_provider_fee, status, payment_status')
@@ -169,7 +166,6 @@ export function FinancialSettings() {
 
   const handleDownloadStatement = async () => {
     try {
-      // Implement statement download logic here
       toast({
         title: "Success",
         description: "Financial statement downloaded successfully",
@@ -190,52 +186,11 @@ export function FinancialSettings() {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight mb-1">Financial & Payments Settings</h2>
           <p className="text-sm text-muted-foreground mb-6">
-            Manage your earnings and payment information
+            Manage your payment information
           </p>
         </div>
 
         <div className="grid gap-6">
-          <Card>
-            <CardHeader>
-              <h3 className="text-lg font-medium">Earnings Overview</h3>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <div className="p-4 bg-card rounded-lg border">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Wallet className="h-4 w-4 text-blue-500" />
-                    <span className="text-sm font-medium">Total Earnings</span>
-                  </div>
-                  <p className="text-2xl font-bold">{formatAmount(financials.totalEarnings)}</p>
-                </div>
-
-                <div className="p-4 bg-card rounded-lg border">
-                  <div className="flex items-center gap-2 mb-2">
-                    <CreditCard className="h-4 w-4 text-yellow-500" />
-                    <span className="text-sm font-medium">Pending Payments</span>
-                  </div>
-                  <p className="text-2xl font-bold">{formatAmount(financials.pendingPayments)}</p>
-                </div>
-
-                <div className="p-4 bg-card rounded-lg border">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Building className="h-4 w-4 text-green-500" />
-                    <span className="text-sm font-medium">Completed Jobs</span>
-                  </div>
-                  <p className="text-2xl font-bold">{financials.completedJobs}</p>
-                </div>
-
-                <div className="p-4 bg-card rounded-lg border">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Receipt className="h-4 w-4 text-purple-500" />
-                    <span className="text-sm font-medium">Average Job Value</span>
-                  </div>
-                  <p className="text-2xl font-bold">{formatAmount(financials.avgJobValue)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           <Card>
             <CardHeader>
               <h3 className="text-lg font-medium">Payment Settings</h3>
@@ -249,7 +204,6 @@ export function FinancialSettings() {
     );
   }
 
-  // Return original component for landlords and tenants
   if (userRole === 'tenant') {
     return (
       <div className="space-y-8">
