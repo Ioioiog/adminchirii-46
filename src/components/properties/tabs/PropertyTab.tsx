@@ -11,6 +11,8 @@ import {
   UserCircle
 } from "lucide-react";
 import { useUserRole } from "@/hooks/use-user-role";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PropertyTabProps {
   property: any;
@@ -36,6 +38,25 @@ export function PropertyTab({
   const { userRole } = useUserRole();
   const isTenant = userRole === 'tenant';
   const status = property.tenancies?.some((t: any) => t.status === 'active') ? 'occupied' : 'vacant';
+
+  const { data: contract } = useQuery({
+    queryKey: ['property-contract', property.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('contracts')
+        .select('*')
+        .eq('property_id', property.id)
+        .eq('status', 'signed')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const landlordInfo = contract?.metadata || {};
 
   return (
     <div className="space-y-8">
@@ -93,16 +114,16 @@ export function PropertyTab({
         <div className="grid gap-4">
           <div className="flex items-center gap-2 text-gray-600">
             <UserCircle className="h-4 w-4" />
-            <span className="font-medium">{`${property.landlord?.first_name || ''} ${property.landlord?.last_name || ''}`}</span>
+            <span className="font-medium">{landlordInfo.ownerName || 'Not specified'}</span>
           </div>
           <div className="flex items-center gap-2 text-gray-600">
             <Mail className="h-4 w-4" />
-            <span>{property.landlord?.email || 'Email not provided'}</span>
+            <span>{landlordInfo.ownerEmail || 'Email not provided'}</span>
           </div>
-          {property.landlord?.phone && (
+          {landlordInfo.ownerPhone && (
             <div className="flex items-center gap-2 text-gray-600">
               <Phone className="h-4 w-4" />
-              <span>{property.landlord.phone}</span>
+              <span>{landlordInfo.ownerPhone}</span>
             </div>
           )}
         </div>
