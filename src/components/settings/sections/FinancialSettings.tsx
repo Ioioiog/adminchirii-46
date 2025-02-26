@@ -1,9 +1,9 @@
-
 import { useEffect, useState } from "react";
 import { StripeAccountForm } from "../StripeAccountForm";
 import { useUserRole } from "@/hooks/use-user-role";
 import { InvoiceGenerationInfo } from "./InvoiceGenerationInfo";
 import { InvoiceInfoForm } from "../InvoiceInfoForm";
+import { PaymentMethodsForm } from "../PaymentMethodsForm";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { CreditCard, Receipt, Building } from "lucide-react";
@@ -64,7 +64,6 @@ export function FinancialSettings() {
           return;
         }
 
-        // Type assertion to ensure contract data matches our interface
         const typedContract: ContractData = {
           property: contract.property,
           metadata: contract.metadata as ContractData['metadata']
@@ -86,11 +85,12 @@ export function FinancialSettings() {
     }
   }, [userRole, toast]);
 
-  // For tenants, show payment-related settings
   if (userRole === 'tenant') {
     return (
       <div className="space-y-6">
         <h2 className="text-2xl font-semibold">Financial & Payments Settings</h2>
+        
+        <PaymentMethodsForm />
         
         <Card>
           <CardHeader>
@@ -103,7 +103,7 @@ export function FinancialSettings() {
                 <div>
                   <h4 className="font-medium">Payment Methods</h4>
                   <p className="text-sm text-muted-foreground">
-                    You can pay your rent and utilities using credit card, debit card, or bank transfer
+                    Add and manage your payment methods for rent and utilities
                   </p>
                 </div>
               </div>
@@ -202,7 +202,6 @@ export function FinancialSettings() {
     );
   }
 
-  // For landlords, show the original content
   if (userRole === 'landlord') {
     return (
       <div className="space-y-6">
