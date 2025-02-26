@@ -13,19 +13,18 @@ import { List, Users, PlusCircle, Search, Filter } from "lucide-react";
 import { useAuthState } from "@/hooks/useAuthState";
 import { useUserRole } from "@/hooks/use-user-role";
 import { cn } from "@/lib/utils";
+
 type MaintenanceView = 'dashboard' | 'providers';
+
 export default function Maintenance() {
   const [activeSection, setActiveSection] = useState<MaintenanceView>('dashboard');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<string | undefined>();
   const [priority, setPriority] = useState<"all" | "low" | "medium" | "high">("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const {
-    userRole
-  } = useUserRole();
-  const {
-    currentUserId
-  } = useAuthState();
+  const { userRole } = useUserRole();
+  const { currentUserId } = useAuthState();
+
   const {
     data: maintenanceRequests,
     isLoading
@@ -67,33 +66,45 @@ export default function Maintenance() {
       return data;
     }
   });
+
   const filteredRequests = React.useMemo(() => {
     if (!maintenanceRequests) return [];
     return maintenanceRequests.filter(request => request.title.toLowerCase().includes(searchQuery.toLowerCase()) || request.description.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [maintenanceRequests, searchQuery]);
+
   const handleRequestClick = (requestId: string) => {
     setSelectedRequestId(requestId);
     setIsDialogOpen(true);
   };
+
   const handleNewRequest = () => {
     setSelectedRequestId(undefined);
     setIsDialogOpen(true);
   };
+
   const handleDialogChange = (open: boolean) => {
     setIsDialogOpen(open);
     if (!open) {
       setSelectedRequestId(undefined);
     }
   };
-  const navigationItems = [{
-    id: 'dashboard' as MaintenanceView,
-    label: 'Maintenance Requests',
-    icon: List
-  }, {
-    id: 'providers' as MaintenanceView,
-    label: 'Service Providers',
-    icon: Users
-  }];
+
+  const navigationItems = userRole === 'service_provider' 
+    ? [{
+        id: 'dashboard' as MaintenanceView,
+        label: 'Maintenance Requests',
+        icon: List
+      }]
+    : [{
+        id: 'dashboard' as MaintenanceView,
+        label: 'Maintenance Requests',
+        icon: List
+      }, {
+        id: 'providers' as MaintenanceView,
+        label: 'Service Providers',
+        icon: Users
+      }];
+
   const renderSection = () => {
     switch (activeSection) {
       case 'dashboard':
@@ -143,16 +154,28 @@ export default function Maintenance() {
         return <ServiceProviderList />;
     }
   };
-  return <div className="flex h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+
+  return (
+    <div className="flex h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       <DashboardSidebar />
       <main className="flex-1 p-8 overflow-y-auto bg-zinc-50">
         <div className="max-w-7xl mx-auto space-y-8">
           <Card className="p-4 bg-white/80 backdrop-blur-sm border shadow-sm">
             <div className="flex gap-4 overflow-x-auto">
-              {navigationItems.map(item => <Button key={item.id} variant={activeSection === item.id ? 'default' : 'ghost'} className={cn("flex-shrink-0 gap-2 transition-all duration-200", activeSection === item.id && "bg-primary text-primary-foreground shadow-sm")} onClick={() => setActiveSection(item.id)}>
+              {navigationItems.map(item => (
+                <Button
+                  key={item.id}
+                  variant={activeSection === item.id ? 'default' : 'ghost'}
+                  className={cn(
+                    "flex-shrink-0 gap-2 transition-all duration-200",
+                    activeSection === item.id && "bg-primary text-primary-foreground shadow-sm"
+                  )}
+                  onClick={() => setActiveSection(item.id)}
+                >
                   <item.icon className="h-4 w-4" />
                   {item.label}
-                </Button>)}
+                </Button>
+              ))}
             </div>
           </Card>
 
@@ -160,8 +183,13 @@ export default function Maintenance() {
             {renderSection()}
           </Card>
 
-          <MaintenanceDialog open={isDialogOpen} onOpenChange={handleDialogChange} requestId={selectedRequestId} />
+          <MaintenanceDialog
+            open={isDialogOpen}
+            onOpenChange={handleDialogChange}
+            requestId={selectedRequestId}
+          />
         </div>
       </main>
-    </div>;
+    </div>
+  );
 }
