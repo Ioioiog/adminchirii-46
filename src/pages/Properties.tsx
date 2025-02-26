@@ -31,7 +31,10 @@ const Properties = () => {
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const { userRole } = useUserRole();
   const { t } = useTranslation('properties');
+  
+  console.log("Current user role:", userRole);
   const { properties, isLoading } = useProperties({ userRole: userRole || "tenant" });
+  console.log("Properties from useProperties:", properties);
 
   const { data: propertyContracts = [] } = useQuery({
     queryKey: ["property-contracts"],
@@ -132,34 +135,68 @@ const Properties = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const renderEmptyState = () => (
-    <div className="col-span-full text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100">
-      <Building2 className="mx-auto h-12 w-12 text-gray-400" />
-      <h3 className="mt-2 text-sm font-medium text-gray-900">No properties found</h3>
-      <p className="mt-1 text-sm text-gray-500">
-        {userRole === 'tenant' ? t('empty.tenant') : t('empty.landlord')}
-      </p>
-      <div className="mt-6">
-        {userRole === 'tenant' ? (
-          <Button 
-            onClick={() => navigate('/documents')}
-            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-sm"
-          >
-            <FileText className="h-4 w-4 mr-2" />
-            View Available Properties
-          </Button>
-        ) : (
-          <Button 
-            onClick={() => setShowAddModal(true)}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Property
-          </Button>
-        )}
+  console.log("Filtered properties:", filteredProperties);
+
+  const renderEmptyState = () => {
+    if (isLoading) {
+      return (
+        <div className="col-span-full text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100">
+          <Building2 className="mx-auto h-12 w-12 text-gray-400 animate-pulse" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Loading properties...</h3>
+        </div>
+      );
+    }
+
+    return (
+      <div className="col-span-full text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100">
+        <Building2 className="mx-auto h-12 w-12 text-gray-400" />
+        <h3 className="mt-2 text-sm font-medium text-gray-900">No properties found</h3>
+        <p className="mt-1 text-sm text-gray-500">
+          {userRole === 'tenant' ? (
+            <div className="space-y-4 max-w-xl mx-auto">
+              <p className="text-gray-600">
+                Your properties will appear here once you have an active rental agreement. Here's how you can get a property:
+              </p>
+              <div className="text-left space-y-3">
+                <h4 className="font-medium text-gray-900">Ways to get a property:</h4>
+                <ul className="list-disc pl-5 space-y-2 text-gray-600">
+                  <li>Accept a rental contract invitation from a landlord</li>
+                  <li>Sign a rental agreement through the platform</li>
+                  <li>Have your existing rental contract registered by your landlord</li>
+                </ul>
+                <h4 className="font-medium text-gray-900 pt-2">Next steps:</h4>
+                <ul className="list-disc pl-5 space-y-2 text-gray-600">
+                  <li>Wait for your landlord to send you a contract invitation</li>
+                  <li>Once received, review and sign the contract</li>
+                  <li>After signing, the property will automatically appear here</li>
+                  <li>You can then manage your rental, submit maintenance requests, and track payments</li>
+                </ul>
+              </div>
+            </div>
+          ) : "Click the button below to add your first property."}
+        </p>
+        <div className="mt-6">
+          {userRole === 'tenant' ? (
+            <Button 
+              onClick={() => navigate('/documents')}
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-sm"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              View Available Properties
+            </Button>
+          ) : (
+            <Button 
+              onClick={() => setShowAddModal(true)}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Property
+            </Button>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -225,115 +262,73 @@ const Properties = () => {
                 </ToggleGroup>
               </div>
 
-              {viewMode === "grid" ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
-                  {filteredProperties?.map(property => {
-                    const hasContract = propertyContracts?.some(contract => contract.property_id === property.id);
-                    const displayStatus = hasContract ? 'occupied' as PropertyStatus : property.status;
-                    return (
-                      <Card key={property.id} className="group bg-white/80 backdrop-blur-sm border border-white/20 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
-                        <CardHeader className="p-6">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                              <div className="p-2 bg-blue-50 rounded-lg group-hover:scale-110 transition-transform duration-300">
-                                <Home className="h-5 w-5 text-blue-600" />
+              {(!properties || properties.length === 0) ? renderEmptyState() : (
+                viewMode === "grid" ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+                    {filteredProperties?.map(property => {
+                      const hasContract = propertyContracts?.some(contract => contract.property_id === property.id);
+                      const displayStatus = hasContract ? 'occupied' as PropertyStatus : property.status;
+                      return (
+                        <Card key={property.id} className="group bg-white/80 backdrop-blur-sm border border-white/20 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
+                          <CardHeader className="p-6">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                <div className="p-2 bg-blue-50 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                                  <Home className="h-5 w-5 text-blue-600" />
+                                </div>
+                                <div>
+                                  <h3 className="font-medium text-lg text-gray-900">{property.name}</h3>
+                                </div>
                               </div>
-                              <div>
-                                <h3 className="font-medium text-lg text-gray-900">{property.name}</h3>
-                              </div>
-                            </div>
-                            <Badge className={`${getStatusColor(displayStatus)} transition-all duration-300`}>
-                              {displayStatus || 'N/A'}
-                            </Badge>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="p-6 pt-0">
-                          <div className="grid gap-4 mb-6">
-                            <div className="flex items-center gap-3 group-hover:transform group-hover:translate-y-[-2px] transition-all duration-300">
-                              <MapPin className="h-5 w-5 text-gray-400" />
-                              <div>
-                                <p className="text-sm font-medium text-gray-900">Address</p>
-                                <p className="text-sm text-gray-500">{property.address}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3 group-hover:transform group-hover:translate-y-[-2px] transition-all duration-300">
-                              <DollarSign className="h-5 w-5 text-gray-400" />
-                              <div>
-                                <p className="text-sm font-medium text-gray-900">Monthly Rent</p>
-                                <p className="text-sm text-gray-500">
-                                  ${property.monthly_rent?.toLocaleString() || 0}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          <Separator className="my-4" />
-                          <div className="flex items-center justify-end gap-2 pt-2">
-                            {userRole === 'landlord' && <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50">
-                                    <Trash2 className="h-4 w-4" />
-                                    Delete
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      This action cannot be undone. This will permanently delete the property
-                                      and all associated data.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <Button variant="destructive" onClick={() => deletePropertyMutation.mutate(property.id)}>
-                                      Delete
-                                    </Button>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>}
-                            <Button 
-                              variant="outline" 
-                              onClick={() => handlePropertyDetails(property.id)} 
-                              className="hover:bg-blue-50 transition-all duration-300"
-                            >
-                              View Details
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                  {filteredProperties?.length === 0 && renderEmptyState()}
-                </div>
-              ) : (
-                <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-white/20 overflow-hidden animate-fade-in">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead>Property Name</TableHead>
-                        <TableHead>Address</TableHead>
-                        <TableHead>Monthly Rent</TableHead>
-                        <TableHead>Tenants</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredProperties?.map(property => {
-                        const hasContract = propertyContracts?.some(contract => contract.property_id === property.id);
-                        const displayStatus = hasContract ? 'occupied' as PropertyStatus : property.status;
-                        return (
-                          <TableRow key={property.id} className="group hover:bg-blue-50/50">
-                            <TableCell className="font-medium">{property.name}</TableCell>
-                            <TableCell>{property.address}</TableCell>
-                            <TableCell>${property.monthly_rent?.toLocaleString() || 0}</TableCell>
-                            <TableCell>{property.tenant_count || 0} Active</TableCell>
-                            <TableCell>
-                              <Badge className={`${getStatusColor(displayStatus)}`}>
+                              <Badge className={`${getStatusColor(displayStatus)} transition-all duration-300`}>
                                 {displayStatus || 'N/A'}
                               </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-6 pt-0">
+                            <div className="grid gap-4 mb-6">
+                              <div className="flex items-center gap-3 group-hover:transform group-hover:translate-y-[-2px] transition-all duration-300">
+                                <MapPin className="h-5 w-5 text-gray-400" />
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">Address</p>
+                                  <p className="text-sm text-gray-500">{property.address}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3 group-hover:transform group-hover:translate-y-[-2px] transition-all duration-300">
+                                <DollarSign className="h-5 w-5 text-gray-400" />
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">Monthly Rent</p>
+                                  <p className="text-sm text-gray-500">
+                                    ${property.monthly_rent?.toLocaleString() || 0}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                            <Separator className="my-4" />
+                            <div className="flex items-center justify-end gap-2 pt-2">
+                              {userRole === 'landlord' && <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50">
+                                      <Trash2 className="h-4 w-4" />
+                                      Delete
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        This action cannot be undone. This will permanently delete the property
+                                        and all associated data.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <Button variant="destructive" onClick={() => deletePropertyMutation.mutate(property.id)}>
+                                        Delete
+                                      </Button>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>}
                               <Button 
                                 variant="outline" 
                                 onClick={() => handlePropertyDetails(property.id)} 
@@ -341,18 +336,61 @@ const Properties = () => {
                               >
                                 View Details
                               </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                      {filteredProperties?.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8">
-                            <div className="flex flex-col items-center justify-center">
-                              <Building2 className="h-12 w-12 text-gray-400 mb-2" />
-                              <h3 className="text-sm font-medium text-gray-900">No properties found</h3>
-                              <p className="text-sm text-gray-500 mt-1">
-                                {userRole === 'landlord' ? "Get started by creating a new property." : <div className="space-y-4 max-w-xl mx-auto">
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                    {filteredProperties?.length === 0 && renderEmptyState()}
+                  </div>
+                ) : (
+                  <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-white/20 overflow-hidden animate-fade-in">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead>Property Name</TableHead>
+                          <TableHead>Address</TableHead>
+                          <TableHead>Monthly Rent</TableHead>
+                          <TableHead>Tenants</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredProperties?.map(property => {
+                          const hasContract = propertyContracts?.some(contract => contract.property_id === property.id);
+                          const displayStatus = hasContract ? 'occupied' as PropertyStatus : property.status;
+                          return (
+                            <TableRow key={property.id} className="group hover:bg-blue-50/50">
+                              <TableCell className="font-medium">{property.name}</TableCell>
+                              <TableCell>{property.address}</TableCell>
+                              <TableCell>${property.monthly_rent?.toLocaleString() || 0}</TableCell>
+                              <TableCell>{property.tenant_count || 0} Active</TableCell>
+                              <TableCell>
+                                <Badge className={`${getStatusColor(displayStatus)}`}>
+                                  {displayStatus || 'N/A'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button 
+                                  variant="outline" 
+                                  onClick={() => handlePropertyDetails(property.id)} 
+                                  className="hover:bg-blue-50 transition-all duration-300"
+                                >
+                                  View Details
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                        {filteredProperties?.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8">
+                              <div className="flex flex-col items-center justify-center">
+                                <Building2 className="h-12 w-12 text-gray-400 mb-2" />
+                                <h3 className="text-sm font-medium text-gray-900">No properties found</h3>
+                                <p className="text-sm text-gray-500 mt-1">
+                                  {userRole === 'landlord' ? "Get started by creating a new property." : <div className="space-y-4 max-w-xl mx-auto">
         <p className="text-gray-600">
           Your properties will appear here once you have an active rental agreement. Here's how you can get a property:
         </p>
@@ -372,18 +410,19 @@ const Properties = () => {
           </ul>
         </div>
       </div>}
-                              </p>
-                              {userRole === 'landlord' && <Button onClick={() => setShowAddModal(true)} className="mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white">
-                                  <Plus className="h-4 w-4 mr-2" />
-                                  Add Property
-                                </Button>}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                                </p>
+                                {userRole === 'landlord' && <Button onClick={() => setShowAddModal(true)} className="mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white">
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Add Property
+                                  </Button>}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )
               )}
             </div>
           </div>
