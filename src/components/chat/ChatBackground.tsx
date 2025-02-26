@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
@@ -22,9 +21,9 @@ export function ChatBackground() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     containerRef.current.appendChild(renderer.domElement);
 
-    // Controls
+    // Controls - Adjusted for better viewing
     const controls = new OrbitControls(camera, renderer.domElement);
-    camera.position.set(0, 0, 8);
+    camera.position.set(0, 0, 12); // Moved camera further back
     controls.update();
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
@@ -32,6 +31,10 @@ export function ChatBackground() {
     controls.enablePan = false;
     controls.autoRotate = true;
     controls.autoRotateSpeed = 0.5;
+    
+    // Limit rotation to keep text readable
+    controls.minPolarAngle = Math.PI / 2.5; // Limit vertical rotation
+    controls.maxPolarAngle = Math.PI / 1.5;
 
     // Enhanced lighting setup
     const ambientLight = new THREE.AmbientLight(0x404040, 3);
@@ -135,11 +138,15 @@ export function ChatBackground() {
         
         textMesh.position.set(-textWidth/2 + 0.2, -textHeight/2 + 0.1, 0.06);
         
+        // Adjusted message positioning
         messageGroup.position.set(
-          (isTenant ? -2 : 2),
-          2 - index * 0.8,
+          (isTenant ? -4 : 4), // Moved messages further apart horizontally
+          4 - index * 1.2, // Increased vertical spacing and moved up
           -2 - index * 0.1
         );
+        
+        // Lock rotation for better readability
+        messageGroup.rotation.set(0, 0, 0);
         
         messageGroup.scale.set(0, 0, 0);
         messageGroup.visible = false;
@@ -158,11 +165,11 @@ export function ChatBackground() {
         const showTyping = () => {
           if (typingIndicator) {
             typingIndicator.visible = true;
-            typingIndicator.position.x = message.sender === "tenant" ? -2 : 2;
-            typingIndicator.position.y = 2 - index * 0.8;
+            typingIndicator.position.x = message.sender === "tenant" ? -4 : 4; // Adjusted typing indicator position
+            typingIndicator.position.y = 4 - index * 1.2; // Adjusted vertical position
             typingIndicator.children.forEach(dot => {
               (dot as THREE.Mesh).material = new THREE.MeshStandardMaterial({
-                color: message.sender === "tenant" ? 0x3b82f6 : 0x10b981
+                color: 0xeeeeee // Light gray dots
               });
             });
           }
@@ -174,16 +181,13 @@ export function ChatBackground() {
           }
         };
 
-        // Show typing indicator before message
         setTimeout(showTyping, message.delay);
-
-        // Show message and hide typing indicator
         setTimeout(() => {
           hideTyping();
           const messageGroup = messageElements[index];
           messageGroup.visible = true;
           animateMessage(messageGroup);
-        }, message.delay + 1500); // Show message 1.5s after typing starts
+        }, message.delay + 1500);
       });
 
       function animateMessage(group: THREE.Group) {
@@ -209,7 +213,7 @@ export function ChatBackground() {
     function animate() {
       requestAnimationFrame(animate);
       
-      // Animate typing indicator if visible
+      // Animate typing indicator
       if (typingIndicator && typingIndicator.visible) {
         typingIndicator.children.forEach((dot, i) => {
           const time = Date.now() * 0.003;
@@ -217,13 +221,12 @@ export function ChatBackground() {
         });
       }
 
-      // Gentle floating animation for messages
-      messageGroups.forEach((group, index) => {
+      // Gentle floating animation for messages, without rotation
+      messageGroups.forEach((group) => {
         if (group.visible) {
           const time = Date.now() * 0.001;
-          group.position.y += Math.sin(time + index) * 0.0001;
-          group.rotation.x = Math.sin(time + index) * 0.01;
-          group.rotation.y = Math.cos(time + index) * 0.01;
+          group.position.y += Math.sin(time) * 0.0001;
+          // Removed rotation animations
         }
       });
 
