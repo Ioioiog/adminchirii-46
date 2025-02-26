@@ -24,6 +24,7 @@ interface ServiceProvider {
   profiles: Array<{
     first_name: string | null;
     last_name: string | null;
+    role?: string | null;
   }>;
   services?: ServiceProviderService[];
   isPreferred?: boolean;
@@ -139,16 +140,18 @@ export function ServiceProviderList() {
           console.log("Provider data:", {
             id: provider.id,
             businessName: provider.business_name,
-            isFirstLogin: provider.is_first_login,
             role: provider.profiles?.role,
           });
+
+          // Check if the provider's profile has the role 'service_provider'
+          // If they do, they registered themselves. If not, they were created by a landlord
+          const isRegisteredProvider = provider.profiles?.role === 'service_provider';
 
           return {
             ...provider,
             profiles: Array.isArray(provider.profiles) ? provider.profiles : [provider.profiles],
             isPreferred: preferredIds.has(provider.id),
-            // A provider is custom (created by landlord) if they have is_first_login=true
-            isCustomProvider: provider.is_first_login === true
+            isCustomProvider: !isRegisteredProvider
           };
         });
 
@@ -158,10 +161,10 @@ export function ServiceProviderList() {
         );
       }
 
-      console.log("Filtered providers with custom status:", filteredProviders.map(p => ({
+      console.log("Filtered providers with status:", filteredProviders.map(p => ({
         name: p.business_name,
-        isCustom: p.isCustomProvider,
-        isFirstLogin: p.is_first_login
+        isCustom: !p.profiles?.role === 'service_provider',
+        role: p.profiles?.role
       })));
 
       return filteredProviders.sort((a, b) => {
