@@ -11,9 +11,9 @@ export function ChatBackground() {
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Scene setup with white background
+    // Scene setup with gradient background
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xffffff);
+    scene.background = new THREE.Color(0xf1f0fb); // Light purple background matching the chat
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ 
       antialias: true,
@@ -24,23 +24,26 @@ export function ChatBackground() {
 
     // Controls
     const controls = new OrbitControls(camera, renderer.domElement);
-    camera.position.set(0, 2, 5);
+    camera.position.set(0, 0, 8); // Moved camera back for better view
     controls.update();
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.enableZoom = false;
+    controls.enablePan = false; // Disable panning for better focus
+    controls.autoRotate = true; // Add subtle auto-rotation
+    controls.autoRotateSpeed = 0.5; // Slow rotation speed
 
-    // Lighting setup
-    const ambientLight = new THREE.AmbientLight(0x404040, 2);
+    // Enhanced lighting setup
+    const ambientLight = new THREE.AmbientLight(0x404040, 3);
     scene.add(ambientLight);
 
-    const pointLight = new THREE.PointLight(0x3b82f6, 1);
-    pointLight.position.set(5, 5, 5);
-    scene.add(pointLight);
+    const pointLight1 = new THREE.PointLight(0x3b82f6, 1);
+    pointLight1.position.set(5, 5, 5);
+    scene.add(pointLight1);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(5, 5, 5);
-    scene.add(directionalLight);
+    const pointLight2 = new THREE.PointLight(0x10b981, 1);
+    pointLight2.position.set(-5, -5, 5);
+    scene.add(pointLight2);
 
     // Chat conversation messages
     const messages = [
@@ -62,56 +65,86 @@ export function ChatBackground() {
         const isTenant = text.startsWith("Tenant:");
         const textGeometry = new TextGeometry(text, {
           font: font,
-          size: 0.2, // Smaller size for conversation
-          depth: 0.05,
+          size: 0.15, // Even smaller size for better readability
+          depth: 0.02, // Thinner depth for more subtle 3D effect
           curveSegments: 12,
-          bevelEnabled: false
+          bevelEnabled: true, // Enable bevel for softer edges
+          bevelThickness: 0.005,
+          bevelSize: 0.005,
+          bevelSegments: 3
         });
-        const textMaterial = new THREE.MeshStandardMaterial({ 
-          color: isTenant ? 0x3b82f6 : 0x10b981, // Blue for tenant, green for landlord
-          metalness: 0.1,
-          roughness: 0.2,
-        });
-        const textMesh = new THREE.Mesh(textGeometry, textMaterial);
         
-        // Center and position the text
+        // Create a message bubble geometry
         textGeometry.computeBoundingBox();
         const textWidth = textGeometry.boundingBox!.max.x - textGeometry.boundingBox!.min.x;
-        textMesh.position.set(
-          -textWidth/2 + (isTenant ? -1 : 1), // Offset left for tenant, right for landlord
-          3 - index * 0.6, // Stack messages vertically
-          -2 - index * 0.2 // Slight depth variation
+        const textHeight = textGeometry.boundingBox!.max.y - textGeometry.boundingBox!.min.y;
+        
+        const bubbleGeometry = new THREE.RoundedBoxGeometry(
+          textWidth + 0.4, // Add padding
+          textHeight + 0.2,
+          0.1,
+          8,
+          0.1
+        );
+        
+        // Create materials
+        const textMaterial = new THREE.MeshStandardMaterial({ 
+          color: isTenant ? 0xffffff : 0xffffff, // White text for both
+          metalness: 0.1,
+          roughness: 0.6,
+        });
+        
+        const bubbleMaterial = new THREE.MeshStandardMaterial({
+          color: isTenant ? 0x3b82f6 : 0x10b981, // Blue for tenant, green for landlord
+          metalness: 0.1,
+          roughness: 0.3,
+        });
+
+        // Create meshes
+        const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+        const bubbleMesh = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
+        
+        // Create a group to hold both the bubble and text
+        const messageGroup = new THREE.Group();
+        messageGroup.add(bubbleMesh);
+        messageGroup.add(textMesh);
+        
+        // Position the text inside the bubble
+        textMesh.position.set(-textWidth/2 + 0.2, -textHeight/2 + 0.1, 0.06);
+        
+        // Position the entire message group
+        messageGroup.position.set(
+          (isTenant ? -2 : 2), // Left or right side
+          2 - index * 0.8, // Vertical stacking
+          -2 - index * 0.1 // Slight depth variation
         );
         
         // Start with zero scale
-        textMesh.scale.set(0, 0, 0);
-        scene.add(textMesh);
-        textMeshes.push(textMesh);
+        messageGroup.scale.set(0, 0, 0);
+        scene.add(messageGroup);
+        textMeshes.push(messageGroup);
 
         // Animate in after a delay
         setTimeout(() => {
           animateMessage(index);
-        }, index * 1200); // Slightly longer delay between messages
+        }, index * 800); // Faster message appearance
       }
 
       messages.forEach((msg, i) => addMessage(msg, i));
 
       function animateMessage(index: number) {
         if (index < textMeshes.length) {
-          const mesh = textMeshes[index];
-          // Animate scale
-          const duration = 1000;
+          const group = textMeshes[index];
+          const duration = 800;
           const start = Date.now();
           
           function updateScale() {
             const now = Date.now();
             const progress = Math.min(1, (now - start) / duration);
             
-            // Elastic easing
-            const scale = Math.pow(progress, 0.3) * 
-              Math.sin(progress * Math.PI * 2.5) * 0.15 + progress;
-            
-            mesh.scale.set(scale, scale, scale);
+            // Bounce easing
+            const scale = 1 + Math.sin(progress * Math.PI) * 0.1;
+            group.scale.set(scale, scale, scale);
             
             if (progress < 1) {
               requestAnimationFrame(updateScale);
@@ -127,12 +160,12 @@ export function ChatBackground() {
     function animate() {
       requestAnimationFrame(animate);
       
-      // Gentle floating animation for text meshes
-      textMeshes.forEach((mesh, index) => {
+      // Gentle floating animation for messages
+      textMeshes.forEach((group, index) => {
         const time = Date.now() * 0.001;
-        mesh.position.y += Math.sin(time + index) * 0.0002;
-        mesh.rotation.x = Math.sin(time + index) * 0.02;
-        mesh.rotation.y = Math.cos(time + index) * 0.02;
+        group.position.y += Math.sin(time + index) * 0.0001; // Subtle vertical movement
+        group.rotation.x = Math.sin(time + index) * 0.01; // Very subtle rotation
+        group.rotation.y = Math.cos(time + index) * 0.01;
       });
 
       controls.update();
@@ -156,10 +189,14 @@ export function ChatBackground() {
         containerRef.current.removeChild(renderer.domElement);
       }
       // Cleanup meshes and geometries
-      textMeshes.forEach(mesh => {
-        mesh.geometry.dispose();
-        (mesh.material as THREE.Material).dispose();
-        scene.remove(mesh);
+      textMeshes.forEach(group => {
+        group.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.geometry.dispose();
+            (child.material as THREE.Material).dispose();
+          }
+        });
+        scene.remove(group);
       });
     };
   }, []);
@@ -167,7 +204,7 @@ export function ChatBackground() {
   return (
     <div
       ref={containerRef}
-      className="absolute inset-0 pointer-events-none bg-white"
+      className="absolute inset-0 pointer-events-none"
       style={{ zIndex: 0 }}
     />
   );
