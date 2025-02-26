@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface ContractMetadata {
-  tenantEmail: string;
+  tenantEmail?: string;
   startDate?: string;
   [key: string]: any;  // Allow other metadata fields
 }
@@ -72,20 +72,29 @@ const TenantRegistration = () => {
           return;
         }
 
-        if (!data.metadata?.tenantEmail) {
+        // Cast the metadata to our expected type and verify tenant email exists
+        const metadata = data.metadata as ContractMetadata;
+        if (!metadata?.tenantEmail) {
           showError("Invalid Contract", "Contract is missing tenant information.");
           return;
         }
 
-        console.log("Checking for existing user with email:", data.metadata.tenantEmail);
+        console.log("Checking for existing user with email:", metadata.tenantEmail);
         const { data: existingUser } = await supabase
           .from('profiles')
           .select('id')
-          .eq('email', data.metadata.tenantEmail)
+          .eq('email', metadata.tenantEmail)
           .maybeSingle();
 
         setIsExistingUser(!!existingUser);
-        setContract(data as Contract);
+        // Cast the entire data to Contract type after we've verified its shape
+        setContract({
+          id: data.id,
+          properties: data.properties,
+          property_id: data.property_id,
+          metadata: metadata,
+          status: data.status as Contract['status']
+        });
         setIsLoading(false);
         console.log("Contract verification complete:", { 
           isExisting: !!existingUser, 
