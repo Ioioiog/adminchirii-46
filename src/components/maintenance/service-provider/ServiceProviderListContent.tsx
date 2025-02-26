@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card } from "@/components/ui/card";
 import { Building2, Star, Heart, Phone, Mail, Globe, MapPin, Trash2, Building } from "lucide-react";
@@ -114,7 +113,6 @@ export function ServiceProviderListContent({
         description: "Service provider has been deleted.",
       });
 
-      // Refresh the page to update the list
       window.location.reload();
     } catch (error: any) {
       console.error('Error deleting service provider:', error);
@@ -127,9 +125,16 @@ export function ServiceProviderListContent({
   };
 
   const getProviderName = (provider: ServiceProvider) => {
-    return provider.business_name || 
-      `${provider.profiles[0]?.first_name || ''} ${provider.profiles[0]?.last_name || ''}`.trim() ||
-      'Unknown Provider';
+    if (provider.business_name) {
+      return provider.business_name;
+    }
+    
+    const profile = provider.profiles[0];
+    if (profile?.first_name || profile?.last_name) {
+      return `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+    }
+    
+    return 'Unknown Provider';
   };
 
   return (
@@ -146,7 +151,7 @@ export function ServiceProviderListContent({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {providers.map((provider) => (
+          {providers?.map((provider) => (
             <TableRow key={provider.id} className="hover:bg-gray-50">
               <TableCell className="min-w-[200px]">
                 <div className="space-y-2">
