@@ -22,6 +22,19 @@ interface Landlord {
   phone: string | null;
 }
 
+interface Tenant {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+}
+
+interface Tenancy {
+  id: string;
+  status: string;
+  tenant: Tenant;
+}
+
 interface Property {
   id: string;
   name: string;
@@ -32,7 +45,44 @@ interface Property {
   available_from: string | null;
   status: PropertyStatus;
   landlord: Landlord;
-  tenancies: any[];
+  tenancies: Tenancy[];
+  amenities: string[];
+  photos: string[];
+  bathrooms: number;
+  bedrooms: number;
+  parking_spots: number;
+  total_area: number;
+  construction_year: number | null;
+  monthly_electricity_cost: number;
+  monthly_water_cost: number;
+  monthly_gas_cost: number;
+  monthly_other_utilities_cost: number;
+  other_utilities_description: string | null;
+}
+
+interface SupabasePropertyResponse {
+  id: string;
+  name: string;
+  address: string;
+  type: string;
+  monthly_rent: number;
+  description: string | null;
+  available_from: string | null;
+  status: PropertyStatus;
+  landlord: Landlord[];
+  tenancies: Tenancy[];
+  amenities: string[];
+  photos: string[];
+  bathrooms: number;
+  bedrooms: number;
+  parking_spots: number;
+  total_area: number;
+  construction_year: number | null;
+  monthly_electricity_cost: number;
+  monthly_water_cost: number;
+  monthly_gas_cost: number;
+  monthly_other_utilities_cost: number;
+  other_utilities_description: string | null;
 }
 
 const PropertyDetails = () => {
@@ -41,7 +91,7 @@ const PropertyDetails = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
-  const [editedData, setEditedData] = useState<any>(null);
+  const [editedData, setEditedData] = useState<Partial<Property> | null>(null);
   const [activeTab, setActiveTab] = useState("property");
   const [userId, setUserId] = useState<string | null>(null);
   const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>({
@@ -98,9 +148,11 @@ const PropertyDetails = () => {
     fetchInvoiceSettings();
   }, []);
 
-  const { data: property, isLoading } = useQuery<Property>({
+  const { data: property, isLoading } = useQuery<Property, Error>({
     queryKey: ["property", id],
     queryFn: async () => {
+      if (!id) throw new Error("No property ID provided");
+
       const { data, error } = await supabase
         .from("properties")
         .select(`
@@ -128,10 +180,15 @@ const PropertyDetails = () => {
 
       if (error) throw error;
 
-      return {
-        ...data,
-        landlord: data.landlord[0]
+      const response = data as SupabasePropertyResponse;
+      
+      const transformedData: Property = {
+        ...response,
+        landlord: response.landlord[0],
+        status: response.status || 'vacant' as PropertyStatus,
       };
+
+      return transformedData;
     },
   });
 
@@ -276,10 +333,10 @@ const PropertyDetails = () => {
     { id: "landlord", label: "Landlord", icon: UserCircle },
   ];
 
-  const activeTenants = property.tenancies?.filter((t: any) => t.status === 'active') || [];
+  const activeTenants = property?.tenancies?.filter((t: Tenancy) => t.status === 'active') || [];
 
   if (!userId) {
-    return null; // or some loading/error state
+    return null;
   }
 
   return (
