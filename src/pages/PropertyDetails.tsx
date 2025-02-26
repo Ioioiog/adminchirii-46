@@ -14,6 +14,27 @@ import { InvoiceSettingsTab } from "@/components/properties/tabs/InvoiceSettings
 import { NavigationTabs } from "@/components/layout/NavigationTabs";
 import { Card, CardContent } from "@/components/ui/card";
 
+interface Landlord {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone: string | null;
+}
+
+interface Property {
+  id: string;
+  name: string;
+  address: string;
+  type: string;
+  monthly_rent: number;
+  description: string | null;
+  available_from: string | null;
+  status: PropertyStatus;
+  landlord: Landlord;
+  tenancies: any[];
+}
+
 const PropertyDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -77,7 +98,7 @@ const PropertyDetails = () => {
     fetchInvoiceSettings();
   }, []);
 
-  const { data: property, isLoading } = useQuery({
+  const { data: property, isLoading } = useQuery<Property>({
     queryKey: ["property", id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -106,7 +127,11 @@ const PropertyDetails = () => {
         .single();
 
       if (error) throw error;
-      return data;
+
+      return {
+        ...data,
+        landlord: data.landlord[0]
+      };
     },
   });
 
@@ -306,7 +331,7 @@ const PropertyDetails = () => {
                   userId={userId}
                 />
               )}
-              {activeTab === "landlord" && property && (
+              {activeTab === "landlord" && property?.landlord && (
                 <div className="space-y-6">
                   <div className="max-w-3xl mx-auto">
                     <Card className="bg-gradient-to-br from-white to-gray-50 border-none shadow-md">
@@ -318,18 +343,18 @@ const PropertyDetails = () => {
                           <div className="flex-1 space-y-4">
                             <div>
                               <h3 className="text-2xl font-semibold text-gray-900">
-                                {property.landlord?.first_name} {property.landlord?.last_name}
+                                {property.landlord.first_name} {property.landlord.last_name}
                               </h3>
                               <p className="text-gray-600">Property Owner</p>
                             </div>
                             <div className="grid gap-4 sm:grid-cols-2">
                               <div>
                                 <p className="text-sm font-medium text-gray-500">Email</p>
-                                <p className="mt-1 text-gray-900">{property.landlord?.email}</p>
+                                <p className="mt-1 text-gray-900">{property.landlord.email}</p>
                               </div>
                               <div>
                                 <p className="text-sm font-medium text-gray-500">Phone</p>
-                                <p className="mt-1 text-gray-900">{property.landlord?.phone || 'Not provided'}</p>
+                                <p className="mt-1 text-gray-900">{property.landlord.phone || 'Not provided'}</p>
                               </div>
                             </div>
                             <div className="pt-4 border-t border-gray-200">
