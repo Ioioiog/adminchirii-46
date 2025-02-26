@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ServiceProvider {
   id: string;
@@ -21,6 +23,14 @@ interface ServiceProvider {
   }>;
 }
 
+interface NewProvider {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  category: string;
+}
+
 interface CreateProviderDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -28,13 +38,6 @@ interface CreateProviderDialogProps {
   isCreating: boolean;
   onCreateProvider: (provider: NewProvider) => Promise<void>;
   provider?: ServiceProvider | null;
-}
-
-interface NewProvider {
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
 }
 
 export function CreateProviderDialog({ 
@@ -50,6 +53,7 @@ export function CreateProviderDialog({
     last_name: "",
     email: "",
     phone: "",
+    category: "general_maintenance"
   });
   const { toast } = useToast();
 
@@ -60,6 +64,7 @@ export function CreateProviderDialog({
         last_name: provider.profiles[0]?.last_name || "",
         email: provider.contact_email || "",
         phone: provider.contact_phone || "",
+        category: "general_maintenance" // Default value for existing providers
       });
     } else if (!isOpen) {
       setNewProvider({
@@ -67,6 +72,7 @@ export function CreateProviderDialog({
         last_name: "",
         email: "",
         phone: "",
+        category: "general_maintenance"
       });
     }
   }, [provider, isOpen]);
@@ -77,10 +83,11 @@ export function CreateProviderDialog({
       if (!newProvider.first_name.trim() || 
           !newProvider.last_name.trim() || 
           !newProvider.email.trim() || 
-          !newProvider.phone.trim()) {
+          !newProvider.phone.trim() ||
+          !newProvider.category) {
         toast({
           title: "Validation Error",
-          description: "Please fill in all required fields (First Name, Last Name, Email, and Phone).",
+          description: "Please fill in all required fields (First Name, Last Name, Email, Phone, and Category).",
           variant: "destructive",
         });
         return;
@@ -110,7 +117,7 @@ export function CreateProviderDialog({
 
       await onCreateProvider(newProvider);
       onSuccess();
-      setNewProvider({ first_name: "", last_name: "", email: "", phone: "" });
+      setNewProvider({ first_name: "", last_name: "", email: "", phone: "", category: "general_maintenance" });
     } catch (error) {
       console.error("Error in handleSubmit:", error);
     }
@@ -166,6 +173,27 @@ export function CreateProviderDialog({
               className="w-full"
               required
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="category">Category *</Label>
+            <Select
+              value={newProvider.category}
+              onValueChange={(value) => setNewProvider(prev => ({ ...prev, category: value }))}>
+              <SelectTrigger id="category" className="w-full">
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="plumbing">Plumbing</SelectItem>
+                <SelectItem value="electrical">Electrical</SelectItem>
+                <SelectItem value="hvac">HVAC</SelectItem>
+                <SelectItem value="general_maintenance">General Maintenance</SelectItem>
+                <SelectItem value="cleaning">Cleaning</SelectItem>
+                <SelectItem value="painting">Painting</SelectItem>
+                <SelectItem value="carpentry">Carpentry</SelectItem>
+                <SelectItem value="landscaping">Landscaping</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <Button 
             className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
