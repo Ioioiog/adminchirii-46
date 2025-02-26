@@ -16,7 +16,14 @@
     "paymentStatus": "Estado de Pagos",
     "paymentStatusDesc": "Haz clic para ver los pagos mensuales",
     "rentedPropertiesDesc": "Tus propiedades alquiladas",
-    "openMaintenanceDesc": "Solicitudes de mantenimiento abiertas"
+    "openMaintenanceDesc": "Solicitudes de mantenimiento abiertas",
+    "activeJobs": "Trabajos Activos",
+    "activeJobsDesc": "Tareas de mantenimiento actualmente en curso",
+    "completedJobs": "Trabajos Completados",
+    "completedJobsDesc": "Tareas de mantenimiento finalizadas este mes",
+    "monthlyEarnings": "Ganancias Mensuales",
+    "monthlyEarningsDesc": "Ganancias totales de trabajos completados este mes",
+    "noPayments": "Sin pagos"
   },
   "revenue": {
     "title": "Resumen de Ingresos",

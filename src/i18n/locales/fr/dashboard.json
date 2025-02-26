@@ -18,11 +18,11 @@
     "rentedPropertiesDesc": "Vos propriétés louées",
     "openMaintenanceDesc": "Demandes de maintenance ouvertes",
     "activeJobs": "Travaux Actifs",
-    "activeJobsDesc": "Travaux de maintenance en cours",
+    "activeJobsDesc": "Tâches de maintenance actuellement en cours",
     "completedJobs": "Travaux Terminés",
-    "completedJobsDesc": "Travaux terminés ce mois-ci",
+    "completedJobsDesc": "Tâches de maintenance terminées ce mois-ci",
     "monthlyEarnings": "Gains Mensuels",
-    "monthlyEarningsDesc": "Gains des travaux terminés ce mois-ci",
+    "monthlyEarningsDesc": "Gains totaux des travaux terminés ce mois-ci",
     "noPayments": "Aucun paiement"
   },
   "revenue": {

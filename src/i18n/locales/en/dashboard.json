@@ -1,4 +1,3 @@
-
 {
   "title": "Dashboard",
   "welcome": "Welcome",
@@ -16,7 +15,14 @@
     "paymentStatus": "Payment Status",
     "paymentStatusDesc": "Click to view monthly payments",
     "rentedPropertiesDesc": "Your rented properties",
-    "openMaintenanceDesc": "Open maintenance requests"
+    "openMaintenanceDesc": "Open maintenance requests",
+    "activeJobs": "Active Jobs",
+    "activeJobsDesc": "Currently ongoing maintenance tasks",
+    "completedJobs": "Completed Jobs",
+    "completedJobsDesc": "Successfully finished maintenance tasks this month",
+    "monthlyEarnings": "Monthly Earnings",
+    "monthlyEarningsDesc": "Total earnings from completed jobs this month",
+    "noPayments": "No payments"
   },
   "revenue": {
     "title": "Track your money",
