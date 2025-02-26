@@ -11,6 +11,7 @@ import { CreditCard, Receipt, Building, Download, Eye, AlertCircle, Wallet } fro
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { Json } from "@/integrations/supabase/types/json";
 import {
   Tooltip,
   TooltipContent,
@@ -36,20 +37,29 @@ interface ServiceProviderFinancials {
   avgJobValue: number;
 }
 
+interface ContractMetadata {
+  tenantName?: string;
+  tenantReg?: string;
+  tenantFiscal?: string;
+  tenantAddress?: string;
+  tenantBank?: string;
+  tenantBankName?: string;
+  tenantEmail?: string;
+  tenantPhone?: string;
+}
+
 interface ContractData {
   property?: {
     name: string;
   };
-  metadata?: {
-    tenantName?: string;
-    tenantReg?: string;
-    tenantFiscal?: string;
-    tenantAddress?: string;
-    tenantBank?: string;
-    tenantBankName?: string;
-    tenantEmail?: string;
-    tenantPhone?: string;
+  metadata?: ContractMetadata;
+}
+
+interface DatabaseContract {
+  property: {
+    name: string;
   };
+  metadata: Json;
 }
 
 export function FinancialSettings() {
@@ -91,19 +101,11 @@ export function FinancialSettings() {
         }
 
         if (data) {
+          const dbContract = data as DatabaseContract;
           // Convert the data to match our ContractData interface
           const formattedData: ContractData = {
-            property: data.property,
-            metadata: {
-              tenantName: data.metadata?.tenantName as string,
-              tenantReg: data.metadata?.tenantReg as string,
-              tenantFiscal: data.metadata?.tenantFiscal as string,
-              tenantAddress: data.metadata?.tenantAddress as string,
-              tenantBank: data.metadata?.tenantBank as string,
-              tenantBankName: data.metadata?.tenantBankName as string,
-              tenantEmail: data.metadata?.tenantEmail as string,
-              tenantPhone: data.metadata?.tenantPhone as string,
-            }
+            property: dbContract.property,
+            metadata: typeof dbContract.metadata === 'object' ? dbContract.metadata as ContractMetadata : {}
           };
           setContractData(formattedData);
         }
