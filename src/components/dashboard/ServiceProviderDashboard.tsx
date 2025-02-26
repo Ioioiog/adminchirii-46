@@ -43,9 +43,9 @@ export function ServiceProviderDashboard({ userId, userName }: ServiceProviderDa
             </div>
             <div className="grid gap-4">
               {/* Active Jobs Content */}
-              <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-gray-100">
+              <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-gray-100 group">
                 <div className="text-center space-y-4">
-                  <Activity className="h-12 w-12 mx-auto text-gray-400 transition-all duration-300 hover:scale-110 hover:text-primary-500 group-hover:rotate-12" />
+                  <Activity className="h-12 w-12 mx-auto text-gray-400 transition-all duration-300 group-hover:text-primary-500" />
                   <div>
                     <h3 className="text-lg font-medium text-gray-900">No active jobs yet</h3>
                     <p className="text-muted-foreground mt-1 max-w-sm mx-auto">
@@ -80,7 +80,7 @@ export function ServiceProviderDashboard({ userId, userName }: ServiceProviderDa
               {/* Recent Activity Content */}
               <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-gray-100 group">
                 <div className="text-center space-y-4">
-                  <Info className="h-12 w-12 mx-auto text-gray-400 transition-all duration-300 hover:scale-110 hover:text-primary-500 group-hover:rotate-12" />
+                  <Info className="h-12 w-12 mx-auto text-gray-400 transition-all duration-300 group-hover:text-primary-500" />
                   <div>
                     <h3 className="text-lg font-medium text-gray-900">Getting Started Guide</h3>
                     <p className="text-muted-foreground mt-1 max-w-sm mx-auto">
