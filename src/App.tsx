@@ -6,6 +6,7 @@ import { AppRoutes } from "@/components/routing/AppRoutes";
 import { useAuthState } from "@/hooks/useAuthState";
 import { InstallPWA } from "@/components/pwa/InstallPWA";
 import { FloatingSettingsBox } from "@/components/settings/FloatingSettingsBox";
+import { UserProfileModal } from "@/components/auth/UserProfileModal";
 import "./App.css";
 
 // Create a client
@@ -31,7 +32,12 @@ function App() {
       <BrowserRouter>
         <AppRoutes isAuthenticated={isAuthenticated} />
         <InstallPWA />
-        {isAuthenticated && <FloatingSettingsBox />}
+        {isAuthenticated && (
+          <>
+            <FloatingSettingsBox />
+            <UserProfileModal />
+          </>
+        )}
         <Toaster />
       </BrowserRouter>
     </QueryClientProvider>
