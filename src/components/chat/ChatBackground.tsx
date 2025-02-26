@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
@@ -23,7 +24,7 @@ export function ChatBackground() {
 
     // Controls - Adjusted for better viewing
     const controls = new OrbitControls(camera, renderer.domElement);
-    camera.position.set(0, 0, 12); // Moved camera further back
+    camera.position.set(2, 0, 12); // Moved camera to the right and back
     controls.update();
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
@@ -80,7 +81,8 @@ export function ChatBackground() {
           group.add(dot);
         }
 
-        group.position.set(isTenant ? -2 : 2, 2, -2);
+        // Adjust typing indicator position to the right side
+        group.position.set(isTenant ? 2 : 6, 2, -2);
         group.visible = false;
         scene.add(group);
         return group;
@@ -138,9 +140,9 @@ export function ChatBackground() {
         
         textMesh.position.set(-textWidth/2 + 0.2, -textHeight/2 + 0.1, 0.06);
         
-        // Adjusted message positioning
+        // Adjusted message positioning to the right side
         messageGroup.position.set(
-          (isTenant ? -4 : 4), // Moved messages further apart horizontally
+          (isTenant ? 2 : 6), // Moved messages to the right side
           4 - index * 1.2, // Increased vertical spacing and moved up
           -2 - index * 0.1
         );
@@ -165,7 +167,7 @@ export function ChatBackground() {
         const showTyping = () => {
           if (typingIndicator) {
             typingIndicator.visible = true;
-            typingIndicator.position.x = message.sender === "tenant" ? -4 : 4; // Adjusted typing indicator position
+            typingIndicator.position.x = message.sender === "tenant" ? 2 : 6; // Adjusted typing indicator position
             typingIndicator.position.y = 4 - index * 1.2; // Adjusted vertical position
             typingIndicator.children.forEach(dot => {
               (dot as THREE.Mesh).material = new THREE.MeshStandardMaterial({
