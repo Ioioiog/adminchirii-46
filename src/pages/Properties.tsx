@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, ChevronDown, Building2, MapPin, User, Calendar, DollarSign, Home, LayoutGrid, Table as TableIcon, Trash2 } from "lucide-react";
@@ -20,31 +19,34 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useUserRole } from "@/hooks/use-user-role";
-
 const Properties = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const queryClient = useQueryClient();
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | PropertyStatus>("all");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
-  const { userRole } = useUserRole();
+  const {
+    userRole
+  } = useUserRole();
   const {
     properties,
     isLoading
   } = useProperties({
     userRole: userRole || "tenant"
   });
-
-  const { data: propertyContracts = [] } = useQuery({
+  const {
+    data: propertyContracts = []
+  } = useQuery({
     queryKey: ["property-contracts"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('contracts')
-        .select('property_id, status')
-        .eq('status', 'signed');
-
+      const {
+        data,
+        error
+      } = await supabase.from('contracts').select('property_id, status').eq('status', 'signed');
       if (error) {
         console.error("Error fetching contracts:", error);
         throw error;
@@ -52,7 +54,6 @@ const Properties = () => {
       return data;
     }
   });
-
   const handleAddProperty = async (formData: any) => {
     if (userRole !== 'landlord') {
       toast({
@@ -62,7 +63,6 @@ const Properties = () => {
       });
       return false;
     }
-
     try {
       const {
         data,
@@ -88,18 +88,14 @@ const Properties = () => {
       return false;
     }
   };
-
   const deletePropertyMutation = useMutation({
     mutationFn: async (propertyId: string) => {
       if (userRole !== 'landlord') {
         throw new Error("Only landlords can delete properties");
       }
-      
-      const { error } = await supabase
-        .from('properties')
-        .delete()
-        .eq('id', propertyId);
-      
+      const {
+        error
+      } = await supabase.from('properties').delete().eq('id', propertyId);
       if (error) {
         console.error("Error deleting property:", error);
         throw error;
@@ -112,40 +108,29 @@ const Properties = () => {
       });
       window.location.reload();
     },
-    onError: (error) => {
+    onError: error => {
       toast({
         title: "Error",
         description: "Failed to delete property. It may have active tenants or related records.",
         variant: "destructive"
       });
       console.error("Delete error:", error);
-    },
+    }
   });
-
   const filteredProperties = properties?.filter(property => {
     if (!property) return false;
-    
     const searchString = searchTerm.toLowerCase();
-    const hasContract = propertyContracts.some(
-      contract => contract.property_id === property.id
-    );
-    
+    const hasContract = propertyContracts.some(contract => contract.property_id === property.id);
     const propertyStatus = hasContract ? 'occupied' as PropertyStatus : property.status;
-
-    const matchesSearch = 
-      property.name.toLowerCase().includes(searchString) ||
-      property.address.toLowerCase().includes(searchString);
+    const matchesSearch = property.name.toLowerCase().includes(searchString) || property.address.toLowerCase().includes(searchString);
     const matchesStatus = statusFilter === "all" || propertyStatus === statusFilter;
-
     return matchesSearch && matchesStatus;
   });
-
   const getEmptyStateMessage = () => {
     if (userRole === 'landlord') {
       return "Get started by creating a new property.";
     }
-    return (
-      <div className="space-y-4 max-w-xl mx-auto">
+    return <div className="space-y-4 max-w-xl mx-auto">
         <p className="text-gray-600">
           Your properties will appear here once you have an active rental agreement. Here's how you can get a property:
         </p>
@@ -164,10 +149,8 @@ const Properties = () => {
             <li>You can then manage your rental, submit maintenance requests, and track payments</li>
           </ul>
         </div>
-      </div>
-    );
+      </div>;
   };
-
   if (isLoading) {
     return <div className="flex h-screen overflow-hidden">
         <DashboardSidebar />
@@ -182,7 +165,6 @@ const Properties = () => {
         </main>
       </div>;
   }
-
   const getStatusColor = (status: PropertyStatus) => {
     if (!status) return 'bg-gray-100 text-gray-800';
     switch (status.toLowerCase()) {
@@ -196,16 +178,14 @@ const Properties = () => {
         return 'bg-gray-100 text-gray-800';
     }
   };
-
   const handlePropertyDetails = (propertyId: string) => {
     navigate(`/properties/${propertyId}`);
   };
-
   return <div className="flex h-screen overflow-hidden">
       <DashboardSidebar />
       <main className="flex-1 overflow-hidden">
         <ScrollArea className="h-screen">
-          <div className="p-8 bg-gradient-to-br from-blue-50 to-indigo-50">
+          <div className="p-8 bg-gradient-to-br from-blue-50 to-indigo-50 bg-zinc-50">
             <div className="max-w-7xl mx-auto space-y-8">
               <div className="bg-white/80 backdrop-blur-sm p-8 rounded-xl shadow-soft-xl mb-8 animate-fade-in border border-white/20">
                 <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
@@ -219,31 +199,19 @@ const Properties = () => {
                       </h1>
                     </div>
                     <p className="text-gray-500 max-w-2xl">
-                      {userRole === 'landlord' 
-                        ? "Manage and track your properties effectively"
-                        : "View your rented properties"}
+                      {userRole === 'landlord' ? "Manage and track your properties effectively" : "View your rented properties"}
                     </p>
                   </div>
-                  {userRole === 'landlord' && (
-                    <Button 
-                      onClick={() => setShowAddModal(true)} 
-                      className="w-full sm:w-auto flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white transition-all duration-300 shadow-soft-md hover:shadow-soft-lg"
-                    >
+                  {userRole === 'landlord' && <Button onClick={() => setShowAddModal(true)} className="w-full sm:w-auto flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white transition-all duration-300 shadow-soft-md hover:shadow-soft-lg">
                       <Plus className="h-4 w-4" />
                       <span>Add Property</span>
-                    </Button>
-                  )}
+                    </Button>}
                 </div>
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <PropertyFilters 
-                  searchTerm={searchTerm} 
-                  setSearchTerm={setSearchTerm} 
-                  statusFilter={statusFilter} 
-                  setStatusFilter={setStatusFilter} 
-                />
-                <ToggleGroup type="single" value={viewMode} onValueChange={(value) => value && setViewMode(value as "grid" | "table")} className="bg-white rounded-lg p-1 border border-gray-200">
+                <PropertyFilters searchTerm={searchTerm} setSearchTerm={setSearchTerm} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />
+                <ToggleGroup type="single" value={viewMode} onValueChange={value => value && setViewMode(value as "grid" | "table")} className="bg-white rounded-lg p-1 border border-gray-200">
                   <ToggleGroupItem value="grid" aria-label="Grid view" className="data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600">
                     <LayoutGrid className="h-4 w-4" />
                   </ToggleGroupItem>
@@ -253,16 +221,11 @@ const Properties = () => {
                 </ToggleGroup>
               </div>
 
-              {viewMode === "grid" ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+              {viewMode === "grid" ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
                   {filteredProperties?.map(property => {
-                    const hasContract = propertyContracts.some(
-                      contract => contract.property_id === property.id
-                    );
-                    const displayStatus = hasContract ? 'occupied' as PropertyStatus : property.status;
-
-                    return (
-                      <Card key={property.id} className="group bg-white/80 backdrop-blur-sm border border-white/20 shadow-soft-md hover:shadow-soft-lg transition-all duration-300 overflow-hidden">
+                const hasContract = propertyContracts.some(contract => contract.property_id === property.id);
+                const displayStatus = hasContract ? 'occupied' as PropertyStatus : property.status;
+                return <Card key={property.id} className="group bg-white/80 backdrop-blur-sm border border-white/20 shadow-soft-md hover:shadow-soft-lg transition-all duration-300 overflow-hidden">
                         <CardHeader className="p-6">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
@@ -308,13 +271,9 @@ const Properties = () => {
                           </div>
                           <Separator className="my-4" />
                           <div className="flex items-center justify-end gap-2 pt-2">
-                            {userRole === 'landlord' && (
-                              <AlertDialog>
+                            {userRole === 'landlord' && <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                  <Button 
-                                    variant="outline" 
-                                    className="border-red-200 text-red-600 hover:bg-red-50"
-                                  >
+                                  <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50">
                                     <Trash2 className="h-4 w-4" />
                                     Delete
                                   </Button>
@@ -329,51 +288,33 @@ const Properties = () => {
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <Button 
-                                      variant="destructive"
-                                      onClick={() => deletePropertyMutation.mutate(property.id)}
-                                    >
+                                    <Button variant="destructive" onClick={() => deletePropertyMutation.mutate(property.id)}>
                                       Delete
                                     </Button>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
-                              </AlertDialog>
-                            )}
-                            <Button 
-                              variant="outline" 
-                              onClick={() => handlePropertyDetails(property.id)}
-                              className="hover:bg-blue-50 transition-colors duration-300"
-                            >
+                              </AlertDialog>}
+                            <Button variant="outline" onClick={() => handlePropertyDetails(property.id)} className="hover:bg-blue-50 transition-colors duration-300">
                               View Details
                             </Button>
                           </div>
                         </CardContent>
-                      </Card>
-                    );
-                  })}
-                  {filteredProperties?.length === 0 && (
-                    <div className="col-span-full text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl shadow-soft-md border border-white/20">
+                      </Card>;
+              })}
+                  {filteredProperties?.length === 0 && <div className="col-span-full text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl shadow-soft-md border border-white/20">
                       <Building2 className="mx-auto h-12 w-12 text-gray-400" />
                       <h3 className="mt-2 text-sm font-medium text-gray-900">No properties found</h3>
                       <div className="mt-1 text-sm">
                         {getEmptyStateMessage()}
                       </div>
-                      {userRole === 'landlord' && (
-                        <div className="mt-6">
-                          <Button 
-                            onClick={() => setShowAddModal(true)}
-                            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white transition-all duration-300 shadow-soft-md hover:shadow-soft-lg"
-                          >
+                      {userRole === 'landlord' && <div className="mt-6">
+                          <Button onClick={() => setShowAddModal(true)} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white transition-all duration-300 shadow-soft-md hover:shadow-soft-lg">
                             <Plus className="h-4 w-4 mr-2" />
                             Add Property
                           </Button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-soft-md border border-white/20 overflow-hidden animate-fade-in">
+                        </div>}
+                    </div>}
+                </div> : <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-soft-md border border-white/20 overflow-hidden animate-fade-in">
                   <Table>
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
@@ -386,14 +327,10 @@ const Properties = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredProperties?.map((property) => {
-                        const hasContract = propertyContracts.some(
-                          contract => contract.property_id === property.id
-                        );
-                        const displayStatus = hasContract ? 'occupied' as PropertyStatus : property.status;
-
-                        return (
-                          <TableRow key={property.id} className="group hover:bg-blue-50/50">
+                      {filteredProperties?.map(property => {
+                    const hasContract = propertyContracts.some(contract => contract.property_id === property.id);
+                    const displayStatus = hasContract ? 'occupied' as PropertyStatus : property.status;
+                    return <TableRow key={property.id} className="group hover:bg-blue-50/50">
                             <TableCell className="font-medium">{property.name}</TableCell>
                             <TableCell>{property.address}</TableCell>
                             <TableCell>${property.monthly_rent?.toLocaleString() || 0}</TableCell>
@@ -404,19 +341,13 @@ const Properties = () => {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button
-                                variant="outline"
-                                onClick={() => handlePropertyDetails(property.id)}
-                                className="hover:bg-blue-50 transition-colors duration-300"
-                              >
+                              <Button variant="outline" onClick={() => handlePropertyDetails(property.id)} className="hover:bg-blue-50 transition-colors duration-300">
                                 View Details
                               </Button>
                             </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                      {filteredProperties?.length === 0 && (
-                        <TableRow>
+                          </TableRow>;
+                  })}
+                      {filteredProperties?.length === 0 && <TableRow>
                           <TableCell colSpan={6} className="text-center py-8">
                             <div className="flex flex-col items-center justify-center">
                               <Building2 className="h-12 w-12 text-gray-400 mb-2" />
@@ -424,32 +355,22 @@ const Properties = () => {
                               <p className="text-sm text-gray-500 mt-1">
                                 {getEmptyStateMessage()}
                               </p>
-                              {userRole === 'landlord' && (
-                                <Button 
-                                  onClick={() => setShowAddModal(true)}
-                                  className="mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
-                                >
+                              {userRole === 'landlord' && <Button onClick={() => setShowAddModal(true)} className="mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white">
                                   <Plus className="h-4 w-4 mr-2" />
                                   Add Property
-                                </Button>
-                              )}
+                                </Button>}
                             </div>
                           </TableCell>
-                        </TableRow>
-                      )}
+                        </TableRow>}
                     </TableBody>
                   </Table>
-                </div>
-              )}
+                </div>}
             </div>
           </div>
         </ScrollArea>
       </main>
 
-      {userRole === 'landlord' && (
-        <PropertyDialog open={showAddModal} onOpenChange={setShowAddModal} onSubmit={handleAddProperty} mode="add" />
-      )}
+      {userRole === 'landlord' && <PropertyDialog open={showAddModal} onOpenChange={setShowAddModal} onSubmit={handleAddProperty} mode="add" />}
     </div>;
 };
-
 export default Properties;
