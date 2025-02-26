@@ -69,7 +69,7 @@ export function ChatBackground() {
         const group = new THREE.Group();
         const dotGeometry = new THREE.SphereGeometry(0.03, 16, 16);
         const dotMaterial = new THREE.MeshStandardMaterial({ 
-          color: 0xeeeeee, // Light gray dots
+          color: isTenant ? 0xffffff : 0xffffff, // White dots
           metalness: 0.1,
           roughness: 0.3,
         });
@@ -80,7 +80,7 @@ export function ChatBackground() {
           group.add(dot);
         }
 
-        group.position.set(isTenant ? -4 : 4, 4, -2);
+        group.position.set(isTenant ? -2 : 2, 2, -2);
         group.visible = false;
         scene.add(group);
         return group;
@@ -111,17 +111,32 @@ export function ChatBackground() {
         const textWidth = textGeometry.boundingBox!.max.x - textGeometry.boundingBox!.min.x;
         const textHeight = textGeometry.boundingBox!.max.y - textGeometry.boundingBox!.min.y;
         
+        const bubbleGeometry = new THREE.BoxGeometry(
+          textWidth + 0.4,
+          textHeight + 0.2,
+          0.1
+        );
+        
         const textMaterial = new THREE.MeshStandardMaterial({ 
           color: 0x000000, // Black text
           metalness: 0.1,
           roughness: 0.6,
         });
+        
+        const bubbleMaterial = new THREE.MeshStandardMaterial({
+          color: 0xffffff, // White bubbles for both tenant and landlord
+          metalness: 0.1,
+          roughness: 0.3,
+        });
 
         const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+        const bubbleMesh = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
+        
         const messageGroup = new THREE.Group();
+        messageGroup.add(bubbleMesh);
         messageGroup.add(textMesh);
         
-        textMesh.position.set(-textWidth/2, -textHeight/2, 0);
+        textMesh.position.set(-textWidth/2 + 0.2, -textHeight/2 + 0.1, 0.06);
         
         // Adjusted message positioning
         messageGroup.position.set(
@@ -150,8 +165,13 @@ export function ChatBackground() {
         const showTyping = () => {
           if (typingIndicator) {
             typingIndicator.visible = true;
-            typingIndicator.position.x = message.sender === "tenant" ? -4 : 4;
-            typingIndicator.position.y = 4 - index * 1.2;
+            typingIndicator.position.x = message.sender === "tenant" ? -4 : 4; // Adjusted typing indicator position
+            typingIndicator.position.y = 4 - index * 1.2; // Adjusted vertical position
+            typingIndicator.children.forEach(dot => {
+              (dot as THREE.Mesh).material = new THREE.MeshStandardMaterial({
+                color: 0xeeeeee // Light gray dots
+              });
+            });
           }
         };
 
@@ -201,17 +221,19 @@ export function ChatBackground() {
         });
       }
 
-      // Gentle floating animation for messages
+      // Gentle floating animation for messages, without rotation
       messageGroups.forEach((group) => {
         if (group.visible) {
           const time = Date.now() * 0.001;
           group.position.y += Math.sin(time) * 0.0001;
+          // Removed rotation animations
         }
       });
 
       controls.update();
       renderer.render(scene, camera);
     }
+    animate();
 
     // Handle window resize
     function handleResize() {
