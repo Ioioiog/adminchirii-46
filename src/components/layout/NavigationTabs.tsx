@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
+import { useUserRole } from "@/hooks/use-user-role";
 
 interface NavigationTab {
   id: string;
   label: string;
   icon: LucideIcon;
+  showForTenant?: boolean;
 }
 
 interface NavigationTabsProps {
@@ -18,10 +20,16 @@ interface NavigationTabsProps {
 }
 
 export function NavigationTabs({ tabs, activeTab, onTabChange }: NavigationTabsProps) {
+  const { userRole } = useUserRole();
+  const isTenant = userRole === 'tenant';
+
+  // Filter out tabs that shouldn't be shown to tenants
+  const visibleTabs = tabs.filter(tab => !isTenant || tab.showForTenant);
+
   return (
     <Card className="p-4 bg-white/80 backdrop-blur-sm border shadow-sm">
       <div className="flex gap-4 overflow-x-auto">
-        {tabs.map((tab) => (
+        {visibleTabs.map((tab) => (
           <Button
             key={tab.id}
             variant={activeTab === tab.id ? 'default' : 'ghost'}

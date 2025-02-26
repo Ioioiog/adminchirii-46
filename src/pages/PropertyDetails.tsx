@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Home, User, Receipt } from "lucide-react";
+import { ArrowLeft, Home, User, Receipt, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -238,9 +238,10 @@ const PropertyDetails = () => {
   }
 
   const tabs = [
-    { id: "property", label: "Property Details", icon: Home },
-    { id: "tenants", label: "Tenants", icon: User },
-    { id: "invoice", label: "Invoice Settings", icon: Receipt },
+    { id: "property", label: "Property Details", icon: Home, showForTenant: true },
+    { id: "tenants", label: "Tenants", icon: User, showForTenant: false },
+    { id: "invoice", label: "Invoice Settings", icon: Receipt, showForTenant: false },
+    { id: "landlord", label: "Landlord", icon: UserCircle, showForTenant: true },
   ];
 
   const activeTenants = property.tenancies?.filter((t: any) => t.status === 'active') || [];
