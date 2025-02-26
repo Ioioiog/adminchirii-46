@@ -27,23 +27,26 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import type { Json } from "@/integrations/supabase/types/json";
 import { useCurrency } from "@/hooks/useCurrency";
+
+// Simplified interface definitions to avoid recursive types
+interface ContractMetadata {
+  tenantName?: string;
+  tenantReg?: string;
+  tenantFiscal?: string;
+  tenantAddress?: string;
+  tenantBank?: string;
+  tenantBankName?: string;
+  tenantEmail?: string;
+  tenantPhone?: string;
+  [key: string]: string | undefined;
+}
 
 interface ContractData {
   property?: {
     name: string;
   };
-  metadata?: {
-    tenantName?: string;
-    tenantReg?: string;
-    tenantFiscal?: string;
-    tenantAddress?: string;
-    tenantBank?: string;
-    tenantBankName?: string;
-    tenantEmail?: string;
-    tenantPhone?: string;
-  } | Json;
+  metadata?: ContractMetadata;
 }
 
 export function FinancialSettings() {
@@ -261,7 +264,7 @@ export function FinancialSettings() {
                   <div>
                     <h4 className="font-medium mb-2">Property</h4>
                     <p className="text-sm text-muted-foreground">
-                      {contractData?.property?.name || 'Not available'}
+                      {contractData.property?.name || 'Not available'}
                     </p>
                   </div>
                   {isViewingDetails && (
@@ -269,49 +272,49 @@ export function FinancialSettings() {
                       <div>
                         <h4 className="font-medium mb-2">Tenant Name</h4>
                         <p className="text-sm text-muted-foreground">
-                          {(contractData?.metadata as any)?.tenantName || 'Not available'}
+                          {contractData.metadata?.tenantName || 'Not available'}
                         </p>
                       </div>
                       <div>
                         <h4 className="font-medium mb-2">Registration Number</h4>
                         <p className="text-sm text-muted-foreground">
-                          {(contractData?.metadata as any)?.tenantReg || 'Not available'}
+                          {contractData.metadata?.tenantReg || 'Not available'}
                         </p>
                       </div>
                       <div>
                         <h4 className="font-medium mb-2">Fiscal Code</h4>
                         <p className="text-sm text-muted-foreground">
-                          {(contractData?.metadata as any)?.tenantFiscal || 'Not available'}
+                          {contractData.metadata?.tenantFiscal || 'Not available'}
                         </p>
                       </div>
                       <div>
                         <h4 className="font-medium mb-2">Address</h4>
                         <p className="text-sm text-muted-foreground">
-                          {(contractData?.metadata as any)?.tenantAddress || 'Not available'}
+                          {contractData.metadata?.tenantAddress || 'Not available'}
                         </p>
                       </div>
                       <div>
                         <h4 className="font-medium mb-2">Bank Account</h4>
                         <p className="text-sm text-muted-foreground">
-                          {(contractData?.metadata as any)?.tenantBank || 'Not available'}
+                          {contractData.metadata?.tenantBank || 'Not available'}
                         </p>
                       </div>
                       <div>
                         <h4 className="font-medium mb-2">Bank Name</h4>
                         <p className="text-sm text-muted-foreground">
-                          {(contractData?.metadata as any)?.tenantBankName || 'Not available'}
+                          {contractData.metadata?.tenantBankName || 'Not available'}
                         </p>
                       </div>
                       <div>
                         <h4 className="font-medium mb-2">Contact Email</h4>
                         <p className="text-sm text-muted-foreground">
-                          {(contractData?.metadata as any)?.tenantEmail || 'Not available'}
+                          {contractData.metadata?.tenantEmail || 'Not available'}
                         </p>
                       </div>
                       <div>
                         <h4 className="font-medium mb-2">Phone Number</h4>
                         <p className="text-sm text-muted-foreground">
-                          {(contractData?.metadata as any)?.tenantPhone || 'Not available'}
+                          {contractData.metadata?.tenantPhone || 'Not available'}
                         </p>
                       </div>
                     </>
