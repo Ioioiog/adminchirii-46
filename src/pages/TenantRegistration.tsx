@@ -16,61 +16,6 @@ interface Contract {
   status: 'draft' | 'pending' | 'signed' | 'expired' | 'cancelled' | 'pending_signature';
 }
 
-const transformMetadataToFormData = (metadata: any) => {
-  return {
-    contractNumber: metadata?.contractNumber || '',
-    contractDate: metadata?.contractDate || '',
-    ownerName: metadata?.ownerName || '',
-    ownerReg: metadata?.ownerReg || '',
-    ownerFiscal: metadata?.ownerFiscal || '',
-    ownerAddress: metadata?.ownerAddress || '',
-    ownerBank: metadata?.ownerBank || '',
-    ownerBankName: metadata?.ownerBankName || '',
-    ownerEmail: metadata?.ownerEmail || '',
-    ownerPhone: metadata?.ownerPhone || '',
-    ownerCounty: metadata?.ownerCounty || '',
-    ownerCity: metadata?.ownerCity || '',
-    ownerRepresentative: metadata?.ownerRepresentative || '',
-    tenantName: metadata?.tenantName || '',
-    tenantReg: metadata?.tenantReg || '',
-    tenantFiscal: metadata?.tenantFiscal || '',
-    tenantAddress: metadata?.tenantAddress || '',
-    tenantBank: metadata?.tenantBank || '',
-    tenantBankName: metadata?.tenantBankName || '',
-    tenantEmail: metadata?.tenantEmail || '',
-    tenantPhone: metadata?.tenantPhone || '',
-    tenantCounty: metadata?.tenantCounty || '',
-    tenantCity: metadata?.tenantCity || '',
-    tenantRepresentative: metadata?.tenantRepresentative || '',
-    propertyAddress: metadata?.propertyAddress || '',
-    rentAmount: metadata?.rentAmount || '',
-    vatIncluded: metadata?.vatIncluded || '',
-    contractDuration: metadata?.contractDuration || '',
-    paymentDay: metadata?.paymentDay || '',
-    roomCount: metadata?.roomCount || '',
-    startDate: metadata?.startDate || '',
-    lateFee: metadata?.lateFee || '',
-    renewalPeriod: metadata?.renewalPeriod || '',
-    unilateralNotice: metadata?.unilateralNotice || '',
-    terminationNotice: metadata?.terminationNotice || '',
-    earlyTerminationFee: metadata?.earlyTerminationFee || '',
-    latePaymentTermination: metadata?.latePaymentTermination || '',
-    securityDeposit: metadata?.securityDeposit || '',
-    depositReturnPeriod: metadata?.depositReturnPeriod || '',
-    waterColdMeter: metadata?.waterColdMeter || '',
-    waterHotMeter: metadata?.waterHotMeter || '',
-    electricityMeter: metadata?.electricityMeter || '',
-    gasMeter: metadata?.gasMeter || '',
-    ownerSignatureDate: metadata?.ownerSignatureDate || '',
-    ownerSignatureName: metadata?.ownerSignatureName || '',
-    ownerSignatureImage: metadata?.ownerSignatureImage,
-    tenantSignatureDate: metadata?.tenantSignatureDate || '',
-    tenantSignatureName: metadata?.tenantSignatureName || '',
-    tenantSignatureImage: metadata?.tenantSignatureImage,
-    assets: Array.isArray(metadata?.assets) ? metadata.assets : []
-  };
-};
-
 const TenantRegistration = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -121,34 +66,24 @@ const TenantRegistration = () => {
           return;
         }
 
-        const formData = transformMetadataToFormData(data.metadata);
-        
-        if (!formData.tenantEmail) {
+        if (!data.metadata?.tenantEmail) {
           showError("Invalid Contract", "Contract is missing tenant information.");
           return;
         }
 
-        console.log("Checking for existing user with email:", formData.tenantEmail);
+        console.log("Checking for existing user with email:", data.metadata.tenantEmail);
         const { data: existingUser } = await supabase
           .from('profiles')
           .select('id')
-          .eq('email', formData.tenantEmail)
+          .eq('email', data.metadata.tenantEmail)
           .maybeSingle();
 
-        const transformedContract: Contract = {
-          id: data.id,
-          properties: data.properties,
-          property_id: data.property_id,
-          metadata: formData,
-          status: data.status
-        };
-
         setIsExistingUser(!!existingUser);
-        setContract(transformedContract);
+        setContract(data);
         setIsLoading(false);
         console.log("Contract verification complete:", { 
           isExisting: !!existingUser, 
-          contract: transformedContract 
+          contract: data 
         });
         
       } catch (error) {
