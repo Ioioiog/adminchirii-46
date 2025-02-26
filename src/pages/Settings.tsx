@@ -1,6 +1,5 @@
 
 import { useState } from "react";
-import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { Button } from "@/components/ui/button";
 import { AccountSettings } from "@/components/settings/sections/AccountSettings";
 import { FinancialSettings } from "@/components/settings/sections/FinancialSettings";
@@ -9,6 +8,9 @@ import { SubscriptionSettings } from "@/components/settings/sections/Subscriptio
 import { Settings2, Wallet, Languages, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUserRole } from "@/hooks/use-user-role";
+import { PageLayout } from "@/components/layout/PageLayout";
+import { ContentCard } from "@/components/layout/ContentCard";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 type SettingsSection = 'account' | 'financial' | 'preferences' | 'subscription';
 
@@ -55,33 +57,40 @@ const Settings = () => {
   };
 
   return (
-    <div className="flex h-screen bg-background">
-      <DashboardSidebar />
-      <main className="flex-1 p-8 overflow-y-auto">
-        <div className="max-w-7xl mx-auto space-y-8">
-          <div className="w-full flex gap-4 bg-card p-4 rounded-lg shadow-sm overflow-x-auto">
-            {navigationItems.map((item) => (
-              <Button
-                key={item.id}
-                variant={activeSection === item.id ? 'default' : 'ghost'}
-                className={cn(
-                  "flex-shrink-0 gap-2",
-                  activeSection === item.id && "bg-primary text-primary-foreground"
-                )}
-                onClick={() => setActiveSection(item.id)}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </Button>
-            ))}
+    <PageLayout>
+      <div className="space-y-8">
+        <PageHeader
+          icon={Settings2}
+          title="Settings"
+          description="Manage your account settings and preferences"
+        />
+
+        <ContentCard className="p-0 overflow-hidden">
+          <div className="border-b border-border/20 bg-gray-50/50">
+            <div className="flex gap-2 p-4 overflow-x-auto">
+              {navigationItems.map((item) => (
+                <Button
+                  key={item.id}
+                  variant={activeSection === item.id ? 'default' : 'ghost'}
+                  className={cn(
+                    "flex-shrink-0 gap-2",
+                    activeSection === item.id && "bg-primary text-primary-foreground"
+                  )}
+                  onClick={() => setActiveSection(item.id)}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </Button>
+              ))}
+            </div>
           </div>
 
-          <div className="bg-card p-6 rounded-lg shadow-sm">
+          <div className="p-6">
             {renderSection()}
           </div>
-        </div>
-      </main>
-    </div>
+        </ContentCard>
+      </div>
+    </PageLayout>
   );
 };
 
