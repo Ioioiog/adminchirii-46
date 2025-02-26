@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, ChevronDown, Building2, MapPin, User, Calendar, DollarSign, Home, LayoutGrid, Table as TableIcon, Trash2 } from "lucide-react";
@@ -242,11 +243,11 @@ const Properties = () => {
                   statusFilter={statusFilter} 
                   setStatusFilter={setStatusFilter} 
                 />
-                <ToggleGroup type="single" value={viewMode} onValueChange={(value) => value && setViewMode(value as "grid" | "table")}>
-                  <ToggleGroupItem value="grid" aria-label="Grid view">
+                <ToggleGroup type="single" value={viewMode} onValueChange={(value) => value && setViewMode(value as "grid" | "table")} className="bg-white rounded-lg p-1 border border-gray-200">
+                  <ToggleGroupItem value="grid" aria-label="Grid view" className="data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600">
                     <LayoutGrid className="h-4 w-4" />
                   </ToggleGroupItem>
-                  <ToggleGroupItem value="table" aria-label="Table view">
+                  <ToggleGroupItem value="table" aria-label="Table view" className="data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600">
                     <TableIcon className="h-4 w-4" />
                   </ToggleGroupItem>
                 </ToggleGroup>
