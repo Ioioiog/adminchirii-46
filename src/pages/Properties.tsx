@@ -19,6 +19,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useUserRole } from "@/hooks/use-user-role";
+
 const Properties = () => {
   const navigate = useNavigate();
   const {
@@ -185,7 +186,7 @@ const Properties = () => {
       <DashboardSidebar />
       <main className="flex-1 overflow-hidden">
         <ScrollArea className="h-screen">
-          <div className="p-8 bg-gradient-to-br from-blue-50 to-indigo-50 bg-primary-50">
+          <div className="p-8 bg-white">
             <div className="max-w-7xl mx-auto space-y-8">
               <div className="bg-white/80 backdrop-blur-sm p-8 rounded-xl shadow-soft-xl mb-8 animate-fade-in border border-white/20">
                 <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
@@ -376,4 +377,5 @@ const Properties = () => {
       {userRole === 'landlord' && <PropertyDialog open={showAddModal} onOpenChange={setShowAddModal} onSubmit={handleAddProperty} mode="add" />}
     </div>;
 };
+
 export default Properties;
