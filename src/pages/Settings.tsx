@@ -28,6 +28,7 @@ const Settings = () => {
       id: 'financial' as SettingsSection,
       label: 'Financial & Payments',
       icon: Wallet,
+      showForRole: ['landlord', 'tenant', 'service_provider'], // Show for all roles
     },
     {
       id: 'preferences' as SettingsSection,
@@ -56,6 +57,11 @@ const Settings = () => {
     }
   };
 
+  // Filter navigation items based on user role
+  const visibleItems = navigationItems.filter(item => 
+    !item.showForRole || item.showForRole.includes(userRole)
+  );
+
   return (
     <PageLayout>
       <div className="space-y-8">
@@ -68,7 +74,7 @@ const Settings = () => {
         <ContentCard className="p-0 overflow-hidden">
           <div className="border-b border-border/20 bg-gradient-to-br from-gray-50 to-white/50">
             <div className="flex gap-2 p-4 overflow-x-auto">
-              {navigationItems.map((item) => (
+              {visibleItems.map((item) => (
                 <Button
                   key={item.id}
                   variant={activeSection === item.id ? 'default' : 'ghost'}
