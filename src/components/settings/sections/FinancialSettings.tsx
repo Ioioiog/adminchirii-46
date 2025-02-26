@@ -44,6 +44,15 @@ export function FinancialSettings() {
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <h3 className="text-lg font-medium">Invoice Information</h3>
+          </CardHeader>
+          <CardContent>
+            <InvoiceInfoForm />
+          </CardContent>
+        </Card>
       </div>
     );
   }
