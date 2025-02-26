@@ -45,10 +45,14 @@
       "noDetails": "Aucun détail de revenu disponible pour ce mois"
     }
   },
-  "sections": {
-    "trackMoney": "Suivez votre argent",
-    "maintenance": "Aperçu de la Maintenance",
-    "properties": "Aperçu des Propriétés",
-    "tenants": "Aperçu des Locataires"
-  }
+  "quickActions": {
+    "title": "Actions Rapides",
+    "viewMore": "Voir Plus",
+    "maintenance": "Maintenance",
+    "maintenanceDesc": "Signalez des problèmes, suivez les réparations et communiquez directement avec les équipes de maintenance via notre plateforme.",
+    "documents": "Documents",
+    "documentsDesc": "Accédez et gérez tous vos documents liés à la location dans un emplacement sécurisé."
+  },
+  "propertyInfo": "Vos Propriétés",
+  "ongoingLease": "En cours"
 }

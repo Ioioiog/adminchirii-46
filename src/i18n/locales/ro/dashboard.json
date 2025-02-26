@@ -25,30 +25,14 @@
     "monthlyEarningsDesc": "Câștiguri din lucrările finalizate în această lună",
     "noPayments": "Fără plăți"
   },
-  "revenue": {
-    "title": "Prezentare Venituri",
-    "history": "History",
-    "predictions": "Predictions",
-    "noData": "Nu există date despre venituri",
-    "noUpcomingPayments": "Nu există plăți viitoare",
-    "upcomingPayments": "Plăți Viitoare",
-    "monthlyAverage": "Media Lunară",
-    "totalRevenue": "Venit Total",
-    "performance": "Performanță",
-    "vs": "vs luna trecută",
-    "details": {
-      "title": "Detalii Venituri",
-      "property": "Proprietate",
-      "amount": "Sumă",
-      "dueDate": "Data Scadentă",
-      "status": "Stare",
-      "noDetails": "Nu există detalii despre venituri pentru această lună"
-    }
+  "quickActions": {
+    "title": "Acțiuni Rapide",
+    "viewMore": "Vezi Mai Mult",
+    "maintenance": "Mentenanță",
+    "maintenanceDesc": "Raportează probleme, urmărește reparațiile și comunică direct cu echipele de mentenanță prin intermediul platformei noastre.",
+    "documents": "Documente",
+    "documentsDesc": "Accesează și gestionează toate documentele legate de închiriere într-o locație sigură."
   },
-  "sections": {
-    "trackMoney": "Urmărește-ți banii",
-    "maintenance": "Prezentare Mentenanță",
-    "properties": "Prezentare Proprietăți",
-    "tenants": "Prezentare Chiriași"
-  }
+  "propertyInfo": "Proprietățile Tale",
+  "ongoingLease": "În Curs"
 }

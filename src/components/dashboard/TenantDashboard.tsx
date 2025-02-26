@@ -51,7 +51,7 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
   const quickActions = [
     {
       title: t('dashboard.quickActions.maintenance'),
-      description: "Report issues, track repairs, and communicate with maintenance teams directly through our platform.",
+      description: t('dashboard.quickActions.maintenanceDesc'),
       icon: Home,
       action: () => navigate('/maintenance'),
       features: [
@@ -62,7 +62,7 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
     },
     {
       title: t('dashboard.quickActions.documents'),
-      description: "Access and manage all your rental-related documents in one secure location.",
+      description: t('dashboard.quickActions.documentsDesc'),
       icon: FileText,
       action: () => navigate('/documents'),
       features: [

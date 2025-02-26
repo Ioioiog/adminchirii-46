@@ -37,5 +37,15 @@
       "status": "Status",
       "noDetails": "No revenue details available for this month"
     }
-  }
+  },
+  "quickActions": {
+    "title": "Quick Actions",
+    "viewMore": "View More",
+    "maintenance": "Maintenance",
+    "maintenanceDesc": "Report issues, track repairs, and communicate with maintenance teams directly through our platform.",
+    "documents": "Documents",
+    "documentsDesc": "Access and manage all your rental-related documents in one secure location."
+  },
+  "propertyInfo": "Your Properties",
+  "ongoingLease": "Ongoing"
 }
