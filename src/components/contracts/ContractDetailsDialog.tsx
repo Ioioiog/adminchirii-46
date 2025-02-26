@@ -2,7 +2,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,6 +70,9 @@ export function ContractDetailsDialog({ open, onOpenChange, contract }: Contract
   if (!contract) return null;
   const metadata = contract.metadata || {};
 
+  console.log("Current user role:", userRole); // Debug log
+  console.log("Contract status:", contract.status); // Debug log
+
   const handleCancel = async () => {
     await cancelMutation.mutateAsync(contract.id);
     onOpenChange(false);
@@ -79,12 +81,17 @@ export function ContractDetailsDialog({ open, onOpenChange, contract }: Contract
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl">
-        <DialogHeader className="flex flex-row items-center justify-between">
+        <DialogHeader className="flex flex-row items-center justify-between space-x-4">
           <DialogTitle>Contract Details</DialogTitle>
           {userRole === 'landlord' && contract.status !== 'cancelled' && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive">Cancel Contract</Button>
+                <Button 
+                  variant="destructive"
+                  className="whitespace-nowrap"
+                >
+                  Cancel Contract
+                </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
