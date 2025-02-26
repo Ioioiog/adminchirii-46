@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Home, User, Receipt, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PropertyStatus } from "@/utils/propertyUtils";
 import { useToast } from "@/hooks/use-toast";
@@ -93,6 +93,13 @@ const PropertyDetails = () => {
               last_name,
               email
             )
+          ),
+          landlord:profiles!properties_landlord_id_fkey(
+            id,
+            first_name,
+            last_name,
+            email,
+            phone
           )
         `)
         .eq("id", id)
