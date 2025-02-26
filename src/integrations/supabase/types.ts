@@ -92,6 +92,77 @@ export type Database = {
         }
         Relationships: []
       }
+      contract_terminations: {
+        Row: {
+          cleaning_requirements: string | null
+          contract_id: string
+          created_at: string
+          deduction_reasons: string | null
+          deposit_deductions: number | null
+          id: string
+          inspection_date: string | null
+          key_return_process: string | null
+          move_out_date: string
+          notice_date: string
+          notice_period: number
+          outstanding_rent: number | null
+          payment_method:
+            | Database["public"]["Enums"]["termination_payment_method"]
+            | null
+          refund_amount: number | null
+          security_deposit_amount: number
+          updated_at: string
+        }
+        Insert: {
+          cleaning_requirements?: string | null
+          contract_id: string
+          created_at?: string
+          deduction_reasons?: string | null
+          deposit_deductions?: number | null
+          id?: string
+          inspection_date?: string | null
+          key_return_process?: string | null
+          move_out_date: string
+          notice_date: string
+          notice_period: number
+          outstanding_rent?: number | null
+          payment_method?:
+            | Database["public"]["Enums"]["termination_payment_method"]
+            | null
+          refund_amount?: number | null
+          security_deposit_amount: number
+          updated_at?: string
+        }
+        Update: {
+          cleaning_requirements?: string | null
+          contract_id?: string
+          created_at?: string
+          deduction_reasons?: string | null
+          deposit_deductions?: number | null
+          id?: string
+          inspection_date?: string | null
+          key_return_process?: string | null
+          move_out_date?: string
+          notice_date?: string
+          notice_period?: number
+          outstanding_rent?: number | null
+          payment_method?:
+            | Database["public"]["Enums"]["termination_payment_method"]
+            | null
+          refund_amount?: number | null
+          security_deposit_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_terminations_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contracts: {
         Row: {
           content: Json
@@ -2417,6 +2488,7 @@ export type Database = {
         | "invitation_accepted"
         | "tenant_assigned"
         | "tenancy_ended"
+      termination_payment_method: "bank_transfer" | "cash" | "check" | "other"
       utility_reading_type: "electricity" | "water" | "gas"
     }
     CompositeTypes: {
