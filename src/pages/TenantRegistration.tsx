@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { Auth } from "@supabase/auth-ui-react";
@@ -86,7 +85,6 @@ const TenantRegistration = () => {
           .maybeSingle();
 
         setIsExistingUser(!!existingUser);
-        // Cast the entire data to Contract type after we've verified its shape
         setContract({
           id: data.id,
           properties: data.properties,
@@ -95,10 +93,6 @@ const TenantRegistration = () => {
           status: data.status as Contract['status']
         });
         setIsLoading(false);
-        console.log("Contract verification complete:", { 
-          isExisting: !!existingUser, 
-          contract: data 
-        });
         
       } catch (error) {
         console.error("Contract verification error:", error);
@@ -113,19 +107,13 @@ const TenantRegistration = () => {
     const checkAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        console.log('Auth check result:', { 
-          hasSession: !!session, 
-          hasToken: !!token,
-          contractId: id
-        });
         
-        if (!session) {
-          if (token) {
-            navigate(`/tenant-registration/${id}?invitation_token=${token}`);
-          } else {
-            navigate('/auth');
+        if (session?.user) {
+          // If user is already authenticated and lands on tenant-registration,
+          // redirect them to the contract page
+          if (token && contractId) {
+            navigate(`/documents/contracts/${contractId}?invitation_token=${token}`);
           }
-          return;
         }
       } catch (error) {
         console.error('Auth check error:', error);
@@ -133,7 +121,7 @@ const TenantRegistration = () => {
     };
 
     checkAuth();
-  }, [token, id, navigate]);
+  }, [token, contractId, navigate]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
