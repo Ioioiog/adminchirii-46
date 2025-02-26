@@ -66,26 +66,31 @@ const Settings = () => {
         />
 
         <ContentCard className="p-0 overflow-hidden">
-          <div className="border-b border-border/20 bg-gray-50/50">
+          <div className="border-b border-border/20 bg-gradient-to-br from-gray-50 to-white/50">
             <div className="flex gap-2 p-4 overflow-x-auto">
               {navigationItems.map((item) => (
                 <Button
                   key={item.id}
                   variant={activeSection === item.id ? 'default' : 'ghost'}
                   className={cn(
-                    "flex-shrink-0 gap-2",
-                    activeSection === item.id && "bg-primary text-primary-foreground"
+                    "flex-shrink-0 gap-2 transition-all duration-200",
+                    activeSection === item.id 
+                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm hover:from-blue-700 hover:to-indigo-700" 
+                      : "hover:bg-gray-100"
                   )}
                   onClick={() => setActiveSection(item.id)}
                 >
-                  <item.icon className="h-4 w-4" />
+                  <item.icon className={cn(
+                    "h-4 w-4",
+                    activeSection === item.id ? "text-white" : "text-gray-500"
+                  )} />
                   {item.label}
                 </Button>
               ))}
             </div>
           </div>
 
-          <div className="p-6">
+          <div className="p-6 bg-gradient-to-br from-white to-gray-50/50 transition-all duration-300 animate-fade-in">
             {renderSection()}
           </div>
         </ContentCard>
