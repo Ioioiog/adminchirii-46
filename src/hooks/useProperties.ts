@@ -35,7 +35,8 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
             return;
           }
 
-          // Query both active tenancies and signed contracts
+          console.log("Fetching properties for tenant:", userData.user.id);
+
           const { data, error } = await supabase
             .from("properties")
             .select(`
@@ -49,30 +50,45 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
               description,
               available_from,
               landlord_id,
-              landlord:profiles!properties_landlord_id_fkey!inner(first_name, last_name, email, phone),
-              tenancies!inner(id, status, tenant_id),
-              contracts!contracts_property_id_fkey(
-                id,
-                status,
-                tenant_id
-              )
+              landlord:profiles!properties_landlord_id_fkey(first_name, last_name, email, phone),
+              tenancies(id, status, tenant_id),
+              contracts(id, status, tenant_id)
             `)
-            .or(`tenancies.tenant_id.eq.${userData.user.id},contracts.tenant_id.eq.${userData.user.id}`)
-            .or('tenancies.status.eq.active,contracts.status.eq.signed');
+            .or(
+              `tenancies.tenant_id.eq.${userData.user.id},contracts.tenant_id.eq.${userData.user.id}`
+            );
 
-          if (error) throw error;
+          if (error) {
+            console.error("Error fetching properties:", error);
+            throw error;
+          }
+
+          console.log("Properties data:", data);
 
           const propertyList = (data || []).map(item => {
-            // Get the first (and only) landlord profile since it's a foreign key relationship
+            const hasActiveTenancy = item.tenancies?.some(
+              (t: any) => t.status === 'active' && t.tenant_id === userData.user.id
+            );
+            const hasSignedContract = item.contracts?.some(
+              (c: any) => c.status === 'signed' && c.tenant_id === userData.user.id
+            );
+
+            // Only include properties where the tenant has either an active tenancy or a signed contract
+            if (!hasActiveTenancy && !hasSignedContract) {
+              return null;
+            }
+
             const landlordProfile = Array.isArray(item.landlord) ? item.landlord[0] : item.landlord;
 
             return {
               ...item,
-              status: item.tenancies?.some((t: any) => t.status === 'active') ? 'occupied' as const : 'vacant' as const,
+              status: hasActiveTenancy ? 'occupied' as const : 'vacant' as const,
               tenant_count: item.tenancies?.filter((t: any) => t.status === 'active').length || 0,
               landlord: landlordProfile as LandlordProfile
             } as Property;
-          });
+          }).filter(Boolean);
+
+          console.log("Filtered property list:", propertyList);
 
           setProperties(propertyList);
         } else {
@@ -107,7 +123,7 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
           setProperties(propertiesWithStatus);
         }
       } catch (error) {
-        console.error("Error fetching properties:", error);
+        console.error("Error in fetchProperties:", error);
       } finally {
         setIsLoading(false);
       }
