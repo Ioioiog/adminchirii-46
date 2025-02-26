@@ -1,4 +1,3 @@
-
 import { DashboardHeader } from "./sections/DashboardHeader";
 import { DashboardMetrics } from "./DashboardMetrics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,15 +12,6 @@ import { supabase } from "@/integrations/supabase/client";
 interface TenantDashboardProps {
   userId: string;
   userName: string;
-  tenantInfo: {
-    tenancy_id: string;
-    status: string;
-    start_date: string;
-    end_date?: string;
-    property_id: string;
-    property_name: string;
-    property_address: string;
-  };
 }
 
 export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
@@ -77,7 +67,13 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
   if (isLoading) {
     return (
       <div className="p-6 space-y-6 max-w-7xl mx-auto">
-        <p className="text-muted-foreground">{t('dashboard.metrics.loading')}</p>
+        <section className="bg-white rounded-xl shadow-sm p-6">
+          <DashboardHeader userName={userName} />
+        </section>
+        <div className="animate-pulse space-y-4">
+          <div className="h-32 bg-gray-200 rounded-xl"></div>
+          <div className="h-64 bg-gray-200 rounded-xl"></div>
+        </div>
       </div>
     );
   }
