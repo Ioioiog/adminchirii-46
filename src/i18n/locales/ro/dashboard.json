@@ -25,6 +25,26 @@
     "monthlyEarningsDesc": "Câștiguri din lucrările finalizate în această lună",
     "noPayments": "Fără plăți"
   },
+  "revenue": {
+    "title": "Prezentare Venituri",
+    "history": "Istoric",
+    "predictions": "Predicții",
+    "noData": "Nu există date despre venituri",
+    "noUpcomingPayments": "Nu există plăți viitoare",
+    "upcomingPayments": "Plăți Viitoare",
+    "monthlyAverage": "Media Lunară",
+    "totalRevenue": "Venit Total",
+    "performance": "Performanță",
+    "vs": "vs luna trecută",
+    "details": {
+      "title": "Detalii Venituri",
+      "property": "Proprietate",
+      "amount": "Sumă",
+      "dueDate": "Data Scadentă",
+      "status": "Stare",
+      "noDetails": "Nu există detalii despre venituri pentru această lună"
+    }
+  },
   "quickActions": {
     "title": "Acțiuni Rapide",
     "viewMore": "Vezi Mai Mult",
