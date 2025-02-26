@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -98,9 +99,11 @@ export function ServiceProviderList() {
           service_area,
           rating,
           review_count,
+          is_first_login,
           profiles!fk_profiles (
             first_name,
-            last_name
+            last_name,
+            role
           ),
           services:service_provider_services (
             name,
@@ -135,7 +138,10 @@ export function ServiceProviderList() {
         .map(provider => ({
           ...provider,
           profiles: Array.isArray(provider.profiles) ? provider.profiles : [provider.profiles],
-          isPreferred: preferredIds.has(provider.id)
+          isPreferred: preferredIds.has(provider.id),
+          // A provider is custom (created by landlord) if they have is_first_login=true
+          // or if their profile role is not 'service_provider'
+          isCustomProvider: provider.is_first_login === true || provider.profiles[0]?.role !== 'service_provider'
         }));
 
       if (filters.category !== "all") {
@@ -143,6 +149,8 @@ export function ServiceProviderList() {
           provider.services?.some(service => service.category === filters.category)
         );
       }
+
+      console.log("Filtered providers:", filteredProviders);
 
       return filteredProviders.sort((a, b) => {
         if (a.isPreferred === b.isPreferred) {
