@@ -7,7 +7,7 @@ import { InvoiceInfoForm } from "../InvoiceInfoForm";
 import { PaymentMethodsForm } from "../PaymentMethodsForm";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { CreditCard, Receipt, Building, Download, Eye, AlertCircle } from "lucide-react";
+import { CreditCard, Receipt, Building, Download, Eye, AlertCircle, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -29,103 +29,59 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useCurrency } from "@/hooks/useCurrency";
 
-type SimpleMetadata = {
-  [key: string]: string | null;
-};
-
-interface ContractMetadata {
-  tenantName?: string;
-  tenantReg?: string;
-  tenantFiscal?: string;
-  tenantAddress?: string;
-  tenantBank?: string;
-  tenantBankName?: string;
-  tenantEmail?: string;
-  tenantPhone?: string;
-  [key: string]: string | undefined;
-}
-
-interface ContractData {
-  property: {
-    name: string | null;
-  } | null;
-  metadata: SimpleMetadata | null;
+interface ServiceProviderFinancials {
+  totalEarnings: number;
+  pendingPayments: number;
+  completedJobs: number;
+  avgJobValue: number;
 }
 
 export function FinancialSettings() {
   const { userRole } = useUserRole();
   const { toast } = useToast();
   const { formatAmount } = useCurrency();
-  const [contractData, setContractData] = useState<ContractData | null>(null);
-  const [isViewingDetails, setIsViewingDetails] = useState(false);
-  const [balance, setBalance] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState(false);
+  const [financials, setFinancials] = useState<ServiceProviderFinancials>({
+    totalEarnings: 0,
+    pendingPayments: 0,
+    completedJobs: 0,
+    avgJobValue: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchServiceProviderFinancials = async () => {
       try {
-        setIsLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        const { data: tenancy, error: tenancyError } = await supabase
-          .from('tenancies')
-          .select('id')
-          .eq('tenant_id', user.id)
-          .single();
+        // Fetch maintenance requests data to calculate financials
+        const { data: maintenanceData, error: maintenanceError } = await supabase
+          .from('maintenance_requests')
+          .select('service_provider_fee, status, payment_status')
+          .eq('assigned_to', user.id);
 
-        if (tenancyError) throw tenancyError;
+        if (maintenanceError) throw maintenanceError;
 
-        const { data: contract, error: contractError } = await supabase
-          .from('contracts')
-          .select(`
-            metadata,
-            property:properties (
-              name
-            )
-          `)
-          .eq('tenant_id', user.id)
-          .eq('status', 'signed')
-          .order('created_at', { ascending: false })
-          .maybeSingle();
+        if (maintenanceData) {
+          const completedJobs = maintenanceData.filter(job => job.status === 'completed').length;
+          const totalEarnings = maintenanceData.reduce((sum, job) => sum + (job.service_provider_fee || 0), 0);
+          const pendingPayments = maintenanceData
+            .filter(job => job.payment_status === 'pending')
+            .reduce((sum, job) => sum + (job.service_provider_fee || 0), 0);
+          const avgJobValue = completedJobs > 0 ? totalEarnings / completedJobs : 0;
 
-        if (contractError) throw contractError;
-
-        if (contract) {
-          const processedMetadata: SimpleMetadata = {};
-          const contractMetadata = contract.metadata as ContractMetadata;
-          
-          if (contractMetadata && typeof contractMetadata === 'object') {
-            Object.entries(contractMetadata).forEach(([key, value]) => {
-              if (typeof value === 'string' || value === null) {
-                processedMetadata[key] = value;
-              }
-            });
-          }
-
-          setContractData({
-            property: contract.property,
-            metadata: processedMetadata
+          setFinancials({
+            totalEarnings,
+            pendingPayments,
+            completedJobs,
+            avgJobValue,
           });
         }
-
-        const { data: payments, error: paymentsError } = await supabase
-          .from('payments')
-          .select('amount, status')
-          .eq('tenancy_id', tenancy.id);
-
-        if (paymentsError) throw paymentsError;
-
-        const totalBalance = payments?.reduce((acc, payment) => {
-          return payment.status === 'pending' ? acc + payment.amount : acc;
-        }, 0) || 0;
-
-        setBalance(totalBalance);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error fetching financials:', error);
         toast({
           title: "Error",
-          description: "Could not fetch financial information",
+          description: "Could not load financial information",
           variant: "destructive",
         });
       } finally {
@@ -133,27 +89,77 @@ export function FinancialSettings() {
       }
     };
 
-    if (userRole === 'tenant') {
-      fetchData();
+    if (userRole === 'service_provider') {
+      fetchServiceProviderFinancials();
     }
   }, [userRole, toast]);
 
-  const handleDownloadStatement = async () => {
-    try {
-      toast({
-        title: "Processing",
-        description: "Generating your financial statement...",
-      });
-      // Implement statement download logic here
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Could not generate financial statement",
-        variant: "destructive",
-      });
-    }
-  };
+  if (userRole === 'service_provider') {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight mb-1">Financial & Payments Settings</h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            Manage your earnings and payment information
+          </p>
+        </div>
 
+        <div className="grid gap-6">
+          <Card>
+            <CardHeader>
+              <h3 className="text-lg font-medium">Earnings Overview</h3>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="p-4 bg-card rounded-lg border">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Wallet className="h-4 w-4 text-blue-500" />
+                    <span className="text-sm font-medium">Total Earnings</span>
+                  </div>
+                  <p className="text-2xl font-bold">{formatAmount(financials.totalEarnings)}</p>
+                </div>
+
+                <div className="p-4 bg-card rounded-lg border">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CreditCard className="h-4 w-4 text-yellow-500" />
+                    <span className="text-sm font-medium">Pending Payments</span>
+                  </div>
+                  <p className="text-2xl font-bold">{formatAmount(financials.pendingPayments)}</p>
+                </div>
+
+                <div className="p-4 bg-card rounded-lg border">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Building className="h-4 w-4 text-green-500" />
+                    <span className="text-sm font-medium">Completed Jobs</span>
+                  </div>
+                  <p className="text-2xl font-bold">{financials.completedJobs}</p>
+                </div>
+
+                <div className="p-4 bg-card rounded-lg border">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Receipt className="h-4 w-4 text-purple-500" />
+                    <span className="text-sm font-medium">Average Job Value</span>
+                  </div>
+                  <p className="text-2xl font-bold">{formatAmount(financials.avgJobValue)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <h3 className="text-lg font-medium">Payment Settings</h3>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <StripeAccountForm />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Return original component for landlords and tenants
   if (userRole === 'tenant') {
     return (
       <div className="space-y-8">
