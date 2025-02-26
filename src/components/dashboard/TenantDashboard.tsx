@@ -1,4 +1,3 @@
-
 import { DashboardHeader } from "./sections/DashboardHeader";
 import { DashboardMetrics } from "./DashboardMetrics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -236,7 +235,6 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
       </section>
 
       <section className="bg-white rounded-xl shadow-sm p-6">
-        <h2 className="text-xl font-semibold mb-4">{t('metrics.title')}</h2>
         <DashboardMetrics userId={userId} userRole="tenant" />
       </section>
 
