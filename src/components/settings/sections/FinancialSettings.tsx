@@ -30,8 +30,20 @@ import {
 import { useCurrency } from "@/hooks/useCurrency";
 
 type SimpleMetadata = {
-  [key: string]: string | null | undefined;
+  [key: string]: string | null;
 };
+
+interface ContractMetadata {
+  tenantName?: string;
+  tenantReg?: string;
+  tenantFiscal?: string;
+  tenantAddress?: string;
+  tenantBank?: string;
+  tenantBankName?: string;
+  tenantEmail?: string;
+  tenantPhone?: string;
+  [key: string]: string | undefined;
+}
 
 interface ContractData {
   property: {
@@ -56,7 +68,6 @@ export function FinancialSettings() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // First get the tenancy ID for the current user
         const { data: tenancy, error: tenancyError } = await supabase
           .from('tenancies')
           .select('id')
@@ -65,7 +76,6 @@ export function FinancialSettings() {
 
         if (tenancyError) throw tenancyError;
 
-        // Type assertion to ensure contract.metadata is treated as an object
         const { data: contract, error: contractError } = await supabase
           .from('contracts')
           .select(`
@@ -83,9 +93,10 @@ export function FinancialSettings() {
 
         if (contract) {
           const processedMetadata: SimpleMetadata = {};
-          if (contract.metadata && typeof contract.metadata === 'object') {
-            // Ensure we're only processing string values
-            Object.entries(contract.metadata as Record<string, unknown>).forEach(([key, value]) => {
+          const contractMetadata = contract.metadata as ContractMetadata;
+          
+          if (contractMetadata && typeof contractMetadata === 'object') {
+            Object.entries(contractMetadata).forEach(([key, value]) => {
               if (typeof value === 'string' || value === null) {
                 processedMetadata[key] = value;
               }
@@ -98,7 +109,6 @@ export function FinancialSettings() {
           });
         }
 
-        // Use tenancy_id instead of tenant_id for payments query
         const { data: payments, error: paymentsError } = await supabase
           .from('payments')
           .select('amount, status')
