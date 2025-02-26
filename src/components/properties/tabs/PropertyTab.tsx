@@ -61,9 +61,11 @@ export function PropertyTab({
           )}
         </div>
         <div className="flex items-center gap-4">
-          <Badge className={`${getStatusColor(status)} text-sm px-3 py-1 rounded-full font-medium`}>
-            {status}
-          </Badge>
+          {!isTenant && (
+            <Badge className={`${getStatusColor(status)} text-sm px-3 py-1 rounded-full font-medium`}>
+              {status}
+            </Badge>
+          )}
           {!isTenant && (
             isEditing ? (
               <div className="flex gap-3">
