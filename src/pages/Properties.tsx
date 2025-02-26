@@ -185,7 +185,7 @@ const Properties = () => {
       <DashboardSidebar />
       <main className="flex-1 overflow-hidden">
         <ScrollArea className="h-screen">
-          <div className="p-8 bg-gradient-to-br from-blue-50 to-indigo-50 bg-zinc-50">
+          <div className="p-8 bg-gradient-to-br from-blue-50 to-indigo-50 bg-transparent">
             <div className="max-w-7xl mx-auto space-y-8">
               <div className="bg-white/80 backdrop-blur-sm p-8 rounded-xl shadow-soft-xl mb-8 animate-fade-in border border-white/20">
                 <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
