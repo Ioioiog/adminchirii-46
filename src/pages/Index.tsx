@@ -16,7 +16,6 @@ const Index = () => {
   const { t } = useTranslation();
   const [userId, setUserId] = React.useState<string | null>(null);
   const [userName, setUserName] = React.useState<string>("");
-  const [tenantInfo, setTenantInfo] = React.useState<any>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const { userRole } = useUserRole();
 
@@ -84,27 +83,6 @@ const Index = () => {
           .join(" ");
         setUserName(fullName || "User");
 
-        // If user is a tenant, fetch their tenancy information
-        if (profile.role === 'tenant') {
-          console.log("Fetching tenant information...");
-          const { data: tenancy, error: tenancyError } = await supabase.rpc(
-            'get_latest_tenancy',
-            { p_tenant_id: currentUserId }
-          );
-
-          if (tenancyError) {
-            console.error("Error fetching tenancy:", tenancyError);
-            toast({
-              title: "Error",
-              description: "Failed to load tenancy information.",
-              variant: "destructive",
-            });
-          } else if (tenancy && tenancy.length > 0) {
-            console.log("Tenant information loaded:", tenancy[0]);
-            setTenantInfo(tenancy[0]);
-          }
-        }
-
       } catch (error: any) {
         console.error("Error in checkUser:", error);
         if (error.status === 401 || error.code === 'PGRST301') {
@@ -147,11 +125,7 @@ const Index = () => {
       case "service_provider":
         return <ServiceProviderDashboard userId={userId} userName={userName} />;
       case "tenant":
-        return tenantInfo ? (
-          <TenantDashboard userId={userId} userName={userName} tenantInfo={tenantInfo} />
-        ) : (
-          <div className="p-4">Loading tenant information...</div>
-        );
+        return <TenantDashboard userId={userId} userName={userName} />;
       case "landlord":
         return <LandlordDashboard userId={userId} userName={userName} />;
       default:
