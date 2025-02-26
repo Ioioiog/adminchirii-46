@@ -28,19 +28,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useCurrency } from "@/hooks/useCurrency";
 
-type ContractMetadata = Record<string, string>;
-
 interface ContractData {
   property: {
     name: string | null;
   } | null;
-  metadata: ContractMetadata | null;
-}
-
-interface DatabaseContract {
-  metadata: ContractMetadata | null;
-  property: {
-    name: string | null;
+  metadata: {
+    [key: string]: string | null;
   } | null;
 }
 
@@ -76,10 +69,9 @@ export function FinancialSettings() {
         if (contractError) throw contractError;
 
         if (contract) {
-          const typedContract = contract as DatabaseContract;
           setContractData({
-            property: typedContract.property,
-            metadata: typedContract.metadata
+            property: contract.property,
+            metadata: contract.metadata
           });
         }
 
@@ -333,13 +325,9 @@ export function FinancialSettings() {
         
         <div className="grid gap-8">
           <InvoiceGenerationInfo />
-          
           <Separator className="my-2" />
-          
           <InvoiceInfoForm />
-          
           <Separator className="my-2" />
-          
           <StripeAccountForm />
         </div>
       </div>
