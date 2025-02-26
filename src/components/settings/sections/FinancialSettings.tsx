@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Json } from "@/integrations/supabase/types/json";
 
 interface TenantFinancialInfo {
   bankName: string;
@@ -75,16 +76,26 @@ export function FinancialSettings() {
     }
   }, [form, userRole]);
 
-  const onSubmit = async (data: TenantFinancialInfo) => {
+  const onSubmit = async (formData: TenantFinancialInfo) => {
     try {
       setIsLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user found");
 
+      // Convert the form data to a Record type that matches Json type
+      const invoiceInfo: Record<string, Json> = {
+        bankName: formData.bankName,
+        bankAccountNumber: formData.bankAccountNumber,
+        bankSwiftCode: formData.bankSwiftCode,
+        preferredPaymentMethod: formData.preferredPaymentMethod,
+        automaticPayments: formData.automaticPayments,
+        paymentReminders: formData.paymentReminders,
+      };
+
       const { error } = await supabase
         .from('profiles')
         .update({
-          invoice_info: data
+          invoice_info: invoiceInfo
         })
         .eq('id', user.id);
 
