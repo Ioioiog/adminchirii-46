@@ -28,7 +28,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useCurrency } from "@/hooks/useCurrency";
-import { Json } from "@/integrations/supabase/types/json";
 
 type SimpleMetadata = {
   [key: string]: string | null | undefined;
@@ -57,6 +56,15 @@ export function FinancialSettings() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
+        // First get the tenancy ID for the current user
+        const { data: tenancy, error: tenancyError } = await supabase
+          .from('tenancies')
+          .select('id')
+          .eq('tenant_id', user.id)
+          .single();
+
+        if (tenancyError) throw tenancyError;
+
         const { data: contract, error: contractError } = await supabase
           .from('contracts')
           .select(`
@@ -75,7 +83,7 @@ export function FinancialSettings() {
         if (contract) {
           const processedMetadata: SimpleMetadata = {};
           if (contract.metadata && typeof contract.metadata === 'object') {
-            Object.entries(contract.metadata).forEach(([key, value]) => {
+            Object.entries(contract.metadata as Record<string, unknown>).forEach(([key, value]) => {
               if (typeof value === 'string' || value === null) {
                 processedMetadata[key] = value;
               }
@@ -88,10 +96,11 @@ export function FinancialSettings() {
           });
         }
 
+        // Use tenancy_id instead of tenant_id for payments query
         const { data: payments, error: paymentsError } = await supabase
           .from('payments')
           .select('amount, status')
-          .eq('tenant_id', user.id);
+          .eq('tenancy_id', tenancy.id);
 
         if (paymentsError) throw paymentsError;
 
