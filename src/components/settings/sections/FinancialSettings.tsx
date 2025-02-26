@@ -28,15 +28,23 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useCurrency } from "@/hooks/useCurrency";
 
-type SimpleMetadata = {
-  [key: string]: string | null | undefined;
+type ContractMetadata = {
+  tenantName?: string;
+  tenantReg?: string;
+  tenantFiscal?: string;
+  tenantAddress?: string;
+  tenantBank?: string;
+  tenantBankName?: string;
+  tenantEmail?: string;
+  tenantPhone?: string;
+  [key: string]: string | undefined;
 };
 
 interface ContractData {
   property: {
     name: string | null;
   } | null;
-  metadata: SimpleMetadata | null;
+  metadata: ContractMetadata | null;
 }
 
 export function FinancialSettings() {
@@ -80,7 +88,7 @@ export function FinancialSettings() {
         if (contractError) throw contractError;
 
         if (contract) {
-          const processedMetadata: SimpleMetadata = {};
+          const processedMetadata: ContractMetadata = {};
           if (contract.metadata && typeof contract.metadata === 'object') {
             Object.entries(contract.metadata as Record<string, unknown>).forEach(([key, value]) => {
               if (typeof value === 'string' || value === null) {
@@ -270,7 +278,7 @@ export function FinancialSettings() {
                   <div>
                     <h4 className="font-medium mb-2">Property</h4>
                     <p className="text-sm text-muted-foreground">
-                      {contractData.property?.name ?? 'Not available'}
+                      {contractData?.property?.name ?? 'Not available'}
                     </p>
                   </div>
                   {isViewingDetails && (
