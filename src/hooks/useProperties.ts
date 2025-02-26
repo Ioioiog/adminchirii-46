@@ -41,13 +41,13 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
               description,
               available_from,
               landlord_id,
-              landlord:profiles!landlord_id (
+              landlord:profiles!properties_landlord_id_fkey(
                 first_name,
                 last_name,
                 email,
                 phone
               ),
-              tenancies!inner (
+              tenancies!inner(
                 id,
                 status,
                 tenant_id
@@ -60,8 +60,14 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
 
           const propertiesWithStatus = (data || []).map(property => ({
             ...property,
-            status: property.tenancies?.some(t => t.status === 'active') ? 'occupied' : 'vacant',
-            tenant_count: property.tenancies?.filter(t => t.status === 'active').length || 0
+            status: property.tenancies?.some(t => t.status === 'active') ? 'occupied' as const : 'vacant' as const,
+            tenant_count: property.tenancies?.filter(t => t.status === 'active').length || 0,
+            landlord: property.landlord ? {
+              first_name: property.landlord.first_name,
+              last_name: property.landlord.last_name,
+              email: property.landlord.email,
+              phone: property.landlord.phone
+            } : undefined
           })) as Property[];
 
           setProperties(propertiesWithStatus);
@@ -90,7 +96,7 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
 
           const propertiesWithStatus = (data || []).map(property => ({
             ...property,
-            status: property.tenancies?.some(t => t.status === 'active') ? 'occupied' : 'vacant',
+            status: property.tenancies?.some(t => t.status === 'active') ? 'occupied' as const : 'vacant' as const,
             tenant_count: property.tenancies?.filter(t => t.status === 'active').length || 0
           })) as Property[];
 

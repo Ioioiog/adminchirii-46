@@ -86,7 +86,7 @@ const PropertyDetails = () => {
         .from("properties")
         .select(`
           *,
-          landlord:profiles!properties_landlord_id_fkey (
+          landlord:profiles!properties_landlord_id_fkey(
             first_name,
             last_name,
             email,
@@ -107,7 +107,16 @@ const PropertyDetails = () => {
         .single();
 
       if (error) throw error;
-      return data;
+
+      return {
+        ...data,
+        landlord: data.landlord ? {
+          first_name: data.landlord.first_name,
+          last_name: data.landlord.last_name,
+          email: data.landlord.email,
+          phone: data.landlord.phone
+        } : undefined
+      } as Property;
     },
   });
 
