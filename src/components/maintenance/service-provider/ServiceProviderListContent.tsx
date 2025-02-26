@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card } from "@/components/ui/card";
-import { Building2, Star, Heart, Phone, Mail, Globe, MapPin, Trash2 } from "lucide-react";
+import { Building2, Star, Heart, Phone, Mail, Globe, MapPin, Trash2, Building } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -164,11 +164,13 @@ export function ServiceProviderListContent({
                     </p>
                   )}
                   {provider.isCustomProvider ? (
-                    <Badge variant="outline" className="border-purple-500 text-purple-700">
-                      Custom Provider
+                    <Badge variant="outline" className="border-purple-500 text-purple-700 flex items-center gap-1.5">
+                      <Building className="h-3 w-3" />
+                      Landlord Provider
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="border-green-500 text-green-700">
+                    <Badge variant="outline" className="border-green-500 text-green-700 flex items-center gap-1.5">
+                      <Building2 className="h-3 w-3" />
                       Registered Provider
                     </Badge>
                   )}
