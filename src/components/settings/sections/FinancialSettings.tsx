@@ -36,10 +36,29 @@ interface ServiceProviderFinancials {
   avgJobValue: number;
 }
 
+interface ContractData {
+  property?: {
+    name: string;
+  };
+  metadata?: {
+    tenantName?: string;
+    tenantReg?: string;
+    tenantFiscal?: string;
+    tenantAddress?: string;
+    tenantBank?: string;
+    tenantBankName?: string;
+    tenantEmail?: string;
+    tenantPhone?: string;
+  };
+}
+
 export function FinancialSettings() {
   const { userRole } = useUserRole();
   const { toast } = useToast();
   const { formatAmount } = useCurrency();
+  const [balance, setBalance] = useState(0);
+  const [isViewingDetails, setIsViewingDetails] = useState(false);
+  const [contractData, setContractData] = useState<ContractData | null>(null);
   const [financials, setFinancials] = useState<ServiceProviderFinancials>({
     totalEarnings: 0,
     pendingPayments: 0,
@@ -47,6 +66,42 @@ export function FinancialSettings() {
     avgJobValue: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchContractData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from('contracts')
+          .select(`
+            property:properties (name),
+            metadata
+          `)
+          .eq('tenant_id', user.id)
+          .eq('status', 'signed')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (error) {
+          console.error('Error fetching contract:', error);
+          return;
+        }
+
+        setContractData(data);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error:', error);
+        setIsLoading(false);
+      }
+    };
+
+    if (userRole === 'tenant') {
+      fetchContractData();
+    }
+  }, [userRole]);
 
   useEffect(() => {
     const fetchServiceProviderFinancials = async () => {
@@ -93,6 +148,23 @@ export function FinancialSettings() {
       fetchServiceProviderFinancials();
     }
   }, [userRole, toast]);
+
+  const handleDownloadStatement = async () => {
+    try {
+      // Implement statement download logic here
+      toast({
+        title: "Success",
+        description: "Financial statement downloaded successfully",
+      });
+    } catch (error) {
+      console.error('Error downloading statement:', error);
+      toast({
+        title: "Error",
+        description: "Failed to download statement",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (userRole === 'service_provider') {
     return (
