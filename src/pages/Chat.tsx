@@ -136,7 +136,7 @@ const Chat = () => {
       return <div className="relative flex-1 flex items-center justify-center p-8 text-center bg-gradient-to-br from-blue-500/5 to-blue-600/5">
         <ChatBackground />
         <div className="relative z-10 max-w-md glass-card p-8 rounded-xl backdrop-blur-sm bg-white/80">
-          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-gray-50">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl" role="img" aria-label="chat">💬</span>
           </div>
           <h3 className="text-lg font-semibold mb-2 text-gray-800">
@@ -149,7 +149,7 @@ const Chat = () => {
           </p>
           
           <div className="space-y-6 text-left">
-            <div className="p-4 bg-gray-50 rounded-lg">
+            <div className="p-4 bg-blue-50 rounded-lg">
               <h4 className="font-medium text-gray-700 mb-2">Chat Features:</h4>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-center gap-2">
