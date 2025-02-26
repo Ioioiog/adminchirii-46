@@ -14,7 +14,7 @@ export function ServiceProviderDashboard({ userId, userName }: ServiceProviderDa
   const navigate = useNavigate();
 
   return (
-    <div className="p-6 space-y-8 max-w-7xl mx-auto">
+    <div className="p-6 space-y-8 max-w-7xl mx-auto bg-gradient-to-br from-white via-blue-50/10 to-indigo-50/10">
       {/* Header Section */}
       <section className="bg-white rounded-2xl shadow-sm p-8 transition-all duration-200 hover:shadow-md animate-fade-in">
         <DashboardHeader userName={userName} />
@@ -23,7 +23,7 @@ export function ServiceProviderDashboard({ userId, userName }: ServiceProviderDa
       {/* Metrics Section */}
       <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         <div className="col-span-full">
-          <div className="bg-white rounded-2xl shadow-sm p-8 transition-all duration-200 hover:shadow-md">
+          <div className="bg-white rounded-2xl shadow-sm p-8 transition-all duration-200 hover:shadow-md animate-fade-in" style={{ animationDelay: '0.1s' }}>
             <DashboardMetrics userId={userId} userRole="service_provider" />
           </div>
         </div>
@@ -31,7 +31,7 @@ export function ServiceProviderDashboard({ userId, userName }: ServiceProviderDa
 
       {/* Active Jobs Section */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg p-8 transition-all duration-200 hover:shadow-xl">
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg p-8 transition-all duration-200 hover:shadow-xl animate-fade-in" style={{ animationDelay: '0.2s' }}>
           <div className="space-y-6">
             <div className="border-b border-gray-100 pb-5">
               <h2 className="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
@@ -66,7 +66,7 @@ export function ServiceProviderDashboard({ userId, userName }: ServiceProviderDa
         </div>
 
         {/* Recent Activity Section */}
-        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg p-8 transition-all duration-200 hover:shadow-xl">
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg p-8 transition-all duration-200 hover:shadow-xl animate-fade-in" style={{ animationDelay: '0.3s' }}>
           <div className="space-y-6">
             <div className="border-b border-gray-100 pb-5">
               <h2 className="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
