@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -28,6 +29,27 @@ export function ServiceList({ onEdit }: ServiceListProps) {
 
   useEffect(() => {
     fetchServices();
+    
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('service-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'service_provider_services'
+        },
+        (payload) => {
+          console.log('Real-time update received:', payload);
+          fetchServices(); // Refresh the list when changes occur
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchServices = async () => {
