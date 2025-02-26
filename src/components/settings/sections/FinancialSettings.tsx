@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { StripeAccountForm } from "../StripeAccountForm";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -91,8 +92,11 @@ export function FinancialSettings() {
           const processedMetadata: ContractMetadata = {};
           if (contract.metadata && typeof contract.metadata === 'object') {
             Object.entries(contract.metadata as Record<string, unknown>).forEach(([key, value]) => {
-              if (typeof value === 'string' || value === null) {
+              // Only assign if the value is a string or can be converted to a string
+              if (typeof value === 'string') {
                 processedMetadata[key] = value;
+              } else if (value !== null && value !== undefined) {
+                processedMetadata[key] = String(value);
               }
             });
           }
@@ -103,7 +107,6 @@ export function FinancialSettings() {
           });
         }
 
-        // Use tenancy_id instead of tenant_id for payments query
         const { data: payments, error: paymentsError } = await supabase
           .from('payments')
           .select('amount, status')
