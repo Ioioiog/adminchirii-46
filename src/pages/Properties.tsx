@@ -19,6 +19,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useUserRole } from "@/hooks/use-user-role";
+import { FileText } from "lucide-react";
+
 const Properties = () => {
   const navigate = useNavigate();
   const {
@@ -301,19 +303,34 @@ const Properties = () => {
                         </CardContent>
                       </Card>;
               })}
-                  {filteredProperties?.length === 0 && <div className="col-span-full text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl shadow-soft-md border border-white/20">
+                  {filteredProperties?.length === 0 && (
+                    <div className="col-span-full text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl shadow-soft-md border border-white/20">
                       <Building2 className="mx-auto h-12 w-12 text-gray-400" />
                       <h3 className="mt-2 text-sm font-medium text-gray-900">No properties found</h3>
                       <div className="mt-1 text-sm">
                         {getEmptyStateMessage()}
                       </div>
-                      {userRole === 'landlord' && <div className="mt-6">
-                          <Button onClick={() => setShowAddModal(true)} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white transition-all duration-300 shadow-soft-md hover:shadow-soft-lg">
+                      <div className="mt-6 flex items-center justify-center gap-4">
+                        {userRole === 'landlord' ? (
+                          <Button 
+                            onClick={() => setShowAddModal(true)}
+                            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white transition-all duration-300 shadow-soft-md hover:shadow-soft-lg"
+                          >
                             <Plus className="h-4 w-4 mr-2" />
                             Add Property
                           </Button>
-                        </div>}
-                    </div>}
+                        ) : (
+                          <Button 
+                            onClick={() => navigate('/documents/contracts')}
+                            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white transition-all duration-300 shadow-soft-md hover:shadow-soft-lg"
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Accept Rental Contract
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div> : <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-soft-md border border-white/20 overflow-hidden animate-fade-in">
                   <Table>
                     <TableHeader>
