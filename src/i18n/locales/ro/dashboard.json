@@ -46,12 +46,12 @@
     }
   },
   "quickActions": {
-    "title": "Access frequently used features and manage your rental efficiently with these quick actions",
-    "viewMore": "View More",
-    "maintenance": "Maintenance",
-    "maintenanceDesc": "Report issues, track repairs, and communicate with maintenance teams directly through our platform",
-    "documents": "Documents",
-    "documentsDesc": "Access and manage all your rental-related documents in one secure location"
+    "title": "Acțiuni Rapide",
+    "viewMore": "Vezi Mai Mult",
+    "maintenance": "Mentenanță",
+    "maintenanceDesc": "Raportează probleme, urmărește reparații și comunică direct cu echipele de mentenanță",
+    "documents": "Documente",
+    "documentsDesc": "Accesează și gestionează documentele tale într-o locație sigură"
   },
   "propertyInfo": "Proprietățile Tale",
   "ongoingLease": "În Curs"
