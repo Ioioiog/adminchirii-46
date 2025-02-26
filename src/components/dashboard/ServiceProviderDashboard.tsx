@@ -1,6 +1,9 @@
 
 import { DashboardHeader } from "./sections/DashboardHeader";
 import { DashboardMetrics } from "./DashboardMetrics";
+import { Info, Activity } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 interface ServiceProviderDashboardProps {
   userId: string;
@@ -8,6 +11,8 @@ interface ServiceProviderDashboardProps {
 }
 
 export function ServiceProviderDashboard({ userId, userName }: ServiceProviderDashboardProps) {
+  const navigate = useNavigate();
+
   return (
     <div className="p-6 space-y-8 max-w-7xl mx-auto">
       {/* Header Section */}
@@ -39,7 +44,22 @@ export function ServiceProviderDashboard({ userId, userName }: ServiceProviderDa
             <div className="grid gap-4">
               {/* Active Jobs Content */}
               <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-gray-100">
-                <p className="text-muted-foreground">No active jobs at the moment</p>
+                <div className="text-center space-y-4">
+                  <Activity className="h-12 w-12 mx-auto text-gray-400" />
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900">No active jobs yet</h3>
+                    <p className="text-muted-foreground mt-1 max-w-sm mx-auto">
+                      Update your service areas and skills to start receiving job requests from property owners.
+                    </p>
+                    <Button 
+                      variant="outline"
+                      className="mt-4"
+                      onClick={() => navigate("/service-areas")}
+                    >
+                      Set Up Service Areas
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -59,7 +79,36 @@ export function ServiceProviderDashboard({ userId, userName }: ServiceProviderDa
             <div className="grid gap-4">
               {/* Recent Activity Content */}
               <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-gray-100">
-                <p className="text-muted-foreground">No recent activity to display</p>
+                <div className="text-center space-y-4">
+                  <Info className="h-12 w-12 mx-auto text-gray-400" />
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900">Getting Started Guide</h3>
+                    <p className="text-muted-foreground mt-1 max-w-sm mx-auto">
+                      Complete these steps to start receiving maintenance requests:
+                    </p>
+                    <ul className="mt-4 space-y-2 text-sm text-left max-w-sm mx-auto">
+                      <li className="flex items-start gap-2">
+                        <span className="font-medium">1.</span>
+                        <span>Update your service provider profile with your expertise and experience</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-medium">2.</span>
+                        <span>Define your service areas to match with nearby properties</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-medium">3.</span>
+                        <span>Set up your payment information to receive payments for completed jobs</span>
+                      </li>
+                    </ul>
+                    <Button 
+                      variant="outline"
+                      className="mt-6"
+                      onClick={() => navigate("/service-provider-profile")}
+                    >
+                      Complete Profile
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
