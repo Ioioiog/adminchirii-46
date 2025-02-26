@@ -1,9 +1,10 @@
 
 import React from "react";
 import { Card } from "@/components/ui/card";
-import { Building2, Star, Heart, Phone, Mail, Globe, MapPin } from "lucide-react";
+import { Building2, Star, Heart, Phone, Mail, Globe, MapPin, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 import {
   Table,
   TableBody,
@@ -13,6 +14,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface ServiceProviderService {
   name: string;
@@ -55,6 +67,8 @@ export function ServiceProviderListContent({
   onEdit,
   userRole
 }: ServiceProviderListContentProps) {
+  const { toast } = useToast();
+
   if (isLoading) {
     return (
       <Card className="p-6">
@@ -85,6 +99,32 @@ export function ServiceProviderListContent({
       </Card>
     );
   }
+
+  const handleDelete = async (providerId: string) => {
+    try {
+      const { error } = await supabase
+        .from('service_provider_profiles')
+        .delete()
+        .eq('id', providerId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Service provider has been deleted.",
+      });
+
+      // Refresh the page to update the list
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Error deleting service provider:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete service provider. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const getProviderName = (provider: ServiceProvider) => {
     return provider.business_name || 
@@ -228,6 +268,35 @@ export function ServiceProviderListContent({
                         >
                           Edit
                         </Button>
+                      )}
+                      {provider.isCustomProvider && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Service Provider</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this service provider? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <div className="flex justify-end gap-4">
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDelete(provider.id)}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </div>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       )}
                     </>
                   )}
