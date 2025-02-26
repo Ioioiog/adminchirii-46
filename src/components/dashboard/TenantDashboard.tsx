@@ -235,6 +235,11 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
         <DashboardHeader userName={userName} />
       </section>
 
+      <section className="bg-white rounded-xl shadow-sm p-6">
+        <h2 className="text-xl font-semibold mb-4">{t('metrics.title')}</h2>
+        <DashboardMetrics userId={userId} userRole="tenant" />
+      </section>
+
       <section className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md p-8">
         <h2 className="text-2xl font-semibold mb-6">{t('propertyInfo')}</h2>
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
@@ -291,11 +296,6 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
             </Card>
           ))}
         </div>
-      </section>
-
-      <section className="bg-white rounded-xl shadow-sm p-6">
-        <h2 className="text-xl font-semibold mb-4">{t('metrics.title')}</h2>
-        <DashboardMetrics userId={userId} userRole="tenant" />
       </section>
 
       <section className="bg-white rounded-xl shadow-sm p-6">
