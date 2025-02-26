@@ -128,27 +128,31 @@ const Chat = () => {
   const renderChatContent = () => {
     if (isConversationLoading) {
       return <div className="flex-1 flex items-center justify-center bg-gray-50">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-        </div>;
+        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+      </div>;
     }
     if (!conversationId) {
       return <div className="relative flex-1 flex items-center justify-center p-8 text-center bg-gradient-to-br from-blue-500/5 to-blue-600/5">
-          <ChatBackground />
-          <div className="relative z-10 max-w-md glass-card p-8 rounded-xl backdrop-blur-sm bg-white/80">
-            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl" role="img" aria-label="chat">💬</span>
-            </div>
-            <h3 className="text-lg font-semibold mb-2 text-gray-800">Select a Conversation</h3>
-            <p className="text-gray-600">
-              Choose a tenant from the list to start chatting ✨
-            </p>
+        <ChatBackground />
+        <div className="relative z-10 max-w-md glass-card p-8 rounded-xl backdrop-blur-sm bg-white/80">
+          <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl" role="img" aria-label="chat">💬</span>
           </div>
-        </div>;
+          <h3 className="text-lg font-semibold mb-2 text-gray-800">
+            {userRole === "landlord" ? "Select a Conversation" : "Chat with Your Landlord"}
+          </h3>
+          <p className="text-gray-600">
+            {userRole === "landlord" 
+              ? "Choose a tenant from the list to start chatting ✨"
+              : "Your landlord will be notified when you send a message ✨"}
+          </p>
+        </div>
+      </div>;
     }
     return <>
-        <MessageList messages={messages} currentUserId={currentUserId} messagesEndRef={messagesEndRef} className="flex-1 h-full" />
-        <MessageInput newMessage={newMessage} setNewMessage={setNewMessage} handleSendMessage={handleSendMessage} onStartVideoCall={handleStartVideoCall} />
-      </>;
+      <MessageList messages={messages} currentUserId={currentUserId} messagesEndRef={messagesEndRef} className="flex-1 h-full" />
+      <MessageInput newMessage={newMessage} setNewMessage={setNewMessage} handleSendMessage={handleSendMessage} onStartVideoCall={handleStartVideoCall} />
+    </>;
   };
 
   console.log('Unread messages by tenant:', unreadMessagesByTenant);
