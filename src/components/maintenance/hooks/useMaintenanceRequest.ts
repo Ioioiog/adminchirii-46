@@ -1,6 +1,8 @@
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Json } from "@/integrations/supabase/types/json";
+import { toast } from "@/hooks/use-toast";
 
 interface Property {
   name: string;
@@ -117,10 +119,41 @@ export function useMaintenanceRequest(requestId?: string) {
     }
   });
 
+  const cancelMutation = useMutation({
+    mutationFn: async (contractId: string) => {
+      console.log("Cancelling contract with ID:", contractId);
+      const { error } = await supabase
+        .from('contracts')
+        .update({ status: 'cancelled' })
+        .eq('id', contractId);
+
+      if (error) {
+        console.error("Error cancelling contract:", error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Contract cancelled",
+        description: "The contract has been cancelled successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to cancel the contract. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Cancel contract error:", error);
+    }
+  });
+
   return {
     existingRequest,
     createMutation,
     updateMutation,
-    isLoading: createMutation.isPending || updateMutation.isPending
+    cancelMutation,
+    isLoading: createMutation.isPending || updateMutation.isPending || cancelMutation.isPending
   };
 }
