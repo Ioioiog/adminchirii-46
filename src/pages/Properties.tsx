@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, ChevronDown, Building2, MapPin, User, Calendar, DollarSign, Home, LayoutGrid, Table as TableIcon, Trash2 } from "lucide-react";
@@ -9,7 +10,6 @@ import { useProperties } from "@/hooks/useProperties";
 import { PropertyListHeader } from "@/components/properties/PropertyListHeader";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { format } from "date-fns";
 import { PropertyStatus } from "@/utils/propertyUtils";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
@@ -54,6 +54,15 @@ const Properties = () => {
   });
 
   const handleAddProperty = async (formData: any) => {
+    if (userRole !== 'landlord') {
+      toast({
+        title: "Error",
+        description: "Only landlords can add properties",
+        variant: "destructive"
+      });
+      return false;
+    }
+
     try {
       const {
         data,
@@ -82,6 +91,10 @@ const Properties = () => {
 
   const deletePropertyMutation = useMutation({
     mutationFn: async (propertyId: string) => {
+      if (userRole !== 'landlord') {
+        throw new Error("Only landlords can delete properties");
+      }
+      
       const { error } = await supabase
         .from('properties')
         .delete()
@@ -178,16 +191,20 @@ const Properties = () => {
                       </h1>
                     </div>
                     <p className="text-gray-500 max-w-2xl">
-                      Manage and track your properties effectively
+                      {userRole === 'landlord' 
+                        ? "Manage and track your properties effectively"
+                        : "View your rented properties"}
                     </p>
                   </div>
-                  <Button 
-                    onClick={() => setShowAddModal(true)} 
-                    className="w-full sm:w-auto flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white transition-all duration-300 shadow-soft-md hover:shadow-soft-lg"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Add Property</span>
-                  </Button>
+                  {userRole === 'landlord' && (
+                    <Button 
+                      onClick={() => setShowAddModal(true)} 
+                      className="w-full sm:w-auto flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white transition-all duration-300 shadow-soft-md hover:shadow-soft-lg"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Add Property</span>
+                    </Button>
+                  )}
                 </div>
               </div>
 
@@ -263,35 +280,37 @@ const Properties = () => {
                           </div>
                           <Separator className="my-4" />
                           <div className="flex items-center justify-end gap-2 pt-2">
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button 
-                                  variant="outline" 
-                                  className="border-red-200 text-red-600 hover:bg-red-50"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  Delete
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete the property
-                                    and all associated data.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            {userRole === 'landlord' && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
                                   <Button 
-                                    variant="destructive"
-                                    onClick={() => deletePropertyMutation.mutate(property.id)}
+                                    variant="outline" 
+                                    className="border-red-200 text-red-600 hover:bg-red-50"
                                   >
+                                    <Trash2 className="h-4 w-4" />
                                     Delete
                                   </Button>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This action cannot be undone. This will permanently delete the property
+                                      and all associated data.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <Button 
+                                      variant="destructive"
+                                      onClick={() => deletePropertyMutation.mutate(property.id)}
+                                    >
+                                      Delete
+                                    </Button>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
                             <Button 
                               variant="outline" 
                               onClick={() => handlePropertyDetails(property.id)}
@@ -309,17 +328,21 @@ const Properties = () => {
                       <Building2 className="mx-auto h-12 w-12 text-gray-400" />
                       <h3 className="mt-2 text-sm font-medium text-gray-900">No properties found</h3>
                       <p className="mt-1 text-sm text-gray-500">
-                        Get started by creating a new property.
+                        {userRole === 'landlord' 
+                          ? "Get started by creating a new property."
+                          : "No properties are currently assigned to you."}
                       </p>
-                      <div className="mt-6">
-                        <Button 
-                          onClick={() => setShowAddModal(true)}
-                          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white transition-all duration-300 shadow-soft-md hover:shadow-soft-lg"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Property
-                        </Button>
-                      </div>
+                      {userRole === 'landlord' && (
+                        <div className="mt-6">
+                          <Button 
+                            onClick={() => setShowAddModal(true)}
+                            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white transition-all duration-300 shadow-soft-md hover:shadow-soft-lg"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Property
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -373,15 +396,19 @@ const Properties = () => {
                               <Building2 className="h-12 w-12 text-gray-400 mb-2" />
                               <h3 className="text-sm font-medium text-gray-900">No properties found</h3>
                               <p className="text-sm text-gray-500 mt-1">
-                                Get started by creating a new property.
+                                {userRole === 'landlord' 
+                                  ? "Get started by creating a new property."
+                                  : "No properties are currently assigned to you."}
                               </p>
-                              <Button 
-                                onClick={() => setShowAddModal(true)}
-                                className="mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
-                              >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Property
-                              </Button>
+                              {userRole === 'landlord' && (
+                                <Button 
+                                  onClick={() => setShowAddModal(true)}
+                                  className="mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+                                >
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Add Property
+                                </Button>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -395,7 +422,9 @@ const Properties = () => {
         </ScrollArea>
       </main>
 
-      <PropertyDialog open={showAddModal} onOpenChange={setShowAddModal} onSubmit={handleAddProperty} mode="add" />
+      {userRole === 'landlord' && (
+        <PropertyDialog open={showAddModal} onOpenChange={setShowAddModal} onSubmit={handleAddProperty} mode="add" />
+      )}
     </div>;
 };
 
