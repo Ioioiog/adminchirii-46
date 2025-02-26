@@ -3,11 +3,13 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Home, Calendar, DollarSign } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TenantDashboardProps {
   userId: string;
   userName: string;
-  tenantInfo: {
+  tenantInfo?: {
     tenancy_id: string;
     status: string;
     start_date: string;
@@ -18,16 +20,76 @@ interface TenantDashboardProps {
   };
 }
 
-export const TenantDashboard = ({ userId, userName, tenantInfo }: TenantDashboardProps) => {
+export const TenantDashboard = ({ userId, userName }: TenantDashboardProps) => {
   const { t } = useTranslation();
 
-  // Add safety check for undefined tenantInfo
-  if (!tenantInfo) {
+  // Fetch tenant information using React Query
+  const { data: tenantInfo, isLoading } = useQuery({
+    queryKey: ['tenant-info', userId],
+    queryFn: async () => {
+      console.log("Fetching tenant info for:", userId);
+      const { data, error } = await supabase.rpc(
+        'get_latest_tenancy',
+        { p_tenant_id: userId }
+      );
+
+      if (error) {
+        console.error("Error fetching tenant info:", error);
+        throw error;
+      }
+
+      console.log("Tenant info fetched:", data);
+      return data?.[0] || null;
+    },
+    retry: 2,
+    enabled: !!userId
+  });
+
+  if (isLoading) {
     return (
       <div className="grid gap-6 md:grid-cols-3">
-        <Card className="bg-white shadow-md">
+        <Card className="bg-white shadow-md animate-pulse">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div className="h-4 w-24 bg-gray-200 rounded" />
+            <div className="h-4 w-4 bg-gray-200 rounded" />
+          </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground mt-4">Loading tenant information...</p>
+            <div className="h-8 w-32 bg-gray-200 rounded mb-2" />
+            <div className="h-4 w-48 bg-gray-200 rounded" />
+          </CardContent>
+        </Card>
+        <Card className="bg-white shadow-md animate-pulse">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div className="h-4 w-24 bg-gray-200 rounded" />
+            <div className="h-4 w-4 bg-gray-200 rounded" />
+          </CardHeader>
+          <CardContent>
+            <div className="h-8 w-32 bg-gray-200 rounded mb-2" />
+            <div className="h-4 w-48 bg-gray-200 rounded" />
+          </CardContent>
+        </Card>
+        <Card className="bg-white shadow-md animate-pulse">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div className="h-4 w-24 bg-gray-200 rounded" />
+            <div className="h-4 w-4 bg-gray-200 rounded" />
+          </CardHeader>
+          <CardContent>
+            <div className="h-8 w-32 bg-gray-200 rounded mb-2" />
+            <div className="h-4 w-48 bg-gray-200 rounded" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!tenantInfo) {
+    return (
+      <div className="grid gap-6 md:grid-cols-1">
+        <Card className="bg-white shadow-md">
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">
+              {t('tenants.dashboard.noTenancy')}
+            </p>
           </CardContent>
         </Card>
       </div>
