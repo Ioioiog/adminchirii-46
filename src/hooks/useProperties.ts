@@ -41,7 +41,7 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
               description,
               available_from,
               landlord_id,
-              landlord:profiles(
+              landlord:profiles!landlord_id(
                 first_name,
                 last_name,
                 email,

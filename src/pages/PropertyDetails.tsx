@@ -87,7 +87,7 @@ const PropertyDetails = () => {
         .from("properties")
         .select(`
           *,
-          landlord:profiles(
+          landlord:profiles!landlord_id(
             first_name,
             last_name,
             email,
