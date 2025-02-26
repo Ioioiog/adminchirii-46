@@ -3,11 +3,13 @@ import { useEffect, useState } from "react";
 import { StripeAccountForm } from "../StripeAccountForm";
 import { useUserRole } from "@/hooks/use-user-role";
 import { InvoiceGenerationInfo } from "./InvoiceGenerationInfo";
+import { InvoiceInfoForm } from "../InvoiceInfoForm";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { CreditCard, Receipt, Building } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import type { Json } from "@/integrations/supabase/types/json";
 
 interface ContractData {
   property?: {
@@ -22,7 +24,7 @@ interface ContractData {
     tenantBankName?: string;
     tenantEmail?: string;
     tenantPhone?: string;
-  };
+  } | Json;
 }
 
 export function FinancialSettings() {
@@ -51,7 +53,14 @@ export function FinancialSettings() {
           .single();
 
         if (error) throw error;
-        setContractData(contract);
+
+        // Type assertion to ensure contract data matches our interface
+        const typedContract: ContractData = {
+          property: contract.property,
+          metadata: contract.metadata as ContractData['metadata']
+        };
+
+        setContractData(typedContract);
       } catch (error) {
         console.error('Error fetching contract:', error);
         toast({
@@ -125,49 +134,49 @@ export function FinancialSettings() {
               <div>
                 <h4 className="font-medium mb-2">Tenant Name</h4>
                 <p className="text-sm text-muted-foreground">
-                  {contractData?.metadata?.tenantName || 'Not available'}
+                  {(contractData?.metadata as any)?.tenantName || 'Not available'}
                 </p>
               </div>
               <div>
                 <h4 className="font-medium mb-2">Registration Number</h4>
                 <p className="text-sm text-muted-foreground">
-                  {contractData?.metadata?.tenantReg || 'Not available'}
+                  {(contractData?.metadata as any)?.tenantReg || 'Not available'}
                 </p>
               </div>
               <div>
                 <h4 className="font-medium mb-2">Fiscal Code</h4>
                 <p className="text-sm text-muted-foreground">
-                  {contractData?.metadata?.tenantFiscal || 'Not available'}
+                  {(contractData?.metadata as any)?.tenantFiscal || 'Not available'}
                 </p>
               </div>
               <div>
                 <h4 className="font-medium mb-2">Address</h4>
                 <p className="text-sm text-muted-foreground">
-                  {contractData?.metadata?.tenantAddress || 'Not available'}
+                  {(contractData?.metadata as any)?.tenantAddress || 'Not available'}
                 </p>
               </div>
               <div>
                 <h4 className="font-medium mb-2">Bank Account</h4>
                 <p className="text-sm text-muted-foreground">
-                  {contractData?.metadata?.tenantBank || 'Not available'}
+                  {(contractData?.metadata as any)?.tenantBank || 'Not available'}
                 </p>
               </div>
               <div>
                 <h4 className="font-medium mb-2">Bank Name</h4>
                 <p className="text-sm text-muted-foreground">
-                  {contractData?.metadata?.tenantBankName || 'Not available'}
+                  {(contractData?.metadata as any)?.tenantBankName || 'Not available'}
                 </p>
               </div>
               <div>
                 <h4 className="font-medium mb-2">Contact Email</h4>
                 <p className="text-sm text-muted-foreground">
-                  {contractData?.metadata?.tenantEmail || 'Not available'}
+                  {(contractData?.metadata as any)?.tenantEmail || 'Not available'}
                 </p>
               </div>
               <div>
                 <h4 className="font-medium mb-2">Phone Number</h4>
                 <p className="text-sm text-muted-foreground">
-                  {contractData?.metadata?.tenantPhone || 'Not available'}
+                  {(contractData?.metadata as any)?.tenantPhone || 'Not available'}
                 </p>
               </div>
             </div>
