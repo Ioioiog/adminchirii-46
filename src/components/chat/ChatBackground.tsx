@@ -42,13 +42,14 @@ export function ChatBackground() {
     directionalLight.position.set(5, 5, 5);
     scene.add(directionalLight);
 
-    // Sample messages
+    // Chat conversation messages
     const messages = [
-      "Welcome to AdminChirii.ro Chat",
-      "Instant messaging with your tenants",
-      "Video calls for better communication",
-      "Share documents and images easily",
-      "Stay connected with notifications"
+      "Tenant: Hi, I noticed a leak in the kitchen sink. Can someone check it out?",
+      "Landlord: Thanks for letting me know. I'll send a plumber over tomorrow.",
+      "Tenant: That would be great. What time should I expect them?",
+      "Landlord: They should arrive between 10 AM and 12 PM. Let me know if that works for you.",
+      "Tenant: That works. Also, the hallway light is flickering.",
+      "Landlord: I'll have them check that as well. Thanks for reporting it!",
     ];
 
     let messageIndex = 0;
@@ -58,24 +59,29 @@ export function ChatBackground() {
     const loader = new FontLoader();
     loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
       function addMessage(text: string, index: number) {
+        const isTenant = text.startsWith("Tenant:");
         const textGeometry = new TextGeometry(text, {
           font: font,
-          size: 0.3,
-          depth: 0.05, // Changed from 'height' to 'depth'
+          size: 0.2, // Smaller size for conversation
+          depth: 0.05,
           curveSegments: 12,
           bevelEnabled: false
         });
         const textMaterial = new THREE.MeshStandardMaterial({ 
-          color: 0x3b82f6,
+          color: isTenant ? 0x3b82f6 : 0x10b981, // Blue for tenant, green for landlord
           metalness: 0.1,
           roughness: 0.2,
         });
         const textMesh = new THREE.Mesh(textGeometry, textMaterial);
         
-        // Center the text
+        // Center and position the text
         textGeometry.computeBoundingBox();
         const textWidth = textGeometry.boundingBox!.max.x - textGeometry.boundingBox!.min.x;
-        textMesh.position.set(-textWidth/2, 2 - index * 0.8, -2 - index * 0.5);
+        textMesh.position.set(
+          -textWidth/2 + (isTenant ? -1 : 1), // Offset left for tenant, right for landlord
+          3 - index * 0.6, // Stack messages vertically
+          -2 - index * 0.2 // Slight depth variation
+        );
         
         // Start with zero scale
         textMesh.scale.set(0, 0, 0);
@@ -85,7 +91,7 @@ export function ChatBackground() {
         // Animate in after a delay
         setTimeout(() => {
           animateMessage(index);
-        }, index * 1000);
+        }, index * 1200); // Slightly longer delay between messages
       }
 
       messages.forEach((msg, i) => addMessage(msg, i));
@@ -121,10 +127,12 @@ export function ChatBackground() {
     function animate() {
       requestAnimationFrame(animate);
       
-      // Rotate all text meshes slightly
+      // Gentle floating animation for text meshes
       textMeshes.forEach((mesh, index) => {
-        mesh.rotation.x = Math.sin(Date.now() * 0.001 + index) * 0.1;
-        mesh.rotation.y = Math.cos(Date.now() * 0.001 + index) * 0.1;
+        const time = Date.now() * 0.001;
+        mesh.position.y += Math.sin(time + index) * 0.0002;
+        mesh.rotation.x = Math.sin(time + index) * 0.02;
+        mesh.rotation.y = Math.cos(time + index) * 0.02;
       });
 
       controls.update();
