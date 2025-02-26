@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Home, User, Receipt, UserCircle } from "lucide-react";
@@ -5,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { PropertyStatus } from "@/utils/propertyUtils";
+import { PropertyStatus, PropertyType } from "@/utils/propertyUtils";
 import { useToast } from "@/hooks/use-toast";
 import { InvoiceSettings } from "@/types/invoice";
 import { PropertyTab } from "@/components/properties/tabs/PropertyTab";
@@ -39,7 +40,7 @@ interface Property {
   id: string;
   name: string;
   address: string;
-  type: string;
+  type: PropertyType;
   monthly_rent: number;
   description: string | null;
   available_from: string | null;
@@ -60,30 +61,12 @@ interface Property {
   other_utilities_description: string | null;
 }
 
-interface SupabasePropertyResponse {
-  id: string;
-  name: string;
-  address: string;
-  type: string;
-  monthly_rent: number;
-  description: string | null;
-  available_from: string | null;
-  status: PropertyStatus;
+type DatabaseProperty = Omit<Property, 'landlord'> & {
   landlord: Landlord[];
-  tenancies: Tenancy[];
-  amenities: string[];
-  photos: string[];
-  bathrooms: number;
-  bedrooms: number;
-  parking_spots: number;
-  total_area: number;
-  construction_year: number | null;
-  monthly_electricity_cost: number;
-  monthly_water_cost: number;
-  monthly_gas_cost: number;
-  monthly_other_utilities_cost: number;
-  other_utilities_description: string | null;
-}
+  landlord_id: string;
+  created_at: string;
+  updated_at: string;
+};
 
 const PropertyDetails = () => {
   const { id } = useParams();
@@ -180,12 +163,33 @@ const PropertyDetails = () => {
 
       if (error) throw error;
 
-      const response = data as SupabasePropertyResponse;
+      // Type assertion with our intermediate type
+      const dbData = data as DatabaseProperty;
       
+      // Transform the data to match our Property interface
       const transformedData: Property = {
-        ...response,
-        landlord: response.landlord[0],
-        status: response.status || 'vacant' as PropertyStatus,
+        id: dbData.id,
+        name: dbData.name,
+        address: dbData.address,
+        type: dbData.type,
+        monthly_rent: dbData.monthly_rent,
+        description: dbData.description,
+        available_from: dbData.available_from,
+        status: dbData.status || 'vacant',
+        landlord: dbData.landlord[0],
+        tenancies: dbData.tenancies,
+        amenities: dbData.amenities || [],
+        photos: dbData.photos || [],
+        bathrooms: dbData.bathrooms,
+        bedrooms: dbData.bedrooms,
+        parking_spots: dbData.parking_spots,
+        total_area: dbData.total_area,
+        construction_year: dbData.construction_year,
+        monthly_electricity_cost: dbData.monthly_electricity_cost,
+        monthly_water_cost: dbData.monthly_water_cost,
+        monthly_gas_cost: dbData.monthly_gas_cost,
+        monthly_other_utilities_cost: dbData.monthly_other_utilities_cost,
+        other_utilities_description: dbData.other_utilities_description,
       };
 
       return transformedData;
@@ -193,6 +197,7 @@ const PropertyDetails = () => {
   });
 
   const handleEdit = () => {
+    if (!property) return;
     setEditedData({
       name: property.name,
       address: property.address,
@@ -204,16 +209,20 @@ const PropertyDetails = () => {
     setIsEditing(true);
   };
 
-  const handleCancel = () => {
-    setIsEditing(false);
-    setEditedData(null);
-  };
-
   const handleSave = async () => {
     try {
+      if (!editedData || !id) return;
+
       const { error } = await supabase
         .from('properties')
-        .update(editedData)
+        .update({
+          name: editedData.name,
+          address: editedData.address,
+          type: editedData.type,
+          monthly_rent: editedData.monthly_rent,
+          description: editedData.description,
+          available_from: editedData.available_from,
+        })
         .eq('id', id);
 
       if (error) throw error;
