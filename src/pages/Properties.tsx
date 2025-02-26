@@ -143,7 +143,28 @@ const Properties = () => {
     if (userRole === 'landlord') {
       return "Get started by creating a new property.";
     }
-    return "Once you sign a rental contract with a landlord, your rented properties will appear here.";
+    return (
+      <div className="space-y-4 max-w-xl mx-auto">
+        <p className="text-gray-600">
+          Your properties will appear here once you have an active rental agreement. Here's how you can get a property:
+        </p>
+        <div className="text-left space-y-3">
+          <h4 className="font-medium text-gray-900">Ways to get a property:</h4>
+          <ul className="list-disc pl-5 space-y-2 text-gray-600">
+            <li>Accept a rental contract invitation from a landlord</li>
+            <li>Sign a rental agreement through the platform</li>
+            <li>Have your existing rental contract registered by your landlord</li>
+          </ul>
+          <h4 className="font-medium text-gray-900 pt-2">Next steps:</h4>
+          <ul className="list-disc pl-5 space-y-2 text-gray-600">
+            <li>Wait for your landlord to send you a contract invitation</li>
+            <li>Once received, review and sign the contract</li>
+            <li>After signing, the property will automatically appear here</li>
+            <li>You can then manage your rental, submit maintenance requests, and track payments</li>
+          </ul>
+        </div>
+      </div>
+    );
   };
 
   if (isLoading) {
@@ -333,9 +354,9 @@ const Properties = () => {
                     <div className="col-span-full text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl shadow-soft-md border border-white/20">
                       <Building2 className="mx-auto h-12 w-12 text-gray-400" />
                       <h3 className="mt-2 text-sm font-medium text-gray-900">No properties found</h3>
-                      <p className="mt-1 text-sm text-gray-500">
+                      <div className="mt-1 text-sm">
                         {getEmptyStateMessage()}
-                      </p>
+                      </div>
                       {userRole === 'landlord' && (
                         <div className="mt-6">
                           <Button 
