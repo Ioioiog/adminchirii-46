@@ -40,7 +40,8 @@ export function PaymentMethodsForm() {
       if (error) throw error;
 
       if (data?.url) {
-        window.location.href = data.url;
+        // Use window.top to ensure we break out of any iframes
+        window.top.location.href = data.url;
       }
     } catch (error) {
       console.error('Error adding payment method:', error);
