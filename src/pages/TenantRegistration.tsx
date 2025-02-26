@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { Auth } from "@supabase/auth-ui-react";
@@ -35,13 +36,36 @@ const TenantRegistration = () => {
   const [isExistingUser, setIsExistingUser] = useState<boolean | null>(null);
   const [contract, setContract] = useState<Contract | null>(null);
 
-  console.log("Contract verification params:", { contractId, token });
-
   const showError = (title: string, description: string) => {
     toast({ title, description, variant: "destructive" });
     navigate("/auth");
   };
 
+  // First check authentication state
+  useEffect(() => {
+    const checkAuthAndRedirect = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          if (contractId && token) {
+            // If user is authenticated and has both contractId and token, 
+            // redirect to contract details
+            navigate(`/documents/contracts/${contractId}?invitation_token=${token}`);
+            return true; // Return true to indicate we've redirected
+          }
+        }
+        return false; // Return false to indicate no redirect happened
+      } catch (error) {
+        console.error('Auth check error:', error);
+        return false;
+      }
+    };
+
+    checkAuthAndRedirect();
+  }, [contractId, token, navigate]);
+
+  // Then verify contract only if we haven't redirected
   useEffect(() => {
     const verifyContract = async () => {
       if (!contractId || !token) {
@@ -50,7 +74,6 @@ const TenantRegistration = () => {
       }
 
       try {
-        console.log("Verifying contract:", { contractId, token });
         const { data, error } = await supabase
           .from('contracts')
           .select('*, properties(name)')
@@ -64,12 +87,6 @@ const TenantRegistration = () => {
           return;
         }
 
-        if (!['pending', 'pending_signature'].includes(data.status)) {
-          console.error("Invalid contract status:", data.status);
-          showError("Invalid Contract", "This contract is no longer available for signing.");
-          return;
-        }
-
         // Cast the metadata to our expected type and verify tenant email exists
         const metadata = data.metadata as ContractMetadata;
         if (!metadata?.tenantEmail) {
@@ -77,7 +94,6 @@ const TenantRegistration = () => {
           return;
         }
 
-        console.log("Checking for existing user with email:", metadata.tenantEmail);
         const { data: existingUser } = await supabase
           .from('profiles')
           .select('id')
@@ -104,34 +120,10 @@ const TenantRegistration = () => {
   }, [contractId, token, navigate, toast]);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          // If user is already authenticated and lands on tenant-registration,
-          // redirect them to the contract page
-          if (token && contractId) {
-            navigate(`/documents/contracts/${contractId}?invitation_token=${token}`);
-          }
-        }
-      } catch (error) {
-        console.error('Auth check error:', error);
-      }
-    };
-
-    checkAuth();
-  }, [token, contractId, navigate]);
-
-  useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("Auth state changed:", event, session?.user?.id);
-        
         if (event === 'SIGNED_IN' && session && contract) {
           try {
-            console.log("Processing new tenant registration");
-            
             const { error: contractError } = await supabase
               .from('contracts')
               .update({
