@@ -93,7 +93,7 @@ const PropertyDetails = () => {
         .from("properties")
         .select(`
           *,
-          landlord:profiles!properties_landlord_id_fkey(first_name, last_name, email, phone),
+          landlord:profiles!properties_landlord_id_fkey!inner(first_name, last_name, email, phone),
           tenancies(
             id,
             status,
@@ -110,11 +110,14 @@ const PropertyDetails = () => {
 
       if (error) throw error;
 
+      // Get the first (and only) landlord profile since it's a foreign key relationship
+      const landlordProfile = Array.isArray(data.landlord) ? data.landlord[0] : data.landlord;
+
       const propertyWithComputedFields = {
         ...data,
         status: data.tenancies?.some((t: any) => t.status === 'active') ? 'occupied' as const : 'vacant' as const,
         tenant_count: data.tenancies?.filter((t: any) => t.status === 'active').length || 0,
-        landlord: data.landlord as LandlordProfile
+        landlord: landlordProfile as LandlordProfile
       } as Property;
 
       return propertyWithComputedFields;

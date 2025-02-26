@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Property } from "@/utils/propertyUtils";
@@ -47,7 +48,7 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
               description,
               available_from,
               landlord_id,
-              landlord:profiles!properties_landlord_id_fkey(first_name, last_name, email, phone),
+              landlord:profiles!properties_landlord_id_fkey!inner(first_name, last_name, email, phone),
               tenancies!inner(id, status, tenant_id)
             `)
             .eq('tenancies.tenant_id', userData.user.id)
@@ -56,11 +57,14 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
 
           if (error) throw error;
 
+          // Get the first (and only) landlord profile since it's a foreign key relationship
+          const landlordProfile = Array.isArray(data.landlord) ? data.landlord[0] : data.landlord;
+
           const propertyWithStatus = {
             ...data,
             status: data.tenancies?.some((t: any) => t.status === 'active') ? 'occupied' as const : 'vacant' as const,
             tenant_count: data.tenancies?.filter((t: any) => t.status === 'active').length || 0,
-            landlord: data.landlord as LandlordProfile
+            landlord: landlordProfile as LandlordProfile
           } as Property;
 
           setProperties([propertyWithStatus]);
