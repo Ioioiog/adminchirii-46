@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Database } from "@/integrations/supabase/types";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useNavigate } from "react-router-dom";
 
 type ServiceCategory = Database["public"]["Enums"]["service_category"];
 
@@ -36,6 +38,7 @@ export function ServiceForm({ onSuccess, service }: ServiceFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { availableCurrencies } = useCurrency();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +70,13 @@ export function ServiceForm({ onSuccess, service }: ServiceFormProps) {
         title: "Success",
         description: `Service ${service ? "updated" : "added"} successfully`,
       });
+      
+      // Call onSuccess to close the dialog
       onSuccess();
+      
+      // Navigate to service provider profile with services tab
+      navigate('/service-provider-profile', { state: { activeSection: 'services' } });
+      
     } catch (error) {
       console.error("Error saving service:", error);
       toast({
