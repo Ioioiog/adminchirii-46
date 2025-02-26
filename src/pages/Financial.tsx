@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { DollarSign, FileText, CreditCard } from "lucide-react";
+import { DollarSign, FileText, CreditCard, BarChart2, Building } from "lucide-react";
 import { InvoiceList } from "@/components/invoices/InvoiceList";
 import { PaymentList } from "@/components/payments/PaymentList";
 import { InvoiceDialog } from "@/components/invoices/InvoiceDialog";
@@ -17,12 +17,22 @@ import { ContentCard } from "@/components/layout/ContentCard";
 import { SearchAndFilterBar } from "@/components/layout/SearchAndFilterBar";
 import { DateRange } from "react-day-picker";
 import { useProperties } from "@/hooks/useProperties";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { useCurrency } from "@/hooks/useCurrency";
 
-type FinancialSection = 'invoices' | 'payments';
+type FinancialSection = 'invoices' | 'payments' | 'overview';
+
+interface FinancialSummary {
+  totalInvoiced: number;
+  totalPaid: number;
+  outstandingAmount: number;
+  overduePendingAmount: number;
+}
 
 const Financial = () => {
-  const [activeSection, setActiveSection] = useState<FinancialSection>('invoices');
+  const [activeSection, setActiveSection] = useState<FinancialSection>('overview');
   const { userRole, userId } = useUserRole();
+  const { formatAmount } = useCurrency();
   const { properties } = useProperties({ userRole: userRole || 'tenant' });
 
   const {
@@ -46,7 +56,38 @@ const Financial = () => {
     fetchInvoices
   } = useInvoices();
 
+  // Calculate financial summary
+  const calculateFinancialSummary = (): FinancialSummary => {
+    const totalInvoiced = invoices.reduce((sum, invoice) => sum + invoice.amount, 0);
+    const totalPaid = invoices
+      .filter(invoice => invoice.status === 'paid')
+      .reduce((sum, invoice) => sum + invoice.amount, 0);
+    const outstandingAmount = invoices
+      .filter(invoice => invoice.status === 'pending')
+      .reduce((sum, invoice) => sum + invoice.amount, 0);
+    const overduePendingAmount = invoices
+      .filter(invoice => 
+        invoice.status === 'pending' && 
+        new Date(invoice.due_date) < new Date()
+      )
+      .reduce((sum, invoice) => sum + invoice.amount, 0);
+
+    return {
+      totalInvoiced,
+      totalPaid,
+      outstandingAmount,
+      overduePendingAmount
+    };
+  };
+
+  const financialSummary = calculateFinancialSummary();
+
   const navigationItems = [
+    {
+      id: 'overview',
+      label: 'Overview',
+      icon: BarChart2,
+    },
     {
       id: 'invoices',
       label: 'Invoices',
@@ -63,6 +104,101 @@ const Financial = () => {
   const filteredUserRole = userRole === 'service_provider' ? null : userRole;
   const isLandlordOrTenant = userRole === 'landlord' || userRole === 'tenant';
 
+  const renderOverviewSection = () => {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          icon={BarChart2}
+          title="Financial Overview"
+          description="Summary of your financial activities and current status"
+        />
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="text-sm font-medium">Total Invoiced</h3>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatAmount(financialSummary.totalInvoiced)}</div>
+              <p className="text-xs text-muted-foreground">
+                Total amount of all invoices
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="text-sm font-medium">Total Paid</h3>
+              <DollarSign className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {formatAmount(financialSummary.totalPaid)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Total amount of paid invoices
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="text-sm font-medium">Outstanding Amount</h3>
+              <DollarSign className="h-4 w-4 text-yellow-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-600">
+                {formatAmount(financialSummary.outstandingAmount)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Total pending payments
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="text-sm font-medium">Overdue Amount</h3>
+              <DollarSign className="h-4 w-4 text-red-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">
+                {formatAmount(financialSummary.overduePendingAmount)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Total amount of overdue invoices
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {userRole === 'tenant' && (
+          <Card>
+            <CardHeader>
+              <h3 className="text-lg font-medium">Property Information</h3>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {properties.map((property) => (
+                  <div key={property.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                    <Building className="h-8 w-8 text-muted-foreground" />
+                    <div>
+                      <h4 className="font-medium">{property.name}</h4>
+                      <p className="text-sm text-muted-foreground">{property.address}</p>
+                      <p className="text-sm mt-1">
+                        Monthly Rent: {formatAmount(property.monthly_rent)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  };
+
   const renderSection = () => {
     if (!isLandlordOrTenant) {
       return (
@@ -74,6 +210,8 @@ const Financial = () => {
     }
 
     switch (activeSection) {
+      case 'overview':
+        return renderOverviewSection();
       case 'invoices':
         return (
           <div className="space-y-6">
