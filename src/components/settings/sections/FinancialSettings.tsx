@@ -50,9 +50,19 @@ export function FinancialSettings() {
           .eq('status', 'signed')
           .order('created_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
+
+        if (!contract) {
+          console.log('No signed contract found for tenant');
+          toast({
+            title: "No Contract Found",
+            description: "No signed rental contract was found for your account",
+            variant: "default",
+          });
+          return;
+        }
 
         // Type assertion to ensure contract data matches our interface
         const typedContract: ContractData = {
@@ -124,62 +134,68 @@ export function FinancialSettings() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-6 md:grid-cols-2">
-              <div>
-                <h4 className="font-medium mb-2">Property</h4>
-                <p className="text-sm text-muted-foreground">
-                  {contractData?.property?.name || 'Not available'}
-                </p>
+            {!contractData ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No signed contract information available. Please contact your landlord if you believe this is an error.
+              </p>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2">
+                <div>
+                  <h4 className="font-medium mb-2">Property</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {contractData?.property?.name || 'Not available'}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-2">Tenant Name</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {(contractData?.metadata as any)?.tenantName || 'Not available'}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-2">Registration Number</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {(contractData?.metadata as any)?.tenantReg || 'Not available'}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-2">Fiscal Code</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {(contractData?.metadata as any)?.tenantFiscal || 'Not available'}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-2">Address</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {(contractData?.metadata as any)?.tenantAddress || 'Not available'}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-2">Bank Account</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {(contractData?.metadata as any)?.tenantBank || 'Not available'}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-2">Bank Name</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {(contractData?.metadata as any)?.tenantBankName || 'Not available'}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-2">Contact Email</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {(contractData?.metadata as any)?.tenantEmail || 'Not available'}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-2">Phone Number</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {(contractData?.metadata as any)?.tenantPhone || 'Not available'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h4 className="font-medium mb-2">Tenant Name</h4>
-                <p className="text-sm text-muted-foreground">
-                  {(contractData?.metadata as any)?.tenantName || 'Not available'}
-                </p>
-              </div>
-              <div>
-                <h4 className="font-medium mb-2">Registration Number</h4>
-                <p className="text-sm text-muted-foreground">
-                  {(contractData?.metadata as any)?.tenantReg || 'Not available'}
-                </p>
-              </div>
-              <div>
-                <h4 className="font-medium mb-2">Fiscal Code</h4>
-                <p className="text-sm text-muted-foreground">
-                  {(contractData?.metadata as any)?.tenantFiscal || 'Not available'}
-                </p>
-              </div>
-              <div>
-                <h4 className="font-medium mb-2">Address</h4>
-                <p className="text-sm text-muted-foreground">
-                  {(contractData?.metadata as any)?.tenantAddress || 'Not available'}
-                </p>
-              </div>
-              <div>
-                <h4 className="font-medium mb-2">Bank Account</h4>
-                <p className="text-sm text-muted-foreground">
-                  {(contractData?.metadata as any)?.tenantBank || 'Not available'}
-                </p>
-              </div>
-              <div>
-                <h4 className="font-medium mb-2">Bank Name</h4>
-                <p className="text-sm text-muted-foreground">
-                  {(contractData?.metadata as any)?.tenantBankName || 'Not available'}
-                </p>
-              </div>
-              <div>
-                <h4 className="font-medium mb-2">Contact Email</h4>
-                <p className="text-sm text-muted-foreground">
-                  {(contractData?.metadata as any)?.tenantEmail || 'Not available'}
-                </p>
-              </div>
-              <div>
-                <h4 className="font-medium mb-2">Phone Number</h4>
-                <p className="text-sm text-muted-foreground">
-                  {(contractData?.metadata as any)?.tenantPhone || 'Not available'}
-                </p>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
