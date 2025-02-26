@@ -87,7 +87,7 @@ const PropertyDetails = () => {
         .from("properties")
         .select(`
           *,
-          landlord:profiles!properties_landlord_id_fkey!inner(
+          landlord:profiles(
             first_name,
             last_name,
             email,
@@ -109,15 +109,19 @@ const PropertyDetails = () => {
 
       if (error) throw error;
 
-      return {
+      const propertyWithComputedFields = {
         ...data,
-        landlord: {
+        status: data.tenancies?.some((t: any) => t.status === 'active') ? 'occupied' as const : 'vacant' as const,
+        tenant_count: data.tenancies?.filter((t: any) => t.status === 'active').length || 0,
+        landlord: data.landlord ? {
           first_name: data.landlord.first_name,
           last_name: data.landlord.last_name,
           email: data.landlord.email,
           phone: data.landlord.phone
-        }
+        } : undefined
       } as Property;
+
+      return propertyWithComputedFields;
     },
   });
 

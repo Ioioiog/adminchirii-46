@@ -41,7 +41,7 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
               description,
               available_from,
               landlord_id,
-              landlord:profiles!properties_landlord_id_fkey!inner(
+              landlord:profiles(
                 first_name,
                 last_name,
                 email,
@@ -54,23 +54,24 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
               )
             `)
             .eq('tenancies.tenant_id', userData.user.id)
-            .eq('tenancies.status', 'active');
+            .eq('tenancies.status', 'active')
+            .single();
 
           if (error) throw error;
 
-          const propertiesWithStatus = (data || []).map(property => ({
-            ...property,
-            status: property.tenancies?.some(t => t.status === 'active') ? 'occupied' as const : 'vacant' as const,
-            tenant_count: property.tenancies?.filter(t => t.status === 'active').length || 0,
-            landlord: {
-              first_name: property.landlord.first_name,
-              last_name: property.landlord.last_name,
-              email: property.landlord.email,
-              phone: property.landlord.phone
-            }
-          })) as Property[];
+          const propertyWithStatus = {
+            ...data,
+            status: data.tenancies?.some((t: any) => t.status === 'active') ? 'occupied' as const : 'vacant' as const,
+            tenant_count: data.tenancies?.filter((t: any) => t.status === 'active').length || 0,
+            landlord: data.landlord ? {
+              first_name: data.landlord.first_name,
+              last_name: data.landlord.last_name,
+              email: data.landlord.email,
+              phone: data.landlord.phone
+            } : undefined
+          } as Property;
 
-          setProperties(propertiesWithStatus);
+          setProperties([propertyWithStatus]);
         } else {
           // For landlords, fetch all their properties
           const { data, error } = await supabase
