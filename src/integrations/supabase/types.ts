@@ -1271,6 +1271,7 @@ export type Database = {
           role: string
           settings: Json | null
           stripe_account_id: string | null
+          stripe_customer_id: string | null
           subscription_end_date: string | null
           subscription_plan: Database["public"]["Enums"]["subscription_plan"]
           subscription_start_date: string | null
@@ -1289,6 +1290,7 @@ export type Database = {
           role?: string
           settings?: Json | null
           stripe_account_id?: string | null
+          stripe_customer_id?: string | null
           subscription_end_date?: string | null
           subscription_plan?: Database["public"]["Enums"]["subscription_plan"]
           subscription_start_date?: string | null
@@ -1307,6 +1309,7 @@ export type Database = {
           role?: string
           settings?: Json | null
           stripe_account_id?: string | null
+          stripe_customer_id?: string | null
           subscription_end_date?: string | null
           subscription_plan?: Database["public"]["Enums"]["subscription_plan"]
           subscription_start_date?: string | null
