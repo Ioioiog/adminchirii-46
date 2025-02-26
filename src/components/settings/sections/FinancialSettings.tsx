@@ -90,7 +90,23 @@ export function FinancialSettings() {
           return;
         }
 
-        setContractData(data);
+        if (data) {
+          // Convert the data to match our ContractData interface
+          const formattedData: ContractData = {
+            property: data.property,
+            metadata: {
+              tenantName: data.metadata?.tenantName as string,
+              tenantReg: data.metadata?.tenantReg as string,
+              tenantFiscal: data.metadata?.tenantFiscal as string,
+              tenantAddress: data.metadata?.tenantAddress as string,
+              tenantBank: data.metadata?.tenantBank as string,
+              tenantBankName: data.metadata?.tenantBankName as string,
+              tenantEmail: data.metadata?.tenantEmail as string,
+              tenantPhone: data.metadata?.tenantPhone as string,
+            }
+          };
+          setContractData(formattedData);
+        }
         setIsLoading(false);
       } catch (error) {
         console.error('Error:', error);
