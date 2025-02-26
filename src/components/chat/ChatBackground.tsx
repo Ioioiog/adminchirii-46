@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
@@ -47,23 +46,53 @@ export function ChatBackground() {
 
     // Chat conversation messages
     const messages = [
-      "Tenant: Hi, I noticed a leak in the kitchen sink. Can someone check it out?",
-      "Landlord: Thanks for letting me know. I'll send a plumber over tomorrow.",
-      "Tenant: That would be great. What time should I expect them?",
-      "Landlord: They should arrive between 10 AM and 12 PM. Let me know if that works for you.",
-      "Tenant: That works. Also, the hallway light is flickering.",
-      "Landlord: I'll have them check that as well. Thanks for reporting it!",
+      { text: "Hi, I noticed a leak in the kitchen sink. Can someone check it out?", sender: "tenant", delay: 0 },
+      { text: "Thanks for letting me know. I'll send a plumber over tomorrow.", sender: "landlord", delay: 3000 },
+      { text: "That would be great. What time should I expect them?", sender: "tenant", delay: 5000 },
+      { text: "They should arrive between 10 AM and 12 PM. Let me know if that works for you.", sender: "landlord", delay: 8000 },
+      { text: "That works. Also, the hallway light is flickering.", sender: "tenant", delay: 10000 },
+      { text: "I'll have them check that as well. Thanks for reporting it!", sender: "landlord", delay: 12000 },
     ];
 
-    let messageIndex = 0;
     let messageGroups: THREE.Group[] = [];
+    let typingIndicator: THREE.Group | null = null;
 
     // Load font and create messages
     const loader = new FontLoader();
     loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
-      function addMessage(text: string, index: number) {
-        const isTenant = text.startsWith("Tenant:");
-        const textGeometry = new TextGeometry(text, {
+      // Create typing indicator dots
+      function createTypingIndicator(isTenant: boolean) {
+        const group = new THREE.Group();
+        const dotGeometry = new THREE.SphereGeometry(0.03, 16, 16);
+        const dotMaterial = new THREE.MeshStandardMaterial({ 
+          color: isTenant ? 0x3b82f6 : 0x10b981,
+          metalness: 0.1,
+          roughness: 0.3,
+        });
+
+        for (let i = 0; i < 3; i++) {
+          const dot = new THREE.Mesh(dotGeometry, dotMaterial);
+          dot.position.x = i * 0.1 - 0.1;
+          group.add(dot);
+        }
+
+        group.position.set(isTenant ? -2 : 2, 2, -2);
+        group.visible = false;
+        scene.add(group);
+        return group;
+      }
+
+      function animateTypingIndicator() {
+        if (!typingIndicator) return;
+        typingIndicator.children.forEach((dot, i) => {
+          const time = Date.now() * 0.003;
+          (dot as THREE.Mesh).position.y = Math.sin(time + i) * 0.05;
+        });
+      }
+
+      function addMessage(message: { text: string; sender: string }, index: number) {
+        const isTenant = message.sender === "tenant";
+        const textGeometry = new TextGeometry(message.text, {
           font: font,
           size: 0.15,
           depth: 0.02,
@@ -74,7 +103,6 @@ export function ChatBackground() {
           bevelSegments: 3
         });
         
-        // Create a message bubble geometry using BoxGeometry instead of RoundedBoxGeometry
         textGeometry.computeBoundingBox();
         const textWidth = textGeometry.boundingBox!.max.x - textGeometry.boundingBox!.min.x;
         const textHeight = textGeometry.boundingBox!.max.y - textGeometry.boundingBox!.min.y;
@@ -85,7 +113,6 @@ export function ChatBackground() {
           0.1
         );
         
-        // Create materials
         const textMaterial = new THREE.MeshStandardMaterial({ 
           color: 0xffffff,
           metalness: 0.1,
@@ -98,57 +125,82 @@ export function ChatBackground() {
           roughness: 0.3,
         });
 
-        // Create meshes
         const textMesh = new THREE.Mesh(textGeometry, textMaterial);
         const bubbleMesh = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
         
-        // Create a group to hold both the bubble and text
         const messageGroup = new THREE.Group();
         messageGroup.add(bubbleMesh);
         messageGroup.add(textMesh);
         
-        // Position the text inside the bubble
         textMesh.position.set(-textWidth/2 + 0.2, -textHeight/2 + 0.1, 0.06);
         
-        // Position the entire message group
         messageGroup.position.set(
           (isTenant ? -2 : 2),
           2 - index * 0.8,
           -2 - index * 0.1
         );
         
-        // Start with zero scale
         messageGroup.scale.set(0, 0, 0);
+        messageGroup.visible = false;
         scene.add(messageGroup);
         messageGroups.push(messageGroup);
 
-        // Animate in after a delay
-        setTimeout(() => {
-          animateMessage(index);
-        }, index * 800);
+        return messageGroup;
       }
 
-      messages.forEach((msg, i) => addMessage(msg, i));
+      // Create all messages but keep them invisible
+      const messageElements = messages.map((msg, i) => addMessage(msg, i));
+      typingIndicator = createTypingIndicator(true);
 
-      function animateMessage(index: number) {
-        if (index < messageGroups.length) {
-          const group = messageGroups[index];
-          const duration = 800;
-          const start = Date.now();
-          
-          function updateScale() {
-            const now = Date.now();
-            const progress = Math.min(1, (now - start) / duration);
-            const scale = 1 + Math.sin(progress * Math.PI) * 0.1;
-            group.scale.set(scale, scale, scale);
-            
-            if (progress < 1) {
-              requestAnimationFrame(updateScale);
-            }
+      // Simulate chat conversation
+      messages.forEach((message, index) => {
+        const showTyping = () => {
+          if (typingIndicator) {
+            typingIndicator.visible = true;
+            typingIndicator.position.x = message.sender === "tenant" ? -2 : 2;
+            typingIndicator.position.y = 2 - index * 0.8;
+            typingIndicator.children.forEach(dot => {
+              (dot as THREE.Mesh).material = new THREE.MeshStandardMaterial({
+                color: message.sender === "tenant" ? 0x3b82f6 : 0x10b981
+              });
+            });
           }
+        };
+
+        const hideTyping = () => {
+          if (typingIndicator) {
+            typingIndicator.visible = false;
+          }
+        };
+
+        // Show typing indicator before message
+        setTimeout(showTyping, message.delay);
+
+        // Show message and hide typing indicator
+        setTimeout(() => {
+          hideTyping();
+          const messageGroup = messageElements[index];
+          messageGroup.visible = true;
+          animateMessage(messageGroup);
+        }, message.delay + 1500); // Show message 1.5s after typing starts
+      });
+
+      function animateMessage(group: THREE.Group) {
+        const duration = 800;
+        const start = Date.now();
+        
+        function updateScale() {
+          const now = Date.now();
+          const progress = Math.min(1, (now - start) / duration);
+          const scale = 1 + Math.sin(progress * Math.PI) * 0.1;
+          group.scale.set(scale, scale, scale);
           
-          updateScale();
+          if (progress < 1) {
+            requestAnimationFrame(updateScale);
+          }
         }
+        
+        updateScale();
       }
     });
 
@@ -156,12 +208,22 @@ export function ChatBackground() {
     function animate() {
       requestAnimationFrame(animate);
       
+      // Animate typing indicator if visible
+      if (typingIndicator && typingIndicator.visible) {
+        typingIndicator.children.forEach((dot, i) => {
+          const time = Date.now() * 0.003;
+          (dot as THREE.Mesh).position.y = Math.sin(time + i) * 0.05;
+        });
+      }
+
       // Gentle floating animation for messages
       messageGroups.forEach((group, index) => {
-        const time = Date.now() * 0.001;
-        group.position.y += Math.sin(time + index) * 0.0001;
-        group.rotation.x = Math.sin(time + index) * 0.01;
-        group.rotation.y = Math.cos(time + index) * 0.01;
+        if (group.visible) {
+          const time = Date.now() * 0.001;
+          group.position.y += Math.sin(time + index) * 0.0001;
+          group.rotation.x = Math.sin(time + index) * 0.01;
+          group.rotation.y = Math.cos(time + index) * 0.01;
+        }
       });
 
       controls.update();
@@ -194,6 +256,15 @@ export function ChatBackground() {
         });
         scene.remove(group);
       });
+      if (typingIndicator) {
+        typingIndicator.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.geometry.dispose();
+            (child.material as THREE.Material).dispose();
+          }
+        });
+        scene.remove(typingIndicator);
+      }
     };
   }, []);
 
