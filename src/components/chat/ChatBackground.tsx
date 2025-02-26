@@ -1,6 +1,9 @@
 
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 export function ChatBackground() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -17,201 +20,117 @@ export function ChatBackground() {
       alpha: true 
     });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     containerRef.current.appendChild(renderer.domElement);
 
-    // Create shapes array
-    const shapes: THREE.Mesh[] = [];
-    const shapeCount = 12;
+    // Controls
+    const controls = new OrbitControls(camera, renderer.domElement);
+    camera.position.set(0, 2, 5);
+    controls.update();
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.enableZoom = false;
 
-    // Function to create typing dot shape
-    function createTypingDot() {
-      const shape = new THREE.Shape();
-      const radius = 0.4;
-      shape.arc(0, 0, radius, 0, Math.PI * 2, false);
-      return shape;
-    }
-
-    // Function to create curved path for phone shape
-    function createPhoneShape() {
-      const shape = new THREE.Shape();
-      shape.moveTo(0, 0);
-      shape.bezierCurveTo(0.8, 0, 1.2, 0.6, 1.2, 1.2);
-      shape.bezierCurveTo(1.2, 1.8, 0.8, 2.4, 0, 2.4);
-      shape.bezierCurveTo(-0.8, 2.4, -1.2, 1.8, -1.2, 1.2);
-      shape.bezierCurveTo(-1.2, 0.6, -0.8, 0, 0, 0);
-      return shape;
-    }
-
-    // Function to create speech bubble shape
-    function createBubbleShape() {
-      const shape = new THREE.Shape();
-      shape.moveTo(0, 0);
-      shape.bezierCurveTo(2, 0, 2.5, 0.8, 2.5, 1.5);
-      shape.bezierCurveTo(2.5, 2.2, 2, 2.8, 0, 2.8);
-      shape.bezierCurveTo(-2, 2.8, -2.5, 2.2, -2.5, 1.5);
-      shape.bezierCurveTo(-2.5, 0.8, -2, 0, 0, 0);
-      shape.moveTo(-0.5, 0);
-      shape.quadraticCurveTo(-1.2, -0.8, -1.5, -1.5);
-      return shape;
-    }
-
-    // Create different shape variations
-    const shapeTypes = [createPhoneShape(), createBubbleShape()];
-
-    // Create typing dots
-    const typingDots: THREE.Mesh[] = [];
-    const dotsCount = 3;
-    const dotSpacing = 1;
-
-    for (let i = 0; i < dotsCount; i++) {
-      const dotGeometry = new THREE.ExtrudeGeometry(createTypingDot(), {
-        depth: 0.2,
-        bevelEnabled: true,
-        bevelThickness: 0.05,
-        bevelSize: 0.05,
-        bevelSegments: 4
-      });
-
-      const dotMaterial = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color('#2563EB'),
-        transparent: true,
-        opacity: 0.9,
-        metalness: 0.1,
-        roughness: 0.2,
-        clearcoat: 0.4,
-        clearcoatRoughness: 0.2,
-      });
-
-      const dot = new THREE.Mesh(dotGeometry, dotMaterial);
-      dot.position.x = (i - 1) * dotSpacing;
-      dot.position.y = 0;
-      dot.position.z = 2;
-      dot.userData.initialY = dot.position.y;
-      dot.userData.delay = i * 0.2;
-
-      typingDots.push(dot);
-      scene.add(dot);
-    }
-
-    // Create regular shapes
-    for (let i = 0; i < shapeCount; i++) {
-      const shapeType = shapeTypes[Math.floor(Math.random() * shapeTypes.length)];
-      const scale = Math.random() * 0.5 + 0.5;
-
-      const geometry = new THREE.ExtrudeGeometry(shapeType, {
-        depth: 0.1,
-        bevelEnabled: true,
-        bevelThickness: 0.05,
-        bevelSize: 0.05,
-        bevelSegments: 4
-      });
-
-      // Create main shape with blue-600
-      const mainMaterial = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color('#2563EB'),
-        transparent: true,
-        opacity: 0.9,
-        side: THREE.DoubleSide,
-        metalness: 0.1,
-        roughness: 0.2,
-        clearcoat: 0.4,
-        clearcoatRoughness: 0.2,
-      });
-
-      // Create overlay with new sky blue color
-      const overlayMaterial = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color('#87c0fa'),
-        transparent: true,
-        opacity: 0.4,
-        side: THREE.DoubleSide,
-        metalness: 0.1,
-        roughness: 0.2,
-        clearcoat: 0.4,
-        clearcoatRoughness: 0.2,
-      });
-
-      const mainShape = new THREE.Mesh(geometry, mainMaterial);
-      mainShape.scale.set(scale, scale, scale);
-
-      // Create and position overlay
-      const overlayShape = new THREE.Mesh(geometry, overlayMaterial);
-      overlayShape.scale.set(scale, scale, scale);
-      overlayShape.position.set(0.15, -0.15, 0.02);
-      mainShape.add(overlayShape);
-
-      // Random position with wider spread
-      mainShape.position.x = (Math.random() - 0.5) * 15;
-      mainShape.position.y = (Math.random() - 0.5) * 15;
-      mainShape.position.z = (Math.random() - 0.5) * 10;
-      mainShape.rotation.x = Math.random() * Math.PI * 0.25;
-      mainShape.rotation.y = Math.random() * Math.PI * 0.25;
-
-      mainShape.userData.initialY = mainShape.position.y;
-      mainShape.userData.speed = Math.random() * 0.5 + 0.5;
-      mainShape.userData.rotationSpeed = (Math.random() * 0.002) + 0.001;
-
-      mainShape.castShadow = true;
-      mainShape.receiveShadow = true;
-      overlayShape.castShadow = true;
-
-      shapes.push(mainShape);
-      scene.add(mainShape);
-    }
-
-    // Enhanced lighting setup
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    // Lighting setup
+    const ambientLight = new THREE.AmbientLight(0x404040, 2);
     scene.add(ambientLight);
+
+    const pointLight = new THREE.PointLight(0x3b82f6, 1);
+    pointLight.position.set(5, 5, 5);
+    scene.add(pointLight);
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
     directionalLight.position.set(5, 5, 5);
-    directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 1024;
-    directionalLight.shadow.mapSize.height = 1024;
     scene.add(directionalLight);
 
-    const pointLight = new THREE.PointLight(0x3b82f6, 0.5);
-    pointLight.position.set(-5, 5, 3);
-    scene.add(pointLight);
+    // Sample messages
+    const messages = [
+      "Welcome to AdminChirii.ro Chat",
+      "Instant messaging with your tenants",
+      "Video calls for better communication",
+      "Share documents and images easily",
+      "Stay connected with notifications"
+    ];
 
-    camera.position.z = 10;
+    let messageIndex = 0;
+    let textMeshes: THREE.Mesh[] = [];
 
-    let time = 0;
+    // Load font and create messages
+    const loader = new FontLoader();
+    loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
+      function addMessage(text: string, index: number) {
+        const textGeometry = new TextGeometry(text, {
+          font: font,
+          size: 0.3,
+          height: 0.05,
+        });
+        const textMaterial = new THREE.MeshStandardMaterial({ 
+          color: 0x3b82f6,
+          metalness: 0.1,
+          roughness: 0.2,
+        });
+        const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+        
+        // Center the text
+        textGeometry.computeBoundingBox();
+        const textWidth = textGeometry.boundingBox!.max.x - textGeometry.boundingBox!.min.x;
+        textMesh.position.set(-textWidth/2, 2 - index * 0.8, -2 - index * 0.5);
+        
+        // Start with zero scale
+        textMesh.scale.set(0, 0, 0);
+        scene.add(textMesh);
+        textMeshes.push(textMesh);
+
+        // Animate in after a delay
+        setTimeout(() => {
+          animateMessage(index);
+        }, index * 1000);
+      }
+
+      messages.forEach((msg, i) => addMessage(msg, i));
+
+      function animateMessage(index: number) {
+        if (index < textMeshes.length) {
+          const mesh = textMeshes[index];
+          // Animate scale
+          const duration = 1000;
+          const start = Date.now();
+          
+          function updateScale() {
+            const now = Date.now();
+            const progress = Math.min(1, (now - start) / duration);
+            
+            // Elastic easing
+            const scale = Math.pow(progress, 0.3) * 
+              Math.sin(progress * Math.PI * 2.5) * 0.15 + progress;
+            
+            mesh.scale.set(scale, scale, scale);
+            
+            if (progress < 1) {
+              requestAnimationFrame(updateScale);
+            }
+          }
+          
+          updateScale();
+        }
+      }
+    });
+
+    // Animation loop
     function animate() {
       requestAnimationFrame(animate);
-      time += 0.008;
-
-      // Animate typing dots
-      typingDots.forEach((dot, index) => {
-        const delay = dot.userData.delay;
-        dot.position.y = Math.sin(time * 3 + delay) * 0.2;
-        dot.rotation.z = Math.sin(time * 2 + delay) * 0.1;
+      
+      // Rotate all text meshes slightly
+      textMeshes.forEach((mesh, index) => {
+        mesh.rotation.x = Math.sin(Date.now() * 0.001 + index) * 0.1;
+        mesh.rotation.y = Math.cos(Date.now() * 0.001 + index) * 0.1;
       });
 
-      // Animate shapes
-      shapes.forEach((shape, index) => {
-        const speed = shape.userData.speed;
-        const rotationSpeed = shape.userData.rotationSpeed;
-        
-        shape.position.y = shape.userData.initialY + 
-          Math.sin(time * speed + index) * 0.8;
-        
-        shape.rotation.x += rotationSpeed * 2;
-        shape.rotation.y += rotationSpeed * 3;
-        
-        shape.rotation.z = Math.sin(time * speed + index) * 0.15;
-
-        shape.position.x += Math.sin(time * speed * 0.5 + index) * 0.01;
-        
-        if (Math.abs(shape.position.x) > 15) {
-          shape.position.x = Math.sign(shape.position.x) * 15;
-        }
-      });
-
+      controls.update();
       renderer.render(scene, camera);
     }
+    animate();
 
+    // Handle window resize
     function handleResize() {
       if (!containerRef.current) return;
       camera.aspect = window.innerWidth / window.innerHeight;
@@ -220,13 +139,18 @@ export function ChatBackground() {
     }
 
     window.addEventListener('resize', handleResize);
-    animate();
 
     return () => {
+      window.removeEventListener('resize', handleResize);
       if (containerRef.current) {
         containerRef.current.removeChild(renderer.domElement);
       }
-      window.removeEventListener('resize', handleResize);
+      // Cleanup meshes and geometries
+      textMeshes.forEach(mesh => {
+        mesh.geometry.dispose();
+        (mesh.material as THREE.Material).dispose();
+        scene.remove(mesh);
+      });
     };
   }, []);
 
