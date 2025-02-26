@@ -1,4 +1,3 @@
-
 import { DashboardHeader } from "./sections/DashboardHeader";
 import { DashboardMetrics } from "./DashboardMetrics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +18,6 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  // Fetch all active tenancies for the tenant
   const { data: tenancies, isLoading } = useQuery({
     queryKey: ["tenant-properties", userId],
     queryFn: async () => {
@@ -53,15 +51,25 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
   const quickActions = [
     {
       title: t('dashboard.quickActions.maintenance'),
-      description: t('dashboard.quickActions.maintenanceDesc'),
+      description: "Report issues, track repairs, and communicate with maintenance teams directly through our platform.",
       icon: Home,
       action: () => navigate('/maintenance'),
+      features: [
+        "Submit new maintenance requests",
+        "Track repair progress in real-time",
+        "Schedule maintenance visits"
+      ]
     },
     {
       title: t('dashboard.quickActions.documents'),
-      description: t('dashboard.quickActions.documentsDesc'),
+      description: "Access and manage all your rental-related documents in one secure location.",
       icon: FileText,
       action: () => navigate('/documents'),
+      features: [
+        "View rental agreements",
+        "Download payment receipts",
+        "Store important documents"
+      ]
     },
   ];
 
@@ -79,7 +87,6 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
     );
   }
 
-  // Show welcome message and guide when no properties are found
   if (!tenancies?.length) {
     return (
       <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -122,28 +129,58 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
           </div>
         </section>
 
-        {/* Quick Actions Section */}
         <section className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-xl font-semibold mb-4">{t('dashboard.quickActions.title')}</h2>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold mb-2">{t('dashboard.quickActions.title')}</h2>
+            <p className="text-gray-600">Access frequently used features and manage your rental efficiently with these quick actions.</p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
             {quickActions.map((action, index) => (
-              <Card key={index} className="hover:shadow-md transition-shadow">
+              <Card key={index} className="hover:shadow-md transition-shadow border-2 border-gray-100">
                 <CardContent className="p-6">
-                  <div className="flex items-start space-x-4">
-                    <div className="p-2 bg-blue-50 rounded-lg">
-                      <action.icon className="h-6 w-6 text-blue-600" />
+                  <div className="space-y-4">
+                    <div className="flex items-start space-x-4">
+                      <div className="p-3 bg-blue-50 rounded-lg">
+                        <action.icon className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold mb-1">{action.title}</h3>
+                        <p className="text-sm text-gray-600 mb-4">{action.description}</p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold mb-1">{action.title}</h3>
-                      <p className="text-sm text-muted-foreground mb-4">{action.description}</p>
-                      <Button onClick={action.action} variant="outline" className="w-full">
-                        {t('dashboard.quickActions.viewMore')}
-                      </Button>
-                    </div>
+                    <ul className="space-y-2 pl-4">
+                      {action.features.map((feature, idx) => (
+                        <li key={idx} className="flex items-center text-sm text-gray-600">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mr-2"></div>
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button 
+                      onClick={action.action} 
+                      className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+                    >
+                      {t('dashboard.quickActions.viewMore')}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
             ))}
+          </div>
+          
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-start space-x-3">
+              <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">How to use Quick Actions</h4>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li>• Click on any action card to access its detailed features</li>
+                  <li>• Use maintenance requests for any property-related issues</li>
+                  <li>• Access documents section for all your paperwork needs</li>
+                  <li>• Track the status of your requests in real-time</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </section>
       </div>
@@ -152,12 +189,10 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Header Section */}
       <section className="bg-white rounded-xl shadow-sm p-6">
         <DashboardHeader userName={userName} />
       </section>
 
-      {/* Properties Section */}
       <section className="bg-white rounded-xl shadow-sm p-6">
         <h2 className="text-xl font-semibold mb-4">{t('dashboard.propertyInfo')}</h2>
         <div className="grid gap-6 md:grid-cols-3">
@@ -214,74 +249,63 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
         </div>
       </section>
 
-      {/* Guide Section */}
-      <section className="bg-white rounded-xl shadow-sm p-6">
-        <div className="flex items-start space-x-4">
-          <div className="p-3 bg-blue-50 rounded-lg">
-            <Info className="h-6 w-6 text-blue-600" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold mb-2">Managing Your Rental</h3>
-            <div className="space-y-4">
-              <p className="text-gray-600">
-                Here are some key features available to help you manage your rental:
-              </p>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <h4 className="font-medium text-gray-900">Maintenance</h4>
-                  <ul className="list-disc pl-5 text-sm text-gray-600 space-y-1">
-                    <li>Submit maintenance requests</li>
-                    <li>Track repair status</li>
-                    <li>Communicate with service providers</li>
-                  </ul>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="font-medium text-gray-900">Documents</h4>
-                  <ul className="list-disc pl-5 text-sm text-gray-600 space-y-1">
-                    <li>Access your rental agreement</li>
-                    <li>Store important documents</li>
-                    <li>View payment history</li>
-                  </ul>
-                </div>
-              </div>
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">Need help?</span> Contact your landlord through the platform or reach out to our support team for assistance.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Metrics Section */}
       <section className="bg-white rounded-xl shadow-sm p-6">
         <h2 className="text-xl font-semibold mb-4">{t('dashboard.metrics.title')}</h2>
         <DashboardMetrics userId={userId} userRole="tenant" />
       </section>
 
-      {/* Quick Actions */}
       <section className="bg-white rounded-xl shadow-sm p-6">
-        <h2 className="text-xl font-semibold mb-4">{t('dashboard.quickActions.title')}</h2>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold mb-2">{t('dashboard.quickActions.title')}</h2>
+          <p className="text-gray-600">Access frequently used features and manage your rental efficiently with these quick actions.</p>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
           {quickActions.map((action, index) => (
-            <Card key={index} className="hover:shadow-md transition-shadow">
+            <Card key={index} className="hover:shadow-md transition-shadow border-2 border-gray-100">
               <CardContent className="p-6">
-                <div className="flex items-start space-x-4">
-                  <div className="p-2 bg-blue-50 rounded-lg">
-                    <action.icon className="h-6 w-6 text-blue-600" />
+                <div className="space-y-4">
+                  <div className="flex items-start space-x-4">
+                    <div className="p-3 bg-blue-50 rounded-lg">
+                      <action.icon className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold mb-1">{action.title}</h3>
+                      <p className="text-sm text-gray-600 mb-4">{action.description}</p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-1">{action.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-4">{action.description}</p>
-                    <Button onClick={action.action} variant="outline" className="w-full">
-                      {t('dashboard.quickActions.viewMore')}
-                    </Button>
-                  </div>
+                  <ul className="space-y-2 pl-4">
+                    {action.features.map((feature, idx) => (
+                      <li key={idx} className="flex items-center text-sm text-gray-600">
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mr-2"></div>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button 
+                    onClick={action.action} 
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+                  >
+                    {t('dashboard.quickActions.viewMore')}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           ))}
+        </div>
+        
+        <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="flex items-start space-x-3">
+            <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-gray-900 mb-2">How to use Quick Actions</h4>
+              <ul className="space-y-2 text-sm text-gray-600">
+                <li>• Click on any action card to access its detailed features</li>
+                <li>• Use maintenance requests for any property-related issues</li>
+                <li>• Access documents section for all your paperwork needs</li>
+                <li>• Track the status of your requests in real-time</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </section>
     </div>
