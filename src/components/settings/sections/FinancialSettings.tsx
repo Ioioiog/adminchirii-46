@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { StripeAccountForm } from "../StripeAccountForm";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -271,7 +270,7 @@ export function FinancialSettings() {
                   <div>
                     <h4 className="font-medium mb-2">Property</h4>
                     <p className="text-sm text-muted-foreground">
-                      {contractData.property?.name || 'Not available'}
+                      {contractData.property?.name ?? 'Not available'}
                     </p>
                   </div>
                   {isViewingDetails && (

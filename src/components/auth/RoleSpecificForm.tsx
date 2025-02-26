@@ -41,6 +41,10 @@ export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormPr
     occupation: "",
     employmentStatus: "",
     currentAddress: "",
+    city: "",
+    income: "",
+    age: "",
+    familyMembers: "",
     emergencyContactName: "",
     emergencyContactPhone: "",
   });
@@ -288,18 +292,54 @@ export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormPr
       {role === 'tenant' && (
         <>
           <div className="space-y-2">
-            <Label htmlFor="occupation">Occupation *</Label>
+            <Label htmlFor="occupation">Occupation</Label>
             <Input
               id="occupation"
               name="occupation"
               value={formData.occupation}
               onChange={handleChange}
-              required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="employmentStatus">Employment Status *</Label>
+            <Label htmlFor="income">Monthly Income</Label>
+            <Input
+              id="income"
+              name="income"
+              type="number"
+              value={formData.income}
+              onChange={handleChange}
+              placeholder="Enter your monthly income"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="age">Age</Label>
+            <Input
+              id="age"
+              name="age"
+              type="number"
+              min="18"
+              max="120"
+              value={formData.age}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="familyMembers">Number of Family Members</Label>
+            <Input
+              id="familyMembers"
+              name="familyMembers"
+              type="number"
+              min="1"
+              value={formData.familyMembers}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="employmentStatus">Employment Status</Label>
             <Select
               value={formData.employmentStatus}
               onValueChange={(value) => handleSelectChange(value, 'employmentStatus')}
@@ -318,13 +358,22 @@ export function RoleSpecificForm({ role, email, onComplete }: RoleSpecificFormPr
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="currentAddress">Current Address *</Label>
+            <Label htmlFor="city">City</Label>
+            <Input
+              id="city"
+              name="city"
+              value={formData.city}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="currentAddress">Current Address</Label>
             <Input
               id="currentAddress"
               name="currentAddress"
               value={formData.currentAddress}
               onChange={handleChange}
-              required
             />
           </div>
 
