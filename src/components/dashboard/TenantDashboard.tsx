@@ -1,7 +1,8 @@
+
 import { DashboardHeader } from "./sections/DashboardHeader";
 import { DashboardMetrics } from "./DashboardMetrics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Home, Calendar, DollarSign, FileText } from "lucide-react";
+import { Home, Calendar, DollarSign, FileText, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ interface TenantDashboardProps {
   };
 }
 
-export function TenantDashboard({ userId, userName, tenantInfo }: TenantDashboardProps) {
+export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
@@ -77,6 +78,77 @@ export function TenantDashboard({ userId, userName, tenantInfo }: TenantDashboar
     return (
       <div className="p-6 space-y-6 max-w-7xl mx-auto">
         <p className="text-muted-foreground">{t('dashboard.metrics.loading')}</p>
+      </div>
+    );
+  }
+
+  // Show welcome message and guide when no properties are found
+  if (!tenancies?.length) {
+    return (
+      <div className="p-6 space-y-6 max-w-7xl mx-auto">
+        <section className="bg-white rounded-xl shadow-sm p-6">
+          <DashboardHeader userName={userName} />
+        </section>
+
+        <section className="bg-white rounded-xl shadow-sm p-8 text-center">
+          <div className="max-w-2xl mx-auto space-y-6">
+            <Building2 className="h-12 w-12 text-gray-400 mx-auto" />
+            <h2 className="text-2xl font-semibold text-gray-900">Welcome to Your Tenant Dashboard</h2>
+            <div className="space-y-4">
+              <p className="text-gray-600">
+                You currently don't have any active properties. Here's how you can get started:
+              </p>
+              <div className="text-left space-y-4 bg-blue-50 p-6 rounded-lg">
+                <h3 className="font-medium text-gray-900">Ways to get a property:</h3>
+                <ul className="list-disc pl-5 space-y-2 text-gray-600">
+                  <li>Accept a rental contract invitation from a landlord</li>
+                  <li>Sign a rental agreement through the platform</li>
+                  <li>Have your existing rental contract registered by your landlord</li>
+                </ul>
+                <h3 className="font-medium text-gray-900 pt-2">What happens next:</h3>
+                <ul className="list-disc pl-5 space-y-2 text-gray-600">
+                  <li>Wait for your landlord to send you a contract invitation</li>
+                  <li>Once received, review and sign the contract</li>
+                  <li>After signing, you'll see your property details here</li>
+                  <li>You'll be able to manage your rental, submit maintenance requests, and track payments</li>
+                </ul>
+              </div>
+            </div>
+            <div className="pt-4">
+              <Button 
+                onClick={() => navigate('/properties')}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+              >
+                View Properties
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        {/* Quick Actions Section */}
+        <section className="bg-white rounded-xl shadow-sm p-6">
+          <h2 className="text-xl font-semibold mb-4">{t('dashboard.quickActions.title')}</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {quickActions.map((action, index) => (
+              <Card key={index} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-start space-x-4">
+                    <div className="p-2 bg-blue-50 rounded-lg">
+                      <action.icon className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold mb-1">{action.title}</h3>
+                      <p className="text-sm text-muted-foreground mb-4">{action.description}</p>
+                      <Button onClick={action.action} variant="outline" className="w-full">
+                        {t('dashboard.quickActions.viewMore')}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
       </div>
     );
   }
