@@ -37,21 +37,33 @@ export function MissingInfoModal() {
 
   useEffect(() => {
     const checkProfile = async () => {
-      if (!isAuthenticated || !currentUserId) return;
+      if (!isAuthenticated || !currentUserId) {
+        console.log("Not authenticated or no user ID", { isAuthenticated, currentUserId });
+        return;
+      }
 
       try {
+        console.log("Checking profile for user:", currentUserId);
+        
         const { data: profile, error } = await supabase
           .from("profiles")
           .select("first_name, last_name, phone, role")
           .eq("id", currentUserId)
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching profile:", error);
+          throw error;
+        }
+
+        console.log("Retrieved profile:", profile);
 
         const hasMissingInfo = !profile.first_name || 
                              !profile.last_name || 
                              !profile.phone || 
                              !profile.role;
+
+        console.log("Has missing info:", hasMissingInfo);
 
         if (hasMissingInfo) {
           setFormData({
@@ -61,6 +73,7 @@ export function MissingInfoModal() {
             role: profile.role || "",
           });
           setOpen(true);
+          console.log("Opening modal with form data:", formData);
         }
       } catch (error) {
         console.error("Error checking profile:", error);
@@ -75,6 +88,7 @@ export function MissingInfoModal() {
     setIsLoading(true);
 
     try {
+      console.log("Submitting form data:", formData);
       const { error } = await supabase
         .from("profiles")
         .update({
