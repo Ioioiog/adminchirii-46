@@ -7,7 +7,8 @@ import { Separator } from "@/components/ui/separator";
 import { 
   Edit2, Save, X, Home, DollarSign, MapPin, 
   Droplets, Zap, Flame, Plus, Car, Bed, Bath,
-  Square, CalendarRange, Building, Mail, Phone
+  Square, CalendarRange, Building, Mail, Phone,
+  UserCircle
 } from "lucide-react";
 import { useUserRole } from "@/hooks/use-user-role";
 
@@ -91,7 +92,7 @@ export function PropertyTab({
         <h3 className="text-lg font-semibold mb-4">Landlord Information</h3>
         <div className="grid gap-4">
           <div className="flex items-center gap-2 text-gray-600">
-            <User className="h-4 w-4" />
+            <UserCircle className="h-4 w-4" />
             <span className="font-medium">{`${property.landlord?.first_name || ''} ${property.landlord?.last_name || ''}`}</span>
           </div>
           <div className="flex items-center gap-2 text-gray-600">
