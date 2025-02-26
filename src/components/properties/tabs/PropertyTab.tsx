@@ -40,25 +40,6 @@ export function PropertyTab({
   const isTenant = userRole === 'tenant';
   const status = property.tenancies?.some((t: any) => t.status === 'active') ? 'occupied' : 'vacant';
 
-  const { data: contract } = useQuery({
-    queryKey: ['property-contract', property.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('contracts')
-        .select('*')
-        .eq('property_id', property.id)
-        .eq('status', 'signed')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  const landlordInfo = (contract?.metadata as FormData) || {} as FormData;
-
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -106,26 +87,6 @@ export function PropertyTab({
                 Edit
               </Button>
             )
-          )}
-        </div>
-      </div>
-
-      <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-xl border border-gray-100">
-        <h3 className="text-lg font-semibold mb-4">Landlord Information</h3>
-        <div className="grid gap-4">
-          <div className="flex items-center gap-2 text-gray-600">
-            <UserCircle className="h-4 w-4" />
-            <span className="font-medium">{landlordInfo.ownerName || 'Not specified'}</span>
-          </div>
-          <div className="flex items-center gap-2 text-gray-600">
-            <Mail className="h-4 w-4" />
-            <span>{landlordInfo.ownerEmail || 'Email not provided'}</span>
-          </div>
-          {landlordInfo.ownerPhone && (
-            <div className="flex items-center gap-2 text-gray-600">
-              <Phone className="h-4 w-4" />
-              <span>{landlordInfo.ownerPhone}</span>
-            </div>
           )}
         </div>
       </div>
