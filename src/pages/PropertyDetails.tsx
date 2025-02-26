@@ -13,6 +13,7 @@ import { PropertyTab } from "@/components/properties/tabs/PropertyTab";
 import { TenantsTab } from "@/components/properties/tabs/TenantsTab";
 import { InvoiceSettingsTab } from "@/components/properties/tabs/InvoiceSettingsTab";
 import { NavigationTabs } from "@/components/layout/NavigationTabs";
+import { LandlordTab } from "@/components/properties/tabs/LandlordTab";
 
 const PropertyDetails = () => {
   const { id } = useParams();
@@ -298,6 +299,9 @@ const PropertyDetails = () => {
                   propertyId={id || ''}
                   userId={userId}
                 />
+              )}
+              {activeTab === "landlord" && (
+                <LandlordTab propertyId={id || ''} />
               )}
             </div>
           </div>
