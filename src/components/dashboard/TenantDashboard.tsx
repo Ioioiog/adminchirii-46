@@ -245,10 +245,11 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
           <p className="text-gray-600">Access frequently used features and manage your rental efficiently with these quick actions.</p>
         </div>
         
-        {tenancies?.length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-lg font-medium mb-4">Your Properties</h3>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-6">
+          {/* Properties Column */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-medium">Your Properties</h3>
+            <div className="space-y-4">
               {tenancies?.map((tenancy) => (
                 <Card key={tenancy.id} className="group hover:shadow-xl transition-all duration-300 border-2 border-gray-100">
                   <CardHeader className="flex flex-row items-center justify-between pb-2 p-6">
@@ -303,53 +304,69 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
               ))}
             </div>
           </div>
-        )}
 
-        <div className="grid gap-6 md:grid-cols-2">
-          {quickActions.map((action, index) => (
-            <Card key={index} className="hover:shadow-md transition-shadow border-2 border-gray-100">
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex items-start space-x-4">
-                    <div className="p-3 bg-blue-50 rounded-lg">
-                      <action.icon className="h-6 w-6 text-blue-600" />
+          {/* Maintenance and Documents Column */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-medium">Quick Actions</h3>
+            <div className="space-y-4">
+              {quickActions.map((action, index) => (
+                <Card key={index} className="hover:shadow-md transition-shadow border-2 border-gray-100">
+                  <CardContent className="p-6">
+                    <div className="space-y-4">
+                      <div className="flex items-start space-x-4">
+                        <div className="p-3 bg-blue-50 rounded-lg">
+                          <action.icon className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold mb-1">{action.title}</h3>
+                          <p className="text-sm text-gray-600 mb-4">{action.description}</p>
+                        </div>
+                      </div>
+                      <ul className="space-y-2 pl-4">
+                        {action.features.map((feature, idx) => (
+                          <li key={idx} className="flex items-center text-sm text-gray-600">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mr-2"></div>
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                      <Button 
+                        onClick={action.action} 
+                        className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+                      >
+                        {t('quickActions.viewMore')}
+                      </Button>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold mb-1">{action.title}</h3>
-                      <p className="text-sm text-gray-600 mb-4">{action.description}</p>
-                    </div>
-                  </div>
-                  <ul className="space-y-2 pl-4">
-                    {action.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-center text-sm text-gray-600">
-                        <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mr-2"></div>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button 
-                    onClick={action.action} 
-                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
-                  >
-                    {t('quickActions.viewMore')}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
         </div>
-        
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <div className="flex items-start space-x-3">
-            <Info className="h-5 w-5 text-blue-600 mt-0.5" />
-            <div>
-              <h4 className="font-medium text-gray-900 mb-2">How to use Quick Actions</h4>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li>• Click on any action card to access its detailed features</li>
-                <li>• Use maintenance requests for any property-related issues</li>
-                <li>• Access documents section for all your paperwork needs</li>
-                <li>• Track the status of your requests in real-time</li>
-              </ul>
+
+        {/* How to Use Section in a separate row */}
+        <div className="mt-8 p-6 bg-gradient-to-br from-gray-50 to-blue-50/30 rounded-xl border border-gray-100 shadow-sm">
+          <div className="flex items-start space-x-4">
+            <div className="p-3 bg-blue-100/50 rounded-lg">
+              <Info className="h-6 w-6 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-lg font-semibold text-gray-900 mb-4">How to use Quick Actions</h4>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[
+                  "Click on any action card to access its detailed features",
+                  "Use maintenance requests for any property-related issues",
+                  "Access documents section for all your paperwork needs",
+                  "Track the status of your requests in real-time"
+                ].map((tip, index) => (
+                  <div key={index} className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                      <span className="text-blue-600 text-sm font-medium">{index + 1}</span>
+                    </div>
+                    <p className="text-gray-600">{tip}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
