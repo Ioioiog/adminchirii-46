@@ -95,20 +95,9 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
         throw tenanciesError;
       }
 
-      console.log("Raw contracts data:", contractsData);
-      console.log("Raw tenancies data:", tenanciesData);
-
       // Transform contracts data
       const contractTenants = (contractsData || []).map((contract: any) => {
         const metadata = contract.metadata as { tenantSignatureName?: string } | null;
-        
-        let tenancyStatus = 'active';
-        if (contract.status === 'draft' || contract.status === 'pending_signature') {
-          tenancyStatus = 'pending';
-        } else if (contract.status === 'expired') {
-          tenancyStatus = 'inactive';
-        }
-
         return {
           id: contract.tenant?.id || contract.id,
           first_name: contract.tenant?.first_name || (metadata?.tenantSignatureName?.split(' ')[0]) || 'Unknown',
@@ -127,7 +116,7 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
             id: contract.id,
             start_date: contract.valid_from,
             end_date: contract.valid_until,
-            status: tenancyStatus,
+            status: contract.status === 'signed' ? 'active' : 'pending',
           },
         } as Tenant;
       });
@@ -155,12 +144,16 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
         },
       }));
 
-      // Combine and deduplicate tenants based on tenant_id
-      const allTenants = [...contractTenants, ...tenancyTenants];
-      const uniqueTenants = Array.from(new Map(allTenants.map(tenant => 
-        [tenant.id, tenant]
-      )).values());
+      // Combine and deduplicate tenants based on tenant_id and property_id
+      const uniqueTenantsMap = new Map();
+      [...contractTenants, ...tenancyTenants].forEach(tenant => {
+        const key = `${tenant.id}-${tenant.property.id}`;
+        if (!uniqueTenantsMap.has(key) || tenant.tenancy.status === 'active') {
+          uniqueTenantsMap.set(key, tenant);
+        }
+      });
 
+      const uniqueTenants = Array.from(uniqueTenantsMap.values());
       console.log("Combined unique tenants:", uniqueTenants);
       return uniqueTenants;
     },
@@ -222,13 +215,21 @@ export function TenantList({ tenants, isLandlord = false }: TenantListProps) {
     return `${tenant.first_name || ''} ${tenant.last_name || ''}`.trim();
   };
 
-  // Combine regular tenants with contract tenants
+  // Combine regular tenants with contract tenants and deduplicate
   const allTenants = [...tenants, ...contractTenants];
-  console.log("Regular tenants:", tenants);
-  console.log("Contract tenants:", contractTenants);
-  console.log("Combined tenants:", allTenants);
+  const uniqueTenantsMap = new Map();
+  allTenants.forEach(tenant => {
+    if (!tenant) return;
+    const key = `${tenant.id}-${tenant.property?.id}`;
+    if (!uniqueTenantsMap.has(key) || tenant.tenancy?.status === 'active') {
+      uniqueTenantsMap.set(key, tenant);
+    }
+  });
+  
+  const uniqueTenants = Array.from(uniqueTenantsMap.values());
+  console.log("Final unique tenants:", uniqueTenants);
 
-  const filteredTenants = allTenants.filter((tenant) => {
+  const filteredTenants = uniqueTenants.filter((tenant) => {
     if (!tenant) return false;
     
     const searchString = searchTerm.toLowerCase();
