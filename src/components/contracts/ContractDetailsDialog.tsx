@@ -6,6 +6,20 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { useUserRole } from "@/hooks/use-user-role";
+import { useMaintenanceRequest } from "@/components/maintenance/hooks/useMaintenanceRequest";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface ContractDetailsDialogProps {
   open: boolean;
@@ -51,15 +65,46 @@ interface ContractDetailsDialogProps {
 }
 
 export function ContractDetailsDialog({ open, onOpenChange, contract }: ContractDetailsDialogProps) {
+  const { userRole } = useUserRole();
+  const { cancelMutation } = useMaintenanceRequest();
+  
   if (!contract) return null;
-
   const metadata = contract.metadata || {};
+
+  const handleCancel = async () => {
+    await cancelMutation.mutateAsync(contract.id);
+    onOpenChange(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl">
-        <DialogHeader>
+        <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle>Contract Details</DialogTitle>
+          {userRole === 'landlord' && contract.status !== 'cancelled' && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive">Cancel Contract</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently cancel the contract.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={handleCancel}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Yes, cancel contract
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </DialogHeader>
 
         <div className="space-y-6 print:space-y-6">
@@ -78,6 +123,7 @@ export function ContractDetailsDialog({ open, onOpenChange, contract }: Contract
                   <Badge variant="secondary" className={
                     contract.status === 'signed' ? 'bg-green-100 text-green-800' :
                     contract.status === 'draft' ? 'bg-gray-100 text-gray-800' :
+                    contract.status === 'cancelled' ? 'bg-red-100 text-red-800' :
                     'bg-yellow-100 text-yellow-800'
                   }>
                     {contract.status}
