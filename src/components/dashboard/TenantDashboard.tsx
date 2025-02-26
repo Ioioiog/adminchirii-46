@@ -16,7 +16,7 @@ interface TenantDashboardProps {
 
 export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t } = useTranslation('dashboard');
 
   const { data: tenancies, isLoading } = useQuery({
     queryKey: ["tenant-properties", userId],
@@ -50,8 +50,8 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
 
   const quickActions = [
     {
-      title: t('dashboard.quickActions.maintenance'),
-      description: t('dashboard.quickActions.maintenanceDesc'),
+      title: t('quickActions.maintenance'),
+      description: t('quickActions.maintenanceDesc'),
       icon: Home,
       action: () => navigate('/maintenance'),
       features: [
@@ -61,8 +61,8 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
       ]
     },
     {
-      title: t('dashboard.quickActions.documents'),
-      description: t('dashboard.quickActions.documentsDesc'),
+      title: t('quickActions.documents'),
+      description: t('quickActions.documentsDesc'),
       icon: FileText,
       action: () => navigate('/documents'),
       features: [
@@ -131,7 +131,7 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
 
         <section className="bg-white rounded-xl shadow-sm p-6">
           <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-2">{t('dashboard.quickActions.title')}</h2>
+            <h2 className="text-xl font-semibold mb-2">{t('quickActions.title')}</h2>
             <p className="text-gray-600">Access frequently used features and manage your rental efficiently with these quick actions.</p>
           </div>
           <div className="grid gap-6 md:grid-cols-2">
@@ -160,7 +160,7 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
                       onClick={action.action} 
                       className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
                     >
-                      {t('dashboard.quickActions.viewMore')}
+                      {t('quickActions.viewMore')}
                     </Button>
                   </div>
                 </CardContent>
@@ -194,7 +194,7 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
       </section>
 
       <section className="bg-white rounded-xl shadow-sm p-6">
-        <h2 className="text-xl font-semibold mb-4">{t('dashboard.propertyInfo')}</h2>
+        <h2 className="text-xl font-semibold mb-4">{t('propertyInfo')}</h2>
         <div className="grid gap-6 md:grid-cols-3">
           {tenancies?.map((tenancy) => (
             <Card key={tenancy.id} className="border border-gray-200">
@@ -222,7 +222,7 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
                       <p className="text-base font-medium">
                         {tenancy.end_date 
                           ? format(new Date(tenancy.end_date), 'MMM d, yyyy')
-                          : t('dashboard.ongoingLease')}
+                          : t('ongoingLease')}
                       </p>
                     </div>
                   </div>
@@ -232,14 +232,14 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
                       size="sm"
                       onClick={() => navigate('/maintenance')}
                     >
-                      {t('dashboard.quickActions.maintenance')}
+                      {t('quickActions.maintenance')}
                     </Button>
                     <Button 
                       variant="outline" 
                       size="sm"
                       onClick={() => navigate('/documents')}
                     >
-                      {t('dashboard.quickActions.documents')}
+                      {t('quickActions.documents')}
                     </Button>
                   </div>
                 </div>
@@ -250,13 +250,13 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
       </section>
 
       <section className="bg-white rounded-xl shadow-sm p-6">
-        <h2 className="text-xl font-semibold mb-4">{t('dashboard.metrics.title')}</h2>
+        <h2 className="text-xl font-semibold mb-4">{t('metrics.title')}</h2>
         <DashboardMetrics userId={userId} userRole="tenant" />
       </section>
 
       <section className="bg-white rounded-xl shadow-sm p-6">
         <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">{t('dashboard.quickActions.title')}</h2>
+          <h2 className="text-xl font-semibold mb-2">{t('quickActions.title')}</h2>
           <p className="text-gray-600">Access frequently used features and manage your rental efficiently with these quick actions.</p>
         </div>
         <div className="grid gap-6 md:grid-cols-2">
@@ -285,7 +285,7 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
                     onClick={action.action} 
                     className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
                   >
-                    {t('dashboard.quickActions.viewMore')}
+                    {t('quickActions.viewMore')}
                   </Button>
                 </div>
               </CardContent>
