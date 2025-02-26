@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { 
   Edit2, Save, X, Home, DollarSign, MapPin, 
   Droplets, Zap, Flame, Plus, Car, Bed, Bath,
-  Square, CalendarRange, Building
+  Square, CalendarRange, Building, Mail, Phone
 } from "lucide-react";
 import { useUserRole } from "@/hooks/use-user-role";
 
@@ -84,6 +83,26 @@ export function PropertyTab({
                 Edit
               </Button>
             )
+          )}
+        </div>
+      </div>
+
+      <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-xl border border-gray-100">
+        <h3 className="text-lg font-semibold mb-4">Landlord Information</h3>
+        <div className="grid gap-4">
+          <div className="flex items-center gap-2 text-gray-600">
+            <User className="h-4 w-4" />
+            <span className="font-medium">{`${property.landlord?.first_name || ''} ${property.landlord?.last_name || ''}`}</span>
+          </div>
+          <div className="flex items-center gap-2 text-gray-600">
+            <Mail className="h-4 w-4" />
+            <span>{property.landlord?.email || 'Email not provided'}</span>
+          </div>
+          {property.landlord?.phone && (
+            <div className="flex items-center gap-2 text-gray-600">
+              <Phone className="h-4 w-4" />
+              <span>{property.landlord.phone}</span>
+            </div>
           )}
         </div>
       </div>
