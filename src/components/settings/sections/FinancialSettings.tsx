@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { StripeAccountForm } from "../StripeAccountForm";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -27,14 +28,17 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useCurrency } from "@/hooks/useCurrency";
+import { Json } from "@/integrations/supabase/types/json";
+
+type SimpleMetadata = {
+  [key: string]: string | null | undefined;
+};
 
 interface ContractData {
   property: {
     name: string | null;
   } | null;
-  metadata: {
-    [key: string]: string | null;
-  } | null;
+  metadata: SimpleMetadata | null;
 }
 
 export function FinancialSettings() {
@@ -69,9 +73,18 @@ export function FinancialSettings() {
         if (contractError) throw contractError;
 
         if (contract) {
+          const processedMetadata: SimpleMetadata = {};
+          if (contract.metadata && typeof contract.metadata === 'object') {
+            Object.entries(contract.metadata).forEach(([key, value]) => {
+              if (typeof value === 'string' || value === null) {
+                processedMetadata[key] = value;
+              }
+            });
+          }
+
           setContractData({
             property: contract.property,
-            metadata: contract.metadata
+            metadata: processedMetadata
           });
         }
 
