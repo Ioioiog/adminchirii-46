@@ -35,6 +35,7 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
             return;
           }
 
+          // Query both active tenancies and signed contracts
           const { data, error } = await supabase
             .from("properties")
             .select(`
@@ -49,25 +50,31 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
               available_from,
               landlord_id,
               landlord:profiles!properties_landlord_id_fkey!inner(first_name, last_name, email, phone),
-              tenancies!inner(id, status, tenant_id)
+              tenancies!inner(id, status, tenant_id),
+              contracts!contracts_property_id_fkey(
+                id,
+                status,
+                tenant_id
+              )
             `)
-            .eq('tenancies.tenant_id', userData.user.id)
-            .eq('tenancies.status', 'active')
-            .single();
+            .or(`tenancies.tenant_id.eq.${userData.user.id},contracts.tenant_id.eq.${userData.user.id}`)
+            .or('tenancies.status.eq.active,contracts.status.eq.signed');
 
           if (error) throw error;
 
-          // Get the first (and only) landlord profile since it's a foreign key relationship
-          const landlordProfile = Array.isArray(data.landlord) ? data.landlord[0] : data.landlord;
+          const propertyList = (data || []).map(item => {
+            // Get the first (and only) landlord profile since it's a foreign key relationship
+            const landlordProfile = Array.isArray(item.landlord) ? item.landlord[0] : item.landlord;
 
-          const propertyWithStatus = {
-            ...data,
-            status: data.tenancies?.some((t: any) => t.status === 'active') ? 'occupied' as const : 'vacant' as const,
-            tenant_count: data.tenancies?.filter((t: any) => t.status === 'active').length || 0,
-            landlord: landlordProfile as LandlordProfile
-          } as Property;
+            return {
+              ...item,
+              status: item.tenancies?.some((t: any) => t.status === 'active') ? 'occupied' as const : 'vacant' as const,
+              tenant_count: item.tenancies?.filter((t: any) => t.status === 'active').length || 0,
+              landlord: landlordProfile as LandlordProfile
+            } as Property;
+          });
 
-          setProperties([propertyWithStatus]);
+          setProperties(propertyList);
         } else {
           // For landlords, fetch all their properties
           const { data, error } = await supabase
