@@ -29,23 +29,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useCurrency } from "@/hooks/useCurrency";
 
-type ContractMetadata = {
-  tenantName?: string;
-  tenantReg?: string;
-  tenantFiscal?: string;
-  tenantAddress?: string;
-  tenantBank?: string;
-  tenantBankName?: string;
-  tenantEmail?: string;
-  tenantPhone?: string;
-  [key: string]: string | undefined;
+type SimpleMetadata = {
+  [key: string]: string | null | undefined;
 };
 
 interface ContractData {
   property: {
     name: string | null;
   } | null;
-  metadata: ContractMetadata | null;
+  metadata: SimpleMetadata | null;
 }
 
 export function FinancialSettings() {
@@ -89,14 +81,11 @@ export function FinancialSettings() {
         if (contractError) throw contractError;
 
         if (contract) {
-          const processedMetadata: ContractMetadata = {};
+          const processedMetadata: SimpleMetadata = {};
           if (contract.metadata && typeof contract.metadata === 'object') {
             Object.entries(contract.metadata as Record<string, unknown>).forEach(([key, value]) => {
-              // Only assign if the value is a string or can be converted to a string
-              if (typeof value === 'string') {
+              if (typeof value === 'string' || value === null) {
                 processedMetadata[key] = value;
-              } else if (value !== null && value !== undefined) {
-                processedMetadata[key] = String(value);
               }
             });
           }
@@ -107,6 +96,7 @@ export function FinancialSettings() {
           });
         }
 
+        // Use tenancy_id instead of tenant_id for payments query
         const { data: payments, error: paymentsError } = await supabase
           .from('payments')
           .select('amount, status')
@@ -281,7 +271,7 @@ export function FinancialSettings() {
                   <div>
                     <h4 className="font-medium mb-2">Property</h4>
                     <p className="text-sm text-muted-foreground">
-                      {contractData?.property?.name ?? 'Not available'}
+                      {contractData.property?.name || 'Not available'}
                     </p>
                   </div>
                   {isViewingDetails && (
