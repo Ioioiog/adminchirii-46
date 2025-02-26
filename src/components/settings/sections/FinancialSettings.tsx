@@ -27,6 +27,7 @@ export function FinancialSettings() {
   const { userRole } = useUserRole();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const [isStripeLoading, setIsStripeLoading] = useState(false);
 
   const form = useForm<TenantFinancialInfo>({
     defaultValues: {
@@ -82,7 +83,6 @@ export function FinancialSettings() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user found");
 
-      // Convert the form data to a Record type that matches Json type
       const invoiceInfo: Record<string, Json> = {
         bankName: formData.bankName,
         bankAccountNumber: formData.bankAccountNumber,
@@ -117,6 +117,43 @@ export function FinancialSettings() {
     }
   };
 
+  const setupStripePayment = async () => {
+    try {
+      setIsStripeLoading(true);
+      const { data, error } = await supabase.functions.invoke('create-payment-setup', {
+        method: 'POST',
+      });
+
+      if (error) throw error;
+
+      if (data?.clientSecret) {
+        // Redirect to Stripe payment setup page
+        const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
+        if (!stripe) throw new Error('Stripe failed to load');
+
+        const { error: stripeError } = await stripe.confirmSetup({
+          clientSecret: data.clientSecret,
+          confirmParams: {
+            return_url: `${window.location.origin}/settings?section=financial`,
+          },
+        });
+
+        if (stripeError) {
+          throw stripeError;
+        }
+      }
+    } catch (error) {
+      console.error('Error setting up Stripe payment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to setup payment method",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStripeLoading(false);
+    }
+  };
+
   if (userRole === 'service_provider') {
     return <StripeAccountForm />;
   }
@@ -127,7 +164,7 @@ export function FinancialSettings() {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight mb-1">Payment Settings</h2>
           <p className="text-sm text-muted-foreground mb-6">
-            Manage your payment preferences and bank account details
+            Manage your payment preferences and payment methods
           </p>
         </div>
 
@@ -138,9 +175,34 @@ export function FinancialSettings() {
                 <CreditCard className="h-6 w-6 text-blue-500" />
               </div>
               <div>
-                <h3 className="text-lg font-medium">Payment Information</h3>
+                <h3 className="text-lg font-medium">Card Payment Setup</h3>
                 <p className="text-sm text-muted-foreground">
-                  Update your payment details and preferences
+                  Add a credit or debit card for automatic payments
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={setupStripePayment} 
+              disabled={isStripeLoading}
+              className="w-full"
+            >
+              {isStripeLoading ? "Setting up..." : "Setup Card Payment"}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center space-x-4">
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <Building className="h-6 w-6 text-blue-500" />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium">Bank Information</h3>
+                <p className="text-sm text-muted-foreground">
+                  Update your bank account details and payment preferences
                 </p>
               </div>
             </div>
