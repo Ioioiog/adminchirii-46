@@ -1,10 +1,16 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Property } from "@/utils/propertyUtils";
 
 interface UsePropertiesProps {
   userRole: "landlord" | "tenant" | "service_provider";
+}
+
+interface LandlordProfile {
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone: string | null;
 }
 
 export const useProperties = ({ userRole }: UsePropertiesProps) => {
@@ -41,17 +47,8 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
               description,
               available_from,
               landlord_id,
-              landlord:profiles!landlord_id(
-                first_name,
-                last_name,
-                email,
-                phone
-              ),
-              tenancies!inner(
-                id,
-                status,
-                tenant_id
-              )
+              landlord:profiles!properties_landlord_id_fkey(first_name, last_name, email, phone),
+              tenancies!inner(id, status, tenant_id)
             `)
             .eq('tenancies.tenant_id', userData.user.id)
             .eq('tenancies.status', 'active')
@@ -63,12 +60,7 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
             ...data,
             status: data.tenancies?.some((t: any) => t.status === 'active') ? 'occupied' as const : 'vacant' as const,
             tenant_count: data.tenancies?.filter((t: any) => t.status === 'active').length || 0,
-            landlord: data.landlord ? {
-              first_name: data.landlord.first_name,
-              last_name: data.landlord.last_name,
-              email: data.landlord.email,
-              phone: data.landlord.phone
-            } : undefined
+            landlord: data.landlord as LandlordProfile
           } as Property;
 
           setProperties([propertyWithStatus]);

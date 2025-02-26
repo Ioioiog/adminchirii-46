@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Home, User, Receipt, Info } from "lucide-react";
@@ -15,6 +14,13 @@ import { TenantsTab } from "@/components/properties/tabs/TenantsTab";
 import { InvoiceSettingsTab } from "@/components/properties/tabs/InvoiceSettingsTab";
 import { NavigationTabs } from "@/components/layout/NavigationTabs";
 import { useUserRole } from "@/hooks/use-user-role";
+
+interface LandlordProfile {
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone: string | null;
+}
 
 const PropertyDetails = () => {
   const { id } = useParams();
@@ -87,12 +93,7 @@ const PropertyDetails = () => {
         .from("properties")
         .select(`
           *,
-          landlord:profiles!landlord_id(
-            first_name,
-            last_name,
-            email,
-            phone
-          ),
+          landlord:profiles!properties_landlord_id_fkey(first_name, last_name, email, phone),
           tenancies(
             id,
             status,
@@ -113,12 +114,7 @@ const PropertyDetails = () => {
         ...data,
         status: data.tenancies?.some((t: any) => t.status === 'active') ? 'occupied' as const : 'vacant' as const,
         tenant_count: data.tenancies?.filter((t: any) => t.status === 'active').length || 0,
-        landlord: data.landlord ? {
-          first_name: data.landlord.first_name,
-          last_name: data.landlord.last_name,
-          email: data.landlord.email,
-          phone: data.landlord.phone
-        } : undefined
+        landlord: data.landlord as LandlordProfile
       } as Property;
 
       return propertyWithComputedFields;
