@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Home, User, Receipt, Info } from "lucide-react";
@@ -5,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { PropertyStatus } from "@/utils/propertyUtils";
+import { PropertyStatus, Property } from "@/utils/propertyUtils";
 import { useToast } from "@/hooks/use-toast";
 import { InvoiceSettings } from "@/types/invoice";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -86,7 +87,7 @@ const PropertyDetails = () => {
         .from("properties")
         .select(`
           *,
-          landlord:profiles!properties_landlord_id_fkey(
+          landlord:profiles!properties_landlord_id_fkey!inner(
             first_name,
             last_name,
             email,
@@ -110,12 +111,12 @@ const PropertyDetails = () => {
 
       return {
         ...data,
-        landlord: data.landlord ? {
+        landlord: {
           first_name: data.landlord.first_name,
           last_name: data.landlord.last_name,
           email: data.landlord.email,
           phone: data.landlord.phone
-        } : undefined
+        }
       } as Property;
     },
   });
