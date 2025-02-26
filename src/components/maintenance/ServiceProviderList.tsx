@@ -135,14 +135,22 @@ export function ServiceProviderList() {
       const preferredIds = new Set(preferredProviders?.map(p => p.service_provider_id) || []);
 
       let filteredProviders = (providers || [])
-        .map(provider => ({
-          ...provider,
-          profiles: Array.isArray(provider.profiles) ? provider.profiles : [provider.profiles],
-          isPreferred: preferredIds.has(provider.id),
-          // A provider is custom (created by landlord) if they have is_first_login=true
-          // or if their profile role is not 'service_provider'
-          isCustomProvider: provider.is_first_login === true || provider.profiles[0]?.role !== 'service_provider'
-        }));
+        .map(provider => {
+          console.log("Provider data:", {
+            id: provider.id,
+            businessName: provider.business_name,
+            isFirstLogin: provider.is_first_login,
+            role: provider.profiles?.role,
+          });
+
+          return {
+            ...provider,
+            profiles: Array.isArray(provider.profiles) ? provider.profiles : [provider.profiles],
+            isPreferred: preferredIds.has(provider.id),
+            // A provider is custom (created by landlord) if they have is_first_login=true
+            isCustomProvider: provider.is_first_login === true
+          };
+        });
 
       if (filters.category !== "all") {
         filteredProviders = filteredProviders.filter(provider => 
@@ -150,7 +158,11 @@ export function ServiceProviderList() {
         );
       }
 
-      console.log("Filtered providers:", filteredProviders);
+      console.log("Filtered providers with custom status:", filteredProviders.map(p => ({
+        name: p.business_name,
+        isCustom: p.isCustomProvider,
+        isFirstLogin: p.is_first_login
+      })));
 
       return filteredProviders.sort((a, b) => {
         if (a.isPreferred === b.isPreferred) {
