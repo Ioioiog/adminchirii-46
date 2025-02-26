@@ -13,6 +13,7 @@ import { useForm } from "react-hook-form";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ServiceProviderInvoiceInfo } from "@/integrations/supabase/types/service-provider";
+import { Json } from "@/integrations/supabase/types/json";
 
 export function FinancialSettings() {
   const { userRole } = useUserRole();
@@ -49,7 +50,22 @@ export function FinancialSettings() {
         if (error) throw error;
 
         if (data?.invoice_info) {
-          form.reset(data.invoice_info as ServiceProviderInvoiceInfo);
+          const invoiceInfo = data.invoice_info as Record<string, unknown>;
+          
+          const transformedData: ServiceProviderInvoiceInfo = {
+            companyName: String(invoiceInfo.companyName || ""),
+            companyAddress: String(invoiceInfo.companyAddress || ""),
+            bankName: String(invoiceInfo.bankName || ""),
+            bankAccountNumber: String(invoiceInfo.bankAccountNumber || ""),
+            bankSwiftCode: String(invoiceInfo.bankSwiftCode || ""),
+            vatNumber: String(invoiceInfo.vatNumber || ""),
+            registrationNumber: String(invoiceInfo.registrationNumber || ""),
+            paymentTerms: String(invoiceInfo.paymentTerms || ""),
+            invoiceNotes: String(invoiceInfo.invoiceNotes || ""),
+            applyVat: Boolean(invoiceInfo.applyVat),
+          };
+
+          form.reset(transformedData);
         }
         setIsLoading(false);
       } catch (error) {
@@ -69,10 +85,23 @@ export function FinancialSettings() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user found");
 
+      const jsonData: Record<string, Json> = {
+        companyName: data.companyName,
+        companyAddress: data.companyAddress,
+        bankName: data.bankName,
+        bankAccountNumber: data.bankAccountNumber,
+        bankSwiftCode: data.bankSwiftCode,
+        vatNumber: data.vatNumber,
+        registrationNumber: data.registrationNumber,
+        paymentTerms: data.paymentTerms,
+        invoiceNotes: data.invoiceNotes,
+        applyVat: data.applyVat,
+      };
+
       const { error } = await supabase
         .from('service_provider_profiles')
         .update({
-          invoice_info: data
+          invoice_info: jsonData
         })
         .eq('id', user.id);
 
