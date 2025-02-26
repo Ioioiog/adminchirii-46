@@ -66,6 +66,7 @@ interface ContractDetailsDialogProps {
 export function ContractDetailsDialog({ open, onOpenChange, contract }: ContractDetailsDialogProps) {
   const { userRole } = useUserRole();
   const [showTerminationForm, setShowTerminationForm] = useState(false);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
   
   if (!contract) return null;
   const metadata = contract.metadata || {};
@@ -73,6 +74,11 @@ export function ContractDetailsDialog({ open, onOpenChange, contract }: Contract
   console.log("Current user role:", userRole);
   console.log("Contract status:", contract.status);
   console.log("Show termination form:", showTerminationForm);
+
+  const handleProceedToTermination = () => {
+    setShowTerminationForm(true);
+    setIsAlertOpen(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -82,7 +88,7 @@ export function ContractDetailsDialog({ open, onOpenChange, contract }: Contract
             <DialogHeader className="flex flex-row items-center justify-between space-x-4">
               <DialogTitle>Contract Details</DialogTitle>
               {userRole === 'landlord' && contract.status !== 'cancelled' && (
-                <AlertDialog>
+                <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
                   <AlertDialogTrigger asChild>
                     <Button 
                       variant="destructive"
@@ -100,7 +106,7 @@ export function ContractDetailsDialog({ open, onOpenChange, contract }: Contract
                     </AlertDialogHeader>
                     <div className="flex justify-end gap-4 mt-4">
                       <AlertDialogCancel>No, keep contract</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => setShowTerminationForm(true)}>
+                      <AlertDialogAction onClick={handleProceedToTermination}>
                         Yes, proceed to termination
                       </AlertDialogAction>
                     </div>
