@@ -67,7 +67,7 @@ export function ServiceProviderFilters({ filters, onFiltersChange }: ServiceProv
             checked={filters.createdByMe}
             onCheckedChange={(checked) => onFiltersChange({ ...filters, createdByMe: checked })}
           />
-          <Label htmlFor="created-by-me">Created by me</Label>
+          <Label htmlFor="created-by-me">Created by my landlord</Label>
         </div>
       </div>
     </div>
