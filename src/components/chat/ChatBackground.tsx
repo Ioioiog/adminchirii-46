@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
@@ -21,7 +22,7 @@ export function ChatBackground() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     containerRef.current.appendChild(renderer.domElement);
 
-    // Controls - Adjusted for better viewing
+    // Controls setup
     const controls = new OrbitControls(camera, renderer.domElement);
     camera.position.set(2, 0, 12);
     controls.update();
@@ -31,12 +32,10 @@ export function ChatBackground() {
     controls.enablePan = false;
     controls.autoRotate = true;
     controls.autoRotateSpeed = 0.5;
-    
-    // Limit rotation to keep text readable
     controls.minPolarAngle = Math.PI / 2.5;
     controls.maxPolarAngle = Math.PI / 1.5;
 
-    // Simple lighting setup
+    // Lighting setup
     const ambientLight = new THREE.AmbientLight(0x404040, 3);
     scene.add(ambientLight);
 
@@ -44,7 +43,7 @@ export function ChatBackground() {
     pointLight.position.set(5, 5, 5);
     scene.add(pointLight);
 
-    // Chat conversation messages
+    // Chat messages
     const messages = [
       { text: "Hi, I noticed a leak in the kitchen sink. Can someone check it out?", sender: "tenant", delay: 0 },
       { text: "Thanks for letting me know. I'll send a plumber over tomorrow.", sender: "landlord", delay: 3000 },
@@ -56,11 +55,12 @@ export function ChatBackground() {
 
     let messageGroups: THREE.Group[] = [];
     let typingIndicator: THREE.Group | null = null;
+    let animationStartTime = Date.now();
+    let isAnimating = true;
 
     // Load font and create messages
     const loader = new FontLoader();
     loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
-      // Create typing indicator dots
       function createTypingIndicator(isTenant: boolean) {
         const group = new THREE.Group();
         const dotGeometry = new THREE.SphereGeometry(0.03, 16, 16);
@@ -122,41 +122,67 @@ export function ChatBackground() {
         return messageGroup;
       }
 
-      // Create all messages but keep them invisible
+      function startAnimation() {
+        // Reset all messages to invisible
+        messageGroups.forEach(group => {
+          group.visible = false;
+        });
+        if (typingIndicator) {
+          typingIndicator.visible = false;
+        }
+        animationStartTime = Date.now();
+        isAnimating = true;
+      }
+
+      // Create all messages
       const messageElements = messages.map((msg, i) => addMessage(msg, i));
       typingIndicator = createTypingIndicator(true);
 
-      // Simulate chat conversation
-      messages.forEach((message, index) => {
-        const showTyping = () => {
-          if (typingIndicator) {
-            typingIndicator.visible = true;
-            typingIndicator.position.x = message.sender === "tenant" ? 2 : 6;
-            typingIndicator.position.y = 4 - index * 1.2;
-          }
-        };
+      // Function to play the animation sequence
+      function playMessageSequence() {
+        messages.forEach((message, index) => {
+          const showTyping = () => {
+            if (typingIndicator && isAnimating) {
+              typingIndicator.visible = true;
+              typingIndicator.position.x = message.sender === "tenant" ? 2 : 6;
+              typingIndicator.position.y = 4 - index * 1.2;
+            }
+          };
 
-        const hideTyping = () => {
-          if (typingIndicator) {
-            typingIndicator.visible = false;
-          }
-        };
+          const hideTyping = () => {
+            if (typingIndicator) {
+              typingIndicator.visible = false;
+            }
+          };
 
-        setTimeout(showTyping, message.delay);
-        setTimeout(() => {
-          hideTyping();
-          const messageGroup = messageElements[index];
-          messageGroup.visible = true;
-          messageGroup.scale.set(1, 1, 1);
-        }, message.delay + 1500);
-      });
+          setTimeout(showTyping, message.delay);
+          setTimeout(() => {
+            if (isAnimating) {
+              hideTyping();
+              const messageGroup = messageElements[index];
+              messageGroup.visible = true;
+              messageGroup.scale.set(1, 1, 1);
+
+              // If this is the last message, schedule a restart
+              if (index === messages.length - 1) {
+                setTimeout(() => {
+                  startAnimation();
+                  playMessageSequence();
+                }, 3000); // Wait 3 seconds before restarting
+              }
+            }
+          }, message.delay + 1500);
+        });
+      }
+
+      // Start the initial animation
+      playMessageSequence();
     });
 
-    // Animation loop (only for controls update)
+    // Animation loop
     function animate() {
       requestAnimationFrame(animate);
       
-      // Only animate typing indicator
       if (typingIndicator && typingIndicator.visible) {
         typingIndicator.children.forEach((dot, i) => {
           const time = Date.now() * 0.003;
