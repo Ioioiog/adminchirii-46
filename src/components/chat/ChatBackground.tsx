@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
@@ -10,9 +11,9 @@ export function ChatBackground() {
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Scene setup with gradient background
+    // Scene setup with white background
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf1f0fb); // Light purple background matching the chat
+    scene.background = new THREE.Color(0xffffff); // Pure white background
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ 
       antialias: true,
@@ -65,7 +66,7 @@ export function ChatBackground() {
         const group = new THREE.Group();
         const dotGeometry = new THREE.SphereGeometry(0.03, 16, 16);
         const dotMaterial = new THREE.MeshStandardMaterial({ 
-          color: isTenant ? 0x3b82f6 : 0x10b981,
+          color: isTenant ? 0xffffff : 0xffffff, // White dots
           metalness: 0.1,
           roughness: 0.3,
         });
@@ -114,13 +115,13 @@ export function ChatBackground() {
         );
         
         const textMaterial = new THREE.MeshStandardMaterial({ 
-          color: 0xffffff,
+          color: 0x000000, // Black text
           metalness: 0.1,
           roughness: 0.6,
         });
         
         const bubbleMaterial = new THREE.MeshStandardMaterial({
-          color: isTenant ? 0x3b82f6 : 0x10b981,
+          color: 0xffffff, // White bubbles for both tenant and landlord
           metalness: 0.1,
           roughness: 0.3,
         });
