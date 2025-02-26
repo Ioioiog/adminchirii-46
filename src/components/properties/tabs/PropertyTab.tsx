@@ -13,6 +13,7 @@ import {
 import { useUserRole } from "@/hooks/use-user-role";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { FormData } from "@/types/contract";
 
 interface PropertyTabProps {
   property: any;
@@ -56,7 +57,7 @@ export function PropertyTab({
     }
   });
 
-  const landlordInfo = contract?.metadata || {};
+  const landlordInfo = (contract?.metadata as FormData) || {} as FormData;
 
   return (
     <div className="space-y-8">
