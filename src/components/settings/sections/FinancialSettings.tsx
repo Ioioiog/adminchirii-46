@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { StripeAccountForm } from "../StripeAccountForm";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -6,177 +7,107 @@ import { InvoiceInfoForm } from "../InvoiceInfoForm";
 import { PaymentMethodsForm } from "../PaymentMethodsForm";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { CreditCard, Receipt, Building, Download, Eye, AlertCircle, Wallet } from "lucide-react";
+import { Building, Receipt } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Json } from "@/integrations/supabase/types/json";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { useCurrency } from "@/hooks/useCurrency";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useForm } from "react-hook-form";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
-interface ServiceProviderFinancials {
-  totalEarnings: number;
-  pendingPayments: number;
-  completedJobs: number;
-  avgJobValue: number;
-}
-
-interface ContractMetadata {
-  tenantName?: string;
-  tenantReg?: string;
-  tenantFiscal?: string;
-  tenantAddress?: string;
-  tenantBank?: string;
-  tenantBankName?: string;
-  tenantEmail?: string;
-  tenantPhone?: string;
-}
-
-interface ContractData {
-  property?: {
-    name: string;
-  };
-  metadata?: ContractMetadata;
-}
-
-interface DatabaseContract {
-  property: {
-    name: string;
-  };
-  metadata: Json;
+interface ServiceProviderInvoiceInfo {
+  companyName: string;
+  companyAddress: string;
+  bankName: string;
+  bankAccountNumber: string;
+  bankSwiftCode: string;
+  vatNumber: string;
+  registrationNumber: string;
+  paymentTerms: string;
+  invoiceNotes: string;
+  applyVat: boolean;
 }
 
 export function FinancialSettings() {
   const { userRole } = useUserRole();
   const { toast } = useToast();
-  const { formatAmount } = useCurrency();
-  const [balance, setBalance] = useState(0);
-  const [isViewingDetails, setIsViewingDetails] = useState(false);
-  const [contractData, setContractData] = useState<ContractData | null>(null);
-  const [financials, setFinancials] = useState<ServiceProviderFinancials>({
-    totalEarnings: 0,
-    pendingPayments: 0,
-    completedJobs: 0,
-    avgJobValue: 0,
-  });
   const [isLoading, setIsLoading] = useState(true);
 
+  const form = useForm<ServiceProviderInvoiceInfo>({
+    defaultValues: {
+      companyName: "",
+      companyAddress: "",
+      bankName: "",
+      bankAccountNumber: "",
+      bankSwiftCode: "",
+      vatNumber: "",
+      registrationNumber: "",
+      paymentTerms: "",
+      invoiceNotes: "",
+      applyVat: false,
+    },
+  });
+
   useEffect(() => {
-    const fetchContractData = async () => {
+    const fetchInvoiceInfo = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
         const { data, error } = await supabase
-          .from('contracts')
-          .select(`
-            property:properties (name),
-            metadata
-          `)
-          .eq('tenant_id', user.id)
-          .eq('status', 'signed')
-          .order('created_at', { ascending: false })
-          .limit(1)
+          .from('service_provider_profiles')
+          .select('invoice_info')
+          .eq('id', user.id)
           .single();
 
-        if (error) {
-          console.error('Error fetching contract:', error);
-          return;
-        }
+        if (error) throw error;
 
-        if (data) {
-          const dbContract = data as DatabaseContract;
-          const formattedData: ContractData = {
-            property: dbContract.property,
-            metadata: typeof dbContract.metadata === 'object' ? dbContract.metadata as ContractMetadata : {}
-          };
-          setContractData(formattedData);
+        if (data?.invoice_info) {
+          form.reset(data.invoice_info as ServiceProviderInvoiceInfo);
         }
         setIsLoading(false);
       } catch (error) {
-        console.error('Error:', error);
-        setIsLoading(false);
-      }
-    };
-
-    if (userRole === 'tenant') {
-      fetchContractData();
-    }
-  }, [userRole]);
-
-  useEffect(() => {
-    const fetchServiceProviderFinancials = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const { data: maintenanceData, error: maintenanceError } = await supabase
-          .from('maintenance_requests')
-          .select('service_provider_fee, status, payment_status')
-          .eq('assigned_to', user.id);
-
-        if (maintenanceError) throw maintenanceError;
-
-        if (maintenanceData) {
-          const completedJobs = maintenanceData.filter(job => job.status === 'completed').length;
-          const totalEarnings = maintenanceData.reduce((sum, job) => sum + (job.service_provider_fee || 0), 0);
-          const pendingPayments = maintenanceData
-            .filter(job => job.payment_status === 'pending')
-            .reduce((sum, job) => sum + (job.service_provider_fee || 0), 0);
-          const avgJobValue = completedJobs > 0 ? totalEarnings / completedJobs : 0;
-
-          setFinancials({
-            totalEarnings,
-            pendingPayments,
-            completedJobs,
-            avgJobValue,
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching financials:', error);
-        toast({
-          title: "Error",
-          description: "Could not load financial information",
-          variant: "destructive",
-        });
-      } finally {
+        console.error('Error fetching invoice info:', error);
         setIsLoading(false);
       }
     };
 
     if (userRole === 'service_provider') {
-      fetchServiceProviderFinancials();
+      fetchInvoiceInfo();
     }
-  }, [userRole, toast]);
+  }, [form, userRole]);
 
-  const handleDownloadStatement = async () => {
+  const onSubmit = async (data: ServiceProviderInvoiceInfo) => {
     try {
+      setIsLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No user found");
+
+      const { error } = await supabase
+        .from('service_provider_profiles')
+        .update({
+          invoice_info: data
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
       toast({
         title: "Success",
-        description: "Financial statement downloaded successfully",
+        description: "Invoice information updated successfully",
       });
     } catch (error) {
-      console.error('Error downloading statement:', error);
+      console.error('Error updating invoice info:', error);
       toast({
         title: "Error",
-        description: "Failed to download statement",
+        description: "Failed to update invoice information",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -186,16 +117,215 @@ export function FinancialSettings() {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight mb-1">Financial & Payments Settings</h2>
           <p className="text-sm text-muted-foreground mb-6">
-            Manage your payment information
+            Manage your payment information and invoice details
           </p>
         </div>
 
         <div className="grid gap-6">
           <Card>
             <CardHeader>
-              <h3 className="text-lg font-medium">Payment Settings</h3>
+              <div className="flex items-center space-x-4">
+                <div className="p-2 bg-blue-50 rounded-lg">
+                  <Receipt className="h-6 w-6 text-blue-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium">Invoice Information</h3>
+                  <p className="text-sm text-muted-foreground">
+                    This information will appear on your invoices
+                  </p>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="companyName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Enter your company name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="registrationNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Registration Number</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Enter company registration number" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="companyAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company Address</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} placeholder="Enter your company address" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="bankName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bank Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Enter your bank name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="bankAccountNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bank Account Number</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Enter your account number" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="bankSwiftCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bank SWIFT/BIC Code</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Enter bank SWIFT/BIC code" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="vatNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>VAT Number</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Enter VAT number (if applicable)" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="paymentTerms"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Payment Terms</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              {...field} 
+                              placeholder="Enter your payment terms (e.g., Payment due within 30 days)" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="invoiceNotes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Additional Invoice Notes</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              {...field} 
+                              placeholder="Enter any additional notes to appear on invoices" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between space-x-2">
+                    <div className="flex flex-col space-y-1">
+                      <Label htmlFor="apply-vat">Apply VAT to Invoices</Label>
+                      <span className="text-sm text-muted-foreground">
+                        Automatically add VAT to your invoice amounts
+                      </span>
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="applyVat"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              id="apply-vat"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <Button type="submit" disabled={isLoading}>
+                    {isLoading ? "Saving..." : "Save Invoice Information"}
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center space-x-4">
+                <div className="p-2 bg-purple-50 rounded-lg">
+                  <Building className="h-6 w-6 text-purple-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium">Stripe Account</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Connect your Stripe account to receive online payments
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
               <StripeAccountForm />
             </CardContent>
           </Card>
