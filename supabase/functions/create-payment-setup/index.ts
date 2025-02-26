@@ -20,16 +20,29 @@ serve(async (req) => {
 
   try {
     // Check required environment variables
-    const publicSiteUrl = Deno.env.get('PUBLIC_SITE_URL');
     const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
-
-    if (!publicSiteUrl) {
-      throw new Error('PUBLIC_SITE_URL environment variable is not set');
-    }
-
     if (!stripeKey) {
       throw new Error('STRIPE_SECRET_KEY environment variable is not set');
     }
+
+    // Get site URL from environment or use a default
+    let publicSiteUrl = Deno.env.get('PUBLIC_SITE_URL');
+    // If not set, try to get it from the request origin
+    if (!publicSiteUrl) {
+      const origin = req.headers.get('origin');
+      if (origin) {
+        publicSiteUrl = origin;
+      } else {
+        publicSiteUrl = 'https://92de9284-1ef8-4d20-9c85-a57cf5098c8d.lovableproject.com';
+      }
+    }
+
+    // Ensure URL is valid and has proper protocol
+    if (!publicSiteUrl.startsWith('http')) {
+      publicSiteUrl = `https://${publicSiteUrl}`;
+    }
+
+    console.log('Using site URL:', publicSiteUrl);
 
     const { userId } = await req.json();
     console.log('Processing request for user:', userId);
@@ -92,7 +105,7 @@ serve(async (req) => {
     }
 
     // Create a SetupIntent for adding a payment method
-    console.log('Creating Stripe Checkout session');
+    console.log('Creating Stripe Checkout session with success URL:', `${publicSiteUrl}/settings?setup_success=true`);
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
