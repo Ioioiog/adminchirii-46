@@ -126,14 +126,15 @@ export function DocumentDialog({
   const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [showAdditionalFields, setShowAdditionalFields] = useState(false);
+  const [showAdditionalFields, setShowAdditionalFields] = useState(initialDocumentType === "lease_agreement");
   const [currentTab, setCurrentTab] = useState("basic");
+  const isLeaseAgreementMode = initialDocumentType === "lease_agreement";
 
   const form = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      document_type: initialDocumentType || "lease_agreement",
+      document_type: initialDocumentType || "general",
       property_id: undefined,
       tenant_id: undefined,
       status: "draft",
@@ -189,10 +190,20 @@ export function DocumentDialog({
 
   // Set showAdditionalFields based on document type
   React.useEffect(() => {
-    setShowAdditionalFields(documentType === "lease_agreement");
+    if (!isLeaseAgreementMode) {
+      setShowAdditionalFields(documentType === "lease_agreement");
+    }
     // Reset current tab to basic when document type changes
     setCurrentTab("basic");
-  }, [documentType]);
+  }, [documentType, isLeaseAgreementMode]);
+
+  // When dialog opens, enforce the document type if in lease agreement mode
+  React.useEffect(() => {
+    if (open && isLeaseAgreementMode) {
+      form.setValue("document_type", "lease_agreement");
+      setShowAdditionalFields(true);
+    }
+  }, [open, isLeaseAgreementMode, form]);
 
   const { data: properties } = useQuery({
     queryKey: ["properties-for-document"],
@@ -224,7 +235,7 @@ export function DocumentDialog({
         })`,
       }));
     },
-    enabled: open && userRole === "landlord" && documentType === "lease_agreement",
+    enabled: open && userRole === "landlord" && (documentType === "lease_agreement" || isLeaseAgreementMode),
   });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -282,7 +293,12 @@ export function DocumentDialog({
   };
 
   const onSubmit = async (values: FormSchemaType) => {
-    if (showAdditionalFields) {
+    // Ensure document_type is lease_agreement in lease agreement mode
+    if (isLeaseAgreementMode) {
+      values.document_type = "lease_agreement";
+    }
+    
+    if (values.document_type === "lease_agreement") {
       // Validate lease-specific fields
       const requiredLeaseFields = ["contractNumber", "contractDate", "ownerName", "rentAmount"];
       const missingFields = requiredLeaseFields.filter(field => !values[field as keyof FormSchemaType]);
@@ -525,6 +541,7 @@ export function DocumentDialog({
                     setShowAdditionalFields(value === "lease_agreement");
                   }}
                   defaultValue={field.value}
+                  disabled={isLeaseAgreementMode}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -622,40 +639,59 @@ export function DocumentDialog({
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="document_type"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Document Type</FormLabel>
-                <Select
-                  onValueChange={(value) => {
-                    field.onChange(value);
-                    setShowAdditionalFields(value === "lease_agreement");
-                  }}
-                  defaultValue={field.value}
-                >
+          {!isLeaseAgreementMode && (
+            <FormField
+              control={form.control}
+              name="document_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Document Type</FormLabel>
+                  <Select
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      setShowAdditionalFields(value === "lease_agreement");
+                    }}
+                    defaultValue={field.value}
+                    disabled={isLeaseAgreementMode}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select document type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="general">General Document</SelectItem>
+                      <SelectItem value="lease_agreement">Lease Agreement</SelectItem>
+                      <SelectItem value="invoice">Invoice</SelectItem>
+                      <SelectItem value="receipt">Receipt</SelectItem>
+                      <SelectItem value="maintenance">Maintenance Document</SelectItem>
+                      <SelectItem value="legal">Legal Document</SelectItem>
+                      <SelectItem value="notice">Notice</SelectItem>
+                      <SelectItem value="inspection">Inspection Report</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+
+          {isLeaseAgreementMode && (
+            <FormField
+              control={form.control}
+              name="document_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Document Type</FormLabel>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select document type" />
-                    </SelectTrigger>
+                    <Input value="Lease Agreement" readOnly className="bg-muted" />
                   </FormControl>
-                  <SelectContent>
-                    <SelectItem value="general">General Document</SelectItem>
-                    <SelectItem value="lease_agreement">Lease Agreement</SelectItem>
-                    <SelectItem value="invoice">Invoice</SelectItem>
-                    <SelectItem value="receipt">Receipt</SelectItem>
-                    <SelectItem value="maintenance">Maintenance Document</SelectItem>
-                    <SelectItem value="legal">Legal Document</SelectItem>
-                    <SelectItem value="notice">Notice</SelectItem>
-                    <SelectItem value="inspection">Inspection Report</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <FormField
@@ -1465,10 +1501,12 @@ export function DocumentDialog({
       <DialogContent className={showAdditionalFields ? "sm:max-w-[700px]" : "sm:max-w-[520px]"}>
         <DialogHeader>
           <DialogTitle>
-            {showAdditionalFields ? "Create Lease Agreement" : "Upload Document"}
+            {isLeaseAgreementMode 
+              ? "Create Lease Agreement" 
+              : (showAdditionalFields ? "Create Lease Agreement" : "Upload Document")}
           </DialogTitle>
           <DialogDescription>
-            {showAdditionalFields 
+            {isLeaseAgreementMode || showAdditionalFields
               ? "Fill in the lease agreement details. You can navigate between sections using the tabs."
               : "Upload a document to your property management system."}
           </DialogDescription>
@@ -1487,7 +1525,11 @@ export function DocumentDialog({
                 Cancel
               </Button>
               <Button type="submit" disabled={isUploading}>
-                {isUploading ? "Saving..." : (showAdditionalFields ? "Create Lease Agreement" : "Upload Document")}
+                {isUploading 
+                  ? "Saving..." 
+                  : (isLeaseAgreementMode || showAdditionalFields 
+                      ? "Create Lease Agreement" 
+                      : "Upload Document")}
               </Button>
             </DialogFooter>
           </form>
