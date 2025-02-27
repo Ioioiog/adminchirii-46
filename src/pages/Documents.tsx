@@ -29,6 +29,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ContractStatus } from "@/types/contract";
+import { useContractPrint } from "@/components/contract/ContractPrintPreview";
 
 interface Contract {
   id: string;
@@ -400,19 +401,27 @@ function Documents() {
                         {contract.valid_until ? format(new Date(contract.valid_until), 'MMM d, yyyy') : '-'}
                       </TableCell>
                       <TableCell className="text-right space-x-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => {
-                            if ('document_name' in contract && 'file_path' in contract) {
-                              handleDownloadDocument(contract.file_path);
-                            } else {
+                        {/* Show Download PDF for lease agreement documents */}
+                        {('document_name' in contract && contract.file_path) ? (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleDownloadDocument(contract.file_path)}
+                          >
+                            Download PDF
+                          </Button>
+                        ) : (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
                               navigate(`/documents/contracts/${contract.id}`);
-                            }
-                          }}
-                        >
-                          {'document_name' in contract ? 'Download' : 'View Details'}
-                        </Button>
+                            }}
+                          >
+                            View Details
+                          </Button>
+                        )}
+                        
                         {userRole === 'landlord' && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
