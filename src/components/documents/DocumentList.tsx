@@ -335,13 +335,18 @@ export function DocumentList({
         throw new Error("No metadata available for this contract");
       }
 
+      // Get contractNumber with proper type safety - completely safe conversion
+      let contractNumber = "";
+      if (doc.metadata && 
+          typeof doc.metadata === 'object' && 
+          'contractNumber' in doc.metadata && 
+          doc.metadata.contractNumber !== null && 
+          doc.metadata.contractNumber !== undefined) {
+        contractNumber = String(doc.metadata.contractNumber);
+      }
+      
       // Cast metadata to FormData type for generateContractPdf
       const formData = doc.metadata as unknown as FormData;
-      
-      // Get contractNumber with proper type safety
-      const contractNumber = typeof doc.metadata.contractNumber === 'string' 
-        ? doc.metadata.contractNumber 
-        : '';
       
       generateContractPdf({
         metadata: formData,
@@ -373,8 +378,8 @@ export function DocumentList({
     } else if ('isContract' in doc) {
       if (doc.metadata && typeof doc.metadata === 'object' && 'file_path' in doc.metadata) {
         const filePath = doc.metadata.file_path;
-        if (typeof filePath === 'string') {
-          handleDownloadDocument(filePath);
+        if (filePath !== null && filePath !== undefined) {
+          handleDownloadDocument(String(filePath));
         }
       } else {
         handleGeneratePDF(doc);
@@ -402,8 +407,9 @@ export function DocumentList({
     
     if ('isContract' in doc) {
       if (doc.metadata && typeof doc.metadata === 'object' && 'file_path' in doc.metadata) {
-        // Explicitly check that file_path is a string and cast it to boolean
-        return typeof doc.metadata.file_path === 'string' ? true : false;
+        // Safely check for existence of file_path and convert to boolean
+        const filePath = doc.metadata.file_path;
+        return filePath !== null && filePath !== undefined;
       }
       return true; // Contracts without file_path can be generated
     }
