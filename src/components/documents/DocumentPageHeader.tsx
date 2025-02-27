@@ -110,6 +110,8 @@ export function DocumentPageHeader({
                      setShowContractModal(false);
                      if (onUploadLeaseClick) {
                        onUploadLeaseClick();
+                     } else if (onUploadClick) {
+                       onUploadClick();
                      }
                    }}>
                 <div className="mb-4 bg-purple-100 p-3 rounded-full">
