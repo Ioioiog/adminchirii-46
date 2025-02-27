@@ -36,9 +36,50 @@ serve(async (req) => {
       throw new Error('Error getting user');
     }
 
+    console.log('Fetching user profile:', user.id);
+
+    // Get user profile to check if they have a Stripe customer ID
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('stripe_customer_id')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError) {
+      throw new Error('Error fetching user profile');
+    }
+
+    let customerId = profile?.stripe_customer_id;
+
+    // If no customer ID exists, create a new customer
+    if (!customerId) {
+      console.log('Creating new Stripe customer for user:', user.id);
+      const customer = await stripe.customers.create({
+        email: user.email,
+        metadata: {
+          supabaseUUID: user.id,
+        },
+      });
+
+      customerId = customer.id;
+
+      // Save the customer ID to the user's profile
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ stripe_customer_id: customerId })
+        .eq('id', user.id);
+
+      if (updateError) {
+        console.error('Error updating profile with Stripe customer ID:', updateError);
+        throw new Error('Error saving customer information');
+      }
+    }
+
+    console.log('Creating SetupIntent for customer:', customerId);
+
     // Create a SetupIntent
     const setupIntent = await stripe.setupIntents.create({
-      customer: user.id, // Using the user ID as the customer ID
+      customer: customerId,
       payment_method_types: ['card'],
       usage: 'off_session', // This allows the payment method to be used for future payments
     });
@@ -53,6 +94,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
+    console.error('Function error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {
