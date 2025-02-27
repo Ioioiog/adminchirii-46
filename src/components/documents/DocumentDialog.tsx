@@ -315,6 +315,7 @@ export function DocumentDialog({
                       <SelectItem value="legal">Legal Document</SelectItem>
                       <SelectItem value="notice">Notice</SelectItem>
                       <SelectItem value="inspection">Inspection Report</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
