@@ -57,23 +57,24 @@ export function DocumentActions({ document: doc, userRole, onDocumentUpdated }: 
       
       console.log("Using file path from database:", filePathToUse);
 
-      // Try to get a public URL for the file first
-      const { data: publicUrlData } = await supabase.storage
+      // Try to download the file directly using a signed URL (no public URL attempt)
+      const { data: signedURLData, error: signError } = await supabase.storage
         .from('documents')
-        .getPublicUrl(filePathToUse);
+        .createSignedUrl(filePathToUse, 60); // 60 seconds expiry
 
-      if (publicUrlData?.publicUrl) {
-        console.log("Retrieved public URL:", publicUrlData.publicUrl);
-        
-        // Use the public URL to download the file
-        const response = await fetch(publicUrlData.publicUrl);
-        if (!response.ok) {
-          console.error("Error fetching with public URL:", response.status, response.statusText);
-          throw new Error(`Failed to download file: ${response.statusText}`);
+      if (signError) {
+        console.error("Error getting signed URL:", signError);
+        // Try downloading the file as if documents is a public bucket (backward compatibility)
+        const { data } = await supabase.storage
+          .from('documents')
+          .download(filePathToUse);
+          
+        if (!data) {
+          throw new Error("Could not download the file. Document might not exist or you don't have permission to access it.");
         }
         
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
+        // Create a downloadable link from the file data
+        const url = window.URL.createObjectURL(data);
         const a = document.createElement("a");
         a.href = url;
         a.download = filePathToUse.split('/').pop() || 'document';
@@ -84,25 +85,13 @@ export function DocumentActions({ document: doc, userRole, onDocumentUpdated }: 
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
         
-        console.log("File download completed successfully using public URL");
+        console.log("File download completed successfully using direct download");
         
         toast({
           title: "Success",
           description: "Document downloaded successfully",
         });
         return;
-      }
-
-      console.log("Public URL not available, trying signed URL method");
-      
-      // Fall back to signed URL if public URL doesn't work
-      const { data: signedURLData, error: signError } = await supabase.storage
-        .from('documents')
-        .createSignedUrl(filePathToUse, 60); // 60 seconds expiry
-
-      if (signError) {
-        console.error("Error getting signed URL:", signError);
-        throw new Error("Could not generate download link");
       }
 
       if (!signedURLData?.signedUrl) {
