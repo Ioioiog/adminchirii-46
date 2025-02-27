@@ -67,8 +67,8 @@ export function DocumentCard({ document: doc, userRole, viewMode }: DocumentCard
           
           if (data) {
             setContractData(data);
-            // Check if the contract was updated by the landlord (has file_path or is in signed status)
-            setIsLandlordUpdated(!!data.file_path || data.status === 'signed' || userRole === 'landlord');
+            // Check if the contract was updated by the landlord (is in signed status or the user is a landlord)
+            setIsLandlordUpdated(data.status === 'signed' || userRole === 'landlord');
           }
         } catch (error) {
           console.error("Error fetching contract data:", error);
