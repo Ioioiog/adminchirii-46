@@ -6,6 +6,13 @@ import { DocumentType } from "@/integrations/supabase/types/document-types";
 import { DocumentListSkeleton } from "./DocumentListSkeleton";
 import { EmptyDocumentState } from "./EmptyDocumentState";
 import { ContractStatus } from "@/types/contract";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { FileText, Download } from "lucide-react";
+import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface DocumentListProps {
   userId: string;
@@ -64,7 +71,7 @@ interface ContractDocument {
 type CombinedDocument = DocumentFromDB | ContractDocument;
 
 function isValidDocumentType(type: string): type is DocumentType {
-  return ['lease_agreement', 'invoice', 'receipt', 'other'].includes(type);
+  return ['lease_agreement', 'invoice', 'receipt', 'other', 'general', 'maintenance', 'legal', 'notice', 'inspection'].includes(type);
 }
 
 export function DocumentList({ 
@@ -75,6 +82,9 @@ export function DocumentList({
   searchTerm,
   viewMode
 }: DocumentListProps) {
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  
   // Fetch regular documents
   const { data: regularDocuments = [], isLoading: isLoadingDocuments } = useQuery({
     queryKey: ["documents", propertyFilter, typeFilter, searchTerm],
@@ -207,6 +217,81 @@ export function DocumentList({
     return true;
   });
 
+  // Helper function to format document type for display
+  const formatDocumentType = (type: string): string => {
+    // First remove _document suffix if present
+    let formattedType = type.replace('_document', '');
+    
+    // Handle special cases
+    switch (formattedType) {
+      case 'lease_agreement':
+        return 'Lease Agreement';
+      case 'general':
+        return 'General Document';
+      case 'invoice':
+        return 'Invoice';
+      case 'receipt':
+        return 'Receipt';
+      case 'maintenance':
+        return 'Maintenance Document';
+      case 'legal':
+        return 'Legal Document';
+      case 'notice':
+        return 'Notice';
+      case 'inspection':
+        return 'Inspection Report';
+      default:
+        // Format any other type by replacing underscores and capitalizing words
+        return formattedType
+          .split('_')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+    }
+  };
+
+  const handleDownloadDocument = async (filePath: string) => {
+    try {
+      const cleanFilePath = filePath.replace(/^\/+/, '');
+      
+      const folderPath = cleanFilePath.split('/').slice(0, -1).join('/');
+      const fileName = cleanFilePath.split('/').pop();
+
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .download(cleanFilePath);
+          
+      if (error) {
+        console.error("Error with download:", error);
+        throw error;
+      }
+          
+      if (data) {
+        const url = window.URL.createObjectURL(data);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName || 'document';
+        document.body.appendChild(a);
+        a.click();
+        
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        toast({
+          title: "Success",
+          description: "Document downloaded successfully",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error downloading document:", error);
+      
+      toast({
+        title: "Error",
+        description: error.message || "Could not download the document. Please try again later.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading) {
     return <DocumentListSkeleton viewMode={viewMode} />;
   }
@@ -215,10 +300,63 @@ export function DocumentList({
     return <EmptyDocumentState userRole={userRole} />;
   }
 
+  // List view implementation with document type column
+  if (viewMode === 'list') {
+    return (
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Document Name</TableHead>
+              <TableHead>Property</TableHead>
+              <TableHead>Document Type</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredDocuments.map(doc => (
+              <TableRow key={doc.id}>
+                <TableCell className="font-medium">{doc.name}</TableCell>
+                <TableCell>{doc.property?.name || 'Untitled Property'}</TableCell>
+                <TableCell>
+                  <Badge variant="outline">
+                    {formatDocumentType(doc.document_type || ('contract_type' in doc ? doc.contract_type : 'other'))}
+                  </Badge>
+                </TableCell>
+                <TableCell>{format(new Date(doc.created_at), 'MMM d, yyyy')}</TableCell>
+                <TableCell className="text-right">
+                  {'isContract' in doc ? (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => navigate(`/documents/contracts/${doc.id}`)}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      View Contract
+                    </Button>
+                  ) : (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleDownloadDocument(doc.file_path)}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  }
+
+  // Grid view implementation
   return (
-    <div className={`space-y-2 max-w-5xl mx-auto ${
-      viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4 space-y-0' : ''
-    }`}>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl mx-auto">
       {filteredDocuments.map((document) => (
         <div 
           key={document.id}
