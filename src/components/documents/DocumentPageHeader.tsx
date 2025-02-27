@@ -3,11 +3,8 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileText, Plus, Upload, FileSignature } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader } from "@/components/ui/dialog";
 import { DocumentDialog } from "@/components/documents/DocumentDialog";
-import { ContractForm } from "@/components/contract/ContractForm";
-import { Asset, FormData } from "@/types/contract";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface DocumentPageHeaderProps {
   activeTab: string;
@@ -24,110 +21,10 @@ export function DocumentPageHeader({
 }: DocumentPageHeaderProps) {
   const navigate = useNavigate();
   const [showContractModal, setShowContractModal] = useState(false);
-  const [showContractForm, setShowContractForm] = useState(false);
-  const [currentContractTab, setCurrentContractTab] = useState<'options' | 'form'>('options');
-  
-  // Contract form state
-  const [assets, setAssets] = useState<Asset[]>([{
-    name: '',
-    value: '',
-    condition: ''
-  }]);
-
-  const [formData, setFormData] = useState<FormData>({
-    contractNumber: '1/01.01.2025',
-    contractDate: '2025-01-01',
-    ownerName: 'xxxx srl',
-    ownerReg: 'Jxx/0000/0000',
-    ownerFiscal: '000000',
-    ownerAddress: 'Șoseaua ....., nr...., Bloc ..., Ap .... Et ....',
-    ownerBank: 'RO00BREL0000000000000100',
-    ownerBankName: 'BANK S.A.',
-    ownerEmail: 'xxxxx@xxxx.com',
-    ownerPhone: '0700000000',
-    ownerCounty: 'București',
-    ownerCity: 'București',
-    ownerRepresentative: 'Administrator',
-    tenantName: 'xxxx srl',
-    tenantReg: 'J00/0000/0000',
-    tenantFiscal: 'RO00000',
-    tenantAddress: 'Șoseaua ....., nr...., Bloc ..., Ap .... Et ....',
-    tenantBank: 'RO78BTRL00000000000',
-    tenantBankName: 'Banca Transilvania',
-    tenantEmail: 'xxxxxx@gmail.com',
-    tenantPhone: '07000000',
-    tenantCounty: 'București',
-    tenantCity: 'București',
-    tenantRepresentative: 'Administrator',
-    propertyAddress: '',
-    rentAmount: '1100',
-    vatIncluded: 'nu',
-    contractDuration: '12',
-    paymentDay: '2',
-    roomCount: '2',
-    startDate: '2025-01-26',
-    lateFee: '0.1',
-    renewalPeriod: '12',
-    unilateralNotice: '30',
-    terminationNotice: '15',
-    earlyTerminationFee: '2 chirii lunare',
-    latePaymentTermination: '5',
-    securityDeposit: '2 chirii lunare',
-    depositReturnPeriod: '2',
-    waterColdMeter: '0',
-    waterHotMeter: '0',
-    electricityMeter: '0',
-    gasMeter: '0',
-    ownerSignatureDate: '2025-01-26',
-    ownerSignatureName: '',
-    tenantSignatureDate: '2025-01-26',
-    tenantSignatureName: '',
-    assets: []
-  });
 
   // Function to handle the create contract button click
   const handleCreateContractClick = () => {
     setShowContractModal(true);
-    setCurrentContractTab('options');
-  };
-
-  // Functions for contract form
-  const handleInputChange = (field: keyof FormData, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleAssetChange = (index: number, field: keyof Asset, value: string) => {
-    const newAssets = [...assets];
-    newAssets[index][field] = value;
-    setAssets(newAssets);
-    setFormData(prev => ({
-      ...prev,
-      assets: newAssets
-    }));
-  };
-
-  const addAssetRow = () => {
-    const newAsset = { name: '', value: '', condition: '' };
-    setAssets(prev => [...prev, newAsset]);
-    setFormData(prev => ({
-      ...prev,
-      assets: [...prev.assets, newAsset]
-    }));
-  };
-
-  const deleteAssetRow = (index: number) => {
-    setAssets(prev => prev.filter((_, i) => i !== index));
-    setFormData(prev => ({
-      ...prev,
-      assets: prev.assets.filter((_, i) => i !== index)
-    }));
-  };
-
-  const handleCreateFromScratch = () => {
-    setCurrentContractTab('form');
   };
 
   return (
@@ -185,103 +82,45 @@ export function DocumentPageHeader({
       {/* Contract creation dialog */}
       {userRole === "landlord" && (
         <Dialog open={showContractModal} onOpenChange={setShowContractModal}>
-          <DialogContent className={currentContractTab === 'options' ? "sm:max-w-[700px]" : "sm:max-w-[900px] h-[90vh]"}>
-            {currentContractTab === 'options' && (
-              <>
-                <DialogHeader>
-                  <DialogTitle>Create Contract</DialogTitle>
-                  <DialogDescription>
-                    Choose how you want to create your contract
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <div className="grid grid-cols-2 gap-4 p-4">
-                  <div 
-                    className="border rounded-lg p-6 flex flex-col items-center justify-center hover:bg-gray-50 cursor-pointer transition-colors"
-                    onClick={handleCreateFromScratch}
-                  >
-                    <div className="mb-4 bg-green-100 p-3 rounded-full">
-                      <Plus className="h-6 w-6 text-green-600" />
-                    </div>
-                    <h3 className="text-lg font-medium mb-2">Create from Scratch</h3>
-                    <p className="text-center text-sm text-gray-500">
-                      Build a new contract using our interactive form
-                    </p>
-                  </div>
-                  
-                  <div 
-                    className="border rounded-lg p-6 flex flex-col items-center justify-center hover:bg-gray-50 cursor-pointer transition-colors"
-                    onClick={() => {
-                      setShowContractModal(false);
-                      if (onUploadLeaseClick) {
-                        onUploadLeaseClick();
-                      }
-                    }}
-                  >
-                    <div className="mb-4 bg-purple-100 p-3 rounded-full">
-                      <FileSignature className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <h3 className="text-lg font-medium mb-2">Upload Lease Agreement</h3>
-                    <p className="text-center text-sm text-gray-500">
-                      Upload an existing lease agreement document
-                    </p>
-                  </div>
+          <DialogContent className="sm:max-w-[700px]">
+            <DialogHeader>
+              <DialogTitle>Create Contract</DialogTitle>
+              <DialogDescription>
+                Choose how you want to create your contract
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid grid-cols-2 gap-4 p-4">
+              <div className="border rounded-lg p-6 flex flex-col items-center justify-center hover:bg-gray-50 cursor-pointer transition-colors"
+                   onClick={() => {
+                     setShowContractModal(false);
+                     navigate("/generate-contract");
+                   }}>
+                <div className="mb-4 bg-green-100 p-3 rounded-full">
+                  <Plus className="h-6 w-6 text-green-600" />
                 </div>
-              </>
-            )}
-
-            {currentContractTab === 'form' && (
-              <>
-                <DialogHeader>
-                  <div className="flex items-center justify-between">
-                    <DialogTitle>Create Contract</DialogTitle>
-                    <Button
-                      variant="ghost"
-                      className="text-gray-500"
-                      onClick={() => setCurrentContractTab('options')}
-                    >
-                      Back to Options
-                    </Button>
-                  </div>
-                  <DialogDescription>
-                    Complete the form to create a new contract
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <div className="overflow-y-auto pr-2" style={{maxHeight: 'calc(90vh - 180px)'}}>
-                  <ContractForm
-                    formData={formData}
-                    assets={assets}
-                    onInputChange={handleInputChange}
-                    onAssetChange={handleAssetChange}
-                    onAddAsset={addAssetRow}
-                    onDeleteAsset={deleteAssetRow}
-                  />
+                <h3 className="text-lg font-medium mb-2">Create from Scratch</h3>
+                <p className="text-center text-sm text-gray-500">
+                  Build a new contract using our interactive form
+                </p>
+              </div>
+              
+              <div className="border rounded-lg p-6 flex flex-col items-center justify-center hover:bg-gray-50 cursor-pointer transition-colors"
+                   onClick={() => {
+                     setShowContractModal(false);
+                     if (onUploadLeaseClick) {
+                       onUploadLeaseClick();
+                     }
+                   }}>
+                <div className="mb-4 bg-purple-100 p-3 rounded-full">
+                  <FileSignature className="h-6 w-6 text-purple-600" />
                 </div>
-                
-                <DialogFooter className="mt-6">
-                  <Button 
-                    type="button" 
-                    variant="outline"
-                    onClick={() => setCurrentContractTab('options')}
-                  >
-                    Back
-                  </Button>
-                  <Button 
-                    type="button"
-                    onClick={() => {
-                      // Here we would normally submit the form data
-                      // For now, just close the modal with notification
-                      setShowContractModal(false);
-                      // In a real implementation, you would save the contract data
-                      alert("Contract created successfully!");
-                    }}
-                  >
-                    Create Contract
-                  </Button>
-                </DialogFooter>
-              </>
-            )}
+                <h3 className="text-lg font-medium mb-2">Upload Lease Agreement</h3>
+                <p className="text-center text-sm text-gray-500">
+                  Upload an existing lease agreement document
+                </p>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       )}
