@@ -367,11 +367,11 @@ function Documents() {
             resetFilters={resetFilters}
           />
           <DocumentList
-            documents={filteredDocuments}
-            isLoading={isLoadingDocuments}
+            userId={userId}
             userRole={userRole}
-            handleDownload={handleDownloadDocument}
-            handleDelete={handleDeleteDocument}
+            propertyFilter={propertyFilter}
+            typeFilter={typeFilter}
+            searchTerm={searchTerm}
             viewMode={viewMode}
           />
         </div>
