@@ -59,6 +59,7 @@ interface LeaseDocument {
   valid_until: string | null;
   properties: { name: string } | null;
   document_name?: string;
+  metadata?: Json; // Add metadata property to the LeaseDocument interface
 }
 
 type ContractOrDocument = Contract | LeaseDocument;
@@ -222,7 +223,8 @@ function Documents() {
       valid_from: null,
       valid_until: null,
       properties: doc.property ? { name: doc.property.name } : null,
-      document_name: doc.name
+      document_name: doc.name,
+      metadata: {} // Initialize with empty metadata for LeaseDocument
     })) || [];
 
     return [...regularContracts, ...documentContracts];
@@ -460,14 +462,23 @@ function Documents() {
                               variant="outline" 
                               size="sm" 
                               onClick={() => {
-                                const printProps = {
-                                  queryClient,
-                                  metadata: contract.metadata,
-                                  contractId: contract.id,
-                                  contractNumber: contract.metadata?.contractNumber
-                                };
-                                const { handlePrint } = useContractPrint(printProps);
-                                handlePrint();
+                                // Only call useContractPrint if we have a Contract, not a LeaseDocument
+                                if (contract.metadata) {
+                                  const printProps = {
+                                    queryClient,
+                                    metadata: contract.metadata,
+                                    contractId: contract.id,
+                                    contractNumber: contract.metadata?.contractNumber
+                                  };
+                                  const { handlePrint } = useContractPrint(printProps);
+                                  handlePrint();
+                                } else {
+                                  toast({
+                                    title: "Error",
+                                    description: "Could not generate PDF for this document",
+                                    variant: "destructive",
+                                  });
+                                }
                               }}
                             >
                               <Download className="h-4 w-4 mr-2" />
