@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DocumentCard } from "./DocumentCard";
@@ -77,7 +78,11 @@ interface ContractDocument {
   isContract: boolean;
   contract_type: string;
   status: ContractStatus;
-  metadata?: any;
+  metadata?: {
+    file_path?: string;
+    contractNumber?: string;
+    [key: string]: any;
+  };
 }
 
 type CombinedDocument = DocumentFromDB | ContractDocument;
@@ -150,7 +155,10 @@ export function DocumentList({
           doc.property?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           doc.tenant?.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
-        return matchesSearch && isValidDocumentType(doc.document_type);
+        // Filter out lease and lease_agreement document types
+        const isNotLeaseDocument = doc.document_type !== 'lease' && doc.document_type !== 'lease_agreement';
+        
+        return matchesSearch && isNotLeaseDocument && isValidDocumentType(doc.document_type);
       });
     },
   });
@@ -273,16 +281,30 @@ export function DocumentList({
   const isLoading = isLoadingDocuments || isLoadingContracts;
 
   const getMergedDocuments = () => {
-    const result: CombinedDocument[] = [...contracts];
+    const result: CombinedDocument[] = [];
     const documentIdsToSkip = new Set<string>();
     
-    contracts.forEach(contract => {
+    // Filter contracts to exclude lease and lease_agreement types
+    const filteredContracts = contracts.filter(contract => 
+      !['lease', 'lease_agreement'].includes(contract.document_type)
+    );
+    
+    filteredContracts.forEach(contract => {
+      result.push(contract);
       if (contract.metadata && typeof contract.metadata === 'object' && 'document_id' in contract.metadata) {
-        documentIdsToSkip.add(contract.metadata.document_id as string);
+        const docId = contract.metadata.document_id;
+        if (typeof docId === 'string') {
+          documentIdsToSkip.add(docId);
+        }
       }
     });
     
-    regularDocuments.forEach(doc => {
+    // Filter documents to exclude lease and lease_agreement types
+    const filteredDocuments = regularDocuments.filter(doc => 
+      !['lease', 'lease_agreement'].includes(doc.document_type)
+    );
+    
+    filteredDocuments.forEach(doc => {
       if (!documentIdsToSkip.has(doc.id)) {
         result.push(doc);
       }
@@ -395,10 +417,17 @@ export function DocumentList({
         throw new Error("No metadata available for this contract");
       }
 
+      const contractNumberValue = doc.metadata.contractNumber;
+      let contractNumber = '';
+      
+      if (contractNumberValue !== undefined) {
+        contractNumber = String(contractNumberValue);
+      }
+      
       generateContractPdf({
         metadata: doc.metadata,
         contractId: doc.id,
-        contractNumber: doc.metadata.contractNumber
+        contractNumber
       });
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -424,10 +453,15 @@ export function DocumentList({
       handleDownloadDocument(doc.file_path);
     } else if ('isContract' in doc) {
       if (doc.metadata && typeof doc.metadata === 'object' && 'file_path' in doc.metadata) {
-        handleDownloadDocument(doc.metadata.file_path as string);
-      } else {
-        handleGeneratePDF(doc);
+        const filePathValue = doc.metadata.file_path;
+        const filePath = filePathValue !== undefined ? String(filePathValue) : '';
+        
+        if (filePath.trim().length > 0) {
+          handleDownloadDocument(filePath);
+          return;
+        }
       }
+      handleGeneratePDF(doc);
     }
   };
 
@@ -449,8 +483,14 @@ export function DocumentList({
       return true;
     }
     
-    if ('isContract' in doc) {
-      return true;
+    if ('isContract' in doc && doc.metadata) {
+      const filePathValue = doc.metadata.file_path;
+      if (filePathValue !== undefined) {
+        const filePath = String(filePathValue);
+        return filePath.trim().length > 0;
+      }
+      
+      return true; // Contracts without file_path can be generated
     }
     
     return false;
