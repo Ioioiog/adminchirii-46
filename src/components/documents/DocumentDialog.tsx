@@ -109,6 +109,8 @@ export function DocumentDialog({
             property_id: propertyId,
             tenant_id: tenantId,
             landlord_id: userId,
+            // Add required content field
+            content: {}, // Empty JSON object as default content
             metadata: { 
               document_name: name,
               file_path: filePath 
@@ -219,10 +221,9 @@ export function DocumentDialog({
           <div className="grid gap-2">
             <Label htmlFor="property">Property</Label>
             <PropertySelect 
-              selectedPropertyId={propertyId} 
-              onPropertySelect={setPropertyId} 
-              userId={userId}
-              userRole={userRole}
+              properties={[]}
+              selectedPropertyId={propertyId || ""} 
+              onPropertyChange={setPropertyId as any}
             />
           </div>
           
@@ -230,10 +231,9 @@ export function DocumentDialog({
             <div className="grid gap-2">
               <Label htmlFor="tenant">Tenant (Optional)</Label>
               <TenantSelect 
-                selectedTenantId={tenantId} 
-                onTenantSelect={setTenantId} 
-                propertyId={propertyId}
-                landlordId={userId}
+                tenants={[]}
+                selectedTenantId={tenantId || ""} 
+                onTenantChange={setTenantId as any}
               />
             </div>
           )}
