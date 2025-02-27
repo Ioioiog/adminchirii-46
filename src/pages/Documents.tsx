@@ -9,6 +9,7 @@ import { ContractsTable } from "@/components/documents/ContractsTable";
 import { SearchAndFilterBar } from "@/components/layout/SearchAndFilterBar";
 import { DocumentFilters } from "@/components/documents/DocumentFilters";
 import { useUserRole } from "@/hooks/use-user-role";
+import { FileText, ScrollText } from "lucide-react"; // Import icons for tabs
 
 export default function Documents() {
   const [activeTab, setActiveTab] = useState<"documents" | "contracts">("documents");
@@ -36,9 +37,10 @@ export default function Documents() {
     setOpenDialog(true);
   };
 
+  // Adding the required icon property to each tab
   const tabs = [
-    { id: "documents", label: "Documents" },
-    { id: "contracts", label: "Contracts" },
+    { id: "documents", label: "Documents", icon: FileText, showForTenant: true },
+    { id: "contracts", label: "Contracts", icon: ScrollText, showForTenant: true },
   ];
 
   if (!userRole || !userId) {
@@ -50,22 +52,22 @@ export default function Documents() {
       <NavigationTabs
         tabs={tabs}
         activeTab={activeTab}
-        onChange={(tab) => setActiveTab(tab as "documents" | "contracts")}
+        onTabChange={(tab) => setActiveTab(tab as "documents" | "contracts")}
       />
 
       <DocumentPageHeader
         activeTab={activeTab}
-        userRole={userRole}
+        userRole={userRole === "service_provider" ? "tenant" : userRole} // Handle service_provider as tenant for UI purposes
         onUploadClick={handleUploadClick}
         onUploadLeaseClick={handleUploadLeaseClick}
       />
 
       <SearchAndFilterBar
+        searchValue={searchQuery}
         searchPlaceholder="Search documents..."
         onSearchChange={setSearchQuery}
-        filters={
+        filterContent={
           <DocumentFilters
-            userRole={userRole}
             filters={filters}
             setFilters={setFilters}
           />
@@ -76,14 +78,14 @@ export default function Documents() {
         <DocumentList
           searchQuery={searchQuery}
           filters={filters}
-          userRole={userRole}
+          userRole={userRole === "service_provider" ? "tenant" : userRole} // Handle service_provider
           userId={userId}
         />
       ) : (
         <ContractsTable
           searchQuery={searchQuery}
           filters={filters}
-          userRole={userRole}
+          userRole={userRole === "service_provider" ? "tenant" : userRole} // Handle service_provider
           userId={userId}
         />
       )}
