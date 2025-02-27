@@ -380,11 +380,14 @@ function Documents() {
                 ) : (
                   contracts.map(contract => {
                     // Print the contract details for debugging
+                    console.log("Contract data:", contract);
                     console.log("Contract type:", contract.contract_type);
                     console.log("Has document_name:", 'document_name' in contract);
                     
-                    // Check if it's a lease agreement document by checking for document_name property
-                    const isLeaseAgreementDocument = 'document_name' in contract;
+                    // Check if it's a lease agreement document uploaded as a document
+                    const isLeaseAgreementDocument = 
+                      'document_name' in contract && 
+                      contract.contract_type === 'lease_agreement_document';
                     
                     return (
                       <TableRow key={contract.id}>
