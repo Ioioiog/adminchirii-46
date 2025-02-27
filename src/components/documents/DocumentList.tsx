@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DocumentCard } from "./DocumentCard";
@@ -342,16 +343,12 @@ export function DocumentList({
       // Cast metadata to FormData type for generateContractPdf
       const formData = { ...defaultMetadata, ...doc.metadata } as FormData;
       
-      // Extract contractNumber safely with type assertion
+      // Extract contractNumber safely - using string concatenation to guarantee a string
       let contractNumber = '';
       
-      if ('contractNumber' in doc.metadata) {
-        // First, get the value and assert it as a possible string
-        const value = doc.metadata.contractNumber as string | number | null | undefined;
-        
-        if (value !== null && value !== undefined) {
-          contractNumber = String(value);
-        }
+      if (doc.metadata.contractNumber !== undefined && doc.metadata.contractNumber !== null) {
+        // Force string conversion by concatenation with empty string
+        contractNumber = '' + doc.metadata.contractNumber;
       }
       
       generateContractPdf({
@@ -382,11 +379,10 @@ export function DocumentList({
     if ('file_path' in doc && doc.file_path && !('isContract' in doc)) {
       handleDownloadDocument(doc.file_path);
     } else if ('isContract' in doc && doc.metadata) {
-      const metadata = doc.metadata as MetadataType;
-      
-      if ('file_path' in metadata && metadata.file_path) {
-        // Type assert the file_path as string since we've defined it in MetadataType
-        const filePath = metadata.file_path as string;
+      // Check if file_path exists in metadata and has content
+      if (doc.metadata.file_path) {
+        // Convert to string explicitly using concatenation
+        const filePath = '' + doc.metadata.file_path;
         if (filePath.trim().length > 0) {
           handleDownloadDocument(filePath);
           return;
@@ -415,11 +411,11 @@ export function DocumentList({
     }
     
     if ('isContract' in doc && doc.metadata) {
-      const metadata = doc.metadata as MetadataType;
-      
-      if ('file_path' in metadata) {
-        const filePath = metadata.file_path;
-        return typeof filePath === 'string' && filePath.trim().length > 0;
+      // Fix for TS2322 error - explicitly convert to boolean
+      if (doc.metadata.file_path !== undefined && doc.metadata.file_path !== null) {
+        // Convert to string and check if it's not empty
+        const filePath = '' + doc.metadata.file_path;
+        return filePath.trim().length > 0;
       }
       
       return true; // Contracts without file_path can be generated
