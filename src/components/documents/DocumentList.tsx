@@ -353,10 +353,10 @@ export function DocumentList({
     
     // Contract documents: Enable for lease_agreement, disable for lease
     if ('isContract' in doc) {
-      if (doc.document_type === 'lease_agreement') {
+      if (doc.document_type === 'lease_agreement' || doc.document_type === 'lease') {
         return true;
       }
-      return false; // Disable for 'lease' type
+      return false; // Disable for other contract types
     }
     
     return false;
@@ -405,9 +405,16 @@ export function DocumentList({
                       if ('file_path' in doc && doc.file_path && !('isContract' in doc)) {
                         handleDownloadDocument(doc.file_path);
                       }
-                      // For lease agreements (contract documents)
-                      else if ('isContract' in doc && doc.document_type === 'lease_agreement') {
-                        handleGeneratePDF(doc);
+                      // For contract documents
+                      else if ('isContract' in doc) {
+                        // For lease documents
+                        if (doc.document_type === 'lease') {
+                          handleGeneratePDF(doc);
+                        }
+                        // For lease agreement documents
+                        else if (doc.document_type === 'lease_agreement') {
+                          handleDownloadDocument(doc.file_path!);
+                        }
                       }
                     }}
                     disabled={!canDownloadDocument(doc)}
