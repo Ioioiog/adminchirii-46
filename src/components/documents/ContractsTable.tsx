@@ -1,7 +1,5 @@
+
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { Download, Trash2 } from "lucide-react";
-import { format } from "date-fns";
 import { 
   Table, 
   TableBody, 
@@ -11,248 +9,217 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { 
+  Download, 
+  Trash2,
+  Eye
+} from "lucide-react";
+import { ContractStatusBadge } from "@/components/contracts/ContractStatusBadge";
+import { format } from "date-fns";
+import { ContractOrDocument } from "@/types/document";
 import { Badge } from "@/components/ui/badge";
 import { 
   AlertDialog,
+  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ContractStatus } from "@/types/contract";
-import { Json } from "@/integrations/supabase/types/json";
+import { useState } from "react";
 import { UseMutationResult } from "@tanstack/react-query";
-
-interface Contract {
-  id: string;
-  contract_type: string;
-  status: ContractStatus;
-  valid_from: string | null;
-  valid_until: string | null;
-  tenant_id: string | null;
-  landlord_id: string;
-  properties: { name: string } | null;
-  metadata: Json;
-}
-
-interface LeaseDocument {
-  id: string;
-  name: string;
-  file_path: string;
-  document_type: string;
-  property: { 
-    id: string;
-    name: string;
-  } | null;
-  created_at: string;
-  contract_type: string;
-  status: ContractStatus;
-  valid_from: string | null;
-  valid_until: string | null;
-  properties: { name: string } | null;
-  document_name?: string;
-  metadata?: Json;
-}
-
-type ContractOrDocument = Contract | LeaseDocument;
+import { useNavigate } from "react-router-dom";
 
 interface ContractsTableProps {
   contracts: ContractOrDocument[];
-  isLoading: boolean;
   userRole: "landlord" | "tenant";
+  isLoading: boolean;
   handleDownloadDocument: (filePath: string) => Promise<void>;
   handleGeneratePDF: (contract: ContractOrDocument) => void;
   deleteContractMutation: UseMutationResult<void, Error, string, unknown>;
 }
 
-export function ContractsTable({
-  contracts,
+export function ContractsTable({ 
+  contracts, 
+  userRole, 
   isLoading,
-  userRole,
   handleDownloadDocument,
   handleGeneratePDF,
   deleteContractMutation
 }: ContractsTableProps) {
   const navigate = useNavigate();
+  const [documentToDelete, setDocumentToDelete] = useState<ContractOrDocument | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  // Helper function to format document type for display
-  const formatDocumentType = (type: string): string => {
-    // First remove _document suffix if present
-    let formattedType = type.replace('_document', '');
-    
-    // Handle special cases
-    switch (formattedType) {
-      case 'lease_agreement':
-        return 'Lease Agreement';
-      case 'lease':
-        return 'Lease';
-      case 'general':
-        return 'General Document';
-      case 'invoice':
-        return 'Invoice';
-      case 'receipt':
-        return 'Receipt';
-      case 'maintenance':
-        return 'Maintenance Document';
-      case 'legal':
-        return 'Legal Document';
-      case 'notice':
-        return 'Notice';
-      case 'inspection':
-        return 'Inspection Report';
-      default:
-        // Format any other type by replacing underscores and capitalizing words
-        return formattedType
-          .split('_')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ');
+  const confirmDelete = () => {
+    if (documentToDelete) {
+      deleteContractMutation.mutate(documentToDelete.id);
     }
+    setShowDeleteDialog(false);
+    setDocumentToDelete(null);
   };
 
-  const handleDocumentAction = (doc: ContractOrDocument) => {
-    console.log("Document action triggered for:", doc);
-
-    // For document type entries with direct file_path
-    if ('file_path' in doc && doc.file_path) {
-      handleDownloadDocument(doc.file_path);
-      return;
+  const getDocumentStatus = (doc: ContractOrDocument): string => {
+    // For lease documents and regular contracts, use the existing status
+    if ('status' in doc && doc.status) {
+      return doc.status;
     }
     
-    // For contract entries
-    if (doc.metadata) {
-      // Check if metadata contains a file_path
-      if (typeof doc.metadata === 'object' && 'file_path' in doc.metadata) {
-        handleDownloadDocument(doc.metadata.file_path as string);
-      } else {
-        // Otherwise generate PDF from contract metadata
-        handleGeneratePDF(doc);
-      }
-    } else {
-      // Fallback to generating PDF if no file_path is available
-      handleGeneratePDF(doc);
-    }
+    // For other document types without status, return "signed" (document is uploaded/completed)
+    return "signed";
   };
+
+  const getIssueDate = (doc: ContractOrDocument): Date => {
+    // For documents with valid_from, use that
+    if ('valid_from' in doc && doc.valid_from) {
+      return new Date(doc.valid_from);
+    }
+    
+    // For documents with created_at, use that
+    if ('created_at' in doc && doc.created_at) {
+      return new Date(doc.created_at);
+    }
+    
+    // Fallback to current date if neither exists
+    return new Date();
+  };
+
+  if (isLoading) {
+    return <div className="text-center py-4">Loading contracts...</div>;
+  }
+
+  if (contracts.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">No contracts found.</p>
+        {userRole === "landlord" && (
+          <Button 
+            onClick={() => navigate("/generate-contract")} 
+            className="mt-4 bg-blue-600 hover:bg-blue-700"
+          >
+            Create Contract
+          </Button>
+        )}
+      </div>
+    );
+  }
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Property</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Valid From</TableHead>
-            <TableHead>Valid Until</TableHead>
-            <TableHead>Download</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {isLoading ? (
+    <>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-4">
-                Loading documents...
-              </TableCell>
+              <TableHead>Contract</TableHead>
+              <TableHead>Property</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Issue Date</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
-          ) : contracts?.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={7} className="text-center py-4">
-                {userRole === 'tenant' 
-                  ? 'No documents available for you yet'
-                  : 'No documents found'}
-              </TableCell>
-            </TableRow>
-          ) : (
-            contracts.map(contract => {
-              // Check if it's a document (has document_name property)
-              const isDocument = 'document_name' in contract;
-              
-              return (
-                <TableRow key={contract.id}>
-                  <TableCell>{contract.properties?.name || 'Untitled Property'}</TableCell>
-                  <TableCell className="capitalize">
-                    {formatDocumentType(contract.contract_type)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className={
-                      contract.status === 'signed' ? 'bg-green-100 text-green-800' : 
-                      contract.status === 'draft' ? 'bg-gray-100 text-gray-800' : 
-                      'bg-yellow-100 text-yellow-800'
-                    }>
-                      {contract.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {contract.valid_from ? format(new Date(contract.valid_from), 'MMM d, yyyy') : 
-                      ('created_at' in contract ? format(new Date(contract.created_at), 'MMM d, yyyy') : '-')}
-                  </TableCell>
-                  <TableCell>
-                    {contract.valid_until ? format(new Date(contract.valid_until), 'MMM d, yyyy') : '-'}
-                  </TableCell>
-                  <TableCell>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleDocumentAction(contract)}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      PDF
-                    </Button>
-                  </TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+          </TableHeader>
+          <TableBody>
+            {contracts.map((contract) => (
+              <TableRow key={contract.id}>
+                <TableCell className="font-medium">
+                  {contract.contract_type === "lease_agreement" || contract.contract_type === "lease" 
+                    ? contract.contract_type.replace('_', ' ') 
+                    : 'document_name' in contract 
+                      ? contract.document_name 
+                      : contract.contract_type?.replace('_', ' ')}
+                </TableCell>
+                <TableCell>
+                  {contract.properties?.name || 'Untitled Property'}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline">
+                    {contract.contract_type?.replace('_', ' ')}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <ContractStatusBadge status={getDocumentStatus(contract)} />
+                </TableCell>
+                <TableCell>
+                  {format(getIssueDate(contract), 'MMM d, yyyy')}
+                </TableCell>
+                <TableCell className="text-right space-x-2">
+                  {userRole === "landlord" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive hover:bg-destructive/10"
                       onClick={() => {
-                        if (!isDocument) {
-                          navigate(`/documents/contracts/${contract.id}`);
+                        setDocumentToDelete(contract);
+                        setShowDeleteDialog(true);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  )}
+                  {contract.status === 'draft' && userRole === "landlord" ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/documents/contracts/${contract.id}`)}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        // For documents with file_path
+                        if ('file_path' in contract && contract.file_path) {
+                          handleDownloadDocument(contract.file_path);
+                        } 
+                        // For contracts with metadata that may contain a file_path
+                        else if ('metadata' in contract && contract.metadata && 
+                                typeof contract.metadata === 'object' && 
+                                'file_path' in (contract.metadata as any)) {
+                          handleDownloadDocument((contract.metadata as any).file_path);
+                        } 
+                        // For other contracts, generate PDF
+                        else {
+                          handleGeneratePDF(contract);
                         }
                       }}
-                      className="mr-2"
                     >
-                      View Details
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
                     </Button>
-                    
-                    {userRole === 'landlord' && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="border-red-200 text-red-600 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the document.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <Button 
-                              variant="destructive"
-                              onClick={() => deleteContractMutation.mutate(contract.id)}
-                            >
-                              Delete
-                            </Button>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
-                  </TableCell>
-                </TableRow>
-              );
-            })
-          )}
-        </TableBody>
-      </Table>
-    </div>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this document
+              {documentToDelete?.contract_type ? ` of type "${documentToDelete.contract_type}"` : ''}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete} 
+              className="bg-destructive text-destructive-foreground"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
