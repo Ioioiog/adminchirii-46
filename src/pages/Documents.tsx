@@ -107,8 +107,15 @@ function Documents() {
     }
 
     // Property filter
-    if (propertyFilter !== "all" && contract.property_id !== propertyFilter) {
-      return false;
+    if (propertyFilter !== "all") {
+      // For document type with property field
+      if ('property' in contract && contract.property && contract.property.id !== propertyFilter) {
+        return false;
+      }
+      // For contract type with property_id field (handle if property_id exists)
+      if (!('property' in contract) && 'property_id' in (contract as any) && (contract as any).property_id !== propertyFilter) {
+        return false;
+      }
     }
 
     // Search term filter
@@ -116,7 +123,12 @@ function Documents() {
       const searchLower = searchTerm.toLowerCase();
       const contractName = contract.contract_type?.toLowerCase() || '';
       const propertyName = contract.properties?.name?.toLowerCase() || '';
-      const tenantEmail = contract.tenant?.email?.toLowerCase() || '';
+      
+      // Only access tenant email if it exists
+      let tenantEmail = '';
+      if ('tenant' in (contract as any) && (contract as any).tenant && (contract as any).tenant.email) {
+        tenantEmail = (contract as any).tenant.email.toLowerCase();
+      }
       
       if (!contractName.includes(searchLower) && 
           !propertyName.includes(searchLower) && 
