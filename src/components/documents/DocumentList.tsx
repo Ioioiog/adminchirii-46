@@ -83,6 +83,8 @@ interface ContractDocument {
   isContract: boolean;
   contract_type: string;
   status: ContractStatus;
+  valid_from?: string | null;
+  valid_until?: string | null;
   metadata?: any;
 }
 
@@ -221,6 +223,8 @@ export function DocumentList({
         isContract: true,
         contract_type: contract.contract_type,
         status: contract.status,
+        valid_from: contract.valid_from,
+        valid_until: contract.valid_until,
         metadata: contract.metadata
       })) as ContractDocument[];
       
@@ -537,12 +541,12 @@ export function DocumentList({
                       )}
                     </TableCell>
                     <TableCell>
-                      {isContractDocument && doc.valid_from 
+                      {isContractDocument && 'valid_from' in doc && doc.valid_from 
                         ? format(new Date(doc.valid_from), 'MMM d, yyyy')
                         : format(new Date(doc.created_at), 'MMM d, yyyy')}
                     </TableCell>
                     <TableCell>
-                      {isContractDocument && doc.valid_until 
+                      {isContractDocument && 'valid_until' in doc && doc.valid_until 
                         ? format(new Date(doc.valid_until), 'MMM d, yyyy') 
                         : '-'}
                     </TableCell>
