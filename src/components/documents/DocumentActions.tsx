@@ -40,58 +40,68 @@ export function DocumentActions({ document: doc, userRole, onDocumentUpdated }: 
         bucket: 'documents'
       });
 
-      // Get the document from the database to ensure we have the latest file path
-      const { data: documentData, error: documentError } = await supabase
-        .from("documents")
-        .select("*")
-        .eq("id", doc.id)
-        .single();
-
-      if (documentError) {
-        console.error("Error fetching document details:", documentError);
-        throw new Error("Could not retrieve document details");
+      // First verify if the file exists
+      const { data: fileInfo, error: fileCheckError } = await supabase.storage
+        .from('documents')
+        .list(cleanFilePath.split('/').slice(0, -1).join('/'));
+      
+      if (fileCheckError) {
+        console.error("Error checking file existence:", fileCheckError);
+      } else {
+        const fileName = cleanFilePath.split('/').pop();
+        const fileExists = fileInfo.some(file => file.name === fileName);
+        
+        if (!fileExists) {
+          console.error("File does not exist in storage:", cleanFilePath);
+          throw new Error("The document file could not be found in storage. It may have been moved or deleted.");
+        }
       }
 
-      // Use the file_path from the database to ensure accuracy
-      const filePathToUse = documentData.file_path.replace(/^\/+/, '');
-      
-      console.log("Using file path from database:", filePathToUse);
+      // Attempt to download using direct download method first
+      try {
+        console.log("Attempting direct download...");
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .download(cleanFilePath);
+          
+        if (error) {
+          console.error("Error with direct download:", error);
+          throw error;
+        }
+          
+        if (data) {
+          // Create a downloadable link from the file data
+          const url = window.URL.createObjectURL(data);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = cleanFilePath.split('/').pop() || 'document';
+          document.body.appendChild(a);
+          a.click();
+          
+          // Clean up
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          
+          console.log("File download completed successfully using direct download");
+          
+          toast({
+            title: "Success",
+            description: "Document downloaded successfully",
+          });
+          return;
+        }
+      } catch (directDownloadError) {
+        console.error("Direct download failed, trying signed URL method...", directDownloadError);
+      }
 
-      // Try to download the file directly using a signed URL (no public URL attempt)
+      // If direct download fails, try signed URL method
       const { data: signedURLData, error: signError } = await supabase.storage
         .from('documents')
-        .createSignedUrl(filePathToUse, 60); // 60 seconds expiry
+        .createSignedUrl(cleanFilePath, 60); // 60 seconds expiry
 
       if (signError) {
         console.error("Error getting signed URL:", signError);
-        // Try downloading the file as if documents is a public bucket (backward compatibility)
-        const { data } = await supabase.storage
-          .from('documents')
-          .download(filePathToUse);
-          
-        if (!data) {
-          throw new Error("Could not download the file. Document might not exist or you don't have permission to access it.");
-        }
-        
-        // Create a downloadable link from the file data
-        const url = window.URL.createObjectURL(data);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filePathToUse.split('/').pop() || 'document';
-        document.body.appendChild(a);
-        a.click();
-        
-        // Clean up
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        console.log("File download completed successfully using direct download");
-        
-        toast({
-          title: "Success",
-          description: "Document downloaded successfully",
-        });
-        return;
+        throw new Error("Could not generate a secure download link for this document.");
       }
 
       if (!signedURLData?.signedUrl) {
@@ -112,7 +122,7 @@ export function DocumentActions({ document: doc, userRole, onDocumentUpdated }: 
       const signedUrl = window.URL.createObjectURL(signedBlob);
       const link = document.createElement("a");
       link.href = signedUrl;
-      link.download = filePathToUse.split('/').pop() || 'document';
+      link.download = cleanFilePath.split('/').pop() || 'document';
       document.body.appendChild(link);
       link.click();
       
