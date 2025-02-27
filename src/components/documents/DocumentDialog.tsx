@@ -99,8 +99,8 @@ export function DocumentDialog({
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      // Store files in a subdirectory based on document type
-      const filePath = `${documentType}/${userId}/${fileName}`;
+      // Store files under user ID first to comply with storage policies
+      const filePath = `${userId}/${documentType}/${fileName}`;
 
       console.log("Attempting to upload file:", {
         bucket: 'documents',
