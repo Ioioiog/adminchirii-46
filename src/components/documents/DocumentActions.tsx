@@ -40,17 +40,72 @@ export function DocumentActions({ document: doc, userRole, onDocumentUpdated }: 
         bucket: 'documents'
       });
 
-      // First get a signed URL for the file
-      const { data: signedURL, error: signError } = await supabase.storage
+      // Get the document from the database to ensure we have the latest file path
+      const { data: documentData, error: documentError } = await supabase
+        .from("documents")
+        .select("*")
+        .eq("id", doc.id)
+        .single();
+
+      if (documentError) {
+        console.error("Error fetching document details:", documentError);
+        throw new Error("Could not retrieve document details");
+      }
+
+      // Use the file_path from the database to ensure accuracy
+      const filePathToUse = documentData.file_path.replace(/^\/+/, '');
+      
+      console.log("Using file path from database:", filePathToUse);
+
+      // Try to get a public URL for the file first
+      const { data: publicUrlData } = await supabase.storage
         .from('documents')
-        .createSignedUrl(cleanFilePath, 60); // 60 seconds expiry
+        .getPublicUrl(filePathToUse);
+
+      if (publicUrlData?.publicUrl) {
+        console.log("Retrieved public URL:", publicUrlData.publicUrl);
+        
+        // Use the public URL to download the file
+        const response = await fetch(publicUrlData.publicUrl);
+        if (!response.ok) {
+          console.error("Error fetching with public URL:", response.status, response.statusText);
+          throw new Error(`Failed to download file: ${response.statusText}`);
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filePathToUse.split('/').pop() || 'document';
+        document.body.appendChild(a);
+        a.click();
+        
+        // Clean up
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        console.log("File download completed successfully using public URL");
+        
+        toast({
+          title: "Success",
+          description: "Document downloaded successfully",
+        });
+        return;
+      }
+
+      console.log("Public URL not available, trying signed URL method");
+      
+      // Fall back to signed URL if public URL doesn't work
+      const { data: signedURLData, error: signError } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(filePathToUse, 60); // 60 seconds expiry
 
       if (signError) {
         console.error("Error getting signed URL:", signError);
         throw new Error("Could not generate download link");
       }
 
-      if (!signedURL?.signedUrl) {
+      if (!signedURLData?.signedUrl) {
         console.error("No signed URL received");
         throw new Error("Could not generate download link");
       }
@@ -58,25 +113,25 @@ export function DocumentActions({ document: doc, userRole, onDocumentUpdated }: 
       console.log("Successfully generated signed URL");
 
       // Download the file using the signed URL
-      const response = await fetch(signedURL.signedUrl);
-      if (!response.ok) {
-        console.error("Fetch error:", response.status, response.statusText);
-        throw new Error("Failed to download file");
+      const signedResponse = await fetch(signedURLData.signedUrl);
+      if (!signedResponse.ok) {
+        console.error("Fetch error with signed URL:", signedResponse.status, signedResponse.statusText);
+        throw new Error(`Failed to download file: ${signedResponse.statusText}`);
       }
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = cleanFilePath.split('/').pop() || 'document';
-      document.body.appendChild(a);
-      a.click();
+      const signedBlob = await signedResponse.blob();
+      const signedUrl = window.URL.createObjectURL(signedBlob);
+      const link = document.createElement("a");
+      link.href = signedUrl;
+      link.download = filePathToUse.split('/').pop() || 'document';
+      document.body.appendChild(link);
+      link.click();
       
       // Clean up
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      window.URL.revokeObjectURL(signedUrl);
+      document.body.removeChild(link);
       
-      console.log("File download completed successfully");
+      console.log("File download completed successfully using signed URL");
 
       toast({
         title: "Success",
