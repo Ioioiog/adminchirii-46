@@ -144,7 +144,7 @@ export function DocumentList({
 
   // Fetch contracts
   const { data: contracts = [], isLoading: isLoadingContracts } = useQuery({
-    queryKey: ["document-contracts", propertyFilter, searchTerm, userId, userRole],
+    queryKey: ["document-contracts", propertyFilter, searchTerm, userId, userRole, typeFilter],
     queryFn: async () => {
       if (!userId) return [];
       
@@ -184,7 +184,7 @@ export function DocumentList({
       }
 
       // Transform contracts into document format
-      return data.map(contract => ({
+      const transformedContracts = data.map(contract => ({
         id: contract.id,
         name: `${contract.contract_type.replace('_', ' ')} - ${contract.properties?.name || 'Untitled Property'}`,
         document_type: contract.contract_type === "lease" ? "lease" : "lease_agreement",
@@ -197,6 +197,13 @@ export function DocumentList({
         contract_type: contract.contract_type,
         status: contract.status
       })) as ContractDocument[];
+      
+      // Filter contracts by document type if a type filter is applied
+      if (typeFilter !== "all") {
+        return transformedContracts.filter(doc => doc.document_type === typeFilter);
+      }
+      
+      return transformedContracts;
     },
     enabled: !!userId
   });
