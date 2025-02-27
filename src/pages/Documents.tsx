@@ -28,7 +28,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ContractStatus, FormData } from "@/types/contract";
-import { useContractPrint } from "@/components/contract/ContractPrintPreview";
+import { generateContractPdf } from "@/utils/contractPdfGenerator";
 
 interface Contract {
   id: string;
@@ -557,16 +557,11 @@ function Documents() {
         }
       }
 
-      // Create the contract print preview component instance
-      const { handlePrint } = useContractPrint({
-        queryClient,
+      generateContractPdf({
         metadata: contractData.metadata as any as FormData,
         contractId: contractData.id,
         contractNumber
       });
-
-      // Trigger the print operation
-      handlePrint();
     } catch (error) {
       console.error("Error generating PDF:", error);
       toast({
