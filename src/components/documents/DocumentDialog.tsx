@@ -51,6 +51,7 @@ interface DocumentDialogProps {
   onOpenChange: (open: boolean) => void;
   userId: string;
   userRole: string;
+  initialDocumentType?: string;
 }
 
 const contractStatuses: { value: ContractStatus; label: string }[] = [
@@ -119,6 +120,7 @@ export function DocumentDialog({
   onOpenChange,
   userId,
   userRole,
+  initialDocumentType
 }: DocumentDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -131,7 +133,7 @@ export function DocumentDialog({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      document_type: "lease_agreement",
+      document_type: initialDocumentType || "lease_agreement",
       property_id: undefined,
       tenant_id: undefined,
       status: "draft",
@@ -187,7 +189,7 @@ export function DocumentDialog({
 
   // Set showAdditionalFields based on document type
   React.useEffect(() => {
-    setShowAdditionalFields(documentType === "lease_agreement" || documentType === "lease");
+    setShowAdditionalFields(documentType === "lease_agreement");
     // Reset current tab to basic when document type changes
     setCurrentTab("basic");
   }, [documentType]);
@@ -222,7 +224,7 @@ export function DocumentDialog({
         })`,
       }));
     },
-    enabled: open && userRole === "landlord" && (documentType === "lease_agreement" || documentType === "lease"),
+    enabled: open && userRole === "landlord" && documentType === "lease_agreement",
   });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -314,7 +316,7 @@ export function DocumentDialog({
         const fileName = `${Date.now()}.${fileExt}`;
         
         // For lease agreements, use the document type in the file path to organize storage
-        filePath = values.document_type === "lease_agreement" || values.document_type === "lease"
+        filePath = values.document_type === "lease_agreement"
           ? `lease_agreement/${fileName}`
           : `${values.document_type}/${fileName}`;
 
@@ -346,7 +348,7 @@ export function DocumentDialog({
       // Prepare metadata for lease agreements
       let contractMetadata = {};
       
-      if (values.document_type === "lease_agreement" || values.document_type === "lease") {
+      if (values.document_type === "lease_agreement") {
         contractMetadata = {
           contractNumber: values.contractNumber,
           contractDate: values.contractDate,
@@ -423,7 +425,7 @@ export function DocumentDialog({
       }
 
       // Create contract record for lease agreement
-      if (values.document_type === "lease_agreement" || values.document_type === "lease") {
+      if (values.document_type === "lease_agreement") {
         // Use proper type for status field
         const status: ContractStatus = values.status || "draft";
         
@@ -437,7 +439,7 @@ export function DocumentDialog({
         }
         
         const contractData = {
-          contract_type: values.document_type === "lease" ? "lease" : "lease_agreement",
+          contract_type: "lease_agreement",
           property_id: values.property_id,
           landlord_id: userId,
           tenant_id: values.tenant_id || null,
@@ -520,7 +522,7 @@ export function DocumentDialog({
                 <Select
                   onValueChange={(value) => {
                     field.onChange(value);
-                    setShowAdditionalFields(value === "lease_agreement" || value === "lease");
+                    setShowAdditionalFields(value === "lease_agreement");
                   }}
                   defaultValue={field.value}
                 >
@@ -532,7 +534,6 @@ export function DocumentDialog({
                   <SelectContent>
                     <SelectItem value="general">General Document</SelectItem>
                     <SelectItem value="lease_agreement">Lease Agreement</SelectItem>
-                    <SelectItem value="lease">Lease</SelectItem>
                     <SelectItem value="invoice">Invoice</SelectItem>
                     <SelectItem value="receipt">Receipt</SelectItem>
                     <SelectItem value="maintenance">Maintenance Document</SelectItem>
@@ -630,7 +631,7 @@ export function DocumentDialog({
                 <Select
                   onValueChange={(value) => {
                     field.onChange(value);
-                    setShowAdditionalFields(value === "lease_agreement" || value === "lease");
+                    setShowAdditionalFields(value === "lease_agreement");
                   }}
                   defaultValue={field.value}
                 >
@@ -642,7 +643,6 @@ export function DocumentDialog({
                   <SelectContent>
                     <SelectItem value="general">General Document</SelectItem>
                     <SelectItem value="lease_agreement">Lease Agreement</SelectItem>
-                    <SelectItem value="lease">Lease</SelectItem>
                     <SelectItem value="invoice">Invoice</SelectItem>
                     <SelectItem value="receipt">Receipt</SelectItem>
                     <SelectItem value="maintenance">Maintenance Document</SelectItem>
@@ -1487,7 +1487,7 @@ export function DocumentDialog({
                 Cancel
               </Button>
               <Button type="submit" disabled={isUploading}>
-                {isUploading ? "Saving..." : (showAdditionalFields ? "Create Lease" : "Upload Document")}
+                {isUploading ? "Saving..." : (showAdditionalFields ? "Create Lease Agreement" : "Upload Document")}
               </Button>
             </DialogFooter>
           </form>
