@@ -15,6 +15,11 @@ import { DocumentPageHeader } from "@/components/documents/DocumentPageHeader";
 import { useDocuments } from "@/hooks/useDocuments";
 import { ContractOrDocument } from "@/types/document";
 
+interface Property {
+  id: string;
+  name: string;
+}
+
 function Documents() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -34,14 +39,14 @@ function Documents() {
   }>({ startDate: null, endDate: null });
 
   // Fetch properties data
-  const { data: properties } = useQuery({
+  const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["properties"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("properties")
         .select("id, name");
       if (error) throw error;
-      return data;
+      return data as Property[];
     },
     enabled: userRole === "landlord"
   });
@@ -106,13 +111,14 @@ function Documents() {
     // Property filter
     if (propertyFilter !== "all") {
       // For document type with property field
-      if ('property' in contract && contract.property && contract.property.id !== propertyFilter) {
-        return false;
+      if ('property' in contract && contract.property && contract.property.id === propertyFilter) {
+        return true;
       }
-      // For contract type with property_id field (handle if property_id exists)
-      if (!('property' in contract) && 'property_id' in (contract as any) && (contract as any).property_id !== propertyFilter) {
-        return false;
+      // For contract type with property_id field
+      if ('property_id' in contract && contract.property_id === propertyFilter) {
+        return true;
       }
+      return false;
     }
 
     // Search term filter
@@ -123,8 +129,8 @@ function Documents() {
       
       // Only access tenant email if it exists
       let tenantEmail = '';
-      if ('tenant' in (contract as any) && (contract as any).tenant && (contract as any).tenant.email) {
-        tenantEmail = (contract as any).tenant.email.toLowerCase();
+      if ('tenant' in contract && contract.tenant && 'email' in contract.tenant) {
+        tenantEmail = (contract.tenant.email as string).toLowerCase();
       }
       
       if (!contractName.includes(searchLower) && 
@@ -137,11 +143,13 @@ function Documents() {
     // Date range filter - start date
     if (dateRangeFilter.startDate) {
       const startDate = new Date(dateRangeFilter.startDate);
-      const contractDate = 'valid_from' in contract && contract.valid_from 
-        ? new Date(contract.valid_from) 
-        : 'created_at' in contract && contract.created_at 
-          ? new Date(contract.created_at)
-          : new Date();
+      let contractDate = new Date();
+      
+      if ('valid_from' in contract && contract.valid_from) {
+        contractDate = new Date(contract.valid_from);
+      } else if ('created_at' in contract && contract.created_at) {
+        contractDate = new Date(contract.created_at);
+      }
       
       if (contractDate < startDate) {
         return false;
@@ -151,11 +159,13 @@ function Documents() {
     // Date range filter - end date
     if (dateRangeFilter.endDate) {
       const endDate = new Date(dateRangeFilter.endDate);
-      const contractDate = 'valid_from' in contract && contract.valid_from 
-        ? new Date(contract.valid_from) 
-        : 'created_at' in contract && contract.created_at 
-          ? new Date(contract.created_at)
-          : new Date();
+      let contractDate = new Date();
+      
+      if ('valid_from' in contract && contract.valid_from) {
+        contractDate = new Date(contract.valid_from);
+      } else if ('created_at' in contract && contract.created_at) {
+        contractDate = new Date(contract.created_at);
+      }
       
       if (contractDate > endDate) {
         return false;

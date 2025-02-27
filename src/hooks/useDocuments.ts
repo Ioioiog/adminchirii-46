@@ -5,6 +5,24 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { jsPDF } from "jspdf";
 import { ContractOrDocument } from "@/types/document";
+import { ContractStatus } from "@/types/contract";
+import { Json } from "@/integrations/supabase/types/json";
+
+// Define an interface for the raw contract data that matches the database structure
+interface RawContract {
+  id: string;
+  contract_type: string;
+  status: string;
+  valid_from: string | null;
+  valid_until: string | null;
+  tenant_id: string | null;
+  landlord_id: string;
+  property_id: string;
+  metadata: Json;
+  properties: {
+    name: string;
+  } | null;
+}
 
 export function useDocuments(userId: string | null, userRole: "landlord" | "tenant" | null) {
   const queryClient = useQueryClient();
@@ -12,7 +30,7 @@ export function useDocuments(userId: string | null, userRole: "landlord" | "tena
 
   // Query for fetching contracts
   const { 
-    data: contracts = [], 
+    data: rawContracts = [], 
     isLoading: isLoadingContracts,
     refetch: refetchContracts
   } = useQuery({
@@ -50,7 +68,7 @@ export function useDocuments(userId: string | null, userRole: "landlord" | "tena
         if (error) throw error;
 
         console.log("Fetched contracts:", contractsData?.length);
-        return contractsData || [];
+        return contractsData as RawContract[] || [];
       } catch (error) {
         console.error("Error fetching contracts:", error);
         return [];
@@ -58,6 +76,12 @@ export function useDocuments(userId: string | null, userRole: "landlord" | "tena
     },
     enabled: !!userId && !!userRole
   });
+
+  // Convert raw contracts to proper ContractOrDocument type
+  const contracts: ContractOrDocument[] = rawContracts.map(contract => ({
+    ...contract,
+    status: contract.status as ContractStatus
+  }));
 
   // Mutation for deleting a contract
   const deleteContractMutation = useMutation({
@@ -74,7 +98,7 @@ export function useDocuments(userId: string | null, userRole: "landlord" | "tena
       toast({
         title: "Contract deleted",
         description: "The contract has been deleted successfully",
-        variant: "success"
+        variant: "default"
       });
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
     },
@@ -139,7 +163,7 @@ export function useDocuments(userId: string | null, userRole: "landlord" | "tena
       toast({
         title: "PDF Generated",
         description: "Contract PDF has been generated successfully",
-        variant: "success"
+        variant: "default"
       });
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -169,7 +193,7 @@ export function useDocuments(userId: string | null, userRole: "landlord" | "tena
       toast({
         title: "Download Started",
         description: "Your document download has started",
-        variant: "success"
+        variant: "default"
       });
     } catch (error) {
       console.error("Error downloading document:", error);
