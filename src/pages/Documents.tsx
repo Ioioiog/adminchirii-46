@@ -15,6 +15,7 @@ import { ContractDetailsDialog } from "@/components/contracts/ContractDetailsDia
 import { ContractsTable } from "@/components/documents/ContractsTable";
 import { DocumentPageHeader } from "@/components/documents/DocumentPageHeader";
 import { useDocuments } from "@/hooks/useDocuments";
+import { ContractOrDocument, LeaseDocument } from "@/types/document";
 
 function Documents() {
   const navigate = useNavigate();
@@ -108,9 +109,13 @@ function Documents() {
     // Date range filter - start date
     if (dateRangeFilter.startDate) {
       const startDate = new Date(dateRangeFilter.startDate);
-      const contractDate = contract.valid_from 
+      
+      // Check if contract is a LeaseDocument (which has created_at)
+      const contractDate = 'valid_from' in contract && contract.valid_from 
         ? new Date(contract.valid_from) 
-        : new Date(contract.created_at);
+        : 'created_at' in contract && contract.created_at 
+          ? new Date(contract.created_at)
+          : new Date(); // Fallback to current date if neither exists
       
       if (contractDate < startDate) {
         return false;
@@ -120,9 +125,13 @@ function Documents() {
     // Date range filter - end date
     if (dateRangeFilter.endDate) {
       const endDate = new Date(dateRangeFilter.endDate);
-      const contractDate = contract.valid_from 
+      
+      // Check if contract is a LeaseDocument (which has created_at)
+      const contractDate = 'valid_from' in contract && contract.valid_from 
         ? new Date(contract.valid_from) 
-        : new Date(contract.created_at);
+        : 'created_at' in contract && contract.created_at 
+          ? new Date(contract.created_at)
+          : new Date(); // Fallback to current date if neither exists
       
       if (contractDate > endDate) {
         return false;
