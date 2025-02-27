@@ -61,7 +61,7 @@ const formSchema = z.object({
   document_type: z.string(),
   property_id: z.string().optional(),
   tenant_id: z.string().optional(),
-  status: z.string().optional(),
+  status: z.enum(["draft", "pending_signature", "signed", "expired", "cancelled"]).optional(),
   valid_from: z.date().optional(),
   valid_until: z.date().optional(),
 });
@@ -85,7 +85,7 @@ export function DocumentDialog({
       document_type: "general",
       property_id: undefined,
       tenant_id: undefined,
-      status: undefined,
+      status: "draft",
       valid_from: undefined,
       valid_until: undefined,
     },
@@ -185,12 +185,15 @@ export function DocumentDialog({
 
       // If it's a lease agreement, also create a contract record
       if (values.document_type === "lease_agreement" && showAdditionalFields) {
+        // Use proper type for status field
+        const status: ContractStatus = values.status || "draft";
+        
         const contractData = {
           contract_type: "lease_agreement",
           property_id: values.property_id,
           landlord_id: userId,
           tenant_id: values.tenant_id || null,
-          status: values.status || "draft",
+          status: status,
           valid_from: values.valid_from ? values.valid_from.toISOString() : null,
           valid_until: values.valid_until ? values.valid_until.toISOString() : null,
           content: {},
@@ -365,7 +368,7 @@ export function DocumentDialog({
                     <FormItem>
                       <FormLabel>Contract Status</FormLabel>
                       <Select
-                        onValueChange={field.onChange}
+                        onValueChange={(value) => field.onChange(value as ContractStatus)}
                         defaultValue={field.value}
                       >
                         <FormControl>
