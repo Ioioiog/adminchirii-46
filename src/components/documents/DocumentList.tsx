@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DocumentCard } from "./DocumentCard";
@@ -58,6 +57,12 @@ interface DocumentFromDB {
   } | null;
 }
 
+interface MetadataType {
+  file_path?: string;
+  contractNumber?: string;
+  [key: string]: unknown;
+}
+
 interface ContractDocument {
   id: string;
   name: string;
@@ -79,11 +84,7 @@ interface ContractDocument {
   isContract: boolean;
   contract_type: string;
   status: ContractStatus;
-  metadata?: {
-    file_path?: string;
-    contractNumber?: string;
-    [key: string]: any;
-  };
+  metadata?: MetadataType;
 }
 
 type CombinedDocument = DocumentFromDB | ContractDocument;
@@ -341,24 +342,22 @@ export function DocumentList({
       // Cast metadata to FormData type for generateContractPdf
       const formData = { ...defaultMetadata, ...doc.metadata } as FormData;
       
-      // Extract contractNumber safely - this fixes TS2345 error by explicitly defining the type
+      // Extract contractNumber safely with type assertion
       let contractNumber = '';
       
-      if (doc.metadata && typeof doc.metadata === 'object' && 'contractNumber' in doc.metadata) {
-        const contractNumberValue = doc.metadata.contractNumber;
+      if ('contractNumber' in doc.metadata) {
+        // First, get the value and assert it as a possible string
+        const value = doc.metadata.contractNumber as string | number | null | undefined;
         
-        // Handle all possible types for contractNumber
-        if (typeof contractNumberValue === 'string') {
-          contractNumber = contractNumberValue;
-        } else if (contractNumberValue !== null && contractNumberValue !== undefined) {
-          contractNumber = String(contractNumberValue);
+        if (value !== null && value !== undefined) {
+          contractNumber = String(value);
         }
       }
       
       generateContractPdf({
         metadata: formData,
         contractId: doc.id,
-        contractNumber: contractNumber // Now contractNumber is safely a string
+        contractNumber
       });
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -382,35 +381,18 @@ export function DocumentList({
 
     if ('file_path' in doc && doc.file_path && !('isContract' in doc)) {
       handleDownloadDocument(doc.file_path);
-    } else if ('isContract' in doc) {
-      try {
-        if (doc.metadata && 
-            typeof doc.metadata === 'object' && 
-            'file_path' in doc.metadata && 
-            doc.metadata.file_path) {
-          
-          // Safely convert file_path to string regardless of its type
-          const filePathValue = doc.metadata.file_path;
-          let filePathStr = '';
-          
-          if (typeof filePathValue === 'string') {
-            filePathStr = filePathValue;
-          } else if (filePathValue !== null && filePathValue !== undefined) {
-            filePathStr = String(filePathValue);
-          }
-          
-          if (filePathStr) {
-            handleDownloadDocument(filePathStr);
-          } else {
-            handleGeneratePDF(doc);
-          }
-        } else {
-          handleGeneratePDF(doc);
+    } else if ('isContract' in doc && doc.metadata) {
+      const metadata = doc.metadata as MetadataType;
+      
+      if ('file_path' in metadata && metadata.file_path) {
+        // Type assert the file_path as string since we've defined it in MetadataType
+        const filePath = metadata.file_path as string;
+        if (filePath.trim().length > 0) {
+          handleDownloadDocument(filePath);
+          return;
         }
-      } catch (err) {
-        console.error("Error handling document action:", err);
-        handleGeneratePDF(doc);
       }
+      handleGeneratePDF(doc);
     }
   };
 
@@ -432,29 +414,12 @@ export function DocumentList({
       return true;
     }
     
-    if ('isContract' in doc) {
-      if (doc.metadata && typeof doc.metadata === 'object' && 'file_path' in doc.metadata) {
-        const filePathValue = doc.metadata.file_path;
-        
-        // Handle all possible types that filePathValue might be
-        if (filePathValue === null || filePathValue === undefined) {
-          return false;
-        }
-        
-        if (typeof filePathValue === 'string') {
-          return filePathValue.trim().length > 0;
-        }
-        
-        if (typeof filePathValue === 'number' || typeof filePathValue === 'boolean') {
-          return true; // These can be converted to string
-        }
-        
-        // Final fallback - try to convert to boolean
-        try {
-          return Boolean(filePathValue);
-        } catch {
-          return false;
-        }
+    if ('isContract' in doc && doc.metadata) {
+      const metadata = doc.metadata as MetadataType;
+      
+      if ('file_path' in metadata) {
+        const filePath = metadata.file_path;
+        return typeof filePath === 'string' && filePath.trim().length > 0;
       }
       
       return true; // Contracts without file_path can be generated
