@@ -378,83 +378,87 @@ function Documents() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  contracts?.map(contract => (
-                    <TableRow key={contract.id}>
-                      <TableCell>{contract.properties?.name || 'Untitled Property'}</TableCell>
-                      <TableCell className="capitalize">
-                        {'document_name' in contract ? 'Lease Agreement Document' : contract.contract_type.replace('_', ' ')}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className={
-                          contract.status === 'signed' ? 'bg-green-100 text-green-800' : 
-                          contract.status === 'draft' ? 'bg-gray-100 text-gray-800' : 
-                          'bg-yellow-100 text-yellow-800'
-                        }>
-                          {contract.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {contract.valid_from ? format(new Date(contract.valid_from), 'MMM d, yyyy') : 
-                          ('created_at' in contract ? format(new Date(contract.created_at), 'MMM d, yyyy') : '-')}
-                      </TableCell>
-                      <TableCell>
-                        {contract.valid_until ? format(new Date(contract.valid_until), 'MMM d, yyyy') : '-'}
-                      </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        {/* Show Download PDF for lease agreement documents */}
-                        {('document_name' in contract && contract.file_path) ? (
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => handleDownloadDocument(contract.file_path)}
-                          >
-                            Download PDF
-                          </Button>
-                        ) : (
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => {
-                              navigate(`/documents/contracts/${contract.id}`);
-                            }}
-                          >
-                            View Details
-                          </Button>
-                        )}
-                        
-                        {userRole === 'landlord' && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="border-red-200 text-red-600 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This action cannot be undone. This will permanently delete the contract.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <Button 
-                                  variant="destructive"
-                                  onClick={() => deleteContractMutation.mutate(contract.id)}
+                  contracts.map(contract => {
+                    console.log("Contract:", contract); // Debug to see contract data
+                    const isLeaseDocument = 'document_name' in contract && contract.contract_type === 'lease_agreement_document';
+                    
+                    return (
+                      <TableRow key={contract.id}>
+                        <TableCell>{contract.properties?.name || 'Untitled Property'}</TableCell>
+                        <TableCell className="capitalize">
+                          {isLeaseDocument ? 'Lease Agreement Document' : contract.contract_type.replace('_', ' ')}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className={
+                            contract.status === 'signed' ? 'bg-green-100 text-green-800' : 
+                            contract.status === 'draft' ? 'bg-gray-100 text-gray-800' : 
+                            'bg-yellow-100 text-yellow-800'
+                          }>
+                            {contract.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {contract.valid_from ? format(new Date(contract.valid_from), 'MMM d, yyyy') : 
+                            ('created_at' in contract ? format(new Date(contract.created_at), 'MMM d, yyyy') : '-')}
+                        </TableCell>
+                        <TableCell>
+                          {contract.valid_until ? format(new Date(contract.valid_until), 'MMM d, yyyy') : '-'}
+                        </TableCell>
+                        <TableCell className="text-right space-x-2">
+                          {isLeaseDocument ? (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleDownloadDocument(contract.file_path)}
+                            >
+                              Download PDF
+                            </Button>
+                          ) : (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => {
+                                navigate(`/documents/contracts/${contract.id}`);
+                              }}
+                            >
+                              View Details
+                            </Button>
+                          )}
+                          
+                          {userRole === 'landlord' && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-red-200 text-red-600 hover:bg-red-50"
                                 >
-                                  Delete
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the contract.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <Button 
+                                    variant="destructive"
+                                    onClick={() => deleteContractMutation.mutate(contract.id)}
+                                  >
+                                    Delete
+                                  </Button>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
