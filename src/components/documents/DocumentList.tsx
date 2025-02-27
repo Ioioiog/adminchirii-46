@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DocumentCard } from "./DocumentCard";
@@ -83,7 +84,7 @@ interface ContractDocument {
 type CombinedDocument = DocumentFromDB | ContractDocument;
 
 function isValidDocumentType(type: string): type is DocumentType {
-  return ['lease_agreement', 'invoice', 'receipt', 'other', 'general', 'maintenance', 'legal', 'notice', 'inspection', 'lease'].includes(type);
+  return ['invoice', 'receipt', 'other', 'general', 'maintenance', 'legal', 'notice', 'inspection'].includes(type);
 }
 
 export function DocumentList({ 
@@ -138,6 +139,9 @@ export function DocumentList({
         query = query.eq("document_type", typeFilter);
       }
 
+      // Filter out lease-related document types
+      query = query.not('document_type', 'in', '("lease_agreement","lease")');
+
       const { data, error } = await query;
 
       if (error) {
@@ -150,7 +154,10 @@ export function DocumentList({
           doc.property?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           doc.tenant?.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
-        return matchesSearch && isValidDocumentType(doc.document_type);
+        // Exclude lease and lease_agreement document types
+        const isNotLeaseType = doc.document_type !== 'lease' && doc.document_type !== 'lease_agreement';
+        
+        return matchesSearch && isNotLeaseType && isValidDocumentType(doc.document_type);
       });
     },
   });
@@ -160,62 +167,8 @@ export function DocumentList({
     queryFn: async () => {
       if (!userId) return [];
       
-      let query = supabase
-        .from("contracts")
-        .select(`
-          id,
-          contract_type,
-          status,
-          valid_from,
-          valid_until,
-          content,
-          property_id,
-          metadata,
-          properties(id, name, address),
-          tenant:profiles!contracts_tenant_id_fkey(
-            first_name,
-            last_name,
-            email
-          ),
-          created_at
-        `);
-
-      if (userRole === "landlord") {
-        query = query.eq("landlord_id", userId);
-      } else if (userRole === "tenant") {
-        query = query.eq("tenant_id", userId);
-      }
-
-      if (propertyFilter && propertyFilter !== "all") {
-        query = query.eq("property_id", propertyFilter);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        throw error;
-      }
-
-      const transformedContracts = data.map(contract => ({
-        id: contract.id,
-        name: `${contract.contract_type.replace('_', ' ')} - ${contract.properties?.name || 'Untitled Property'}`,
-        document_type: contract.contract_type === "lease" ? "lease" : "lease_agreement",
-        property_id: contract.property_id,
-        created_at: contract.created_at,
-        uploaded_by: userId,
-        property: contract.properties,
-        tenant: contract.tenant,
-        isContract: true,
-        contract_type: contract.contract_type,
-        status: contract.status,
-        metadata: contract.metadata
-      })) as ContractDocument[];
-      
-      if (typeFilter !== "all") {
-        return transformedContracts.filter(doc => doc.document_type === typeFilter);
-      }
-      
-      return transformedContracts;
+      // We don't need to fetch contracts in the documents tab
+      return [];
     },
     enabled: !!userId
   });
@@ -273,22 +226,8 @@ export function DocumentList({
   const isLoading = isLoadingDocuments || isLoadingContracts;
 
   const getMergedDocuments = () => {
-    const result: CombinedDocument[] = [...contracts];
-    const documentIdsToSkip = new Set<string>();
-    
-    contracts.forEach(contract => {
-      if (contract.metadata && typeof contract.metadata === 'object' && 'document_id' in contract.metadata) {
-        documentIdsToSkip.add(contract.metadata.document_id as string);
-      }
-    });
-    
-    regularDocuments.forEach(doc => {
-      if (!documentIdsToSkip.has(doc.id)) {
-        result.push(doc);
-      }
-    });
-    
-    return result;
+    // We're only using regular documents in the documents tab now
+    return regularDocuments;
   };
 
   const filteredDocuments = getMergedDocuments().filter(doc => {
@@ -307,10 +246,6 @@ export function DocumentList({
     let formattedType = type.replace('_document', '');
     
     switch (formattedType) {
-      case 'lease_agreement':
-        return 'Lease Agreement';
-      case 'lease':
-        return 'Lease';
       case 'general':
         return 'General Document';
       case 'invoice':
