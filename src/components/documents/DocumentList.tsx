@@ -264,8 +264,13 @@ export function DocumentList({
     }
   };
 
-  const handleDownloadDocument = async (filePath: string) => {
+  const handleDownloadDocument = async (filePath: string | undefined) => {
     try {
+      // Check if filePath is undefined or empty
+      if (!filePath) {
+        throw new Error("No file path available for this document");
+      }
+      
       const cleanFilePath = filePath.replace(/^\/+/, '');
       
       const folderPath = cleanFilePath.split('/').slice(0, -1).join('/');
@@ -351,7 +356,7 @@ export function DocumentList({
       return true;
     }
     
-    // Contract documents: Enable for lease_agreement, disable for lease
+    // Contract documents: Enable for lease_agreement and lease
     if ('isContract' in doc) {
       if (doc.document_type === 'lease_agreement' || doc.document_type === 'lease') {
         return true;
@@ -360,6 +365,11 @@ export function DocumentList({
     }
     
     return false;
+  };
+
+  // Check if document has a downloadable file
+  const hasDownloadableFile = (doc: CombinedDocument): boolean => {
+    return 'file_path' in doc && !!doc.file_path;
   };
 
   if (isLoading) {
@@ -413,7 +423,16 @@ export function DocumentList({
                         }
                         // For lease agreement documents
                         else if (doc.document_type === 'lease_agreement') {
-                          handleDownloadDocument(doc.file_path!);
+                          // Only try to download if file_path exists
+                          if (hasDownloadableFile(doc)) {
+                            handleDownloadDocument(doc.file_path);
+                          } else {
+                            toast({
+                              title: "Error",
+                              description: "No downloadable file available for this document",
+                              variant: "destructive",
+                            });
+                          }
                         }
                       }
                     }}
