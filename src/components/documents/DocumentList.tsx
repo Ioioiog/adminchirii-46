@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DocumentCard } from "./DocumentCard";
@@ -343,12 +342,16 @@ export function DocumentList({
       // Cast metadata to FormData type for generateContractPdf
       const formData = { ...defaultMetadata, ...doc.metadata } as FormData;
       
-      // Extract contractNumber safely - using string concatenation to guarantee a string
+      // Extract contractNumber with proper type checking
       let contractNumber = '';
       
-      if (doc.metadata.contractNumber !== undefined && doc.metadata.contractNumber !== null) {
-        // Force string conversion by concatenation with empty string
-        contractNumber = '' + doc.metadata.contractNumber;
+      if (doc.metadata && typeof doc.metadata === 'object') {
+        const contractNumberValue = doc.metadata.contractNumber;
+        if (typeof contractNumberValue === 'string') {
+          contractNumber = contractNumberValue;
+        } else if (contractNumberValue !== null && contractNumberValue !== undefined) {
+          contractNumber = String(contractNumberValue);
+        }
       }
       
       generateContractPdf({
@@ -380,9 +383,15 @@ export function DocumentList({
       handleDownloadDocument(doc.file_path);
     } else if ('isContract' in doc && doc.metadata) {
       // Check if file_path exists in metadata and has content
-      if (doc.metadata.file_path) {
-        // Convert to string explicitly using concatenation
-        const filePath = '' + doc.metadata.file_path;
+      if (doc.metadata && typeof doc.metadata === 'object' && 'file_path' in doc.metadata) {
+        const filePathValue = doc.metadata.file_path;
+        // Ensure we have a string value
+        const filePath = typeof filePathValue === 'string' 
+          ? filePathValue 
+          : filePathValue !== null && filePathValue !== undefined 
+            ? String(filePathValue) 
+            : '';
+            
         if (filePath.trim().length > 0) {
           handleDownloadDocument(filePath);
           return;
@@ -411,11 +420,19 @@ export function DocumentList({
     }
     
     if ('isContract' in doc && doc.metadata) {
-      // Fix for TS2322 error - explicitly convert to boolean
-      if (doc.metadata.file_path !== undefined && doc.metadata.file_path !== null) {
-        // Convert to string and check if it's not empty
-        const filePath = '' + doc.metadata.file_path;
-        return filePath.trim().length > 0;
+      // Check if metadata is an object and has file_path property
+      if (typeof doc.metadata === 'object' && doc.metadata !== null && 'file_path' in doc.metadata) {
+        const filePathValue = doc.metadata.file_path;
+        
+        // Handle different types that file_path might be
+        if (typeof filePathValue === 'string') {
+          return filePathValue.trim().length > 0;
+        }
+        
+        // For non-string values that can be converted to string
+        if (filePathValue !== null && filePathValue !== undefined) {
+          return String(filePathValue).trim().length > 0;
+        }
       }
       
       return true; // Contracts without file_path can be generated
