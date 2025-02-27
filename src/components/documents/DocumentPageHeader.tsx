@@ -25,13 +25,13 @@ export function DocumentPageHeader({
             <FileText className="h-6 w-6 text-white" />
           </div>
           <h1 className="text-2xl font-semibold">
-            Documents & Contracts
+            {activeTab === 'contracts' ? 'Contracts' : 'Documents'}
           </h1>
         </div>
         <p className="text-gray-500">
           {userRole === 'tenant' 
-            ? 'View your property related documents and contracts'
-            : 'Manage and track all your property-related documents and contracts'}
+            ? 'View your property related documents'
+            : 'Manage and track all your property-related documents'}
         </p>
       </div>
 
@@ -44,13 +44,15 @@ export function DocumentPageHeader({
             <Plus className="h-4 w-4 mr-2" />
             Upload Document
           </Button>
-          <Button 
-            onClick={() => navigate("/generate-contract")} 
-            className="bg-green-600 hover:bg-green-700"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Contract
-          </Button>
+          {activeTab === "contracts" && (
+            <Button 
+              onClick={() => navigate("/generate-contract")} 
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Contract
+            </Button>
+          )}
         </div>
       )}
     </div>

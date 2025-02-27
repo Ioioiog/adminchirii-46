@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Download } from "lucide-react";
-import { format, isValid } from "date-fns";
+import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { generateContractPdf } from "@/utils/contractPdfGenerator";
@@ -24,7 +24,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
-import { UseMutationResult } from "@tanstack/react-query";
 
 interface DocumentListProps {
   userId: string;
@@ -33,11 +32,6 @@ interface DocumentListProps {
   typeFilter: "all" | DocumentType;
   searchTerm: string;
   viewMode: "grid" | "list";
-  contracts?: any[];
-  isLoadingContracts?: boolean;
-  handleDownloadDocument?: (filePath: string) => Promise<void>;
-  handleGeneratePDF?: (contract: any) => void;
-  deleteContractMutation?: UseMutationResult<void, Error, string, unknown>;
 }
 
 interface DocumentFromDB {
@@ -83,8 +77,6 @@ interface ContractDocument {
   isContract: boolean;
   contract_type: string;
   status: ContractStatus;
-  valid_from?: string | null;
-  valid_until?: string | null;
   metadata?: any;
 }
 
@@ -94,31 +86,13 @@ function isValidDocumentType(type: string): type is DocumentType {
   return ['lease_agreement', 'invoice', 'receipt', 'other', 'general', 'maintenance', 'legal', 'notice', 'inspection', 'lease'].includes(type);
 }
 
-const formatDate = (dateString: string | null | undefined): string => {
-  if (!dateString) return '-';
-  
-  try {
-    const date = new Date(dateString);
-    if (!isValid(date)) return '-';
-    return format(date, 'MMM d, yyyy');
-  } catch (error) {
-    console.error("Invalid date format:", dateString, error);
-    return '-';
-  }
-};
-
 export function DocumentList({ 
   userId, 
   userRole, 
   propertyFilter, 
   typeFilter,
   searchTerm,
-  viewMode,
-  contracts = [],
-  isLoadingContracts = false,
-  handleDownloadDocument: propHandleDownloadDocument,
-  handleGeneratePDF: propHandleGeneratePDF,
-  deleteContractMutation: propDeleteContractMutation
+  viewMode
 }: DocumentListProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -129,12 +103,6 @@ export function DocumentList({
   const { data: regularDocuments = [], isLoading: isLoadingDocuments } = useQuery({
     queryKey: ["documents", propertyFilter, typeFilter, searchTerm],
     queryFn: async () => {
-      console.log("Fetching documents with filter:", { typeFilter, propertyFilter });
-      
-      if (typeFilter === "lease") {
-        return [];
-      }
-      
       let query = supabase
         .from("documents")
         .select(`
@@ -173,11 +141,8 @@ export function DocumentList({
       const { data, error } = await query;
 
       if (error) {
-        console.error("Error fetching documents:", error);
         throw error;
       }
-
-      console.log("Regular documents fetched:", data?.length || 0);
 
       return (data as DocumentFromDB[]).filter(doc => {
         const matchesSearch = 
@@ -190,14 +155,10 @@ export function DocumentList({
     },
   });
 
-  const useProvidedContracts = contracts && contracts.length > 0;
-  
-  const { data: fetchedContracts = [], isLoading: isLoadingFetchedContracts } = useQuery({
+  const { data: contracts = [], isLoading: isLoadingContracts } = useQuery({
     queryKey: ["document-contracts", propertyFilter, searchTerm, userId, userRole, typeFilter],
     queryFn: async () => {
       if (!userId) return [];
-      
-      console.log("Fetching contracts with filter:", { typeFilter, propertyFilter });
       
       let query = supabase
         .from("contracts")
@@ -228,85 +189,59 @@ export function DocumentList({
       if (propertyFilter && propertyFilter !== "all") {
         query = query.eq("property_id", propertyFilter);
       }
-      
-      if (typeFilter === "lease") {
-        query = query.eq("contract_type", "lease");
-      }
 
       const { data, error } = await query;
 
       if (error) {
-        console.error("Error fetching contracts:", error);
         throw error;
       }
 
-      console.log("Contracts fetched:", data?.length || 0);
-
-      const transformedContracts = data.map(contract => {
-        let documentType: string;
-        if (contract.contract_type === "lease") {
-          documentType = "lease";
-        } else if (contract.contract_type === "lease_agreement") {
-          documentType = "lease_agreement";
-        } else {
-          documentType = "lease_agreement";
-        }
-        
-        return {
-          id: contract.id,
-          name: `${contract.contract_type.replace('_', ' ')} - ${contract.properties?.name || 'Untitled Property'}`,
-          document_type: documentType,
-          property_id: contract.property_id,
-          created_at: contract.created_at,
-          uploaded_by: userId,
-          property: contract.properties,
-          tenant: contract.tenant,
-          isContract: true,
-          contract_type: contract.contract_type,
-          status: contract.status,
-          valid_from: contract.valid_from,
-          valid_until: contract.valid_until,
-          metadata: contract.metadata
-        };
-      }) as ContractDocument[];
+      const transformedContracts = data.map(contract => ({
+        id: contract.id,
+        name: `${contract.contract_type.replace('_', ' ')} - ${contract.properties?.name || 'Untitled Property'}`,
+        document_type: contract.contract_type === "lease" ? "lease" : "lease_agreement",
+        property_id: contract.property_id,
+        created_at: contract.created_at,
+        uploaded_by: userId,
+        property: contract.properties,
+        tenant: contract.tenant,
+        isContract: true,
+        contract_type: contract.contract_type,
+        status: contract.status,
+        metadata: contract.metadata
+      })) as ContractDocument[];
       
-      console.log("Transformed contracts:", transformedContracts.length);
-      
-      if (typeFilter !== "all" && typeFilter !== "lease") {
+      if (typeFilter !== "all") {
         return transformedContracts.filter(doc => doc.document_type === typeFilter);
       }
       
       return transformedContracts;
     },
-    enabled: !!userId && !useProvidedContracts
+    enabled: !!userId
   });
 
-  const contractsData = useProvidedContracts ? contracts : fetchedContracts;
-  const contractsLoading = useProvidedContracts ? isLoadingContracts : isLoadingFetchedContracts;
-
-  const localDeleteMutation = useMutation({
-    mutationFn: async (documentId: string) => {
-      const docToDelete = getMergedDocuments().find(doc => doc.id === documentId);
-      
-      if (!docToDelete) throw new Error("Document not found");
-      
-      if ('isContract' in docToDelete) {
+  const deleteMutation = useMutation({
+    mutationFn: async (document: CombinedDocument) => {
+      if ('isContract' in document) {
+        // Delete contract
         const { error } = await supabase
           .from('contracts')
           .delete()
-          .eq('id', docToDelete.id);
+          .eq('id', document.id);
           
         if (error) throw error;
       } else {
+        // Delete document
         const { error } = await supabase
           .from('documents')
           .delete()
-          .eq('id', docToDelete.id);
+          .eq('id', document.id);
           
         if (error) throw error;
         
-        if (docToDelete.file_path) {
-          const cleanFilePath = docToDelete.file_path.replace(/^\/+/, '');
+        // If there's a file path, also delete the file from storage
+        if (document.file_path) {
+          const cleanFilePath = document.file_path.replace(/^\/+/, '');
           const { error: storageError } = await supabase.storage
             .from('documents')
             .remove([cleanFilePath]);
@@ -335,15 +270,13 @@ export function DocumentList({
     }
   });
 
-  const deleteContractMutation = propDeleteContractMutation || localDeleteMutation;
-
-  const isLoading = isLoadingDocuments || contractsLoading;
+  const isLoading = isLoadingDocuments || isLoadingContracts;
 
   const getMergedDocuments = () => {
-    const result: CombinedDocument[] = [...contractsData];
+    const result: CombinedDocument[] = [...contracts];
     const documentIdsToSkip = new Set<string>();
     
-    contractsData.forEach(contract => {
+    contracts.forEach(contract => {
       if (contract.metadata && typeof contract.metadata === 'object' && 'document_id' in contract.metadata) {
         documentIdsToSkip.add(contract.metadata.document_id as string);
       }
@@ -369,13 +302,6 @@ export function DocumentList({
     }
     return true;
   });
-
-  console.log("Filtered documents:", filteredDocuments.map(doc => ({
-    id: doc.id,
-    name: doc.name,
-    documentType: doc.document_type,
-    isContract: 'isContract' in doc
-  })));
 
   const formatDocumentType = (type: string): string => {
     let formattedType = type.replace('_document', '');
@@ -410,10 +336,6 @@ export function DocumentList({
   };
 
   const handleDownloadDocument = async (filePath: string | undefined) => {
-    if (propHandleDownloadDocument) {
-      return propHandleDownloadDocument(filePath as string);
-    }
-    
     try {
       console.log("Attempting to download document with path:", filePath);
       
@@ -468,10 +390,6 @@ export function DocumentList({
   };
 
   const handleGeneratePDF = (doc: ContractDocument) => {
-    if (propHandleGeneratePDF) {
-      return propHandleGeneratePDF(doc);
-    }
-    
     try {
       if (!doc.metadata) {
         throw new Error("No metadata available for this contract");
@@ -508,7 +426,7 @@ export function DocumentList({
       if (doc.metadata && typeof doc.metadata === 'object' && 'file_path' in doc.metadata) {
         handleDownloadDocument(doc.metadata.file_path as string);
       } else {
-        handleGeneratePDF(doc as ContractDocument);
+        handleGeneratePDF(doc);
       }
     }
   };
@@ -520,7 +438,7 @@ export function DocumentList({
 
   const confirmDelete = () => {
     if (documentToDelete) {
-      deleteContractMutation.mutate(documentToDelete.id);
+      deleteMutation.mutate(documentToDelete);
     }
     setShowDeleteDialog(false);
     setDocumentToDelete(null);
@@ -556,88 +474,46 @@ export function DocumentList({
                 <TableHead>Document Name</TableHead>
                 <TableHead>Property</TableHead>
                 <TableHead>Document Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created/Valid From</TableHead>
-                <TableHead>Valid Until</TableHead>
+                <TableHead>Created</TableHead>
                 <TableHead>Download</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredDocuments.map(doc => {
-                const isContractDocument = 'isContract' in doc;
-                
-                return (
-                  <TableRow key={doc.id}>
-                    <TableCell className="font-medium">{doc.name}</TableCell>
-                    <TableCell>{doc.property?.name || 'Untitled Property'}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {formatDocumentType(doc.document_type || (isContractDocument ? doc.contract_type : 'other'))}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {isContractDocument ? (
-                        <Badge variant="secondary" className={
-                          doc.status === 'signed' ? 'bg-green-100 text-green-800' : 
-                          doc.status === 'draft' ? 'bg-gray-100 text-gray-800' : 
-                          'bg-yellow-100 text-yellow-800'
-                        }>
-                          {doc.status}
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="bg-green-100 text-green-800">
-                          Complete
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {isContractDocument && 'valid_from' in doc && doc.valid_from 
-                        ? formatDate(doc.valid_from)
-                        : formatDate(doc.created_at)}
-                    </TableCell>
-                    <TableCell>
-                      {isContractDocument && 'valid_until' in doc && doc.valid_until 
-                        ? formatDate(doc.valid_until)
-                        : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleDocumentAction(doc)}
-                        disabled={!canDownloadDocument(doc)}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        PDF
-                      </Button>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {isContractDocument && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => navigate(`/documents/contracts/${doc.id}`)}
-                          className="mr-2"
-                        >
-                          View Details
-                        </Button>
-                      )}
-                      {userRole === 'landlord' && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="text-destructive hover:bg-destructive/10"
-                          onClick={() => handleDeleteDocument(doc)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {filteredDocuments.map(doc => (
+                <TableRow key={doc.id}>
+                  <TableCell className="font-medium">{doc.name}</TableCell>
+                  <TableCell>{doc.property?.name || 'Untitled Property'}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {formatDocumentType(doc.document_type || ('contract_type' in doc ? doc.contract_type : 'other'))}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{format(new Date(doc.created_at), 'MMM d, yyyy')}</TableCell>
+                  <TableCell>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleDocumentAction(doc)}
+                      disabled={!canDownloadDocument(doc)}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </Button>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDeleteDocument(doc)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </div>

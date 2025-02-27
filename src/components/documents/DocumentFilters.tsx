@@ -1,17 +1,12 @@
 
-import React from "react";
-import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DocumentType } from "@/integrations/supabase/types/document-types";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Grid, List } from "lucide-react";
+
+interface FilterProperty {
+  id: string;
+  name: string;
+}
 
 interface DocumentFiltersProps {
   searchTerm: string;
@@ -20,9 +15,7 @@ interface DocumentFiltersProps {
   setTypeFilter: (value: "all" | DocumentType) => void;
   propertyFilter: string;
   setPropertyFilter: (value: string) => void;
-  properties?: { id: string; name: string }[];
-  viewMode?: "grid" | "list"; 
-  setViewMode?: (mode: "grid" | "list") => void;
+  properties?: FilterProperty[];
 }
 
 export function DocumentFilters({
@@ -32,46 +25,40 @@ export function DocumentFilters({
   setTypeFilter,
   propertyFilter,
   setPropertyFilter,
-  properties = [],
-  viewMode = "list",
-  setViewMode
+  properties,
 }: DocumentFiltersProps) {
   return (
-    <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4 md:items-center">
-      <div className="relative flex-1">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search documents..."
-          className="pl-8"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+    <div className="space-y-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <Input
+            placeholder="Search documents..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full"
+          />
+        </div>
         <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as "all" | DocumentType)}>
-          <SelectTrigger className="w-full sm:w-[180px]">
+          <SelectTrigger>
             <SelectValue placeholder="Filter by type" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All document types</SelectItem>
+            <SelectItem value="all">All types</SelectItem>
             <SelectItem value="lease_agreement">Lease Agreement</SelectItem>
             <SelectItem value="lease">Lease</SelectItem>
             <SelectItem value="invoice">Invoice</SelectItem>
             <SelectItem value="receipt">Receipt</SelectItem>
-            <SelectItem value="maintenance">Maintenance</SelectItem>
-            <SelectItem value="legal">Legal</SelectItem>
+            <SelectItem value="general">General Document</SelectItem>
+            <SelectItem value="maintenance">Maintenance Document</SelectItem>
+            <SelectItem value="legal">Legal Document</SelectItem>
             <SelectItem value="notice">Notice</SelectItem>
-            <SelectItem value="inspection">Inspection</SelectItem>
-            <SelectItem value="general">General</SelectItem>
+            <SelectItem value="inspection">Inspection Report</SelectItem>
             <SelectItem value="other">Other</SelectItem>
           </SelectContent>
         </Select>
-
-        {properties && properties.length > 0 && (
+        {properties && (
           <Select value={propertyFilter} onValueChange={setPropertyFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectTrigger>
               <SelectValue placeholder="Filter by property" />
             </SelectTrigger>
             <SelectContent>
@@ -85,19 +72,6 @@ export function DocumentFilters({
           </Select>
         )}
       </div>
-
-      {setViewMode && (
-        <div className="flex justify-end">
-          <ToggleGroup type="single" value={viewMode} onValueChange={(value) => value && setViewMode(value as "grid" | "list")}>
-            <ToggleGroupItem value="list" aria-label="List view">
-              <List className="h-4 w-4" />
-            </ToggleGroupItem>
-            <ToggleGroupItem value="grid" aria-label="Grid view">
-              <Grid className="h-4 w-4" />
-            </ToggleGroupItem>
-          </ToggleGroup>
-        </div>
-      )}
     </div>
   );
 }
