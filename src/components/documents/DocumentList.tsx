@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
+import { UseMutationResult } from "@tanstack/react-query";
 
 interface DocumentListProps {
   userId: string;
@@ -32,6 +33,11 @@ interface DocumentListProps {
   typeFilter: "all" | DocumentType;
   searchTerm: string;
   viewMode: "grid" | "list";
+  contracts?: any[];
+  isLoadingContracts?: boolean;
+  handleDownloadDocument?: (filePath: string) => Promise<void>;
+  handleGeneratePDF?: (contract: any) => void;
+  deleteContractMutation?: UseMutationResult<void, Error, string, unknown>;
 }
 
 interface DocumentFromDB {
@@ -92,7 +98,12 @@ export function DocumentList({
   propertyFilter, 
   typeFilter,
   searchTerm,
-  viewMode
+  viewMode,
+  contracts = [],
+  isLoadingContracts = false,
+  handleDownloadDocument: propHandleDownloadDocument,
+  handleGeneratePDF: propHandleGeneratePDF,
+  deleteContractMutation: propDeleteContractMutation
 }: DocumentListProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -155,7 +166,9 @@ export function DocumentList({
     },
   });
 
-  const { data: contracts = [], isLoading: isLoadingContracts } = useQuery({
+  const useProvidedContracts = contracts && contracts.length > 0;
+  
+  const { data: fetchedContracts = [], isLoading: isLoadingFetchedContracts } = useQuery({
     queryKey: ["document-contracts", propertyFilter, searchTerm, userId, userRole, typeFilter],
     queryFn: async () => {
       if (!userId) return [];
@@ -217,31 +230,35 @@ export function DocumentList({
       
       return transformedContracts;
     },
-    enabled: !!userId
+    enabled: !!userId && !useProvidedContracts
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (document: CombinedDocument) => {
-      if ('isContract' in document) {
-        // Delete contract
+  const contractsData = useProvidedContracts ? contracts : fetchedContracts;
+  const contractsLoading = useProvidedContracts ? isLoadingContracts : isLoadingFetchedContracts;
+
+  const localDeleteMutation = useMutation({
+    mutationFn: async (documentId: string) => {
+      const docToDelete = getMergedDocuments().find(doc => doc.id === documentId);
+      
+      if (!docToDelete) throw new Error("Document not found");
+      
+      if ('isContract' in docToDelete) {
         const { error } = await supabase
           .from('contracts')
           .delete()
-          .eq('id', document.id);
+          .eq('id', docToDelete.id);
           
         if (error) throw error;
       } else {
-        // Delete document
         const { error } = await supabase
           .from('documents')
           .delete()
-          .eq('id', document.id);
+          .eq('id', docToDelete.id);
           
         if (error) throw error;
         
-        // If there's a file path, also delete the file from storage
-        if (document.file_path) {
-          const cleanFilePath = document.file_path.replace(/^\/+/, '');
+        if (docToDelete.file_path) {
+          const cleanFilePath = docToDelete.file_path.replace(/^\/+/, '');
           const { error: storageError } = await supabase.storage
             .from('documents')
             .remove([cleanFilePath]);
@@ -270,13 +287,15 @@ export function DocumentList({
     }
   });
 
-  const isLoading = isLoadingDocuments || isLoadingContracts;
+  const deleteContractMutation = propDeleteContractMutation || localDeleteMutation;
+
+  const isLoading = isLoadingDocuments || contractsLoading;
 
   const getMergedDocuments = () => {
-    const result: CombinedDocument[] = [...contracts];
+    const result: CombinedDocument[] = [...contractsData];
     const documentIdsToSkip = new Set<string>();
     
-    contracts.forEach(contract => {
+    contractsData.forEach(contract => {
       if (contract.metadata && typeof contract.metadata === 'object' && 'document_id' in contract.metadata) {
         documentIdsToSkip.add(contract.metadata.document_id as string);
       }
@@ -336,6 +355,10 @@ export function DocumentList({
   };
 
   const handleDownloadDocument = async (filePath: string | undefined) => {
+    if (propHandleDownloadDocument) {
+      return propHandleDownloadDocument(filePath as string);
+    }
+    
     try {
       console.log("Attempting to download document with path:", filePath);
       
@@ -390,6 +413,10 @@ export function DocumentList({
   };
 
   const handleGeneratePDF = (doc: ContractDocument) => {
+    if (propHandleGeneratePDF) {
+      return propHandleGeneratePDF(doc);
+    }
+    
     try {
       if (!doc.metadata) {
         throw new Error("No metadata available for this contract");
@@ -438,7 +465,7 @@ export function DocumentList({
 
   const confirmDelete = () => {
     if (documentToDelete) {
-      deleteMutation.mutate(documentToDelete);
+      deleteContractMutation.mutate(documentToDelete.id);
     }
     setShowDeleteDialog(false);
     setDocumentToDelete(null);
@@ -474,46 +501,88 @@ export function DocumentList({
                 <TableHead>Document Name</TableHead>
                 <TableHead>Property</TableHead>
                 <TableHead>Document Type</TableHead>
-                <TableHead>Created</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created/Valid From</TableHead>
+                <TableHead>Valid Until</TableHead>
                 <TableHead>Download</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredDocuments.map(doc => (
-                <TableRow key={doc.id}>
-                  <TableCell className="font-medium">{doc.name}</TableCell>
-                  <TableCell>{doc.property?.name || 'Untitled Property'}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">
-                      {formatDocumentType(doc.document_type || ('contract_type' in doc ? doc.contract_type : 'other'))}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{format(new Date(doc.created_at), 'MMM d, yyyy')}</TableCell>
-                  <TableCell>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleDocumentAction(doc)}
-                      disabled={!canDownloadDocument(doc)}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </Button>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="text-destructive hover:bg-destructive/10"
-                      onClick={() => handleDeleteDocument(doc)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {filteredDocuments.map(doc => {
+                const isContractDocument = 'isContract' in doc;
+                
+                return (
+                  <TableRow key={doc.id}>
+                    <TableCell className="font-medium">{doc.name}</TableCell>
+                    <TableCell>{doc.property?.name || 'Untitled Property'}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {formatDocumentType(doc.document_type || (isContractDocument ? doc.contract_type : 'other'))}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {isContractDocument ? (
+                        <Badge variant="secondary" className={
+                          doc.status === 'signed' ? 'bg-green-100 text-green-800' : 
+                          doc.status === 'draft' ? 'bg-gray-100 text-gray-800' : 
+                          'bg-yellow-100 text-yellow-800'
+                        }>
+                          {doc.status}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-green-100 text-green-800">
+                          Complete
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {isContractDocument && doc.valid_from 
+                        ? format(new Date(doc.valid_from), 'MMM d, yyyy')
+                        : format(new Date(doc.created_at), 'MMM d, yyyy')}
+                    </TableCell>
+                    <TableCell>
+                      {isContractDocument && doc.valid_until 
+                        ? format(new Date(doc.valid_until), 'MMM d, yyyy') 
+                        : '-'}
+                    </TableCell>
+                    <TableCell>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleDocumentAction(doc)}
+                        disabled={!canDownloadDocument(doc)}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        PDF
+                      </Button>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {isContractDocument && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => navigate(`/documents/contracts/${doc.id}`)}
+                          className="mr-2"
+                        >
+                          View Details
+                        </Button>
+                      )}
+                      {userRole === 'landlord' && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDeleteDocument(doc)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

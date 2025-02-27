@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, CreditCard } from "lucide-react";
+import { FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useToast } from "@/hooks/use-toast";
@@ -10,9 +10,6 @@ import { DocumentDialog } from "@/components/documents/DocumentDialog";
 import { DocumentType } from "@/integrations/supabase/types/document-types";
 import { DocumentFilters } from "@/components/documents/DocumentFilters";
 import { useQuery } from "@tanstack/react-query";
-import { NavigationTabs } from "@/components/layout/NavigationTabs";
-import { ContractDetailsDialog } from "@/components/contracts/ContractDetailsDialog";
-import { ContractsTable } from "@/components/documents/ContractsTable";
 import { DocumentPageHeader } from "@/components/documents/DocumentPageHeader";
 import { useDocuments } from "@/hooks/useDocuments";
 
@@ -26,9 +23,6 @@ function Documents() {
   const [typeFilter, setTypeFilter] = useState<"all" | DocumentType>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
-  const [activeTab, setActiveTab] = useState("contracts");
-  const [selectedContract, setSelectedContract] = useState(null);
-  const [showContractDetails, setShowContractDetails] = useState(false);
 
   // Fetch properties data
   const { data: properties } = useQuery({
@@ -87,78 +81,44 @@ function Documents() {
 
   if (!userId || !userRole) return null;
 
-  const navigationItems = [{
-    id: 'documents',
-    label: 'Documents',
-    icon: FileText,
-    showForTenant: true
-  }, {
-    id: 'contracts',
-    label: 'Contracts',
-    icon: CreditCard,
-    showForTenant: true
-  }];
-
-  const renderSection = () => {
-    switch (activeTab) {
-      case 'documents':
-        return (
-          <div className="space-y-4">
-            <DocumentFilters
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              typeFilter={typeFilter}
-              setTypeFilter={setTypeFilter}
-              propertyFilter={propertyFilter}
-              setPropertyFilter={setPropertyFilter}
-              properties={properties}
-            />
-            <DocumentList
-              userId={userId}
-              userRole={userRole}
-              propertyFilter={propertyFilter}
-              typeFilter={typeFilter}
-              searchTerm={searchTerm}
-              viewMode={viewMode}
-            />
-          </div>
-        );
-      case 'contracts':
-        return (
-          <ContractsTable 
-            contracts={contracts}
-            isLoading={isLoadingContracts}
-            userRole={userRole}
-            handleDownloadDocument={handleDownloadDocument}
-            handleGeneratePDF={handleGeneratePDF}
-            deleteContractMutation={deleteContractMutation}
-          />
-        );
-      default:
-        return null;
-    }
-  };
-
   return (
     <div className="flex bg-[#F8F9FC] min-h-screen">
       <DashboardSidebar />
       <main className="flex-1 p-8">
         <div className="max-w-7xl mx-auto space-y-6">
-          <NavigationTabs 
-            tabs={navigationItems} 
-            activeTab={activeTab} 
-            onTabChange={id => setActiveTab(id)} 
-          />
-          
           <div className="bg-white rounded-lg shadow-sm p-6">
             <DocumentPageHeader 
-              activeTab={activeTab}
+              activeTab="all"
               userRole={userRole}
               onUploadClick={() => setShowAddModal(true)}
             />
             
-            <div className="mt-6">
-              {renderSection()}
+            <div className="mt-6 space-y-6">
+              <DocumentFilters
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                typeFilter={typeFilter}
+                setTypeFilter={setTypeFilter}
+                propertyFilter={propertyFilter}
+                setPropertyFilter={setPropertyFilter}
+                properties={properties}
+                viewMode={viewMode}
+                setViewMode={setViewMode}
+              />
+              
+              <DocumentList
+                userId={userId}
+                userRole={userRole}
+                propertyFilter={propertyFilter}
+                typeFilter={typeFilter}
+                searchTerm={searchTerm}
+                viewMode={viewMode}
+                contracts={contracts}
+                isLoadingContracts={isLoadingContracts}
+                handleDownloadDocument={handleDownloadDocument}
+                handleGeneratePDF={handleGeneratePDF}
+                deleteContractMutation={deleteContractMutation}
+              />
             </div>
           </div>
         </div>
@@ -169,12 +129,6 @@ function Documents() {
         onOpenChange={setShowAddModal} 
         userId={userId} 
         userRole={userRole} 
-      />
-
-      <ContractDetailsDialog 
-        open={showContractDetails} 
-        onOpenChange={setShowContractDetails} 
-        contract={selectedContract} 
       />
     </div>
   );
