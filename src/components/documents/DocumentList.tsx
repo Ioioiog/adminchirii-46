@@ -13,6 +13,7 @@ import { FileText, Download } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { generateContractPdf } from "@/utils/contractPdfGenerator";
 
 interface DocumentListProps {
   userId: string;
@@ -66,6 +67,7 @@ interface ContractDocument {
   isContract: boolean;
   contract_type: string;
   status: ContractStatus;
+  metadata?: any;
 }
 
 type CombinedDocument = DocumentFromDB | ContractDocument;
@@ -158,6 +160,7 @@ export function DocumentList({
           valid_until,
           content,
           property_id,
+          metadata,
           properties(id, name, address),
           tenant:profiles!contracts_tenant_id_fkey(
             first_name,
@@ -195,7 +198,8 @@ export function DocumentList({
         tenant: contract.tenant,
         isContract: true,
         contract_type: contract.contract_type,
-        status: contract.status
+        status: contract.status,
+        metadata: contract.metadata
       })) as ContractDocument[];
       
       // Filter contracts by document type if a type filter is applied
@@ -303,6 +307,43 @@ export function DocumentList({
     }
   };
 
+  // Handler for generating PDF for lease agreements
+  const handleGeneratePDF = (contract: ContractDocument) => {
+    try {
+      if (!contract.metadata) {
+        throw new Error("No metadata available for this contract");
+      }
+
+      // Extract contract number if it exists in the metadata
+      let contractNumber: string | undefined;
+
+      if (typeof contract.metadata === 'object') {
+        const metadataObj = contract.metadata as Record<string, any>;
+        if (metadataObj && 'contractNumber' in metadataObj) {
+          contractNumber = metadataObj.contractNumber as string;
+        }
+      }
+
+      generateContractPdf({
+        metadata: contract.metadata,
+        contractId: contract.id,
+        contractNumber
+      });
+
+      toast({
+        title: "Success",
+        description: "PDF generation initiated",
+      });
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast({
+        title: "Error",
+        description: "Could not generate PDF for this document",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Check if document should have download button enabled
   const canDownloadDocument = (doc: CombinedDocument): boolean => {
     // Regular documents with file_path can be downloaded
@@ -359,7 +400,16 @@ export function DocumentList({
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={() => 'file_path' in doc && doc.file_path ? handleDownloadDocument(doc.file_path) : null}
+                    onClick={() => {
+                      // For regular documents with file_path
+                      if ('file_path' in doc && doc.file_path && !('isContract' in doc)) {
+                        handleDownloadDocument(doc.file_path);
+                      }
+                      // For lease agreements (contract documents)
+                      else if ('isContract' in doc && doc.document_type === 'lease_agreement') {
+                        handleGeneratePDF(doc);
+                      }
+                    }}
                     disabled={!canDownloadDocument(doc)}
                   >
                     <Download className="h-4 w-4 mr-2" />
