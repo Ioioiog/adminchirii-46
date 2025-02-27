@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   Dialog,
@@ -98,16 +99,27 @@ export function DocumentDialog({
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      // Store files in a subdirectory based on document type
       const filePath = `${documentType}/${userId}/${fileName}`;
 
+      console.log("Attempting to upload file:", {
+        bucket: 'documents',
+        filePath,
+        contentType: file.type
+      });
+
       const { error: uploadError } = await supabase.storage
-        .from("documents")
+        .from('documents')
         .upload(filePath, file, {
           cacheControl: '3600',
-          contentType: file.type
+          contentType: file.type,
+          upsert: false
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("Error uploading document:", uploadError);
+        throw uploadError;
+      }
 
       const { error: dbError } = await supabase
         .from("documents")
@@ -120,7 +132,10 @@ export function DocumentDialog({
           tenant_id: selectedTenantId === "none" ? null : selectedTenantId,
         });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error("Error saving document metadata:", dbError);
+        throw dbError;
+      }
 
       toast({
         title: "Success",
