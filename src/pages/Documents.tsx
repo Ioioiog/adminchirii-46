@@ -27,8 +27,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
-type ContractStatus = 'draft' | 'pending_signature' | 'signed' | 'expired' | 'cancelled';
+import { ContractStatus } from "@/types/contract";
 
 interface Contract {
   id: string;
@@ -52,9 +51,15 @@ interface LeaseDocument {
     name: string;
   } | null;
   created_at: string;
+  contract_type: string;
+  status: ContractStatus;
+  valid_from: string | null;
+  valid_until: string | null;
+  properties: { name: string } | null;
+  document_name?: string;
 }
 
-type QueryResult = (Contract | LeaseDocument)[];
+type ContractOrDocument = Contract | LeaseDocument;
 
 function Documents() {
   const navigate = useNavigate();
@@ -83,7 +88,7 @@ function Documents() {
     enabled: userRole === "landlord"
   });
 
-  const fetchContracts = async (): Promise<QueryResult> => {
+  const fetchContracts = async (): Promise<ContractOrDocument[]> => {
     if (!userId) {
       throw new Error("No user ID available");
     }
@@ -201,19 +206,19 @@ function Documents() {
 
     console.log("Found lease documents:", leaseDocuments);
 
-    const leaseAgreementContracts = leaseDocuments?.map(doc => ({
+    const leaseAgreementContracts: LeaseDocument[] = leaseDocuments?.map(doc => ({
       id: doc.id,
+      name: doc.name,
+      file_path: doc.file_path,
+      document_type: doc.document_type,
+      property: doc.property,
+      created_at: doc.created_at,
       contract_type: "lease_agreement_document",
       status: "signed" as ContractStatus,
       valid_from: null,
       valid_until: null,
-      tenant_id: null,
-      landlord_id: userId,
-      properties: doc.property,
-      metadata: {},
-      document_name: doc.name,
-      file_path: doc.file_path,
-      created_at: doc.created_at
+      properties: doc.property ? { name: doc.property.name } : null,
+      document_name: doc.name
     })) || [];
 
     return [...regularContracts, ...leaseAgreementContracts];
@@ -227,7 +232,8 @@ function Documents() {
 
   const deleteContractMutation = useMutation({
     mutationFn: async (contractId: string) => {
-      const isDocument = contracts.find(c => c.id === contractId && 'document_name' in c);
+      const contractToDelete = contracts.find(c => c.id === contractId);
+      const isDocument = contractToDelete && 'document_name' in contractToDelete;
       
       if (isDocument) {
         const { error: documentError } = await supabase
