@@ -335,18 +335,23 @@ export function DocumentList({
         throw new Error("No metadata available for this contract");
       }
 
-      // Get contractNumber with proper type safety - completely safe conversion
-      let contractNumber = "";
-      if (doc.metadata && 
-          typeof doc.metadata === 'object' && 
-          'contractNumber' in doc.metadata && 
-          doc.metadata.contractNumber !== null && 
-          doc.metadata.contractNumber !== undefined) {
-        contractNumber = String(doc.metadata.contractNumber);
-      }
+      // Create a default FormData-like object with required properties
+      const defaultMetadata: Partial<FormData> = {};
       
       // Cast metadata to FormData type for generateContractPdf
-      const formData = doc.metadata as unknown as FormData;
+      const formData = { ...defaultMetadata, ...doc.metadata } as FormData;
+      
+      // Extract contractNumber safely
+      let contractNumber = '';
+      try {
+        if (doc.metadata && 
+            typeof doc.metadata === 'object' && 
+            'contractNumber' in doc.metadata) {
+          contractNumber = String(doc.metadata.contractNumber || '');
+        }
+      } catch (err) {
+        console.error("Error extracting contract number:", err);
+      }
       
       generateContractPdf({
         metadata: formData,
@@ -376,12 +381,19 @@ export function DocumentList({
     if ('file_path' in doc && doc.file_path && !('isContract' in doc)) {
       handleDownloadDocument(doc.file_path);
     } else if ('isContract' in doc) {
-      if (doc.metadata && typeof doc.metadata === 'object' && 'file_path' in doc.metadata) {
-        const filePath = doc.metadata.file_path;
-        if (filePath !== null && filePath !== undefined) {
-          handleDownloadDocument(String(filePath));
+      try {
+        if (doc.metadata && 
+            typeof doc.metadata === 'object' && 
+            'file_path' in doc.metadata && 
+            doc.metadata.file_path) {
+          // Use a try-catch block to safely handle potential errors
+          const filePathStr = String(doc.metadata.file_path);
+          handleDownloadDocument(filePathStr);
+        } else {
+          handleGeneratePDF(doc);
         }
-      } else {
+      } catch (err) {
+        console.error("Error handling document action:", err);
         handleGeneratePDF(doc);
       }
     }
@@ -406,12 +418,18 @@ export function DocumentList({
     }
     
     if ('isContract' in doc) {
-      if (doc.metadata && typeof doc.metadata === 'object' && 'file_path' in doc.metadata) {
-        // Safely check for existence of file_path and convert to boolean
-        const filePath = doc.metadata.file_path;
-        return filePath !== null && filePath !== undefined;
+      try {
+        if (doc.metadata && 
+            typeof doc.metadata === 'object' && 
+            'file_path' in doc.metadata) {
+          // Force a boolean return value with double negation
+          return !!doc.metadata.file_path;
+        }
+        return true; // Contracts without file_path can be generated
+      } catch (err) {
+        console.error("Error checking download capability:", err);
+        return true; // Default to allowing download attempt
       }
-      return true; // Contracts without file_path can be generated
     }
     
     return false;
