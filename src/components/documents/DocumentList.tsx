@@ -15,6 +15,32 @@ interface DocumentListProps {
   viewMode: "grid" | "list";
 }
 
+interface DocumentFromDB {
+  id: string;
+  name: string;
+  file_path: string;
+  document_type: string;
+  property_id: string;
+  tenant_id: string;
+  created_at: string;
+  updated_at: string;
+  uploaded_by: string;
+  property: {
+    id: string;
+    name: string;
+    address: string;
+  } | null;
+  tenant: {
+    first_name: string | null;
+    last_name: string | null;
+    email: string | null;
+  } | null;
+}
+
+function isValidDocumentType(type: string): type is DocumentType {
+  return ['lease_agreement', 'invoice', 'receipt', 'other'].includes(type);
+}
+
 export function DocumentList({ 
   userId, 
   userRole, 
@@ -61,12 +87,15 @@ export function DocumentList({
         throw error;
       }
 
-      // Apply search filter on the client side
-      return data.filter(doc => 
-        doc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doc.property?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doc.tenant?.email?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      // Apply search filter on the client side and validate document types
+      return (data as DocumentFromDB[]).filter(doc => {
+        const matchesSearch = 
+          doc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          doc.property?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          doc.tenant?.email?.toLowerCase().includes(searchTerm.toLowerCase());
+
+        return matchesSearch && isValidDocumentType(doc.document_type);
+      });
     },
   });
 
@@ -88,7 +117,10 @@ export function DocumentList({
           className="bg-card hover:bg-accent/5 transition-colors rounded-lg border shadow-sm"
         >
           <DocumentCard 
-            document={document} 
+            document={{
+              ...document,
+              document_type: document.document_type as DocumentType
+            }}
             userRole={userRole}
             viewMode={viewMode}
           />
