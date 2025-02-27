@@ -14,6 +14,7 @@ import { ContractsTable } from "@/components/documents/ContractsTable";
 import { DocumentPageHeader } from "@/components/documents/DocumentPageHeader";
 import { useDocuments } from "@/hooks/useDocuments";
 import { ContractOrDocument } from "@/types/document";
+import { ContractStatus } from "@/types/contract";
 
 interface Property {
   id: string;
@@ -111,7 +112,7 @@ function Documents() {
     // Property filter
     if (propertyFilter !== "all") {
       // For document type with property field
-      if ('property' in contract && contract.property && contract.property.id === propertyFilter) {
+      if ('property' in contract && contract.property && 'id' in contract.property && contract.property.id === propertyFilter) {
         return true;
       }
       // For contract type with property_id field
@@ -129,7 +130,7 @@ function Documents() {
       
       // Only access tenant email if it exists
       let tenantEmail = '';
-      if ('tenant' in contract && contract.tenant && 'email' in contract.tenant) {
+      if ('tenant' in contract && contract.tenant && typeof contract.tenant === 'object' && contract.tenant !== null && 'email' in contract.tenant) {
         tenantEmail = (contract.tenant.email as string).toLowerCase();
       }
       
