@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DocumentCard } from "./DocumentCard";
@@ -307,7 +306,6 @@ export function DocumentList({
     }
   };
 
-  // Define handleGeneratePDF to fix the error
   const handleGeneratePDF = (doc: ContractDocument) => {
     try {
       if (!doc.metadata) {
@@ -335,25 +333,17 @@ export function DocumentList({
       type: doc.document_type,
       isContract: 'isContract' in doc,
       hasFilePath: 'file_path' in doc && !!doc.file_path,
-      filePath: 'file_path' in doc ? doc.file_path : undefined
+      filePath: 'file_path' in doc ? doc.file_path : undefined,
+      metadata: 'metadata' in doc ? doc.metadata : undefined
     });
 
     if ('file_path' in doc && doc.file_path && !('isContract' in doc)) {
       handleDownloadDocument(doc.file_path);
     } else if ('isContract' in doc) {
-      if (doc.document_type === 'lease') {
+      if (doc.metadata && typeof doc.metadata === 'object' && 'file_path' in doc.metadata) {
+        handleDownloadDocument(doc.metadata.file_path as string);
+      } else {
         handleGeneratePDF(doc);
-      } else if (doc.document_type === 'lease_agreement') {
-        if (hasDownloadableFile(doc)) {
-          handleDownloadDocument(doc.file_path);
-        } else {
-          console.log("Lease agreement missing file path:", doc);
-          toast({
-            title: "Error",
-            description: "No downloadable file available for this document",
-            variant: "destructive",
-          });
-        }
       }
     }
   };
@@ -364,10 +354,7 @@ export function DocumentList({
     }
     
     if ('isContract' in doc) {
-      if (doc.document_type === 'lease_agreement' || doc.document_type === 'lease') {
-        return true;
-      }
-      return false;
+      return true;
     }
     
     return false;
