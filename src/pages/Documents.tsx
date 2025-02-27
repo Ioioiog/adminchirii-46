@@ -379,14 +379,18 @@ function Documents() {
                   </TableRow>
                 ) : (
                   contracts.map(contract => {
-                    console.log("Contract:", contract); // Debug to see contract data
-                    const isLeaseDocument = 'document_name' in contract && contract.contract_type === 'lease_agreement_document';
+                    // Print the contract details for debugging
+                    console.log("Contract type:", contract.contract_type);
+                    console.log("Has document_name:", 'document_name' in contract);
+                    
+                    // Check if it's a lease agreement document by checking for document_name property
+                    const isLeaseAgreementDocument = 'document_name' in contract;
                     
                     return (
                       <TableRow key={contract.id}>
                         <TableCell>{contract.properties?.name || 'Untitled Property'}</TableCell>
                         <TableCell className="capitalize">
-                          {isLeaseDocument ? 'Lease Agreement Document' : contract.contract_type.replace('_', ' ')}
+                          {isLeaseAgreementDocument ? 'Lease Agreement Document' : contract.contract_type.replace('_', ' ')}
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary" className={
@@ -405,7 +409,7 @@ function Documents() {
                           {contract.valid_until ? format(new Date(contract.valid_until), 'MMM d, yyyy') : '-'}
                         </TableCell>
                         <TableCell className="text-right space-x-2">
-                          {isLeaseDocument ? (
+                          {isLeaseAgreementDocument ? (
                             <Button 
                               variant="outline" 
                               size="sm" 
