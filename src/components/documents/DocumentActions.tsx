@@ -36,32 +36,11 @@ export function DocumentActions({ document: doc, userRole, onDocumentUpdated }: 
       
       console.log("Attempting to download document with details:", {
         id: doc.id,
-        original_file_path: doc.file_path,
-        cleaned_file_path: cleanFilePath,
+        file_path: cleanFilePath,
         bucket: 'documents'
       });
 
-      // First verify the file exists
-      const { data: fileList, error: listError } = await supabase.storage
-        .from('documents')
-        .list(cleanFilePath.split('/').slice(0, -1).join('/'));
-
-      console.log("File list result:", { fileList, listError });
-
-      if (listError) {
-        console.error("Error listing files:", listError);
-        throw new Error("Could not verify file existence");
-      }
-
-      const fileName = cleanFilePath.split('/').pop();
-      const fileExists = fileList?.some(file => file.name === fileName);
-
-      if (!fileExists) {
-        console.error("File not found in storage:", cleanFilePath);
-        throw new Error("The requested file could not be found");
-      }
-
-      // Get a signed URL for the verified file
+      // First get a signed URL for the file
       const { data: signedURL, error: signError } = await supabase.storage
         .from('documents')
         .createSignedUrl(cleanFilePath, 60); // 60 seconds expiry
