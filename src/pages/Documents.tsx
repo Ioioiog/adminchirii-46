@@ -571,7 +571,7 @@ function Documents() {
                     <FileText className="h-6 w-6 text-white" />
                   </div>
                   <h1 className="text-2xl font-semibold">
-                    {activeTab === 'contracts' ? 'Documents' : 'Documents'}
+                    {activeTab === 'contracts' ? 'Contracts' : 'Documents'}
                   </h1>
                 </div>
                 <p className="text-gray-500">
