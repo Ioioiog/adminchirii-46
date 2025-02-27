@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Grid, List, Plus, FileText, CreditCard, Trash2, Download } from "lucide-react";
@@ -457,42 +456,7 @@ function Documents() {
                               variant="outline" 
                               size="sm" 
                               onClick={() => {
-                                // Only call useContractPrint if we have a Contract, not a LeaseDocument
-                                if (contract.metadata && typeof contract.metadata === 'object') {
-                                  try {
-                                    // We need to cast the metadata to FormData type to match the expected type
-                                    // in useContractPrint
-                                    const contractData = contract as Contract;
-                                    const metaData = contractData.metadata as unknown as FormData;
-                                    
-                                    const contractNumber = typeof metaData === 'object' && 
-                                      'contractNumber' in metaData ? 
-                                      metaData.contractNumber : undefined;
-                                      
-                                    const printProps = {
-                                      queryClient,
-                                      metadata: metaData,
-                                      contractId: contract.id,
-                                      contractNumber
-                                    };
-                                    
-                                    const { handlePrint } = useContractPrint(printProps);
-                                    handlePrint();
-                                  } catch (error) {
-                                    console.error("Error generating PDF:", error);
-                                    toast({
-                                      title: "Error",
-                                      description: "Could not generate PDF for this document",
-                                      variant: "destructive",
-                                    });
-                                  }
-                                } else {
-                                  toast({
-                                    title: "Error",
-                                    description: "Could not generate PDF for this document",
-                                    variant: "destructive",
-                                  });
-                                }
+                                handleGeneratePDF(contract);
                               }}
                             >
                               <Download className="h-4 w-4 mr-2" />
@@ -562,6 +526,54 @@ function Documents() {
         );
       default:
         return null;
+    }
+  };
+
+  // Create a proper function to handle PDF generation
+  const handleGeneratePDF = (contract: ContractOrDocument) => {
+    // Check if this is a document with file_path (LeaseDocument) or a contract
+    if ('file_path' in contract && contract.file_path) {
+      // If it's a document with a file path, download it directly
+      handleDownloadDocument(contract.file_path);
+      return;
+    }
+
+    // Otherwise it's a contract that needs PDF generation
+    try {
+      if (!contract.metadata) {
+        throw new Error("No metadata available for this contract");
+      }
+
+      // Convert the contract to the needed type
+      const contractData = contract as Contract;
+      
+      // Extract contract number if it exists in the metadata
+      let contractNumber: string | undefined;
+
+      if (typeof contractData.metadata === 'object') {
+        const metadataObj = contractData.metadata as Record<string, any>;
+        if (metadataObj && 'contractNumber' in metadataObj) {
+          contractNumber = metadataObj.contractNumber as string;
+        }
+      }
+
+      // Create the contract print preview component instance
+      const { handlePrint } = useContractPrint({
+        queryClient,
+        metadata: contractData.metadata as any as FormData,
+        contractId: contractData.id,
+        contractNumber
+      });
+
+      // Trigger the print operation
+      handlePrint();
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast({
+        title: "Error",
+        description: "Could not generate PDF for this document",
+        variant: "destructive",
+      });
     }
   };
 
