@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DocumentCard } from "./DocumentCard";
 import { DocumentType } from "@/integrations/supabase/types/document-types";
@@ -8,11 +8,22 @@ import { ContractStatus } from "@/types/contract";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Download } from "lucide-react";
+import { Trash2, Download } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { generateContractPdf } from "@/utils/contractPdfGenerator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
 
 interface DocumentListProps {
   userId: string;
@@ -85,6 +96,9 @@ export function DocumentList({
 }: DocumentListProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [documentToDelete, setDocumentToDelete] = useState<CombinedDocument | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   const { data: regularDocuments = [], isLoading: isLoadingDocuments } = useQuery({
     queryKey: ["documents", propertyFilter, typeFilter, searchTerm],
@@ -204,6 +218,56 @@ export function DocumentList({
       return transformedContracts;
     },
     enabled: !!userId
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (document: CombinedDocument) => {
+      if ('isContract' in document) {
+        // Delete contract
+        const { error } = await supabase
+          .from('contracts')
+          .delete()
+          .eq('id', document.id);
+          
+        if (error) throw error;
+      } else {
+        // Delete document
+        const { error } = await supabase
+          .from('documents')
+          .delete()
+          .eq('id', document.id);
+          
+        if (error) throw error;
+        
+        // If there's a file path, also delete the file from storage
+        if (document.file_path) {
+          const cleanFilePath = document.file_path.replace(/^\/+/, '');
+          const { error: storageError } = await supabase.storage
+            .from('documents')
+            .remove([cleanFilePath]);
+            
+          if (storageError) {
+            console.error("Error deleting file from storage:", storageError);
+          }
+        }
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Document deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+      queryClient.invalidateQueries({ queryKey: ["document-contracts"] });
+    },
+    onError: (error) => {
+      console.error("Delete error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete document. Please try again.",
+        variant: "destructive",
+      });
+    }
   });
 
   const isLoading = isLoadingDocuments || isLoadingContracts;
@@ -367,6 +431,19 @@ export function DocumentList({
     }
   };
 
+  const handleDeleteDocument = (doc: CombinedDocument) => {
+    setDocumentToDelete(doc);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = () => {
+    if (documentToDelete) {
+      deleteMutation.mutate(documentToDelete);
+    }
+    setShowDeleteDialog(false);
+    setDocumentToDelete(null);
+  };
+
   const canDownloadDocument = (doc: CombinedDocument): boolean => {
     if ('file_path' in doc && doc.file_path && !('isContract' in doc)) {
       return true;
@@ -389,66 +466,76 @@ export function DocumentList({
 
   if (viewMode === 'list') {
     return (
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Document Name</TableHead>
-              <TableHead>Property</TableHead>
-              <TableHead>Document Type</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead>Download</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredDocuments.map(doc => (
-              <TableRow key={doc.id}>
-                <TableCell className="font-medium">{doc.name}</TableCell>
-                <TableCell>{doc.property?.name || 'Untitled Property'}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">
-                    {formatDocumentType(doc.document_type || ('contract_type' in doc ? doc.contract_type : 'other'))}
-                  </Badge>
-                </TableCell>
-                <TableCell>{format(new Date(doc.created_at), 'MMM d, yyyy')}</TableCell>
-                <TableCell>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => handleDocumentAction(doc)}
-                    disabled={!canDownloadDocument(doc)}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download
-                  </Button>
-                </TableCell>
-                <TableCell className="text-right">
-                  {'isContract' in doc ? (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => navigate(`/documents/contracts/${doc.id}`)}
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      View Contract
-                    </Button>
-                  ) : (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleDownloadDocument(doc.file_path)}
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      View
-                    </Button>
-                  )}
-                </TableCell>
+      <>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Document Name</TableHead>
+                <TableHead>Property</TableHead>
+                <TableHead>Document Type</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Download</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {filteredDocuments.map(doc => (
+                <TableRow key={doc.id}>
+                  <TableCell className="font-medium">{doc.name}</TableCell>
+                  <TableCell>{doc.property?.name || 'Untitled Property'}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {formatDocumentType(doc.document_type || ('contract_type' in doc ? doc.contract_type : 'other'))}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{format(new Date(doc.created_at), 'MMM d, yyyy')}</TableCell>
+                  <TableCell>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleDocumentAction(doc)}
+                      disabled={!canDownloadDocument(doc)}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </Button>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDeleteDocument(doc)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the document 
+                {documentToDelete?.name ? ` "${documentToDelete.name}"` : ''}.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </>
     );
   }
 
