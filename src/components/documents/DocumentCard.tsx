@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useContractPrint } from "@/components/contract/ContractPrintPreview";
+import { DocumentType } from "@/integrations/supabase/types/document-types";
 
 interface DocumentCardProps {
   document: {
@@ -19,7 +20,7 @@ interface DocumentCardProps {
     name: string;
     file_path?: string;
     created_at: string;
-    document_type: "lease_agreement" | "invoice" | "receipt" | "other";
+    document_type: DocumentType;
     property?: {
       id: string;
       name: string;
@@ -39,11 +40,17 @@ interface DocumentCardProps {
   viewMode: "grid" | "list";
 }
 
-const documentTypeLabels = {
+const documentTypeLabels: Record<DocumentType, string> = {
   lease_agreement: "Lease Agreement",
+  lease: "Lease",
   invoice: "Invoice",
   receipt: "Receipt",
   other: "Other",
+  general: "General Document",
+  maintenance: "Maintenance Document",
+  legal: "Legal Document",
+  notice: "Notice",
+  inspection: "Inspection Report",
 };
 
 export function DocumentCard({ document: doc, userRole, viewMode }: DocumentCardProps) {
@@ -170,7 +177,7 @@ export function DocumentCard({ document: doc, userRole, viewMode }: DocumentCard
           <Badge variant="secondary" className="flex-shrink-0">
             {doc.isContract 
               ? `Contract - ${doc.status}` 
-              : documentTypeLabels[doc.document_type]}
+              : documentTypeLabels[doc.document_type] || "Document"}
           </Badge>
           
           <div className="hidden sm:block text-sm text-muted-foreground">
