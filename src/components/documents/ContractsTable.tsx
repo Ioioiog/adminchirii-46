@@ -87,6 +87,12 @@ export function ContractsTable({
     return new Date();
   };
 
+  const handleViewDocument = (contract: ContractOrDocument) => {
+    if ('id' in contract) {
+      navigate(`/documents/contracts/${contract.id}`);
+    }
+  };
+
   if (isLoading) {
     return <div className="text-center py-4">Loading contracts...</div>;
   }
@@ -146,6 +152,15 @@ export function ContractsTable({
                   {format(getIssueDate(contract), 'MMM d, yyyy')}
                 </TableCell>
                 <TableCell className="text-right space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleViewDocument(contract)}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    View
+                  </Button>
+                
                   {userRole === "landlord" && (
                     <Button
                       variant="outline"
@@ -160,40 +175,30 @@ export function ContractsTable({
                       Delete
                     </Button>
                   )}
-                  {contract.status === 'draft' && userRole === "landlord" ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/documents/contracts/${contract.id}`)}
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      View
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        // For documents with file_path
-                        if ('file_path' in contract && contract.file_path) {
-                          handleDownloadDocument(contract.file_path);
-                        } 
-                        // For contracts with metadata that may contain a file_path
-                        else if ('metadata' in contract && contract.metadata && 
-                                typeof contract.metadata === 'object' && 
-                                'file_path' in (contract.metadata as any)) {
-                          handleDownloadDocument((contract.metadata as any).file_path);
-                        } 
-                        // For other contracts, generate PDF
-                        else {
-                          handleGeneratePDF(contract);
-                        }
-                      }}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </Button>
-                  )}
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // For documents with file_path
+                      if ('file_path' in contract && contract.file_path) {
+                        handleDownloadDocument(contract.file_path);
+                      } 
+                      // For contracts with metadata that may contain a file_path
+                      else if ('metadata' in contract && contract.metadata && 
+                              typeof contract.metadata === 'object' && 
+                              'file_path' in (contract.metadata as any)) {
+                        handleDownloadDocument((contract.metadata as any).file_path);
+                      } 
+                      // For other contracts, generate PDF
+                      else {
+                        handleGeneratePDF(contract);
+                      }
+                    }}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
