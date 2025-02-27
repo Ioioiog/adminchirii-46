@@ -1,7 +1,7 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { CreditCard, FileText } from "lucide-react";
+import { CreditCard, FileText, GridIcon, List } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +16,9 @@ import { useDocuments } from "@/hooks/useDocuments";
 import { ContractOrDocument } from "@/types/document";
 import { ContractStatus } from "@/types/contract";
 import { DocumentList } from "@/components/documents/DocumentList";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card } from "@/components/ui/card";
 
 interface Property {
   id: string;
@@ -49,6 +52,7 @@ function Documents() {
   const [showContractDetails, setShowContractDetails] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
   const [activeTab, setActiveTab] = useState<"contracts" | "documents">("documents");
+  const [leaseUploadMode, setLeaseUploadMode] = useState(false);
   const [dateRangeFilter, setDateRangeFilter] = useState<{
     startDate: string | null;
     endDate: string | null;
@@ -116,7 +120,8 @@ function Documents() {
     isLoadingContracts, 
     deleteContractMutation,
     handleGeneratePDF,
-    handleDownloadDocument
+    handleDownloadDocument,
+    refetchContracts
   } = useDocuments(userId, userRole);
 
   useEffect(() => {
@@ -161,124 +166,142 @@ function Documents() {
   };
 
   // Filter documents based on filters
-  const filteredDocuments = documents.filter(document => {
-    // Type filter
-    if (typeFilter !== "all" && document.document_type !== typeFilter) {
-      return false;
-    }
-
-    // Property filter
-    if (propertyFilter !== "all" && document.property_id !== propertyFilter) {
-      return false;
-    }
-
-    // Search term filter
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      const documentName = document.name.toLowerCase();
-      const documentType = document.document_type.toLowerCase();
-      const propertyName = document.properties?.name?.toLowerCase() || '';
-      
-      if (!documentName.includes(searchLower) && 
-          !documentType.includes(searchLower) && 
-          !propertyName.includes(searchLower)) {
+  const filteredDocuments = useMemo(() => {
+    return documents.filter(document => {
+      // Type filter
+      if (typeFilter !== "all" && document.document_type !== typeFilter) {
         return false;
       }
-    }
 
-    // Date filter
-    if (dateRangeFilter.startDate) {
-      const startDate = new Date(dateRangeFilter.startDate);
-      const documentDate = new Date(document.created_at);
-      if (documentDate < startDate) {
+      // Property filter
+      if (propertyFilter !== "all" && document.property_id !== propertyFilter) {
         return false;
       }
-    }
 
-    if (dateRangeFilter.endDate) {
-      const endDate = new Date(dateRangeFilter.endDate);
-      const documentDate = new Date(document.created_at);
-      if (documentDate > endDate) {
-        return false;
+      // Search term filter
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        const documentName = document.name.toLowerCase();
+        const documentType = document.document_type.toLowerCase();
+        const propertyName = document.properties?.name?.toLowerCase() || '';
+        
+        if (!documentName.includes(searchLower) && 
+            !documentType.includes(searchLower) && 
+            !propertyName.includes(searchLower)) {
+          return false;
+        }
       }
-    }
 
-    return true;
-  });
+      // Date filter
+      if (dateRangeFilter.startDate) {
+        const startDate = new Date(dateRangeFilter.startDate);
+        const documentDate = new Date(document.created_at);
+        if (documentDate < startDate) {
+          return false;
+        }
+      }
+
+      if (dateRangeFilter.endDate) {
+        const endDate = new Date(dateRangeFilter.endDate);
+        const documentDate = new Date(document.created_at);
+        if (documentDate > endDate) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [documents, typeFilter, propertyFilter, searchTerm, dateRangeFilter]);
 
   // Filter contracts based on all filters
-  const filteredContracts = contracts.filter(contract => {
-    // Status filter
-    if (statusFilter !== "all" && contract.status !== statusFilter) {
-      return false;
-    }
-
-    // Property filter
-    if (propertyFilter !== "all") {
-      // For document type with property field
-      if ('property' in contract && contract.property && 'id' in contract.property && contract.property.id === propertyFilter) {
-        return true;
-      }
-      // For contract type with property_id field
-      if ('property_id' in contract && contract.property_id === propertyFilter) {
-        return true;
-      }
-      return false;
-    }
-
-    // Search term filter
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      const contractName = contract.contract_type?.toLowerCase() || '';
-      const propertyName = contract.properties?.name?.toLowerCase() || '';
-      
-      // Only access tenant email if it exists
-      let tenantEmail = '';
-      if ('tenant' in contract && contract.tenant && typeof contract.tenant === 'object' && contract.tenant !== null && 'email' in contract.tenant) {
-        tenantEmail = (contract.tenant.email as string).toLowerCase();
-      }
-      
-      if (!contractName.includes(searchLower) && 
-          !propertyName.includes(searchLower) && 
-          !tenantEmail.includes(searchLower)) {
+  const filteredContracts = useMemo(() => {
+    return contracts.filter(contract => {
+      // Status filter
+      if (statusFilter !== "all" && contract.status !== statusFilter) {
         return false;
       }
-    }
 
-    // Date range filter - start date
-    if (dateRangeFilter.startDate) {
-      const startDate = new Date(dateRangeFilter.startDate);
-      let contractDate = new Date();
-      
-      if ('valid_from' in contract && contract.valid_from) {
-        contractDate = new Date(contract.valid_from);
-      } else if ('created_at' in contract && contract.created_at) {
-        contractDate = new Date(contract.created_at);
-      }
-      
-      if (contractDate < startDate) {
+      // Property filter
+      if (propertyFilter !== "all") {
+        // For document type with property field
+        if ('property' in contract && contract.property && 'id' in contract.property && contract.property.id === propertyFilter) {
+          return true;
+        }
+        // For contract type with property_id field
+        if ('property_id' in contract && contract.property_id === propertyFilter) {
+          return true;
+        }
         return false;
       }
-    }
 
-    // Date range filter - end date
-    if (dateRangeFilter.endDate) {
-      const endDate = new Date(dateRangeFilter.endDate);
-      let contractDate = new Date();
-      
-      if ('valid_from' in contract && contract.valid_from) {
-        contractDate = new Date(contract.valid_from);
-      } else if ('created_at' in contract && contract.created_at) {
-        contractDate = new Date(contract.created_at);
+      // Search term filter
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        const contractName = contract.contract_type?.toLowerCase() || '';
+        const propertyName = contract.properties?.name?.toLowerCase() || '';
+        
+        // Only access tenant email if it exists
+        let tenantEmail = '';
+        if ('tenant' in contract && contract.tenant && typeof contract.tenant === 'object' && contract.tenant !== null && 'email' in contract.tenant) {
+          tenantEmail = (contract.tenant.email as string).toLowerCase();
+        }
+        
+        if (!contractName.includes(searchLower) && 
+            !propertyName.includes(searchLower) && 
+            !tenantEmail.includes(searchLower)) {
+          return false;
+        }
       }
-      
-      if (contractDate > endDate) {
-        return false;
-      }
-    }
 
-    return true;
-  });
+      // Date range filter - start date
+      if (dateRangeFilter.startDate) {
+        const startDate = new Date(dateRangeFilter.startDate);
+        let contractDate = new Date();
+        
+        if ('valid_from' in contract && contract.valid_from) {
+          contractDate = new Date(contract.valid_from);
+        } else if ('created_at' in contract && contract.created_at) {
+          contractDate = new Date(contract.created_at);
+        }
+        
+        if (contractDate < startDate) {
+          return false;
+        }
+      }
+
+      // Date range filter - end date
+      if (dateRangeFilter.endDate) {
+        const endDate = new Date(dateRangeFilter.endDate);
+        let contractDate = new Date();
+        
+        if ('valid_from' in contract && contract.valid_from) {
+          contractDate = new Date(contract.valid_from);
+        } else if ('created_at' in contract && contract.created_at) {
+          contractDate = new Date(contract.created_at);
+        }
+        
+        if (contractDate > endDate) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [contracts, statusFilter, propertyFilter, searchTerm, dateRangeFilter]);
+
+  // Calculate document and contract counts
+  const documentCount = filteredDocuments.length;
+  const contractCount = filteredContracts.length;
+
+  const handleLeaseUploadClick = () => {
+    setLeaseUploadMode(true);
+    setShowAddModal(true);
+  };
+
+  const handleRegularUploadClick = () => {
+    setLeaseUploadMode(false);
+    setShowAddModal(true);
+  };
 
   if (!userId || !userRole) return null;
 
@@ -341,6 +364,29 @@ function Documents() {
             setStatusFilter={setStatusFilter}
             resetFilters={resetFilters}
           />
+          <div className="flex justify-end mb-4">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-500">View:</span>
+              <Button 
+                variant={viewMode === "list" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className="px-3"
+              >
+                <List className="h-4 w-4 mr-1" />
+                List
+              </Button>
+              <Button 
+                variant={viewMode === "grid" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+                className="px-3"
+              >
+                <GridIcon className="h-4 w-4 mr-1" />
+                Grid
+              </Button>
+            </div>
+          </div>
           <ContractsTable 
             contracts={filteredContracts}
             isLoading={isLoadingContracts}
@@ -366,6 +412,29 @@ function Documents() {
             setDateRangeFilter={setDateRangeFilter}
             resetFilters={resetFilters}
           />
+          <div className="flex justify-end mb-4">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-500">View:</span>
+              <Button 
+                variant={viewMode === "list" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className="px-3"
+              >
+                <List className="h-4 w-4 mr-1" />
+                List
+              </Button>
+              <Button 
+                variant={viewMode === "grid" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+                className="px-3"
+              >
+                <GridIcon className="h-4 w-4 mr-1" />
+                Grid
+              </Button>
+            </div>
+          </div>
           <DocumentList
             userId={userId}
             userRole={userRole}
@@ -388,10 +457,13 @@ function Documents() {
             <DocumentPageHeader 
               activeTab={activeTab}
               userRole={userRole}
-              onUploadClick={() => setShowAddModal(true)}
+              onUploadClick={handleRegularUploadClick}
+              onUploadLeaseClick={handleLeaseUploadClick}
+              documentCount={documentCount}
+              contractCount={contractCount}
             />
             
-            <div className="flex space-x-4 mb-6 border-b">
+            <div className="flex space-x-4 mb-6 border-b mt-4">
               {navigationItems.map(item => (
                 <button
                   key={item.id}
@@ -421,7 +493,15 @@ function Documents() {
         open={showAddModal} 
         onOpenChange={setShowAddModal} 
         userId={userId} 
-        userRole={userRole} 
+        userRole={userRole}
+        leaseUploadMode={leaseUploadMode}
+        onSuccess={() => {
+          if (leaseUploadMode) {
+            refetchContracts();
+          } else {
+            refetchDocuments();
+          }
+        }}
       />
 
       <ContractDetailsDialog 
