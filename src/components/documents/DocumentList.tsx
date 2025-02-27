@@ -5,7 +5,7 @@ import { DocumentCard } from "./DocumentCard";
 import { DocumentType } from "@/integrations/supabase/types/document-types";
 import { DocumentListSkeleton } from "./DocumentListSkeleton";
 import { EmptyDocumentState } from "./EmptyDocumentState";
-import { ContractStatus } from "@/types/contract";
+import { ContractStatus, FormData } from "@/types/contract";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -424,8 +424,10 @@ export function DocumentList({
         contractNumber = String(contractNumberValue);
       }
       
+      // Safely cast the metadata to FormData type for the PDF generator
+      // FormData has many required fields, so we use type assertion
       generateContractPdf({
-        metadata: doc.metadata,
+        metadata: doc.metadata as unknown as FormData,
         contractId: doc.id,
         contractNumber
       });
