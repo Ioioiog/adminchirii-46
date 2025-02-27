@@ -131,6 +131,10 @@ export function DocumentList({
     queryFn: async () => {
       console.log("Fetching documents with filter:", { typeFilter, propertyFilter });
       
+      if (typeFilter === "lease") {
+        return [];
+      }
+      
       let query = supabase
         .from("documents")
         .select(`
@@ -162,10 +166,8 @@ export function DocumentList({
         query = query.eq("property_id", propertyFilter);
       }
 
-      if (typeFilter && typeFilter !== "all" && typeFilter !== "lease") {
+      if (typeFilter && typeFilter !== "all") {
         query = query.eq("document_type", typeFilter);
-      } else if (typeFilter === "lease") {
-        query = query.eq("document_type", "lease");
       }
 
       const { data, error } = await query;
@@ -175,7 +177,7 @@ export function DocumentList({
         throw error;
       }
 
-      console.log("Regular documents fetched:", data);
+      console.log("Regular documents fetched:", data?.length || 0);
 
       return (data as DocumentFromDB[]).filter(doc => {
         const matchesSearch = 
@@ -226,6 +228,10 @@ export function DocumentList({
       if (propertyFilter && propertyFilter !== "all") {
         query = query.eq("property_id", propertyFilter);
       }
+      
+      if (typeFilter === "lease") {
+        query = query.eq("contract_type", "lease");
+      }
 
       const { data, error } = await query;
 
@@ -234,12 +240,14 @@ export function DocumentList({
         throw error;
       }
 
-      console.log("Contracts fetched:", data);
+      console.log("Contracts fetched:", data?.length || 0);
 
       const transformedContracts = data.map(contract => {
         let documentType: string;
         if (contract.contract_type === "lease") {
           documentType = "lease";
+        } else if (contract.contract_type === "lease_agreement") {
+          documentType = "lease_agreement";
         } else {
           documentType = "lease_agreement";
         }
@@ -262,9 +270,9 @@ export function DocumentList({
         };
       }) as ContractDocument[];
       
-      console.log("Transformed contracts:", transformedContracts);
+      console.log("Transformed contracts:", transformedContracts.length);
       
-      if (typeFilter !== "all") {
+      if (typeFilter !== "all" && typeFilter !== "lease") {
         return transformedContracts.filter(doc => doc.document_type === typeFilter);
       }
       
@@ -361,6 +369,13 @@ export function DocumentList({
     }
     return true;
   });
+
+  console.log("Filtered documents:", filteredDocuments.map(doc => ({
+    id: doc.id,
+    name: doc.name,
+    documentType: doc.document_type,
+    isContract: 'isContract' in doc
+  })));
 
   const formatDocumentType = (type: string): string => {
     let formattedType = type.replace('_document', '');
@@ -493,7 +508,7 @@ export function DocumentList({
       if (doc.metadata && typeof doc.metadata === 'object' && 'file_path' in doc.metadata) {
         handleDownloadDocument(doc.metadata.file_path as string);
       } else {
-        handleGeneratePDF(doc);
+        handleGeneratePDF(doc as ContractDocument);
       }
     }
   };
