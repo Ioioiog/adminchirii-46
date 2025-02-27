@@ -1,3 +1,4 @@
+
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DocumentType } from "@/integrations/supabase/types/document-types";
@@ -44,8 +45,14 @@ export function DocumentFilters({
           <SelectContent>
             <SelectItem value="all">All types</SelectItem>
             <SelectItem value="lease_agreement">Lease Agreement</SelectItem>
+            <SelectItem value="lease">Lease</SelectItem>
             <SelectItem value="invoice">Invoice</SelectItem>
             <SelectItem value="receipt">Receipt</SelectItem>
+            <SelectItem value="general">General Document</SelectItem>
+            <SelectItem value="maintenance">Maintenance Document</SelectItem>
+            <SelectItem value="legal">Legal Document</SelectItem>
+            <SelectItem value="notice">Notice</SelectItem>
+            <SelectItem value="inspection">Inspection Report</SelectItem>
             <SelectItem value="other">Other</SelectItem>
           </SelectContent>
         </Select>
