@@ -31,6 +31,7 @@ import {
 import { useState } from "react";
 import { UseMutationResult } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { ContractStatus } from "@/types/contract";
 
 interface ContractsTableProps {
   contracts: ContractOrDocument[];
@@ -61,7 +62,7 @@ export function ContractsTable({
     setDocumentToDelete(null);
   };
 
-  const getDocumentStatus = (doc: ContractOrDocument): string => {
+  const getDocumentStatus = (doc: ContractOrDocument): ContractStatus => {
     // For lease documents and regular contracts, use the existing status
     if ('status' in doc && doc.status) {
       return doc.status;
