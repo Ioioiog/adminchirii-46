@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { DollarSign, FileText, CreditCard, BarChart2, Building } from "lucide-react";
 import { InvoiceList } from "@/components/invoices/InvoiceList";
@@ -19,6 +18,7 @@ import { DateRange } from "react-day-picker";
 import { useProperties } from "@/hooks/useProperties";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useCurrency } from "@/hooks/useCurrency";
+import { startOfMonth, endOfMonth } from "date-fns";
 
 type FinancialSection = 'invoices' | 'payments' | 'overview';
 
@@ -56,19 +56,27 @@ const Financial = () => {
     fetchInvoices
   } = useInvoices();
 
-  // Calculate financial summary
   const calculateFinancialSummary = (): FinancialSummary => {
-    const totalInvoiced = invoices.reduce((sum, invoice) => sum + invoice.amount, 0);
-    const totalPaid = invoices
+    const currentDate = new Date();
+    const monthStart = startOfMonth(currentDate);
+    const monthEnd = endOfMonth(currentDate);
+
+    const currentMonthInvoices = invoices.filter(invoice => {
+      const invoiceDate = new Date(invoice.created_at);
+      return invoiceDate >= monthStart && invoiceDate <= monthEnd;
+    });
+
+    const totalInvoiced = currentMonthInvoices.reduce((sum, invoice) => sum + invoice.amount, 0);
+    const totalPaid = currentMonthInvoices
       .filter(invoice => invoice.status === 'paid')
       .reduce((sum, invoice) => sum + invoice.amount, 0);
-    const outstandingAmount = invoices
+    const outstandingAmount = currentMonthInvoices
       .filter(invoice => invoice.status === 'pending')
       .reduce((sum, invoice) => sum + invoice.amount, 0);
-    const overduePendingAmount = invoices
+    const overduePendingAmount = currentMonthInvoices
       .filter(invoice => 
         invoice.status === 'pending' && 
-        new Date(invoice.due_date) < new Date()
+        new Date(invoice.due_date) < currentDate
       )
       .reduce((sum, invoice) => sum + invoice.amount, 0);
 
@@ -100,7 +108,6 @@ const Financial = () => {
     },
   ];
 
-  // Filter out service providers from accessing financial features
   const filteredUserRole = userRole === 'service_provider' ? null : userRole;
   const isLandlordOrTenant = userRole === 'landlord' || userRole === 'tenant';
 
@@ -110,25 +117,25 @@ const Financial = () => {
         <PageHeader
           icon={BarChart2}
           title="Financial Overview"
-          description="Summary of your financial activities and current status"
+          description="Summary of your financial activities for the current month"
         />
         <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <h3 className="text-sm font-medium">Total Invoiced</h3>
+              <h3 className="text-sm font-medium">This Month's Total</h3>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{formatAmount(financialSummary.totalInvoiced)}</div>
               <p className="text-xs text-muted-foreground">
-                Total amount of all invoices
+                Total invoiced this month
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <h3 className="text-sm font-medium">Total Paid</h3>
+              <h3 className="text-sm font-medium">Month's Paid Amount</h3>
               <DollarSign className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
@@ -136,14 +143,14 @@ const Financial = () => {
                 {formatAmount(financialSummary.totalPaid)}
               </div>
               <p className="text-xs text-muted-foreground">
-                Total amount of paid invoices
+                Total paid this month
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <h3 className="text-sm font-medium">Outstanding Amount</h3>
+              <h3 className="text-sm font-medium">Month's Outstanding</h3>
               <DollarSign className="h-4 w-4 text-yellow-600" />
             </CardHeader>
             <CardContent>
@@ -151,14 +158,14 @@ const Financial = () => {
                 {formatAmount(financialSummary.outstandingAmount)}
               </div>
               <p className="text-xs text-muted-foreground">
-                Total pending payments
+                Pending payments this month
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <h3 className="text-sm font-medium">Overdue Amount</h3>
+              <h3 className="text-sm font-medium">Month's Overdue</h3>
               <DollarSign className="h-4 w-4 text-red-600" />
             </CardHeader>
             <CardContent>
@@ -166,7 +173,7 @@ const Financial = () => {
                 {formatAmount(financialSummary.overduePendingAmount)}
               </div>
               <p className="text-xs text-muted-foreground">
-                Total amount of overdue invoices
+                Overdue payments this month
               </p>
             </CardContent>
           </Card>
