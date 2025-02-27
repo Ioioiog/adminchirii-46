@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Grid, List, Plus, FileText, CreditCard, Trash2 } from "lucide-react";
@@ -176,6 +177,7 @@ function Documents() {
       }
     }
 
+    // Fetch lease agreement documents regardless of user role
     const documentQuery = supabase
       .from("documents")
       .select(`
@@ -379,7 +381,7 @@ function Documents() {
                     <TableRow key={contract.id}>
                       <TableCell>{contract.properties?.name || 'Untitled Property'}</TableCell>
                       <TableCell className="capitalize">
-                        {'document_name' in contract ? 'Lease Agreement Document' : contract.contract_type}
+                        {'document_name' in contract ? 'Lease Agreement Document' : contract.contract_type.replace('_', ' ')}
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className={
