@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Download, Trash2 } from "lucide-react";
@@ -113,6 +112,30 @@ export function ContractsTable({
     }
   };
 
+  const handleDocumentAction = (doc: ContractOrDocument) => {
+    console.log("Document action triggered for:", doc);
+
+    // For document type entries with direct file_path
+    if ('file_path' in doc && doc.file_path) {
+      handleDownloadDocument(doc.file_path);
+      return;
+    }
+    
+    // For contract entries
+    if (doc.metadata) {
+      // Check if metadata contains a file_path
+      if (typeof doc.metadata === 'object' && 'file_path' in doc.metadata) {
+        handleDownloadDocument(doc.metadata.file_path as string);
+      } else {
+        // Otherwise generate PDF from contract metadata
+        handleGeneratePDF(doc);
+      }
+    } else {
+      // Fallback to generating PDF if no file_path is available
+      handleGeneratePDF(doc);
+    }
+  };
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -170,54 +193,28 @@ export function ContractsTable({
                     {contract.valid_until ? format(new Date(contract.valid_until), 'MMM d, yyyy') : '-'}
                   </TableCell>
                   <TableCell>
-                    {isDocument ? (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleDownloadDocument(contract.file_path)}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Download
-                      </Button>
-                    ) : (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => {
-                          // Instead of generating PDF, directly download document if available
-                          if (contract.metadata && typeof contract.metadata === 'object' && 'file_path' in contract.metadata) {
-                            handleDownloadDocument(contract.metadata.file_path as string);
-                          } else {
-                            // Fallback to generating PDF if no file_path is available
-                            handleGeneratePDF(contract);
-                          }
-                        }}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        PDF
-                      </Button>
-                    )}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleDocumentAction(contract)}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      PDF
+                    </Button>
                   </TableCell>
                   <TableCell className="text-right space-x-2">
-                    {isDocument ? (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleDownloadDocument(contract.file_path)}
-                      >
-                        View
-                      </Button>
-                    ) : (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => {
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        if (!isDocument) {
                           navigate(`/documents/contracts/${contract.id}`);
-                        }}
-                      >
-                        View Details
-                      </Button>
-                    )}
+                        }
+                      }}
+                      className="mr-2"
+                    >
+                      View Details
+                    </Button>
                     
                     {userRole === 'landlord' && (
                       <AlertDialog>
