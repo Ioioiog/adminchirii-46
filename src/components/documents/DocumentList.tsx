@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DocumentCard } from "./DocumentCard";
@@ -253,45 +254,77 @@ export function DocumentList({
   };
 
   const handleDownloadDocument = async (filePath: string | undefined) => {
-    console.log("Attempting to download document with path:", filePath);
-    
-    if (!filePath) {
-      console.log("No file path available for document");
-      throw new Error("No file path available for this document");
-    }
-    
-    const cleanFilePath = filePath.replace(/^\/+/, '');
-    console.log("Cleaned file path:", cleanFilePath);
-    
-    const folderPath = cleanFilePath.split('/').slice(0, -1).join('/');
-    const fileName = cleanFilePath.split('/').pop();
-    console.log("Folder path:", folderPath);
-    console.log("File name:", fileName);
-
-    const { data, error } = await supabase.storage
-      .from('documents')
-      .download(cleanFilePath);
-          
-    if (error) {
-      console.error("Supabase storage error:", error);
-      throw error;
-    }
-          
-    if (data) {
-      console.log("File downloaded successfully, creating blob URL");
-      const url = window.URL.createObjectURL(data);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName || 'document';
-      document.body.appendChild(a);
-      a.click();
+    try {
+      console.log("Attempting to download document with path:", filePath);
       
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      if (!filePath) {
+        console.log("No file path available for document");
+        throw new Error("No file path available for this document");
+      }
+      
+      const cleanFilePath = filePath.replace(/^\/+/, '');
+      console.log("Cleaned file path:", cleanFilePath);
+      
+      const folderPath = cleanFilePath.split('/').slice(0, -1).join('/');
+      const fileName = cleanFilePath.split('/').pop();
+      console.log("Folder path:", folderPath);
+      console.log("File name:", fileName);
+
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .download(cleanFilePath);
+          
+      if (error) {
+        console.error("Supabase storage error:", error);
+        throw error;
+      }
+          
+      if (data) {
+        console.log("File downloaded successfully, creating blob URL");
+        const url = window.URL.createObjectURL(data);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName || 'document';
+        document.body.appendChild(a);
+        a.click();
+        
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        toast({
+          title: "Success",
+          description: "Document downloaded successfully",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error downloading document:", error);
       
       toast({
-        title: "Success",
-        description: "Document downloaded successfully",
+        title: "Error",
+        description: error.message || "Could not download the document. Please try again later.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Define handleGeneratePDF to fix the error
+  const handleGeneratePDF = (doc: ContractDocument) => {
+    try {
+      if (!doc.metadata) {
+        throw new Error("No metadata available for this contract");
+      }
+
+      generateContractPdf({
+        metadata: doc.metadata,
+        contractId: doc.id,
+        contractNumber: doc.metadata.contractNumber
+      });
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast({
+        title: "Error",
+        description: "Could not generate PDF for this document",
+        variant: "destructive",
       });
     }
   };
