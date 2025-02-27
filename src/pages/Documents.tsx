@@ -28,7 +28,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ContractStatus } from "@/types/contract";
+import { ContractStatus, FormData } from "@/types/contract";
 import { useContractPrint } from "@/components/contract/ContractPrintPreview";
 
 interface Contract {
@@ -417,11 +417,6 @@ function Documents() {
                   </TableRow>
                 ) : (
                   contracts.map(contract => {
-                    // Print the contract details for debugging
-                    console.log("Contract data:", contract);
-                    console.log("Contract type:", contract.contract_type);
-                    console.log("Has document_name:", 'document_name' in contract);
-                    
                     // Check if it's a document (has document_name property)
                     const isDocument = 'document_name' in contract;
                     
@@ -463,15 +458,34 @@ function Documents() {
                               size="sm" 
                               onClick={() => {
                                 // Only call useContractPrint if we have a Contract, not a LeaseDocument
-                                if (contract.metadata) {
-                                  const printProps = {
-                                    queryClient,
-                                    metadata: contract.metadata,
-                                    contractId: contract.id,
-                                    contractNumber: contract.metadata?.contractNumber
-                                  };
-                                  const { handlePrint } = useContractPrint(printProps);
-                                  handlePrint();
+                                if (contract.metadata && typeof contract.metadata === 'object') {
+                                  try {
+                                    // We need to cast the metadata to FormData type to match the expected type
+                                    // in useContractPrint
+                                    const contractData = contract as Contract;
+                                    const metaData = contractData.metadata as unknown as FormData;
+                                    
+                                    const contractNumber = typeof metaData === 'object' && 
+                                      'contractNumber' in metaData ? 
+                                      metaData.contractNumber : undefined;
+                                      
+                                    const printProps = {
+                                      queryClient,
+                                      metadata: metaData,
+                                      contractId: contract.id,
+                                      contractNumber
+                                    };
+                                    
+                                    const { handlePrint } = useContractPrint(printProps);
+                                    handlePrint();
+                                  } catch (error) {
+                                    console.error("Error generating PDF:", error);
+                                    toast({
+                                      title: "Error",
+                                      description: "Could not generate PDF for this document",
+                                      variant: "destructive",
+                                    });
+                                  }
                                 } else {
                                   toast({
                                     title: "Error",
