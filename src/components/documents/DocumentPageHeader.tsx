@@ -1,7 +1,7 @@
 
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Plus } from "lucide-react";
+import { FileText, Plus, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface DocumentPageHeaderProps {
@@ -41,8 +41,8 @@ export function DocumentPageHeader({
             className="bg-blue-600 hover:bg-blue-700" 
             onClick={onUploadClick}
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Upload Document
+            <Upload className="h-4 w-4 mr-2" />
+            Upload Agreement
           </Button>
           {activeTab === "contracts" && (
             <Button 
