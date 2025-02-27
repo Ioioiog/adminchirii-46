@@ -303,6 +303,24 @@ export function DocumentList({
     }
   };
 
+  // Check if document should have download button enabled
+  const canDownloadDocument = (doc: CombinedDocument): boolean => {
+    // Regular documents with file_path can be downloaded
+    if ('file_path' in doc && doc.file_path && !('isContract' in doc)) {
+      return true;
+    }
+    
+    // Contract documents: Enable for lease_agreement, disable for lease
+    if ('isContract' in doc) {
+      if (doc.document_type === 'lease_agreement') {
+        return true;
+      }
+      return false; // Disable for 'lease' type
+    }
+    
+    return false;
+  };
+
   if (isLoading) {
     return <DocumentListSkeleton viewMode={viewMode} />;
   }
@@ -342,7 +360,7 @@ export function DocumentList({
                     variant="outline" 
                     size="sm" 
                     onClick={() => 'file_path' in doc && doc.file_path ? handleDownloadDocument(doc.file_path) : null}
-                    disabled={'isContract' in doc && doc.isContract}
+                    disabled={!canDownloadDocument(doc)}
                   >
                     <Download className="h-4 w-4 mr-2" />
                     Download
