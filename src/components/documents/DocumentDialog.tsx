@@ -152,16 +152,36 @@ export function DocumentDialog({
     try {
       // First, upload the file to storage
       const fileExt = file.name.split(".").pop();
-      const fileName = `${userId}/${Date.now()}.${fileExt}`;
-      const filePath = `${values.document_type}/${fileName}`;
+      const fileName = `${Date.now()}.${fileExt}`;
+      
+      // For lease agreements, use the document type in the file path to organize storage
+      // Store directly in the bucket root to avoid permission issues with nested paths
+      const filePath = values.document_type === "lease_agreement" 
+        ? `lease_agreement/${fileName}`
+        : `${values.document_type}/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
+      console.log("Uploading file to path:", filePath);
+
+      // Try uploading the file
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from("documents")
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          upsert: false,
+          contentType: file.type
+        });
 
       if (uploadError) {
+        console.error("Storage upload error:", uploadError);
+        
+        // If there's a permission error, show a more detailed error
+        if (uploadError.message.includes("row-level security") || uploadError.statusCode === 403) {
+          throw new Error("Permission denied: You don't have rights to upload files to storage. Please contact your administrator.");
+        }
+        
         throw uploadError;
       }
+
+      console.log("File uploaded successfully:", uploadData);
 
       // Then create a record in the documents table
       let documentData = {
@@ -180,6 +200,7 @@ export function DocumentDialog({
         .single();
 
       if (documentError) {
+        console.error("Document insert error:", documentError);
         throw documentError;
       }
 
