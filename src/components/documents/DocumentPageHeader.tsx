@@ -39,13 +39,15 @@ export function DocumentPageHeader({
 
       {userRole === "landlord" && (
         <div className="flex gap-2">
-          <Button 
-            className="bg-blue-600 hover:bg-blue-700" 
-            onClick={onUploadClick}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Upload Document
-          </Button>
+          {activeTab !== "contracts" && (
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700" 
+              onClick={onUploadClick}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Document
+            </Button>
+          )}
           
           <Button 
             className="bg-purple-600 hover:bg-purple-700" 
