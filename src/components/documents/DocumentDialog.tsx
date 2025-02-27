@@ -174,7 +174,7 @@ export function DocumentDialog({
         console.error("Storage upload error:", uploadError);
         
         // If there's a permission error, show a more detailed error
-        if (uploadError.message.includes("row-level security") || uploadError.statusCode === 403) {
+        if (uploadError.message && uploadError.message.includes("row-level security")) {
           throw new Error("Permission denied: You don't have rights to upload files to storage. Please contact your administrator.");
         }
         
