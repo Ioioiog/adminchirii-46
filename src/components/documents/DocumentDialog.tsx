@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   Dialog,
@@ -40,7 +39,6 @@ export function DocumentDialog({
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
   const [selectedTenantId, setSelectedTenantId] = useState<string>("none");
 
-  // Fetch properties for landlord
   const { data: properties } = useQuery({
     queryKey: ["properties", userId],
     queryFn: async () => {
@@ -55,7 +53,6 @@ export function DocumentDialog({
     enabled: userRole === "landlord",
   });
 
-  // Fetch tenants for selected property
   const { data: tenants } = useQuery({
     queryKey: ["property-tenants", selectedPropertyId],
     queryFn: async () => {
@@ -81,14 +78,13 @@ export function DocumentDialog({
 
   const handlePropertyChange = (value: string) => {
     setSelectedPropertyId(value);
-    setSelectedTenantId("none"); // Reset tenant selection when property changes
+    setSelectedTenantId("none");
   };
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) return;
 
-    // For landlords, require property selection
     if (userRole === "landlord" && !selectedPropertyId) {
       toast({
         title: "Error",
@@ -104,21 +100,12 @@ export function DocumentDialog({
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `${documentType}/${userId}/${fileName}`;
 
-      // Create documents bucket if it doesn't exist
-      const { error: bucketError } = await supabase.storage
-        .createBucket('documents', {
-          public: false,
-          allowedMimeTypes: ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-          fileSizeLimit: 5242880, // 5MB
-        });
-
-      if (bucketError && bucketError.message !== 'Bucket already exists') {
-        throw bucketError;
-      }
-
       const { error: uploadError } = await supabase.storage
         .from("documents")
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          contentType: file.type
+        });
 
       if (uploadError) throw uploadError;
 
