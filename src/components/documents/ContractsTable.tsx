@@ -87,6 +87,20 @@ export function ContractsTable({
     return new Date();
   };
 
+  const getStartDate = (doc: ContractOrDocument): string => {
+    if ('valid_from' in doc && doc.valid_from) {
+      return format(new Date(doc.valid_from), 'MMM d, yyyy');
+    }
+    return '-';
+  };
+
+  const getEndDate = (doc: ContractOrDocument): string => {
+    if ('valid_until' in doc && doc.valid_until) {
+      return format(new Date(doc.valid_until), 'MMM d, yyyy');
+    }
+    return '-';
+  };
+
   const handleViewDocument = (contract: ContractOrDocument) => {
     if ('id' in contract) {
       navigate(`/documents/contracts/${contract.id}`);
@@ -124,6 +138,8 @@ export function ContractsTable({
               <TableHead>Type</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Issue Date</TableHead>
+              <TableHead>Start Date</TableHead>
+              <TableHead>End Date</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -150,6 +166,12 @@ export function ContractsTable({
                 </TableCell>
                 <TableCell>
                   {format(getIssueDate(contract), 'MMM d, yyyy')}
+                </TableCell>
+                <TableCell>
+                  {getStartDate(contract)}
+                </TableCell>
+                <TableCell>
+                  {getEndDate(contract)}
                 </TableCell>
                 <TableCell className="text-right space-x-2">
                   <Button
