@@ -341,13 +341,19 @@ export function DocumentList({
       // Cast metadata to FormData type for generateContractPdf
       const formData = { ...defaultMetadata, ...doc.metadata } as FormData;
       
-      // Extract contractNumber safely
+      // Extract contractNumber safely - this fixes TS2345 error by explicitly defining the type
       let contractNumber = '';
       try {
+        // We need to explicitly check if contractNumber is present and convert it to string
         if (doc.metadata && 
             typeof doc.metadata === 'object' && 
             'contractNumber' in doc.metadata) {
-          contractNumber = String(doc.metadata.contractNumber || '');
+          // Use explicit string conversion and provide empty string fallback
+          contractNumber = typeof doc.metadata.contractNumber === 'string' 
+            ? doc.metadata.contractNumber 
+            : doc.metadata.contractNumber 
+              ? String(doc.metadata.contractNumber) 
+              : '';
         }
       } catch (err) {
         console.error("Error extracting contract number:", err);
@@ -356,7 +362,7 @@ export function DocumentList({
       generateContractPdf({
         metadata: formData,
         contractId: doc.id,
-        contractNumber: contractNumber
+        contractNumber: contractNumber // Now contractNumber is safely a string
       });
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -386,8 +392,15 @@ export function DocumentList({
             typeof doc.metadata === 'object' && 
             'file_path' in doc.metadata && 
             doc.metadata.file_path) {
-          // Use a try-catch block to safely handle potential errors
-          const filePathStr = String(doc.metadata.file_path);
+          
+          // Explicit string conversion with type checking
+          let filePathStr: string;
+          if (typeof doc.metadata.file_path === 'string') {
+            filePathStr = doc.metadata.file_path;
+          } else {
+            filePathStr = String(doc.metadata.file_path);
+          }
+          
           handleDownloadDocument(filePathStr);
         } else {
           handleGeneratePDF(doc);
@@ -422,8 +435,21 @@ export function DocumentList({
         if (doc.metadata && 
             typeof doc.metadata === 'object' && 
             'file_path' in doc.metadata) {
-          // Force a boolean return value with double negation
-          return !!doc.metadata.file_path;
+          
+          // Fix for TS2322 error - explicitly check and convert to boolean
+          const filePathValue = doc.metadata.file_path;
+          
+          // Handle different types that might be present
+          if (typeof filePathValue === 'string') {
+            return filePathValue.length > 0; // If it's a string, check if it's non-empty
+          } else if (typeof filePathValue === 'number') {
+            return true; // If it's a number, we can convert it
+          } else if (filePathValue === null || filePathValue === undefined) {
+            return false; // If null or undefined, we can't download
+          } else {
+            // For other types, use double negation to force boolean
+            return !!filePathValue;
+          }
         }
         return true; // Contracts without file_path can be generated
       } catch (err) {
