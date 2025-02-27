@@ -178,7 +178,7 @@ function Documents() {
       }
     }
 
-    // Fetch lease agreement documents regardless of user role
+    // Fetch all document types, not just lease_agreement
     const documentQuery = supabase
       .from("documents")
       .select(`
@@ -191,8 +191,7 @@ function Documents() {
           id,
           name
         )
-      `)
-      .eq("document_type", "lease_agreement");
+      `);
 
     if (userRole === "landlord") {
       documentQuery.eq("uploaded_by", userId);
@@ -200,23 +199,24 @@ function Documents() {
       documentQuery.eq("tenant_id", userId);
     }
 
-    const { data: leaseDocuments, error: documentsError } = await documentQuery;
+    const { data: documents, error: documentsError } = await documentQuery;
 
     if (documentsError) {
-      console.error("Error fetching lease documents:", documentsError);
+      console.error("Error fetching documents:", documentsError);
       throw documentsError;
     }
 
-    console.log("Found lease documents:", leaseDocuments);
+    console.log("Found documents:", documents);
 
-    const leaseAgreementContracts: LeaseDocument[] = leaseDocuments?.map(doc => ({
+    // Convert all documents to our common format
+    const documentContracts: LeaseDocument[] = documents?.map(doc => ({
       id: doc.id,
       name: doc.name,
       file_path: doc.file_path,
       document_type: doc.document_type,
       property: doc.property,
       created_at: doc.created_at,
-      contract_type: "lease_agreement_document",
+      contract_type: `${doc.document_type}_document`,
       status: "signed" as ContractStatus,
       valid_from: null,
       valid_until: null,
@@ -224,7 +224,7 @@ function Documents() {
       document_name: doc.name
     })) || [];
 
-    return [...regularContracts, ...leaseAgreementContracts];
+    return [...regularContracts, ...documentContracts];
   };
 
   const { data: contracts = [], isLoading: isLoadingContracts } = useQuery({
@@ -232,6 +232,38 @@ function Documents() {
     queryFn: fetchContracts,
     enabled: !!userId && !!userRole
   });
+
+  // Helper function to format document type for display
+  const formatDocumentType = (type: string): string => {
+    // First remove _document suffix if present
+    let formattedType = type.replace('_document', '');
+    
+    // Handle special cases
+    switch (formattedType) {
+      case 'lease_agreement':
+        return 'Lease Agreement';
+      case 'general':
+        return 'General Document';
+      case 'invoice':
+        return 'Invoice';
+      case 'receipt':
+        return 'Receipt';
+      case 'maintenance':
+        return 'Maintenance Document';
+      case 'legal':
+        return 'Legal Document';
+      case 'notice':
+        return 'Notice';
+      case 'inspection':
+        return 'Inspection Report';
+      default:
+        // Format any other type by replacing underscores and capitalizing words
+        return formattedType
+          .split('_')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+    }
+  };
 
   const deleteContractMutation = useMutation({
     mutationFn: async (contractId: string) => {
@@ -384,16 +416,14 @@ function Documents() {
                     console.log("Contract type:", contract.contract_type);
                     console.log("Has document_name:", 'document_name' in contract);
                     
-                    // Check if it's a lease agreement document uploaded as a document
-                    const isLeaseAgreementDocument = 
-                      'document_name' in contract && 
-                      contract.contract_type === 'lease_agreement_document';
+                    // Check if it's a document (has document_name property)
+                    const isDocument = 'document_name' in contract;
                     
                     return (
                       <TableRow key={contract.id}>
                         <TableCell>{contract.properties?.name || 'Untitled Property'}</TableCell>
                         <TableCell className="capitalize">
-                          {isLeaseAgreementDocument ? 'Lease Agreement Document' : contract.contract_type.replace('_', ' ')}
+                          {formatDocumentType(contract.contract_type)}
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary" className={
@@ -412,7 +442,7 @@ function Documents() {
                           {contract.valid_until ? format(new Date(contract.valid_until), 'MMM d, yyyy') : '-'}
                         </TableCell>
                         <TableCell className="text-right space-x-2">
-                          {isLeaseAgreementDocument ? (
+                          {isDocument ? (
                             <Button 
                               variant="outline" 
                               size="sm" 
