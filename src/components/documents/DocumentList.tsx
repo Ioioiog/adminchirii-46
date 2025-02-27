@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DocumentCard } from "./DocumentCard";
@@ -321,6 +322,7 @@ export function DocumentList({
               <TableHead>Property</TableHead>
               <TableHead>Document Type</TableHead>
               <TableHead>Created</TableHead>
+              <TableHead>Download</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -335,6 +337,17 @@ export function DocumentList({
                   </Badge>
                 </TableCell>
                 <TableCell>{format(new Date(doc.created_at), 'MMM d, yyyy')}</TableCell>
+                <TableCell>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => 'file_path' in doc && doc.file_path ? handleDownloadDocument(doc.file_path) : null}
+                    disabled={'isContract' in doc && doc.isContract}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </Button>
+                </TableCell>
                 <TableCell className="text-right">
                   {'isContract' in doc ? (
                     <Button 
@@ -351,8 +364,8 @@ export function DocumentList({
                       size="sm" 
                       onClick={() => handleDownloadDocument(doc.file_path)}
                     >
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
+                      <FileText className="h-4 w-4 mr-2" />
+                      View
                     </Button>
                   )}
                 </TableCell>
