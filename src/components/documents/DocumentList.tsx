@@ -71,7 +71,7 @@ interface ContractDocument {
 type CombinedDocument = DocumentFromDB | ContractDocument;
 
 function isValidDocumentType(type: string): type is DocumentType {
-  return ['lease_agreement', 'invoice', 'receipt', 'other', 'general', 'maintenance', 'legal', 'notice', 'inspection'].includes(type);
+  return ['lease_agreement', 'invoice', 'receipt', 'other', 'general', 'maintenance', 'legal', 'notice', 'inspection', 'lease'].includes(type);
 }
 
 export function DocumentList({ 
@@ -187,7 +187,7 @@ export function DocumentList({
       return data.map(contract => ({
         id: contract.id,
         name: `${contract.contract_type.replace('_', ' ')} - ${contract.properties?.name || 'Untitled Property'}`,
-        document_type: "lease_agreement",
+        document_type: contract.contract_type === "lease" ? "lease" : "lease_agreement",
         property_id: contract.property_id,
         created_at: contract.created_at,
         uploaded_by: userId,
@@ -226,6 +226,8 @@ export function DocumentList({
     switch (formattedType) {
       case 'lease_agreement':
         return 'Lease Agreement';
+      case 'lease':
+        return 'Lease';
       case 'general':
         return 'General Document';
       case 'invoice':
@@ -240,6 +242,8 @@ export function DocumentList({
         return 'Notice';
       case 'inspection':
         return 'Inspection Report';
+      case 'other':
+        return 'Other Document';
       default:
         // Format any other type by replacing underscores and capitalizing words
         return formattedType

@@ -1,4 +1,5 @@
-export type DocumentType = "lease_agreement" | "invoice" | "receipt" | "other";
+
+export type DocumentType = "lease_agreement" | "invoice" | "receipt" | "other" | "general" | "maintenance" | "legal" | "notice" | "inspection" | "lease";
 
 export interface Document {
   Row: {
