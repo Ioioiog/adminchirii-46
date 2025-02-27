@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Download } from "lucide-react";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { generateContractPdf } from "@/utils/contractPdfGenerator";
@@ -93,6 +93,19 @@ type CombinedDocument = DocumentFromDB | ContractDocument;
 function isValidDocumentType(type: string): type is DocumentType {
   return ['lease_agreement', 'invoice', 'receipt', 'other', 'general', 'maintenance', 'legal', 'notice', 'inspection', 'lease'].includes(type);
 }
+
+const formatDate = (dateString: string | null | undefined): string => {
+  if (!dateString) return '-';
+  
+  try {
+    const date = new Date(dateString);
+    if (!isValid(date)) return '-';
+    return format(date, 'MMM d, yyyy');
+  } catch (error) {
+    console.error("Invalid date format:", dateString, error);
+    return '-';
+  }
+};
 
 export function DocumentList({ 
   userId, 
@@ -542,12 +555,12 @@ export function DocumentList({
                     </TableCell>
                     <TableCell>
                       {isContractDocument && 'valid_from' in doc && doc.valid_from 
-                        ? format(new Date(doc.valid_from), 'MMM d, yyyy')
-                        : format(new Date(doc.created_at), 'MMM d, yyyy')}
+                        ? formatDate(doc.valid_from)
+                        : formatDate(doc.created_at)}
                     </TableCell>
                     <TableCell>
                       {isContractDocument && 'valid_until' in doc && doc.valid_until 
-                        ? format(new Date(doc.valid_until), 'MMM d, yyyy') 
+                        ? formatDate(doc.valid_until)
                         : '-'}
                     </TableCell>
                     <TableCell>
