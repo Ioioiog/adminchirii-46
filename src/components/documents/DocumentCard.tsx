@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { ContractStatus } from "@/types/contract";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useContractPrint } from "@/components/contract/ContractPrintPreview";
 
 interface DocumentCardProps {
   document: {
@@ -46,6 +49,42 @@ const documentTypeLabels = {
 export function DocumentCard({ document: doc, userRole, viewMode }: DocumentCardProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [contractData, setContractData] = useState<any>(null);
+  const [isLandlordUpdated, setIsLandlordUpdated] = useState(false);
+
+  useEffect(() => {
+    if (doc.isContract) {
+      const fetchContractData = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('contracts')
+            .select('*, metadata')
+            .eq('id', doc.id)
+            .single();
+            
+          if (error) throw error;
+          
+          if (data) {
+            setContractData(data);
+            // Check if the contract was updated by the landlord (has file_path or is in signed status)
+            setIsLandlordUpdated(!!data.file_path || data.status === 'signed' || userRole === 'landlord');
+          }
+        } catch (error) {
+          console.error("Error fetching contract data:", error);
+        }
+      };
+      
+      fetchContractData();
+    }
+  }, [doc.id, doc.isContract, userRole]);
+
+  const { handlePrint } = useContractPrint({
+    queryClient,
+    metadata: contractData?.metadata || {},
+    contractId: doc.id,
+    contractNumber: contractData?.metadata?.contractNumber
+  });
 
   const handleViewContract = () => {
     if (doc.isContract) {
@@ -73,14 +112,14 @@ export function DocumentCard({ document: doc, userRole, viewMode }: DocumentCard
           
       if (data) {
         const url = window.URL.createObjectURL(data);
-        const a = document.createElement("a");
+        const a = window.document.createElement("a");
         a.href = url;
         a.download = fileName || 'document';
-        document.body.appendChild(a);
+        window.document.body.appendChild(a);
         a.click();
         
         window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        window.document.body.removeChild(a);
         
         toast({
           title: "Success",
@@ -139,13 +178,23 @@ export function DocumentCard({ document: doc, userRole, viewMode }: DocumentCard
           </div>
           
           {doc.isContract ? (
-            <Button 
-              variant="outline"
-              size="sm"
-              onClick={handleViewContract}
-            >
-              View Contract
-            </Button>
+            isLandlordUpdated ? (
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={() => contractData && handlePrint()}
+              >
+                Download PDF
+              </Button>
+            ) : (
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={handleViewContract}
+              >
+                View Contract
+              </Button>
+            )
           ) : (
             <div className="flex items-center gap-2">
               <Button
