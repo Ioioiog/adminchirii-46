@@ -1,31 +1,70 @@
 
-import { useState } from "react";
+import React, { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { DocumentType } from "@/integrations/supabase/types/document-types";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
-import { Property } from "@/utils/propertyUtils";
-import { PropertySelect } from "./PropertySelect";
-import { TenantSelect } from "./TenantSelect";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { ContractStatus } from "@/types/contract";
 
 interface DocumentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
-  userRole: "landlord" | "tenant";
+  userRole: string;
 }
 
-type DocumentType = "lease_agreement" | "invoice" | "receipt" | "other";
+const contractStatuses: { value: ContractStatus; label: string }[] = [
+  { value: "draft", label: "Draft" },
+  { value: "pending_signature", label: "Pending Signature" },
+  { value: "signed", label: "Signed" },
+];
+
+const formSchema = z.object({
+  name: z.string().min(1, "Document name is required"),
+  document_type: z.string(),
+  property_id: z.string().optional(),
+  tenant_id: z.string().optional(),
+  status: z.string().optional(),
+  valid_from: z.date().optional(),
+  valid_until: z.date().optional(),
+});
 
 export function DocumentDialog({
   open,
@@ -34,119 +73,164 @@ export function DocumentDialog({
   userRole,
 }: DocumentDialogProps) {
   const { toast } = useToast();
-  const [isUploading, setIsUploading] = useState(false);
+  const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
-  const [documentType, setDocumentType] = useState<DocumentType>("other");
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
-  const [selectedTenantId, setSelectedTenantId] = useState<string>("none");
+  const [isUploading, setIsUploading] = useState(false);
+  const [showAdditionalFields, setShowAdditionalFields] = useState(false);
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      document_type: "general",
+      property_id: undefined,
+      tenant_id: undefined,
+      status: undefined,
+      valid_from: undefined,
+      valid_until: undefined,
+    },
+  });
+
+  const documentType = form.watch("document_type");
+
+  // Set showAdditionalFields based on document type
+  React.useEffect(() => {
+    setShowAdditionalFields(documentType === "lease_agreement");
+  }, [documentType]);
 
   const { data: properties } = useQuery({
-    queryKey: ["properties", userId],
+    queryKey: ["properties-for-document"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("properties")
-        .select("*")
+        .select("id, name")
         .eq("landlord_id", userId);
-
-      if (error) throw error;
-      return data as Property[];
-    },
-    enabled: userRole === "landlord",
-  });
-
-  const { data: tenants } = useQuery({
-    queryKey: ["property-tenants", selectedPropertyId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tenancies")
-        .select(`
-          tenant_id,
-          tenant:profiles!inner(
-            id,
-            first_name,
-            last_name,
-            email
-          )
-        `)
-        .eq("property_id", selectedPropertyId)
-        .eq("status", "active");
 
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedPropertyId && userRole === "landlord",
+    enabled: open && userRole === "landlord",
   });
 
-  const handlePropertyChange = (value: string) => {
-    setSelectedPropertyId(value);
-    setSelectedTenantId("none");
+  const { data: tenants } = useQuery({
+    queryKey: ["tenants-for-document"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, email")
+        .eq("role", "tenant");
+
+      if (error) throw error;
+      return data.map((tenant) => ({
+        ...tenant,
+        fullName: `${tenant.first_name || ""} ${tenant.last_name || ""} (${
+          tenant.email
+        })`,
+      }));
+    },
+    enabled: open && userRole === "landlord" && documentType === "lease_agreement",
+  });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
   };
 
-  const handleUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file) return;
-
-    if (userRole === "landlord" && !selectedPropertyId) {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!file) {
       toast({
         title: "Error",
-        description: "Please select a property",
+        description: "Please select a file to upload",
         variant: "destructive",
       });
       return;
     }
-
+    
     setIsUploading(true);
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      // Store files under user ID first to comply with storage policies
-      const filePath = `${userId}/${documentType}/${fileName}`;
 
-      console.log("Attempting to upload file:", {
-        bucket: 'documents',
-        filePath,
-        contentType: file.type
-      });
+    try {
+      // First, upload the file to storage
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${userId}/${Date.now()}.${fileExt}`;
+      const filePath = `${values.document_type}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          contentType: file.type,
-          upsert: false
-        });
+        .from("documents")
+        .upload(filePath, file);
 
       if (uploadError) {
-        console.error("Error uploading document:", uploadError);
         throw uploadError;
       }
 
-      const { error: dbError } = await supabase
-        .from("documents")
-        .insert({
-          name: file.name,
-          file_path: filePath,
-          uploaded_by: userId,
-          document_type: documentType,
-          property_id: userRole === "landlord" ? selectedPropertyId : null,
-          tenant_id: selectedTenantId === "none" ? null : selectedTenantId,
-        });
+      // Then create a record in the documents table
+      let documentData = {
+        name: values.name,
+        document_type: values.document_type,
+        file_path: filePath,
+        uploaded_by: userId,
+        property_id: values.property_id || null,
+        tenant_id: values.tenant_id || null,
+      };
 
-      if (dbError) {
-        console.error("Error saving document metadata:", dbError);
-        throw dbError;
+      const { data: document, error: documentError } = await supabase
+        .from("documents")
+        .insert(documentData)
+        .select()
+        .single();
+
+      if (documentError) {
+        throw documentError;
       }
 
+      // If it's a lease agreement, also create a contract record
+      if (values.document_type === "lease_agreement" && showAdditionalFields) {
+        const contractData = {
+          contract_type: "lease_agreement",
+          property_id: values.property_id,
+          landlord_id: userId,
+          tenant_id: values.tenant_id || null,
+          status: values.status || "draft",
+          valid_from: values.valid_from ? values.valid_from.toISOString() : null,
+          valid_until: values.valid_until ? values.valid_until.toISOString() : null,
+          content: {},
+          metadata: {
+            document_id: document.id,
+            file_path: filePath,
+            document_name: values.name
+          }
+        };
+
+        const { error: contractError } = await supabase
+          .from("contracts")
+          .insert(contractData);
+
+        if (contractError) {
+          console.error("Error creating contract record:", contractError);
+          // Don't throw here, we still uploaded the document successfully
+          toast({
+            title: "Warning",
+            description: "Document uploaded but contract record creation failed.",
+            variant: "default",
+          });
+        }
+      }
+
+      // Success! Refresh document list and close dialog
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+      queryClient.invalidateQueries({ queryKey: ["contracts"] });
       toast({
         title: "Success",
         description: "Document uploaded successfully",
       });
+      form.reset();
+      setFile(null);
       onOpenChange(false);
-    } catch (error) {
-      console.error("Error uploading document:", error);
+    } catch (error: any) {
+      console.error("Upload error:", error);
       toast({
         title: "Error",
-        description: "Could not upload the document",
+        description: error.message || "Failed to upload document",
         variant: "destructive",
       });
     } finally {
@@ -156,63 +240,261 @@ export function DocumentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent aria-describedby="document-upload-description">
+      <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>Upload Document</DialogTitle>
-          <DialogDescription id="document-upload-description">
-            Upload a document and assign it to a property or tenant. Supported file types include PDF, images, and documents.
+          <DialogDescription>
+            Upload a document to your property management system.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleUpload} className="space-y-4">
-          <div>
-            <Label htmlFor="file">Select File</Label>
-            <Input
-              id="file"
-              type="file"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-              required
-              aria-required="true"
-              aria-label="Document file"
-              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-            />
-          </div>
-          {userRole === "landlord" && (
-            <>
-              <PropertySelect
-                properties={properties}
-                selectedPropertyId={selectedPropertyId}
-                onPropertyChange={handlePropertyChange}
-              />
-              {selectedPropertyId && (
-                <TenantSelect
-                  tenants={tenants}
-                  selectedTenantId={selectedTenantId}
-                  onTenantChange={setSelectedTenantId}
-                />
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Document Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter document name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </>
-          )}
-          <div>
-            <Label htmlFor="type">Document Type</Label>
-            <Select
-              value={documentType}
-              onValueChange={(value: DocumentType) => setDocumentType(value)}
-            >
-              <SelectTrigger aria-label="Document type">
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="lease_agreement">Lease Agreement</SelectItem>
-                <SelectItem value="invoice">Invoice</SelectItem>
-                <SelectItem value="receipt">Receipt</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button type="submit" disabled={!file || isUploading}>
-            {isUploading ? "Uploading..." : "Upload"}
-          </Button>
-        </form>
+            />
+
+            <FormField
+              control={form.control}
+              name="document_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Document Type</FormLabel>
+                  <Select
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      setShowAdditionalFields(value === "lease_agreement");
+                    }}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select document type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="general">General Document</SelectItem>
+                      <SelectItem value="lease_agreement">Lease Agreement</SelectItem>
+                      <SelectItem value="invoice">Invoice</SelectItem>
+                      <SelectItem value="receipt">Receipt</SelectItem>
+                      <SelectItem value="maintenance">Maintenance Document</SelectItem>
+                      <SelectItem value="legal">Legal Document</SelectItem>
+                      <SelectItem value="notice">Notice</SelectItem>
+                      <SelectItem value="inspection">Inspection Report</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {userRole === "landlord" && (
+              <FormField
+                control={form.control}
+                name="property_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Property (Optional)</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select property" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {properties?.map((property) => (
+                          <SelectItem key={property.id} value={property.id}>
+                            {property.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {showAdditionalFields && userRole === "landlord" && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="tenant_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tenant (Optional)</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select tenant" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {tenants?.map((tenant) => (
+                            <SelectItem key={tenant.id} value={tenant.id}>
+                              {tenant.fullName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contract Status</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {contractStatuses.map((status) => (
+                            <SelectItem key={status.value} value={status.value}>
+                              {status.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="valid_from"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Valid From</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="valid_until"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Valid Until</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
+
+            <div>
+              <FormLabel>Document File</FormLabel>
+              <Input
+                type="file"
+                onChange={handleFileChange}
+                className="mt-1"
+                accept=".pdf,.doc,.docx,.xlsx,.xls,.jpg,.jpeg,.png"
+              />
+              {file && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Selected: {file.name}
+                </p>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isUploading}>
+                {isUploading ? "Uploading..." : "Upload Document"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
