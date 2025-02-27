@@ -78,7 +78,12 @@ interface ContractDocument {
   isContract: boolean;
   contract_type: string;
   status: ContractStatus;
-  metadata?: any;
+  metadata?: {
+    file_path?: string;
+    contractNumber?: string;
+    document_id?: string;
+    [key: string]: any;
+  };
 }
 
 type CombinedDocument = DocumentFromDB | ContractDocument;
@@ -333,7 +338,7 @@ export function DocumentList({
       generateContractPdf({
         metadata: doc.metadata,
         contractId: doc.id,
-        contractNumber: doc.metadata.contractNumber
+        contractNumber: doc.metadata.contractNumber || ''
       });
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -359,7 +364,7 @@ export function DocumentList({
       handleDownloadDocument(doc.file_path);
     } else if ('isContract' in doc) {
       if (doc.metadata && typeof doc.metadata === 'object' && 'file_path' in doc.metadata) {
-        handleDownloadDocument(doc.metadata.file_path as string);
+        handleDownloadDocument(doc.metadata.file_path);
       } else {
         handleGeneratePDF(doc);
       }
