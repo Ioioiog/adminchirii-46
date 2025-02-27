@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DocumentCard } from "./DocumentCard";
@@ -87,7 +86,6 @@ export function DocumentList({
   const { toast } = useToast();
   const navigate = useNavigate();
   
-  // Fetch regular documents
   const { data: regularDocuments = [], isLoading: isLoadingDocuments } = useQuery({
     queryKey: ["documents", propertyFilter, typeFilter, searchTerm],
     queryFn: async () => {
@@ -132,7 +130,6 @@ export function DocumentList({
         throw error;
       }
 
-      // Apply search filter on the client side and validate document types
       return (data as DocumentFromDB[]).filter(doc => {
         const matchesSearch = 
           doc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -144,7 +141,6 @@ export function DocumentList({
     },
   });
 
-  // Fetch contracts
   const { data: contracts = [], isLoading: isLoadingContracts } = useQuery({
     queryKey: ["document-contracts", propertyFilter, searchTerm, userId, userRole, typeFilter],
     queryFn: async () => {
@@ -186,7 +182,6 @@ export function DocumentList({
         throw error;
       }
 
-      // Transform contracts into document format
       const transformedContracts = data.map(contract => ({
         id: contract.id,
         name: `${contract.contract_type.replace('_', ' ')} - ${contract.properties?.name || 'Untitled Property'}`,
@@ -202,7 +197,6 @@ export function DocumentList({
         metadata: contract.metadata
       })) as ContractDocument[];
       
-      // Filter contracts by document type if a type filter is applied
       if (typeFilter !== "all") {
         return transformedContracts.filter(doc => doc.document_type === typeFilter);
       }
@@ -214,9 +208,7 @@ export function DocumentList({
 
   const isLoading = isLoadingDocuments || isLoadingContracts;
 
-  // Combine and filter the documents
   const filteredDocuments = [...regularDocuments, ...contracts].filter(doc => {
-    // Apply search term filter
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       return (
@@ -228,12 +220,9 @@ export function DocumentList({
     return true;
   });
 
-  // Helper function to format document type for display
   const formatDocumentType = (type: string): string => {
-    // First remove _document suffix if present
     let formattedType = type.replace('_document', '');
     
-    // Handle special cases
     switch (formattedType) {
       case 'lease_agreement':
         return 'Lease Agreement';
@@ -256,7 +245,6 @@ export function DocumentList({
       case 'other':
         return 'Other Document';
       default:
-        // Format any other type by replacing underscores and capitalizing words
         return formattedType
           .split('_')
           .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -265,109 +253,93 @@ export function DocumentList({
   };
 
   const handleDownloadDocument = async (filePath: string | undefined) => {
-    try {
-      // Check if filePath is undefined or empty
-      if (!filePath) {
-        throw new Error("No file path available for this document");
-      }
-      
-      const cleanFilePath = filePath.replace(/^\/+/, '');
-      
-      const folderPath = cleanFilePath.split('/').slice(0, -1).join('/');
-      const fileName = cleanFilePath.split('/').pop();
-
-      const { data, error } = await supabase.storage
-        .from('documents')
-        .download(cleanFilePath);
-          
-      if (error) {
-        console.error("Error with download:", error);
-        throw error;
-      }
-          
-      if (data) {
-        const url = window.URL.createObjectURL(data);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = fileName || 'document';
-        document.body.appendChild(a);
-        a.click();
-        
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        toast({
-          title: "Success",
-          description: "Document downloaded successfully",
-        });
-      }
-    } catch (error: any) {
-      console.error("Error downloading document:", error);
-      
-      toast({
-        title: "Error",
-        description: error.message || "Could not download the document. Please try again later.",
-        variant: "destructive",
-      });
+    console.log("Attempting to download document with path:", filePath);
+    
+    if (!filePath) {
+      console.log("No file path available for document");
+      throw new Error("No file path available for this document");
     }
-  };
+    
+    const cleanFilePath = filePath.replace(/^\/+/, '');
+    console.log("Cleaned file path:", cleanFilePath);
+    
+    const folderPath = cleanFilePath.split('/').slice(0, -1).join('/');
+    const fileName = cleanFilePath.split('/').pop();
+    console.log("Folder path:", folderPath);
+    console.log("File name:", fileName);
 
-  // Handler for generating PDF for lease agreements
-  const handleGeneratePDF = (contract: ContractDocument) => {
-    try {
-      if (!contract.metadata) {
-        throw new Error("No metadata available for this contract");
-      }
-
-      // Extract contract number if it exists in the metadata
-      let contractNumber: string | undefined;
-
-      if (typeof contract.metadata === 'object') {
-        const metadataObj = contract.metadata as Record<string, any>;
-        if (metadataObj && 'contractNumber' in metadataObj) {
-          contractNumber = metadataObj.contractNumber as string;
-        }
-      }
-
-      generateContractPdf({
-        metadata: contract.metadata,
-        contractId: contract.id,
-        contractNumber
-      });
-
+    const { data, error } = await supabase.storage
+      .from('documents')
+      .download(cleanFilePath);
+          
+    if (error) {
+      console.error("Supabase storage error:", error);
+      throw error;
+    }
+          
+    if (data) {
+      console.log("File downloaded successfully, creating blob URL");
+      const url = window.URL.createObjectURL(data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName || 'document';
+      document.body.appendChild(a);
+      a.click();
+      
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
       toast({
         title: "Success",
-        description: "PDF generation initiated",
-      });
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-      toast({
-        title: "Error",
-        description: "Could not generate PDF for this document",
-        variant: "destructive",
+        description: "Document downloaded successfully",
       });
     }
   };
 
-  // Check if document should have download button enabled
+  const handleDocumentAction = (doc: CombinedDocument) => {
+    console.log("Document action triggered for:", {
+      id: doc.id,
+      type: doc.document_type,
+      isContract: 'isContract' in doc,
+      hasFilePath: 'file_path' in doc && !!doc.file_path,
+      filePath: 'file_path' in doc ? doc.file_path : undefined
+    });
+
+    if ('file_path' in doc && doc.file_path && !('isContract' in doc)) {
+      handleDownloadDocument(doc.file_path);
+    } else if ('isContract' in doc) {
+      if (doc.document_type === 'lease') {
+        handleGeneratePDF(doc);
+      } else if (doc.document_type === 'lease_agreement') {
+        if (hasDownloadableFile(doc)) {
+          handleDownloadDocument(doc.file_path);
+        } else {
+          console.log("Lease agreement missing file path:", doc);
+          toast({
+            title: "Error",
+            description: "No downloadable file available for this document",
+            variant: "destructive",
+          });
+        }
+      }
+    }
+  };
+
   const canDownloadDocument = (doc: CombinedDocument): boolean => {
-    // Regular documents with file_path can be downloaded
     if ('file_path' in doc && doc.file_path && !('isContract' in doc)) {
       return true;
     }
     
-    // Contract documents: Enable for lease_agreement and lease
     if ('isContract' in doc) {
       if (doc.document_type === 'lease_agreement' || doc.document_type === 'lease') {
         return true;
       }
-      return false; // Disable for other contract types
+      return false;
     }
     
     return false;
   };
 
-  // Check if document has a downloadable file
   const hasDownloadableFile = (doc: CombinedDocument): boolean => {
     return 'file_path' in doc && !!doc.file_path;
   };
@@ -380,7 +352,6 @@ export function DocumentList({
     return <EmptyDocumentState userRole={userRole} />;
   }
 
-  // List view implementation with document type column
   if (viewMode === 'list') {
     return (
       <div className="rounded-md border">
@@ -410,32 +381,7 @@ export function DocumentList({
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={() => {
-                      // For regular documents with file_path
-                      if ('file_path' in doc && doc.file_path && !('isContract' in doc)) {
-                        handleDownloadDocument(doc.file_path);
-                      }
-                      // For contract documents
-                      else if ('isContract' in doc) {
-                        // For lease documents
-                        if (doc.document_type === 'lease') {
-                          handleGeneratePDF(doc);
-                        }
-                        // For lease agreement documents
-                        else if (doc.document_type === 'lease_agreement') {
-                          // Only try to download if file_path exists
-                          if (hasDownloadableFile(doc)) {
-                            handleDownloadDocument(doc.file_path);
-                          } else {
-                            toast({
-                              title: "Error",
-                              description: "No downloadable file available for this document",
-                              variant: "destructive",
-                            });
-                          }
-                        }
-                      }
-                    }}
+                    onClick={() => handleDocumentAction(doc)}
                     disabled={!canDownloadDocument(doc)}
                   >
                     <Download className="h-4 w-4 mr-2" />
@@ -471,7 +417,6 @@ export function DocumentList({
     );
   }
 
-  // Grid view implementation
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl mx-auto">
       {filteredDocuments.map((document) => (
