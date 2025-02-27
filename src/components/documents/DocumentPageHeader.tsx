@@ -1,19 +1,21 @@
 
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Plus, Upload } from "lucide-react";
+import { FileText, Plus, Upload, FileSignature } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface DocumentPageHeaderProps {
   activeTab: string;
   userRole: "landlord" | "tenant";
   onUploadClick: () => void;
+  onUploadLeaseClick?: () => void;
 }
 
 export function DocumentPageHeader({ 
   activeTab, 
   userRole, 
-  onUploadClick 
+  onUploadClick,
+  onUploadLeaseClick
 }: DocumentPageHeaderProps) {
   const navigate = useNavigate();
 
@@ -42,8 +44,17 @@ export function DocumentPageHeader({
             onClick={onUploadClick}
           >
             <Upload className="h-4 w-4 mr-2" />
-            Upload Agreement
+            Upload Document
           </Button>
+          
+          <Button 
+            className="bg-purple-600 hover:bg-purple-700" 
+            onClick={onUploadLeaseClick || onUploadClick}
+          >
+            <FileSignature className="h-4 w-4 mr-2" />
+            Upload Lease Agreement
+          </Button>
+          
           {activeTab === "contracts" && (
             <Button 
               onClick={() => navigate("/generate-contract")} 
