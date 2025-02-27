@@ -42,7 +42,19 @@ interface Contract {
   metadata: Json;
 }
 
-type QueryResult = Contract[];
+interface LeaseDocument {
+  id: string;
+  name: string;
+  file_path: string;
+  document_type: string;
+  property: { 
+    id: string;
+    name: string;
+  } | null;
+  created_at: string;
+}
+
+type QueryResult = (Contract | LeaseDocument)[];
 
 function Documents() {
   const navigate = useNavigate();
@@ -76,9 +88,10 @@ function Documents() {
       throw new Error("No user ID available");
     }
 
+    let regularContracts: Contract[] = [];
+    
     if (userRole === "tenant") {
       try {
-        // First get the user's email
         const { data: userProfile, error: profileError } = await supabase
           .from('profiles')
           .select('email')
@@ -111,7 +124,6 @@ function Documents() {
             metadata
           `);
 
-        // Using .or() with explicit filter objects for better security and clarity
         const { data: contracts, error: contractsError } = await query.or(
           `tenant_id.eq.${userId},invitation_email.eq.${userProfile.email}`
         );
@@ -122,8 +134,7 @@ function Documents() {
         }
 
         console.log("Found contracts for tenant:", contracts);
-        return (contracts || []) as Contract[];
-
+        regularContracts = (contracts || []) as Contract[];
       } catch (error) {
         console.error("Error in fetchContracts:", error);
         throw error;
@@ -153,14 +164,59 @@ function Documents() {
         }
 
         console.log("Found contracts for landlord:", contracts);
-        return (contracts || []) as Contract[];
+        regularContracts = (contracts || []) as Contract[];
       } catch (error) {
         console.error("Error fetching landlord contracts:", error);
         throw error;
       }
     }
 
-    return [];
+    const documentQuery = supabase
+      .from("documents")
+      .select(`
+        id,
+        name,
+        file_path,
+        document_type,
+        created_at,
+        property:properties (
+          id,
+          name
+        )
+      `)
+      .eq("document_type", "lease_agreement");
+
+    if (userRole === "landlord") {
+      documentQuery.eq("uploaded_by", userId);
+    } else if (userRole === "tenant") {
+      documentQuery.eq("tenant_id", userId);
+    }
+
+    const { data: leaseDocuments, error: documentsError } = await documentQuery;
+
+    if (documentsError) {
+      console.error("Error fetching lease documents:", documentsError);
+      throw documentsError;
+    }
+
+    console.log("Found lease documents:", leaseDocuments);
+
+    const leaseAgreementContracts = leaseDocuments?.map(doc => ({
+      id: doc.id,
+      contract_type: "lease_agreement_document",
+      status: "signed" as ContractStatus,
+      valid_from: null,
+      valid_until: null,
+      tenant_id: null,
+      landlord_id: userId,
+      properties: doc.property,
+      metadata: {},
+      document_name: doc.name,
+      file_path: doc.file_path,
+      created_at: doc.created_at
+    })) || [];
+
+    return [...regularContracts, ...leaseAgreementContracts];
   };
 
   const { data: contracts = [], isLoading: isLoadingContracts } = useQuery({
@@ -171,14 +227,28 @@ function Documents() {
 
   const deleteContractMutation = useMutation({
     mutationFn: async (contractId: string) => {
-      const { error: contractError } = await supabase
-        .from('contracts')
-        .delete()
-        .eq('id', contractId);
+      const isDocument = contracts.find(c => c.id === contractId && 'document_name' in c);
       
-      if (contractError) {
-        console.error("Error deleting contract:", contractError);
-        throw contractError;
+      if (isDocument) {
+        const { error: documentError } = await supabase
+          .from('documents')
+          .delete()
+          .eq('id', contractId);
+        
+        if (documentError) {
+          console.error("Error deleting document:", documentError);
+          throw documentError;
+        }
+      } else {
+        const { error: contractError } = await supabase
+          .from('contracts')
+          .delete()
+          .eq('id', contractId);
+        
+        if (contractError) {
+          console.error("Error deleting contract:", contractError);
+          throw contractError;
+        }
       }
     },
     onSuccess: () => {
@@ -242,7 +312,7 @@ function Documents() {
     id: 'contracts',
     label: 'Contracts',
     icon: CreditCard,
-    showForTenant: true  // Changed this to true so tenants can see contracts
+    showForTenant: true
   }];
 
   const renderSection = () => {
@@ -302,7 +372,9 @@ function Documents() {
                   contracts?.map(contract => (
                     <TableRow key={contract.id}>
                       <TableCell>{contract.properties?.name || 'Untitled Property'}</TableCell>
-                      <TableCell className="capitalize">{contract.contract_type}</TableCell>
+                      <TableCell className="capitalize">
+                        {'document_name' in contract ? 'Lease Agreement Document' : contract.contract_type}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className={
                           contract.status === 'signed' ? 'bg-green-100 text-green-800' : 
@@ -313,7 +385,8 @@ function Documents() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {contract.valid_from ? format(new Date(contract.valid_from), 'MMM d, yyyy') : '-'}
+                        {contract.valid_from ? format(new Date(contract.valid_from), 'MMM d, yyyy') : 
+                          ('created_at' in contract ? format(new Date(contract.created_at), 'MMM d, yyyy') : '-')}
                       </TableCell>
                       <TableCell>
                         {contract.valid_until ? format(new Date(contract.valid_until), 'MMM d, yyyy') : '-'}
@@ -322,9 +395,15 @@ function Documents() {
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          onClick={() => navigate(`/documents/contracts/${contract.id}`)}
+                          onClick={() => {
+                            if ('document_name' in contract && 'file_path' in contract) {
+                              handleDownloadDocument(contract.file_path);
+                            } else {
+                              navigate(`/documents/contracts/${contract.id}`);
+                            }
+                          }}
                         >
-                          View Details
+                          {'document_name' in contract ? 'Download' : 'View Details'}
                         </Button>
                         {userRole === 'landlord' && (
                           <AlertDialog>
@@ -366,6 +445,49 @@ function Documents() {
         );
       default:
         return null;
+    }
+  };
+
+  const handleDownloadDocument = async (filePath: string) => {
+    try {
+      const cleanFilePath = filePath.replace(/^\/+/, '');
+      
+      const folderPath = cleanFilePath.split('/').slice(0, -1).join('/');
+      const fileName = cleanFilePath.split('/').pop();
+
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .download(cleanFilePath);
+          
+      if (error) {
+        console.error("Error with download:", error);
+        throw error;
+      }
+          
+      if (data) {
+        const url = window.URL.createObjectURL(data);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName || 'document';
+        document.body.appendChild(a);
+        a.click();
+        
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        toast({
+          title: "Success",
+          description: "Document downloaded successfully",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error downloading document:", error);
+      
+      toast({
+        title: "Error",
+        description: error.message || "Could not download the document. Please try again later.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -421,17 +543,7 @@ function Documents() {
             </div>
             
             <div className="mt-6">
-              {isLoadingContracts ? (
-                <div className="text-center py-4">Loading contracts...</div>
-              ) : contracts?.length === 0 ? (
-                <div className="text-center py-4 text-gray-500">
-                  {userRole === 'tenant' 
-                    ? 'No contracts available for you yet'
-                    : 'No contracts found'}
-                </div>
-              ) : (
-                renderSection()
-              )}
+              {renderSection()}
             </div>
           </div>
         </div>
