@@ -13,6 +13,9 @@ import { FileText, Download } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useContractPrint } from "@/components/contract/ContractPrintPreview";
+import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface DocumentListProps {
   userId: string;
@@ -84,6 +87,8 @@ export function DocumentList({
 }: DocumentListProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [contractsData, setContractsData] = useState<Record<string, any>>({});
   
   // Fetch regular documents
   const { data: regularDocuments = [], isLoading: isLoadingDocuments } = useQuery({
@@ -158,6 +163,7 @@ export function DocumentList({
           valid_until,
           content,
           property_id,
+          metadata,
           properties(id, name, address),
           tenant:profiles!contracts_tenant_id_fkey(
             first_name,
@@ -182,6 +188,13 @@ export function DocumentList({
       if (error) {
         throw error;
       }
+
+      // Store contract data for PDF generation
+      const contractsDataObj: Record<string, any> = {};
+      data.forEach(contract => {
+        contractsDataObj[contract.id] = contract;
+      });
+      setContractsData(contractsDataObj);
 
       // Transform contracts into document format
       const transformedContracts = data.map(contract => ({
@@ -223,6 +236,17 @@ export function DocumentList({
     }
     return true;
   });
+
+  // Get contract print function
+  const getContractPrintProps = (contractId: string) => {
+    const contractData = contractsData[contractId];
+    return {
+      queryClient,
+      metadata: contractData?.metadata || {},
+      contractId,
+      contractNumber: contractData?.metadata?.contractNumber
+    };
+  };
 
   // Helper function to format document type for display
   const formatDocumentType = (type: string): string => {
@@ -303,6 +327,12 @@ export function DocumentList({
     }
   };
 
+  const handleDownloadContractAsPDF = (contractId: string) => {
+    const printProps = getContractPrintProps(contractId);
+    const { handlePrint } = useContractPrint(printProps);
+    handlePrint();
+  };
+
   if (isLoading) {
     return <DocumentListSkeleton viewMode={viewMode} />;
   }
@@ -326,39 +356,55 @@ export function DocumentList({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredDocuments.map(doc => (
-              <TableRow key={doc.id}>
-                <TableCell className="font-medium">{doc.name}</TableCell>
-                <TableCell>{doc.property?.name || 'Untitled Property'}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">
-                    {formatDocumentType(doc.document_type || ('contract_type' in doc ? doc.contract_type : 'other'))}
-                  </Badge>
-                </TableCell>
-                <TableCell>{format(new Date(doc.created_at), 'MMM d, yyyy')}</TableCell>
-                <TableCell className="text-right">
-                  {'isContract' in doc ? (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => navigate(`/documents/contracts/${doc.id}`)}
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      View Contract
-                    </Button>
-                  ) : (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleDownloadDocument(doc.file_path)}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
+            {filteredDocuments.map(doc => {
+              const isContract = 'isContract' in doc;
+              const contractId = isContract ? doc.id : '';
+              const { handlePrint } = useContractPrint(getContractPrintProps(contractId));
+              
+              return (
+                <TableRow key={doc.id}>
+                  <TableCell className="font-medium">{doc.name}</TableCell>
+                  <TableCell>{doc.property?.name || 'Untitled Property'}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {formatDocumentType(doc.document_type || ('contract_type' in doc ? doc.contract_type : 'other'))}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{format(new Date(doc.created_at), 'MMM d, yyyy')}</TableCell>
+                  <TableCell className="text-right flex justify-end gap-2">
+                    {isContract ? (
+                      <>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => navigate(`/documents/contracts/${doc.id}`)}
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          View
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handlePrint()}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download PDF
+                        </Button>
+                      </>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleDownloadDocument(doc.file_path)}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
@@ -381,6 +427,7 @@ export function DocumentList({
             }}
             userRole={userRole}
             viewMode={viewMode}
+            contractsData={contractsData}
           />
         </div>
       ))}

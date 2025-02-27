@@ -38,6 +38,7 @@ interface DocumentCardProps {
   };
   userRole: "landlord" | "tenant";
   viewMode: "grid" | "list";
+  contractsData?: Record<string, any>;
 }
 
 const documentTypeLabels: Record<DocumentType, string> = {
@@ -53,7 +54,7 @@ const documentTypeLabels: Record<DocumentType, string> = {
   inspection: "Inspection Report",
 };
 
-export function DocumentCard({ document: doc, userRole, viewMode }: DocumentCardProps) {
+export function DocumentCard({ document: doc, userRole, viewMode, contractsData = {} }: DocumentCardProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -62,29 +63,34 @@ export function DocumentCard({ document: doc, userRole, viewMode }: DocumentCard
 
   useEffect(() => {
     if (doc.isContract) {
-      const fetchContractData = async () => {
-        try {
-          const { data, error } = await supabase
-            .from('contracts')
-            .select('*, metadata')
-            .eq('id', doc.id)
-            .single();
+      if (contractsData && contractsData[doc.id]) {
+        setContractData(contractsData[doc.id]);
+        setIsLandlordUpdated(contractsData[doc.id].status === 'signed' || userRole === 'landlord');
+      } else {
+        const fetchContractData = async () => {
+          try {
+            const { data, error } = await supabase
+              .from('contracts')
+              .select('*, metadata')
+              .eq('id', doc.id)
+              .single();
+              
+            if (error) throw error;
             
-          if (error) throw error;
-          
-          if (data) {
-            setContractData(data);
-            // Check if the contract was updated by the landlord (is in signed status or the user is a landlord)
-            setIsLandlordUpdated(data.status === 'signed' || userRole === 'landlord');
+            if (data) {
+              setContractData(data);
+              // Check if the contract was updated by the landlord (is in signed status or the user is a landlord)
+              setIsLandlordUpdated(data.status === 'signed' || userRole === 'landlord');
+            }
+          } catch (error) {
+            console.error("Error fetching contract data:", error);
           }
-        } catch (error) {
-          console.error("Error fetching contract data:", error);
-        }
-      };
-      
-      fetchContractData();
+        };
+        
+        fetchContractData();
+      }
     }
-  }, [doc.id, doc.isContract, userRole]);
+  }, [doc.id, doc.isContract, userRole, contractsData]);
 
   const { handlePrint } = useContractPrint({
     queryClient,
@@ -185,15 +191,7 @@ export function DocumentCard({ document: doc, userRole, viewMode }: DocumentCard
           </div>
           
           {doc.isContract ? (
-            isLandlordUpdated ? (
-              <Button 
-                variant="outline"
-                size="sm"
-                onClick={() => contractData && handlePrint()}
-              >
-                Download PDF
-              </Button>
-            ) : (
+            <div className="flex flex-wrap gap-2">
               <Button 
                 variant="outline"
                 size="sm"
@@ -201,7 +199,15 @@ export function DocumentCard({ document: doc, userRole, viewMode }: DocumentCard
               >
                 View Contract
               </Button>
-            )
+              
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={() => contractData && handlePrint()}
+              >
+                Download PDF
+              </Button>
+            </div>
           ) : (
             <div className="flex items-center gap-2">
               <Button
