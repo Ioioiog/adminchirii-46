@@ -54,6 +54,20 @@ export function DocumentFilters({
     }
   };
 
+  // List of all document types
+  const documentTypes: DocumentType[] = [
+    "lease_agreement", 
+    "invoice", 
+    "receipt", 
+    "other", 
+    "general", 
+    "maintenance", 
+    "legal", 
+    "notice", 
+    "inspection", 
+    "lease"
+  ];
+
   return (
     <div className="space-y-4 mb-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -72,16 +86,11 @@ export function DocumentFilters({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All types</SelectItem>
-            <SelectItem value="lease_agreement">Lease Agreement</SelectItem>
-            <SelectItem value="lease">Lease</SelectItem>
-            <SelectItem value="invoice">Invoice</SelectItem>
-            <SelectItem value="receipt">Receipt</SelectItem>
-            <SelectItem value="general">General Document</SelectItem>
-            <SelectItem value="maintenance">Maintenance Document</SelectItem>
-            <SelectItem value="legal">Legal Document</SelectItem>
-            <SelectItem value="notice">Notice</SelectItem>
-            <SelectItem value="inspection">Inspection Report</SelectItem>
-            <SelectItem value="other">Other</SelectItem>
+            {documentTypes.map((type) => (
+              <SelectItem key={type} value={type}>
+                {type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         {properties && (
