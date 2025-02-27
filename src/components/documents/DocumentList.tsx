@@ -338,10 +338,15 @@ export function DocumentList({
       // Cast metadata to FormData type for generateContractPdf
       const formData = doc.metadata as unknown as FormData;
       
+      // Get contractNumber with proper type safety
+      const contractNumber = typeof doc.metadata.contractNumber === 'string' 
+        ? doc.metadata.contractNumber 
+        : '';
+      
       generateContractPdf({
         metadata: formData,
         contractId: doc.id,
-        contractNumber: doc.metadata.contractNumber || ''
+        contractNumber: contractNumber
       });
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -397,9 +402,10 @@ export function DocumentList({
     
     if ('isContract' in doc) {
       if (doc.metadata && typeof doc.metadata === 'object' && 'file_path' in doc.metadata) {
-        return typeof doc.metadata.file_path === 'string';
+        // Explicitly check that file_path is a string and cast it to boolean
+        return typeof doc.metadata.file_path === 'string' ? true : false;
       }
-      return true;
+      return true; // Contracts without file_path can be generated
     }
     
     return false;
