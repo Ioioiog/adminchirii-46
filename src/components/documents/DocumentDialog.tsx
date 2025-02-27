@@ -131,7 +131,7 @@ export function DocumentDialog({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      document_type: "general",
+      document_type: "lease_agreement",
       property_id: undefined,
       tenant_id: undefined,
       status: "draft",
