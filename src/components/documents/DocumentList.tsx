@@ -208,7 +208,26 @@ export function DocumentList({
 
   const isLoading = isLoadingDocuments || isLoadingContracts;
 
-  const filteredDocuments = [...regularDocuments, ...contracts].filter(doc => {
+  const getMergedDocuments = () => {
+    const result = [...contracts];
+    const documentIdsToSkip = new Set<string>();
+    
+    contracts.forEach(contract => {
+      if (contract.metadata && typeof contract.metadata === 'object' && 'document_id' in contract.metadata) {
+        documentIdsToSkip.add(contract.metadata.document_id as string);
+      }
+    });
+    
+    regularDocuments.forEach(doc => {
+      if (!documentIdsToSkip.has(doc.id)) {
+        result.push(doc);
+      }
+    });
+    
+    return result;
+  };
+
+  const filteredDocuments = getMergedDocuments().filter(doc => {
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       return (
@@ -358,10 +377,6 @@ export function DocumentList({
     }
     
     return false;
-  };
-
-  const hasDownloadableFile = (doc: CombinedDocument): boolean => {
-    return 'file_path' in doc && !!doc.file_path;
   };
 
   if (isLoading) {
