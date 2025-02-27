@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   Dialog,
@@ -100,7 +101,20 @@ export function DocumentDialog({
     setIsUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const filePath = `${userId}/${crypto.randomUUID()}.${fileExt}`;
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `${documentType}/${userId}/${fileName}`;
+
+      // Create documents bucket if it doesn't exist
+      const { error: bucketError } = await supabase.storage
+        .createBucket('documents', {
+          public: false,
+          allowedMimeTypes: ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+          fileSizeLimit: 5242880, // 5MB
+        });
+
+      if (bucketError && bucketError.message !== 'Bucket already exists') {
+        throw bucketError;
+      }
 
       const { error: uploadError } = await supabase.storage
         .from("documents")
@@ -157,6 +171,7 @@ export function DocumentDialog({
               required
               aria-required="true"
               aria-label="Document file"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
             />
           </div>
           {userRole === "landlord" && (
