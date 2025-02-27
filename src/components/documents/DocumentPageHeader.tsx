@@ -49,13 +49,15 @@ export function DocumentPageHeader({
             </Button>
           )}
           
-          <Button 
-            className="bg-purple-600 hover:bg-purple-700" 
-            onClick={onUploadLeaseClick || onUploadClick}
-          >
-            <FileSignature className="h-4 w-4 mr-2" />
-            Upload Lease Agreement
-          </Button>
+          {activeTab === "contracts" && (
+            <Button 
+              className="bg-purple-600 hover:bg-purple-700" 
+              onClick={onUploadLeaseClick || onUploadClick}
+            >
+              <FileSignature className="h-4 w-4 mr-2" />
+              Upload Lease Agreement
+            </Button>
+          )}
           
           {activeTab === "contracts" && (
             <Button 
