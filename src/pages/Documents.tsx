@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CreditCard } from "lucide-react";
+import { CreditCard, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useToast } from "@/hooks/use-toast";
@@ -15,10 +15,24 @@ import { DocumentPageHeader } from "@/components/documents/DocumentPageHeader";
 import { useDocuments } from "@/hooks/useDocuments";
 import { ContractOrDocument } from "@/types/document";
 import { ContractStatus } from "@/types/contract";
+import { DocumentList } from "@/components/documents/DocumentList";
 
 interface Property {
   id: string;
   name: string;
+}
+
+interface Document {
+  id: string;
+  name: string;
+  file_path: string;
+  document_type: string;
+  property_id: string | null;
+  tenant_id: string | null;
+  uploaded_by: string;
+  created_at: string;
+  updated_at: string;
+  properties?: { name: string } | null;
 }
 
 function Documents() {
@@ -34,6 +48,7 @@ function Documents() {
   const [selectedContract, setSelectedContract] = useState(null);
   const [showContractDetails, setShowContractDetails] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [activeTab, setActiveTab] = useState<"contracts" | "documents">("documents");
   const [dateRangeFilter, setDateRangeFilter] = useState<{
     startDate: string | null;
     endDate: string | null;
@@ -50,6 +65,49 @@ function Documents() {
       return data as Property[];
     },
     enabled: userRole === "landlord"
+  });
+
+  // Fetch all documents
+  const { data: documents = [], isLoading: isLoadingDocuments, refetch: refetchDocuments } = useQuery<Document[]>({
+    queryKey: ["documents", userId, userRole],
+    queryFn: async () => {
+      if (!userId || !userRole) return [];
+      
+      try {
+        let query = supabase
+          .from("documents")
+          .select(`
+            id, 
+            name, 
+            file_path, 
+            document_type, 
+            property_id, 
+            tenant_id, 
+            uploaded_by,
+            created_at,
+            updated_at,
+            properties:property_id (
+              name
+            )
+          `);
+        
+        if (userRole === "landlord") {
+          query = query.eq("uploaded_by", userId);
+        } else if (userRole === "tenant") {
+          query = query.eq("tenant_id", userId);
+        }
+        
+        const { data, error } = await query;
+        if (error) throw error;
+        
+        console.log("Fetched documents:", data?.length);
+        return data as Document[];
+      } catch (error) {
+        console.error("Error fetching documents:", error);
+        return [];
+      }
+    },
+    enabled: !!userId && !!userRole
   });
 
   // Use our custom hook for document operations
@@ -101,6 +159,52 @@ function Documents() {
     setStatusFilter("all");
     setDateRangeFilter({ startDate: null, endDate: null });
   };
+
+  // Filter documents based on filters
+  const filteredDocuments = documents.filter(document => {
+    // Type filter
+    if (typeFilter !== "all" && document.document_type !== typeFilter) {
+      return false;
+    }
+
+    // Property filter
+    if (propertyFilter !== "all" && document.property_id !== propertyFilter) {
+      return false;
+    }
+
+    // Search term filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const documentName = document.name.toLowerCase();
+      const documentType = document.document_type.toLowerCase();
+      const propertyName = document.properties?.name?.toLowerCase() || '';
+      
+      if (!documentName.includes(searchLower) && 
+          !documentType.includes(searchLower) && 
+          !propertyName.includes(searchLower)) {
+        return false;
+      }
+    }
+
+    // Date filter
+    if (dateRangeFilter.startDate) {
+      const startDate = new Date(dateRangeFilter.startDate);
+      const documentDate = new Date(document.created_at);
+      if (documentDate < startDate) {
+        return false;
+      }
+    }
+
+    if (dateRangeFilter.endDate) {
+      const endDate = new Date(dateRangeFilter.endDate);
+      const documentDate = new Date(document.created_at);
+      if (documentDate > endDate) {
+        return false;
+      }
+    }
+
+    return true;
+  });
 
   // Filter contracts based on all filters
   const filteredContracts = contracts.filter(contract => {
@@ -178,40 +282,101 @@ function Documents() {
 
   if (!userId || !userRole) return null;
 
-  const navigationItems = [{
-    id: 'contracts',
-    label: 'Contracts',
-    icon: CreditCard,
-    showForTenant: true
-  }];
+  const navigationItems = [
+    {
+      id: 'documents',
+      label: 'Documents',
+      icon: FileText,
+      showForTenant: true
+    },
+    {
+      id: 'contracts',
+      label: 'Contracts',
+      icon: CreditCard,
+      showForTenant: true
+    }
+  ];
+
+  const handleDeleteDocument = async (documentId: string) => {
+    try {
+      const { error } = await supabase
+        .from("documents")
+        .delete()
+        .eq("id", documentId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Document deleted",
+        description: "The document has been deleted successfully",
+        variant: "default"
+      });
+      
+      refetchDocuments();
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete document",
+        variant: "destructive"
+      });
+    }
+  };
 
   const renderContent = () => {
-    return (
-      <div className="space-y-4">
-        <DocumentFilters
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          typeFilter={typeFilter}
-          setTypeFilter={setTypeFilter}
-          propertyFilter={propertyFilter}
-          setPropertyFilter={setPropertyFilter}
-          properties={properties}
-          dateRangeFilter={dateRangeFilter}
-          setDateRangeFilter={setDateRangeFilter}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-          resetFilters={resetFilters}
-        />
-        <ContractsTable 
-          contracts={filteredContracts}
-          isLoading={isLoadingContracts}
-          userRole={userRole}
-          handleDownloadDocument={handleDownloadDocument}
-          handleGeneratePDF={handleGeneratePDF}
-          deleteContractMutation={deleteContractMutation}
-        />
-      </div>
-    );
+    if (activeTab === "contracts") {
+      return (
+        <div className="space-y-4">
+          <DocumentFilters
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            typeFilter={typeFilter}
+            setTypeFilter={setTypeFilter}
+            propertyFilter={propertyFilter}
+            setPropertyFilter={setPropertyFilter}
+            properties={properties}
+            dateRangeFilter={dateRangeFilter}
+            setDateRangeFilter={setDateRangeFilter}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            resetFilters={resetFilters}
+          />
+          <ContractsTable 
+            contracts={filteredContracts}
+            isLoading={isLoadingContracts}
+            userRole={userRole}
+            handleDownloadDocument={handleDownloadDocument}
+            handleGeneratePDF={handleGeneratePDF}
+            deleteContractMutation={deleteContractMutation}
+          />
+        </div>
+      );
+    } else {
+      return (
+        <div className="space-y-4">
+          <DocumentFilters
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            typeFilter={typeFilter}
+            setTypeFilter={setTypeFilter}
+            propertyFilter={propertyFilter}
+            setPropertyFilter={setPropertyFilter}
+            properties={properties}
+            dateRangeFilter={dateRangeFilter}
+            setDateRangeFilter={setDateRangeFilter}
+            resetFilters={resetFilters}
+          />
+          <DocumentList
+            documents={filteredDocuments}
+            isLoading={isLoadingDocuments}
+            userRole={userRole}
+            handleDownload={handleDownloadDocument}
+            handleDelete={handleDeleteDocument}
+            viewMode={viewMode}
+          />
+        </div>
+      );
+    }
   };
 
   return (
@@ -221,10 +386,29 @@ function Documents() {
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="bg-white rounded-lg shadow-sm p-6">
             <DocumentPageHeader 
-              activeTab="contracts"
+              activeTab={activeTab}
               userRole={userRole}
               onUploadClick={() => setShowAddModal(true)}
             />
+            
+            <div className="flex space-x-4 mb-6 border-b">
+              {navigationItems.map(item => (
+                <button
+                  key={item.id}
+                  className={`pb-2 px-1 ${
+                    activeTab === item.id
+                      ? 'border-b-2 border-blue-600 font-medium text-blue-600'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                  onClick={() => setActiveTab(item.id as "documents" | "contracts")}
+                >
+                  <div className="flex items-center">
+                    <item.icon className="h-4 w-4 mr-2" />
+                    {item.label}
+                  </div>
+                </button>
+              ))}
+            </div>
             
             <div className="mt-6">
               {renderContent()}

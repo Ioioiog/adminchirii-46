@@ -25,13 +25,13 @@ export function DocumentPageHeader({
             <FileText className="h-6 w-6 text-white" />
           </div>
           <h1 className="text-2xl font-semibold">
-            Documents
+            {activeTab === 'contracts' ? 'Contracts' : 'Documents'}
           </h1>
         </div>
         <p className="text-gray-500">
           {userRole === 'tenant' 
-            ? 'View your property related documents'
-            : 'Manage and track all your property-related documents'}
+            ? `View your property related ${activeTab === 'contracts' ? 'contracts' : 'documents'}`
+            : `Manage and track all your property-related ${activeTab === 'contracts' ? 'contracts' : 'documents'}`}
         </p>
       </div>
 
