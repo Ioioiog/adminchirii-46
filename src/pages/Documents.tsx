@@ -131,8 +131,6 @@ function Documents() {
             metadata
           `);
 
-        // Only fetch lease-related contract types
-        query.or(`contract_type.eq.lease_agreement,contract_type.eq.lease`);
         query.or(`tenant_id.eq.${userId},invitation_email.eq.${userProfile.email}`);
 
         const { data: contracts, error: contractsError } = await query;
@@ -165,9 +163,7 @@ function Documents() {
             properties(name),
             metadata
           `)
-          .eq("landlord_id", userId)
-          // Only fetch lease-related contract types
-          .or('contract_type.eq.lease_agreement,contract_type.eq.lease');
+          .eq("landlord_id", userId);
 
         if (contractsError) {
           console.error("Error fetching landlord contracts:", contractsError);
@@ -182,7 +178,7 @@ function Documents() {
       }
     }
 
-    // Fetch only lease agreement documents
+    // Fetch all document types specified
     const documentQuery = supabase
       .from("documents")
       .select(`
@@ -196,7 +192,7 @@ function Documents() {
           name
         )
       `)
-      .eq("document_type", "lease_agreement");
+      .or('document_type.eq.lease_agreement,document_type.eq.general,document_type.eq.invoice,document_type.eq.receipt,document_type.eq.maintenance,document_type.eq.legal,document_type.eq.notice,document_type.eq.inspection');
 
     if (userRole === "landlord") {
       documentQuery.eq("uploaded_by", userId);
@@ -211,9 +207,9 @@ function Documents() {
       throw documentsError;
     }
 
-    console.log("Found lease agreement documents:", documents);
+    console.log("Found documents:", documents);
 
-    // Convert lease agreement documents to our common format
+    // Convert documents to our common format
     const documentContracts: LeaseDocument[] = documents?.map(doc => ({
       id: doc.id,
       name: doc.name,
@@ -249,6 +245,20 @@ function Documents() {
         return 'Lease Agreement';
       case 'lease':
         return 'Lease';
+      case 'general':
+        return 'General Document';
+      case 'invoice':
+        return 'Invoice';
+      case 'receipt':
+        return 'Receipt';
+      case 'maintenance':
+        return 'Maintenance Document';
+      case 'legal':
+        return 'Legal Document';
+      case 'notice':
+        return 'Notice';
+      case 'inspection':
+        return 'Inspection Report';
       default:
         // Format any other type by replacing underscores and capitalizing words
         return formattedType
@@ -391,15 +401,15 @@ function Documents() {
                 {isLoadingContracts ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-4">
-                      Loading contracts...
+                      Loading documents...
                     </TableCell>
                   </TableRow>
                 ) : contracts?.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-4">
                       {userRole === 'tenant' 
-                        ? 'No lease agreements available for you yet'
-                        : 'No lease agreements found'}
+                        ? 'No documents available for you yet'
+                        : 'No documents found'}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -470,7 +480,7 @@ function Documents() {
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete the contract.
+                                    This action cannot be undone. This will permanently delete the document.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -561,13 +571,13 @@ function Documents() {
                     <FileText className="h-6 w-6 text-white" />
                   </div>
                   <h1 className="text-2xl font-semibold">
-                    {activeTab === 'contracts' ? 'Lease Agreements' : 'Documents'}
+                    {activeTab === 'contracts' ? 'Documents' : 'Documents'}
                   </h1>
                 </div>
                 <p className="text-gray-500">
                   {userRole === 'tenant' 
-                    ? 'View and sign your lease agreements'
-                    : 'Manage and track all your property lease agreements'}
+                    ? 'View your property related documents'
+                    : 'Manage and track all your property-related documents'}
                 </p>
               </div>
 
@@ -578,7 +588,7 @@ function Documents() {
                     onClick={() => setShowAddModal(true)}
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    {activeTab === 'contracts' ? 'Upload Lease' : 'Upload Document'}
+                    Upload Document
                   </Button>
                   {activeTab === "contracts" && (
                     <Button 
@@ -586,7 +596,7 @@ function Documents() {
                       className="bg-green-600 hover:bg-green-700"
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      Create Lease
+                      Create Contract
                     </Button>
                   )}
                 </div>
