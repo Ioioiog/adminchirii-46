@@ -343,20 +343,16 @@ export function DocumentList({
       
       // Extract contractNumber safely - this fixes TS2345 error by explicitly defining the type
       let contractNumber = '';
-      try {
-        // We need to explicitly check if contractNumber is present and convert it to string
-        if (doc.metadata && 
-            typeof doc.metadata === 'object' && 
-            'contractNumber' in doc.metadata) {
-          // Use explicit string conversion and provide empty string fallback
-          contractNumber = typeof doc.metadata.contractNumber === 'string' 
-            ? doc.metadata.contractNumber 
-            : doc.metadata.contractNumber 
-              ? String(doc.metadata.contractNumber) 
-              : '';
+      
+      if (doc.metadata && typeof doc.metadata === 'object' && 'contractNumber' in doc.metadata) {
+        const contractNumberValue = doc.metadata.contractNumber;
+        
+        // Handle all possible types for contractNumber
+        if (typeof contractNumberValue === 'string') {
+          contractNumber = contractNumberValue;
+        } else if (contractNumberValue !== null && contractNumberValue !== undefined) {
+          contractNumber = String(contractNumberValue);
         }
-      } catch (err) {
-        console.error("Error extracting contract number:", err);
       }
       
       generateContractPdf({
@@ -393,15 +389,21 @@ export function DocumentList({
             'file_path' in doc.metadata && 
             doc.metadata.file_path) {
           
-          // Explicit string conversion with type checking
-          let filePathStr: string;
-          if (typeof doc.metadata.file_path === 'string') {
-            filePathStr = doc.metadata.file_path;
-          } else {
-            filePathStr = String(doc.metadata.file_path);
+          // Safely convert file_path to string regardless of its type
+          const filePathValue = doc.metadata.file_path;
+          let filePathStr = '';
+          
+          if (typeof filePathValue === 'string') {
+            filePathStr = filePathValue;
+          } else if (filePathValue !== null && filePathValue !== undefined) {
+            filePathStr = String(filePathValue);
           }
           
-          handleDownloadDocument(filePathStr);
+          if (filePathStr) {
+            handleDownloadDocument(filePathStr);
+          } else {
+            handleGeneratePDF(doc);
+          }
         } else {
           handleGeneratePDF(doc);
         }
@@ -431,31 +433,31 @@ export function DocumentList({
     }
     
     if ('isContract' in doc) {
-      try {
-        if (doc.metadata && 
-            typeof doc.metadata === 'object' && 
-            'file_path' in doc.metadata) {
-          
-          // Fix for TS2322 error - explicitly check and convert to boolean
-          const filePathValue = doc.metadata.file_path;
-          
-          // Handle different types that might be present
-          if (typeof filePathValue === 'string') {
-            return filePathValue.length > 0; // If it's a string, check if it's non-empty
-          } else if (typeof filePathValue === 'number') {
-            return true; // If it's a number, we can convert it
-          } else if (filePathValue === null || filePathValue === undefined) {
-            return false; // If null or undefined, we can't download
-          } else {
-            // For other types, use double negation to force boolean
-            return !!filePathValue;
-          }
+      if (doc.metadata && typeof doc.metadata === 'object' && 'file_path' in doc.metadata) {
+        const filePathValue = doc.metadata.file_path;
+        
+        // Handle all possible types that filePathValue might be
+        if (filePathValue === null || filePathValue === undefined) {
+          return false;
         }
-        return true; // Contracts without file_path can be generated
-      } catch (err) {
-        console.error("Error checking download capability:", err);
-        return true; // Default to allowing download attempt
+        
+        if (typeof filePathValue === 'string') {
+          return filePathValue.trim().length > 0;
+        }
+        
+        if (typeof filePathValue === 'number' || typeof filePathValue === 'boolean') {
+          return true; // These can be converted to string
+        }
+        
+        // Final fallback - try to convert to boolean
+        try {
+          return Boolean(filePathValue);
+        } catch {
+          return false;
+        }
       }
+      
+      return true; // Contracts without file_path can be generated
     }
     
     return false;
