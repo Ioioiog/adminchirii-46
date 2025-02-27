@@ -129,6 +129,8 @@ export function DocumentList({
   const { data: regularDocuments = [], isLoading: isLoadingDocuments } = useQuery({
     queryKey: ["documents", propertyFilter, typeFilter, searchTerm],
     queryFn: async () => {
+      console.log("Fetching documents with filter:", { typeFilter, propertyFilter });
+      
       let query = supabase
         .from("documents")
         .select(`
@@ -160,15 +162,20 @@ export function DocumentList({
         query = query.eq("property_id", propertyFilter);
       }
 
-      if (typeFilter && typeFilter !== "all") {
+      if (typeFilter && typeFilter !== "all" && typeFilter !== "lease") {
         query = query.eq("document_type", typeFilter);
+      } else if (typeFilter === "lease") {
+        query = query.eq("document_type", "lease");
       }
 
       const { data, error } = await query;
 
       if (error) {
+        console.error("Error fetching documents:", error);
         throw error;
       }
+
+      console.log("Regular documents fetched:", data);
 
       return (data as DocumentFromDB[]).filter(doc => {
         const matchesSearch = 
@@ -187,6 +194,8 @@ export function DocumentList({
     queryKey: ["document-contracts", propertyFilter, searchTerm, userId, userRole, typeFilter],
     queryFn: async () => {
       if (!userId) return [];
+      
+      console.log("Fetching contracts with filter:", { typeFilter, propertyFilter });
       
       let query = supabase
         .from("contracts")
@@ -221,25 +230,39 @@ export function DocumentList({
       const { data, error } = await query;
 
       if (error) {
+        console.error("Error fetching contracts:", error);
         throw error;
       }
 
-      const transformedContracts = data.map(contract => ({
-        id: contract.id,
-        name: `${contract.contract_type.replace('_', ' ')} - ${contract.properties?.name || 'Untitled Property'}`,
-        document_type: contract.contract_type === "lease" ? "lease" : "lease_agreement",
-        property_id: contract.property_id,
-        created_at: contract.created_at,
-        uploaded_by: userId,
-        property: contract.properties,
-        tenant: contract.tenant,
-        isContract: true,
-        contract_type: contract.contract_type,
-        status: contract.status,
-        valid_from: contract.valid_from,
-        valid_until: contract.valid_until,
-        metadata: contract.metadata
-      })) as ContractDocument[];
+      console.log("Contracts fetched:", data);
+
+      const transformedContracts = data.map(contract => {
+        let documentType: string;
+        if (contract.contract_type === "lease") {
+          documentType = "lease";
+        } else {
+          documentType = "lease_agreement";
+        }
+        
+        return {
+          id: contract.id,
+          name: `${contract.contract_type.replace('_', ' ')} - ${contract.properties?.name || 'Untitled Property'}`,
+          document_type: documentType,
+          property_id: contract.property_id,
+          created_at: contract.created_at,
+          uploaded_by: userId,
+          property: contract.properties,
+          tenant: contract.tenant,
+          isContract: true,
+          contract_type: contract.contract_type,
+          status: contract.status,
+          valid_from: contract.valid_from,
+          valid_until: contract.valid_until,
+          metadata: contract.metadata
+        };
+      }) as ContractDocument[];
+      
+      console.log("Transformed contracts:", transformedContracts);
       
       if (typeFilter !== "all") {
         return transformedContracts.filter(doc => doc.document_type === typeFilter);
