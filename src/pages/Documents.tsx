@@ -29,7 +29,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ContractStatus } from "@/types/contract";
-import { useContractPrint } from "@/components/contract/ContractPrintPreview";
 
 interface Contract {
   id: string;
@@ -378,83 +377,75 @@ function Documents() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  contracts?.map(contract => {
-                    const isDownloadable = contract.status === 'signed' || userRole === 'landlord';
-                    
-                    return (
-                      <TableRow key={contract.id}>
-                        <TableCell>{contract.properties?.name || 'Untitled Property'}</TableCell>
-                        <TableCell className="capitalize">
-                          {'document_name' in contract ? 'Lease Agreement Document' : contract.contract_type.replace('_', ' ')}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className={
-                            contract.status === 'signed' ? 'bg-green-100 text-green-800' : 
-                            contract.status === 'draft' ? 'bg-gray-100 text-gray-800' : 
-                            'bg-yellow-100 text-yellow-800'
-                          }>
-                            {contract.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {contract.valid_from ? format(new Date(contract.valid_from), 'MMM d, yyyy') : 
-                            ('created_at' in contract ? format(new Date(contract.created_at), 'MMM d, yyyy') : '-')}
-                        </TableCell>
-                        <TableCell>
-                          {contract.valid_until ? format(new Date(contract.valid_until), 'MMM d, yyyy') : '-'}
-                        </TableCell>
-                        <TableCell className="text-right space-x-2">
-                          {isDownloadable ? (
-                            <ContractPDFButton 
-                              contract={contract} 
-                              queryClient={queryClient}
-                            />
-                          ) : (
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => {
-                                navigate(`/documents/contracts/${contract.id}`);
-                              }}
-                            >
-                              View Details
-                            </Button>
-                          )}
-                          
-                          {userRole === 'landlord' && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="border-red-200 text-red-600 hover:bg-red-50"
+                  contracts?.map(contract => (
+                    <TableRow key={contract.id}>
+                      <TableCell>{contract.properties?.name || 'Untitled Property'}</TableCell>
+                      <TableCell className="capitalize">
+                        {'document_name' in contract ? 'Lease Agreement Document' : contract.contract_type.replace('_', ' ')}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className={
+                          contract.status === 'signed' ? 'bg-green-100 text-green-800' : 
+                          contract.status === 'draft' ? 'bg-gray-100 text-gray-800' : 
+                          'bg-yellow-100 text-yellow-800'
+                        }>
+                          {contract.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {contract.valid_from ? format(new Date(contract.valid_from), 'MMM d, yyyy') : 
+                          ('created_at' in contract ? format(new Date(contract.created_at), 'MMM d, yyyy') : '-')}
+                      </TableCell>
+                      <TableCell>
+                        {contract.valid_until ? format(new Date(contract.valid_until), 'MMM d, yyyy') : '-'}
+                      </TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => {
+                            if ('document_name' in contract && 'file_path' in contract) {
+                              handleDownloadDocument(contract.file_path);
+                            } else {
+                              navigate(`/documents/contracts/${contract.id}`);
+                            }
+                          }}
+                        >
+                          {'document_name' in contract ? 'Download' : 'View Details'}
+                        </Button>
+                        {userRole === 'landlord' && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-red-200 text-red-600 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete the contract.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <Button 
+                                  variant="destructive"
+                                  onClick={() => deleteContractMutation.mutate(contract.id)}
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  Delete
                                 </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete the contract.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <Button 
-                                    variant="destructive"
-                                    onClick={() => deleteContractMutation.mutate(contract.id)}
-                                  >
-                                    Delete
-                                  </Button>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>
@@ -580,67 +571,6 @@ function Documents() {
       />
     </div>
   );
-}
-
-// New component to handle the "Download PDF" button
-function ContractPDFButton({ contract, queryClient }) {
-  const { handlePrint } = useContractPrint({
-    queryClient,
-    metadata: contract.metadata || {},
-    contractId: contract.id,
-    contractNumber: contract.metadata?.contractNumber
-  });
-
-  // For document-type contracts that have a file path
-  if ('document_name' in contract && contract.file_path) {
-    return (
-      <Button 
-        variant="outline" 
-        size="sm" 
-        onClick={() => handleDownloadDocument(contract.file_path)}
-      >
-        Download PDF
-      </Button>
-    );
-  }
-
-  // For regular contracts that need to be generated as PDF
-  return (
-    <Button 
-      variant="outline" 
-      size="sm" 
-      onClick={() => handlePrint()}
-    >
-      Download PDF
-    </Button>
-  );
-}
-
-// Helper function to download documents
-async function handleDownloadDocument(filePath: string) {
-  try {
-    const cleanFilePath = filePath.replace(/^\/+/, '');
-    const fileName = cleanFilePath.split('/').pop();
-
-    const { data, error } = await supabase.storage
-      .from('documents')
-      .download(cleanFilePath);
-        
-    if (error) throw error;
-    
-    if (data) {
-      const url = window.URL.createObjectURL(data);
-      const a = window.document.createElement("a");
-      a.href = url;
-      a.download = fileName || 'document';
-      window.document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      window.document.body.removeChild(a);
-    }
-  } catch (error) {
-    console.error("Download error:", error);
-  }
 }
 
 export default Documents;
