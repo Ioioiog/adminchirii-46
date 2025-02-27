@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -51,6 +51,7 @@ interface DocumentDialogProps {
   onOpenChange: (open: boolean) => void;
   userId: string;
   userRole: string;
+  initialDocumentType?: "general" | "lease_agreement" | "lease";
 }
 
 const contractStatuses: { value: ContractStatus; label: string }[] = [
@@ -119,19 +120,20 @@ export function DocumentDialog({
   onOpenChange,
   userId,
   userRole,
+  initialDocumentType = "general"
 }: DocumentDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [showAdditionalFields, setShowAdditionalFields] = useState(false);
+  const [showAdditionalFields, setShowAdditionalFields] = useState(initialDocumentType === "lease_agreement" || initialDocumentType === "lease");
   const [currentTab, setCurrentTab] = useState("basic");
 
   const form = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      document_type: "lease_agreement",
+      document_type: initialDocumentType,
       property_id: undefined,
       tenant_id: undefined,
       status: "draft",
@@ -182,6 +184,17 @@ export function DocumentDialog({
       gasMeter: "0",
     },
   });
+
+  // Reset form when initial document type changes
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        ...form.getValues(),
+        document_type: initialDocumentType
+      });
+      setShowAdditionalFields(initialDocumentType === "lease_agreement" || initialDocumentType === "lease");
+    }
+  }, [open, initialDocumentType, form]);
 
   const documentType = form.watch("document_type");
 
