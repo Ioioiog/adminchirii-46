@@ -96,7 +96,7 @@ export default function Documents() {
           handleGeneratePDF={() => {}}
           deleteContractMutation={{
             mutate: () => {},
-            isLoading: false,
+            isPending: false,
             isError: false,
             isSuccess: false,
             reset: () => {},
@@ -105,7 +105,6 @@ export default function Documents() {
             context: undefined,
             failureCount: 0,
             failureReason: null,
-            isPending: false,
             submittedAt: 0,
             variables: "",
             mutateAsync: async () => {}
