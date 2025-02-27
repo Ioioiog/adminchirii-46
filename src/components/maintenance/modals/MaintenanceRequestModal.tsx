@@ -37,48 +37,48 @@ export const MaintenanceRequestModal = ({
 }: MaintenanceRequestModalProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[800px] max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-[800px] h-[90vh] p-0 gap-0">
+        <DialogHeader className="p-6 pb-4">
           <DialogTitle className="text-xl font-semibold">
             {isNew ? "Create Maintenance Request" : "Maintenance Request Management"}
           </DialogTitle>
         </DialogHeader>
         
-        <div className="flex-1 min-h-0">
-          <Tabs defaultValue="details" className="w-full h-full flex flex-col">
-            <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger value="details" className="flex items-center gap-2">
-                <Info className="h-4 w-4" />
-                Details
-              </TabsTrigger>
-              {!isNew && (
-                <>
-                  <TabsTrigger value="progress" className="flex items-center gap-2">
-                    <ClipboardList className="h-4 w-4" />
-                    Progress
-                  </TabsTrigger>
-                  <TabsTrigger value="provider" className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Provider
-                  </TabsTrigger>
-                  <TabsTrigger value="costs" className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4" />
-                    Costs
-                  </TabsTrigger>
-                  <TabsTrigger value="documents" className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Documents
-                  </TabsTrigger>
-                  <TabsTrigger value="communication" className="flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4" />
-                    Chat
-                  </TabsTrigger>
-                </>
-              )}
-            </TabsList>
+        <ScrollArea className="flex-1 h-[calc(90vh-80px)] overflow-y-auto">
+          <div className="p-6 pt-0">
+            <Tabs defaultValue="details" className="w-full">
+              <TabsList className="grid w-full grid-cols-6 mb-6">
+                <TabsTrigger value="details" className="flex items-center gap-2">
+                  <Info className="h-4 w-4" />
+                  Details
+                </TabsTrigger>
+                {!isNew && (
+                  <>
+                    <TabsTrigger value="progress" className="flex items-center gap-2">
+                      <ClipboardList className="h-4 w-4" />
+                      Progress
+                    </TabsTrigger>
+                    <TabsTrigger value="provider" className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Provider
+                    </TabsTrigger>
+                    <TabsTrigger value="costs" className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4" />
+                      Costs
+                    </TabsTrigger>
+                    <TabsTrigger value="documents" className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Documents
+                    </TabsTrigger>
+                    <TabsTrigger value="communication" className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      Chat
+                    </TabsTrigger>
+                  </>
+                )}
+              </TabsList>
 
-            <ScrollArea className="flex-1 mt-6">
-              <div className="space-y-6 px-2">
+              <div className="space-y-6">
                 <TabsContent value="details">
                   <MaintenanceDetailsTab 
                     request={request}
@@ -127,9 +127,9 @@ export const MaintenanceRequestModal = ({
                   </>
                 )}
               </div>
-            </ScrollArea>
-          </Tabs>
-        </div>
+            </Tabs>
+          </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
