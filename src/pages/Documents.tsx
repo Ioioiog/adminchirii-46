@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Grid, List, Plus, FileText, CreditCard, Trash2 } from "lucide-react";
+import { Grid, List, Plus, FileText, CreditCard, Trash2, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { Button } from "@/components/ui/button";
@@ -394,19 +394,20 @@ function Documents() {
                   <TableHead>Status</TableHead>
                   <TableHead>Valid From</TableHead>
                   <TableHead>Valid Until</TableHead>
+                  <TableHead>Download</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoadingContracts ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-4">
+                    <TableCell colSpan={7} className="text-center py-4">
                       Loading documents...
                     </TableCell>
                   </TableRow>
                 ) : contracts?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-4">
+                    <TableCell colSpan={7} className="text-center py-4">
                       {userRole === 'tenant' 
                         ? 'No documents available for you yet'
                         : 'No documents found'}
@@ -444,6 +445,36 @@ function Documents() {
                         <TableCell>
                           {contract.valid_until ? format(new Date(contract.valid_until), 'MMM d, yyyy') : '-'}
                         </TableCell>
+                        <TableCell>
+                          {isDocument ? (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleDownloadDocument(contract.file_path)}
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Download
+                            </Button>
+                          ) : (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => {
+                                const printProps = {
+                                  queryClient,
+                                  metadata: contract.metadata,
+                                  contractId: contract.id,
+                                  contractNumber: contract.metadata?.contractNumber
+                                };
+                                const { handlePrint } = useContractPrint(printProps);
+                                handlePrint();
+                              }}
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              PDF
+                            </Button>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right space-x-2">
                           {isDocument ? (
                             <Button 
@@ -451,7 +482,7 @@ function Documents() {
                               size="sm" 
                               onClick={() => handleDownloadDocument(contract.file_path)}
                             >
-                              Download PDF
+                              View
                             </Button>
                           ) : (
                             <Button 
