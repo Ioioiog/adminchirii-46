@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DocumentCard } from "./DocumentCard";
@@ -34,7 +35,12 @@ export function DocumentList({
             name,
             address
           ),
-          tenant:profiles (
+          uploaded_by:profiles!documents_uploaded_by_fkey (
+            email,
+            first_name,
+            last_name
+          ),
+          tenant:profiles!documents_tenant_id_fkey (
             first_name,
             last_name,
             email
