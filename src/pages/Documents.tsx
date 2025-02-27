@@ -27,7 +27,7 @@ function Documents() {
   const [typeFilter, setTypeFilter] = useState<"all" | DocumentType>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
-  const [activeTab, setActiveTab] = useState("contracts");
+  const [activeTab, setActiveTab] = useState("documents");
   const [selectedContract, setSelectedContract] = useState(null);
   const [showContractDetails, setShowContractDetails] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -99,23 +99,40 @@ function Documents() {
     setDateRangeFilter({ startDate: null, endDate: null });
   };
 
-  // Filter contracts based on status and date
+  // Filter contracts based on all filters
   const filteredContracts = contracts.filter(contract => {
     // Status filter
     if (statusFilter !== "all" && contract.status !== statusFilter) {
       return false;
     }
 
+    // Property filter
+    if (propertyFilter !== "all" && contract.property_id !== propertyFilter) {
+      return false;
+    }
+
+    // Search term filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const contractName = contract.contract_type?.toLowerCase() || '';
+      const propertyName = contract.properties?.name?.toLowerCase() || '';
+      const tenantEmail = contract.tenant?.email?.toLowerCase() || '';
+      
+      if (!contractName.includes(searchLower) && 
+          !propertyName.includes(searchLower) && 
+          !tenantEmail.includes(searchLower)) {
+        return false;
+      }
+    }
+
     // Date range filter - start date
     if (dateRangeFilter.startDate) {
       const startDate = new Date(dateRangeFilter.startDate);
-      
-      // Check if contract is a LeaseDocument (which has created_at)
       const contractDate = 'valid_from' in contract && contract.valid_from 
         ? new Date(contract.valid_from) 
         : 'created_at' in contract && contract.created_at 
           ? new Date(contract.created_at)
-          : new Date(); // Fallback to current date if neither exists
+          : new Date();
       
       if (contractDate < startDate) {
         return false;
@@ -125,13 +142,11 @@ function Documents() {
     // Date range filter - end date
     if (dateRangeFilter.endDate) {
       const endDate = new Date(dateRangeFilter.endDate);
-      
-      // Check if contract is a LeaseDocument (which has created_at)
       const contractDate = 'valid_from' in contract && contract.valid_from 
         ? new Date(contract.valid_from) 
         : 'created_at' in contract && contract.created_at 
           ? new Date(contract.created_at)
-          : new Date(); // Fallback to current date if neither exists
+          : new Date();
       
       if (contractDate > endDate) {
         return false;
@@ -156,24 +171,28 @@ function Documents() {
   }];
 
   const renderSection = () => {
+    const sharedFilters = (
+      <DocumentFilters
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        typeFilter={typeFilter}
+        setTypeFilter={setTypeFilter}
+        propertyFilter={propertyFilter}
+        setPropertyFilter={setPropertyFilter}
+        properties={properties}
+        dateRangeFilter={dateRangeFilter}
+        setDateRangeFilter={setDateRangeFilter}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        resetFilters={resetFilters}
+      />
+    );
+
     switch (activeTab) {
       case 'documents':
         return (
           <div className="space-y-4">
-            <DocumentFilters
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              typeFilter={typeFilter}
-              setTypeFilter={setTypeFilter}
-              propertyFilter={propertyFilter}
-              setPropertyFilter={setPropertyFilter}
-              properties={properties}
-              dateRangeFilter={dateRangeFilter}
-              setDateRangeFilter={setDateRangeFilter}
-              statusFilter={statusFilter}
-              setStatusFilter={setStatusFilter}
-              resetFilters={resetFilters}
-            />
+            {sharedFilters}
             <DocumentList
               userId={userId}
               userRole={userRole}
@@ -186,21 +205,8 @@ function Documents() {
         );
       case 'contracts':
         return (
-          <>
-            <DocumentFilters
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              typeFilter={typeFilter}
-              setTypeFilter={setTypeFilter}
-              propertyFilter={propertyFilter}
-              setPropertyFilter={setPropertyFilter}
-              properties={properties}
-              dateRangeFilter={dateRangeFilter}
-              setDateRangeFilter={setDateRangeFilter}
-              statusFilter={statusFilter}
-              setStatusFilter={setStatusFilter}
-              resetFilters={resetFilters}
-            />
+          <div className="space-y-4">
+            {sharedFilters}
             <ContractsTable 
               contracts={filteredContracts}
               isLoading={isLoadingContracts}
@@ -209,7 +215,7 @@ function Documents() {
               handleGeneratePDF={handleGeneratePDF}
               deleteContractMutation={deleteContractMutation}
             />
-          </>
+          </div>
         );
       default:
         return null;
