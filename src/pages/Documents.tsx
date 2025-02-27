@@ -29,6 +29,11 @@ function Documents() {
   const [activeTab, setActiveTab] = useState("contracts");
   const [selectedContract, setSelectedContract] = useState(null);
   const [showContractDetails, setShowContractDetails] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateRangeFilter, setDateRangeFilter] = useState<{
+    startDate: string | null;
+    endDate: string | null;
+  }>({ startDate: null, endDate: null });
 
   // Fetch properties data
   const { data: properties } = useQuery({
@@ -85,6 +90,48 @@ function Documents() {
     checkUser();
   }, [navigate, toast]);
 
+  const resetFilters = () => {
+    setSearchTerm("");
+    setTypeFilter("all");
+    setPropertyFilter("all");
+    setStatusFilter("all");
+    setDateRangeFilter({ startDate: null, endDate: null });
+  };
+
+  // Filter contracts based on status and date
+  const filteredContracts = contracts.filter(contract => {
+    // Status filter
+    if (statusFilter !== "all" && contract.status !== statusFilter) {
+      return false;
+    }
+
+    // Date range filter - start date
+    if (dateRangeFilter.startDate) {
+      const startDate = new Date(dateRangeFilter.startDate);
+      const contractDate = contract.valid_from 
+        ? new Date(contract.valid_from) 
+        : new Date(contract.created_at);
+      
+      if (contractDate < startDate) {
+        return false;
+      }
+    }
+
+    // Date range filter - end date
+    if (dateRangeFilter.endDate) {
+      const endDate = new Date(dateRangeFilter.endDate);
+      const contractDate = contract.valid_from 
+        ? new Date(contract.valid_from) 
+        : new Date(contract.created_at);
+      
+      if (contractDate > endDate) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
   if (!userId || !userRole) return null;
 
   const navigationItems = [{
@@ -112,6 +159,11 @@ function Documents() {
               propertyFilter={propertyFilter}
               setPropertyFilter={setPropertyFilter}
               properties={properties}
+              dateRangeFilter={dateRangeFilter}
+              setDateRangeFilter={setDateRangeFilter}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              resetFilters={resetFilters}
             />
             <DocumentList
               userId={userId}
@@ -125,14 +177,30 @@ function Documents() {
         );
       case 'contracts':
         return (
-          <ContractsTable 
-            contracts={contracts}
-            isLoading={isLoadingContracts}
-            userRole={userRole}
-            handleDownloadDocument={handleDownloadDocument}
-            handleGeneratePDF={handleGeneratePDF}
-            deleteContractMutation={deleteContractMutation}
-          />
+          <>
+            <DocumentFilters
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              typeFilter={typeFilter}
+              setTypeFilter={setTypeFilter}
+              propertyFilter={propertyFilter}
+              setPropertyFilter={setPropertyFilter}
+              properties={properties}
+              dateRangeFilter={dateRangeFilter}
+              setDateRangeFilter={setDateRangeFilter}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              resetFilters={resetFilters}
+            />
+            <ContractsTable 
+              contracts={filteredContracts}
+              isLoading={isLoadingContracts}
+              userRole={userRole}
+              handleDownloadDocument={handleDownloadDocument}
+              handleGeneratePDF={handleGeneratePDF}
+              deleteContractMutation={deleteContractMutation}
+            />
+          </>
         );
       default:
         return null;
