@@ -40,21 +40,34 @@ export function DocumentActions({ document: doc, userRole, onDocumentUpdated }: 
         bucket: 'documents'
       });
 
+      // Get the folder path (excluding the filename)
+      const folderPath = cleanFilePath.split('/').slice(0, -1).join('/');
+      const fileName = cleanFilePath.split('/').pop();
+
       // First verify if the file exists
-      const { data: fileInfo, error: fileCheckError } = await supabase.storage
-        .from('documents')
-        .list(cleanFilePath.split('/').slice(0, -1).join('/'));
-      
-      if (fileCheckError) {
-        console.error("Error checking file existence:", fileCheckError);
-      } else {
-        const fileName = cleanFilePath.split('/').pop();
-        const fileExists = fileInfo.some(file => file.name === fileName);
+      let fileExists = false;
+      try {
+        const { data: fileInfo, error: fileCheckError } = await supabase.storage
+          .from('documents')
+          .list(folderPath);
         
-        if (!fileExists) {
-          console.error("File does not exist in storage:", cleanFilePath);
-          throw new Error("The document file could not be found in storage. It may have been moved or deleted.");
+        if (fileCheckError) {
+          console.error("Error checking file existence:", fileCheckError);
+          throw new Error("Unable to verify if file exists. Please try again later.");
+        } else {
+          fileExists = fileInfo.some(file => file.name === fileName);
+          
+          if (!fileExists) {
+            console.error("File does not exist in storage:", cleanFilePath);
+            throw new Error("The document file could not be found in storage. Please contact your landlord to re-upload the document.");
+          }
         }
+      } catch (error: any) {
+        // Handle specific storage errors
+        if (error.message.includes("The resource was not found")) {
+          throw new Error("The folder for this document doesn't exist in storage.");
+        }
+        throw error;
       }
 
       // Attempt to download using direct download method first
@@ -74,7 +87,7 @@ export function DocumentActions({ document: doc, userRole, onDocumentUpdated }: 
           const url = window.URL.createObjectURL(data);
           const a = document.createElement("a");
           a.href = url;
-          a.download = cleanFilePath.split('/').pop() || 'document';
+          a.download = fileName || 'document';
           document.body.appendChild(a);
           a.click();
           
@@ -122,7 +135,7 @@ export function DocumentActions({ document: doc, userRole, onDocumentUpdated }: 
       const signedUrl = window.URL.createObjectURL(signedBlob);
       const link = document.createElement("a");
       link.href = signedUrl;
-      link.download = cleanFilePath.split('/').pop() || 'document';
+      link.download = fileName || 'document';
       document.body.appendChild(link);
       link.click();
       
