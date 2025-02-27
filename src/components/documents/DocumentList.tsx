@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { generateContractPdf } from "@/utils/contractPdfGenerator";
+import { FormData } from "@/types/contract";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -81,7 +82,6 @@ interface ContractDocument {
   metadata?: {
     file_path?: string;
     contractNumber?: string;
-    document_id?: string;
     [key: string]: any;
   };
 }
@@ -335,8 +335,11 @@ export function DocumentList({
         throw new Error("No metadata available for this contract");
       }
 
+      // Cast metadata to FormData type for generateContractPdf
+      const formData = doc.metadata as unknown as FormData;
+      
       generateContractPdf({
-        metadata: doc.metadata,
+        metadata: formData,
         contractId: doc.id,
         contractNumber: doc.metadata.contractNumber || ''
       });
@@ -364,7 +367,10 @@ export function DocumentList({
       handleDownloadDocument(doc.file_path);
     } else if ('isContract' in doc) {
       if (doc.metadata && typeof doc.metadata === 'object' && 'file_path' in doc.metadata) {
-        handleDownloadDocument(doc.metadata.file_path);
+        const filePath = doc.metadata.file_path;
+        if (typeof filePath === 'string') {
+          handleDownloadDocument(filePath);
+        }
       } else {
         handleGeneratePDF(doc);
       }
@@ -390,6 +396,9 @@ export function DocumentList({
     }
     
     if ('isContract' in doc) {
+      if (doc.metadata && typeof doc.metadata === 'object' && 'file_path' in doc.metadata) {
+        return typeof doc.metadata.file_path === 'string';
+      }
       return true;
     }
     
