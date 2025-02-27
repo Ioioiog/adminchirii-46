@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Grid, List, Plus, FileText, CreditCard, Trash2, Download } from "lucide-react";
@@ -456,7 +457,13 @@ function Documents() {
                               variant="outline" 
                               size="sm" 
                               onClick={() => {
-                                handleGeneratePDF(contract);
+                                // Instead of generating PDF, directly download document if available
+                                if (contract.metadata && typeof contract.metadata === 'object' && 'file_path' in contract.metadata) {
+                                  handleDownloadDocument(contract.metadata.file_path as string);
+                                } else {
+                                  // Fallback to generating PDF if no file_path is available
+                                  handleGeneratePDF(contract);
+                                }
                               }}
                             >
                               <Download className="h-4 w-4 mr-2" />
