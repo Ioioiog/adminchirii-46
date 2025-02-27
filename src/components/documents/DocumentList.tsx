@@ -209,7 +209,7 @@ export function DocumentList({
   const isLoading = isLoadingDocuments || isLoadingContracts;
 
   const getMergedDocuments = () => {
-    const result = [...contracts];
+    const result: CombinedDocument[] = [...contracts];
     const documentIdsToSkip = new Set<string>();
     
     contracts.forEach(contract => {
