@@ -17,9 +17,9 @@ interface TenantInvitation {
   status: string;
   start_date: string;
   end_date: string | null;
-  properties?: Array<{
+  tenant_invitation_properties?: Array<{
     property_id: string;
-    property: {
+    properties: {
       name: string;
     }
   }>;
