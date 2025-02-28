@@ -19,17 +19,29 @@ interface Metrics {
   }>;
 }
 
-// Increased cache time to reduce API calls
-const METRICS_CACHE_TIME = 10 * 60 * 1000; // 10 minutes
+// Higher cache time to reduce API calls
+const METRICS_CACHE_TIME = 15 * 60 * 1000; // 15 minutes
+
+// Use a cache for expensive metrics calculations
+const metricsCache = new Map<string, { data: Metrics, timestamp: number }>();
 
 async function fetchServiceProviderMetrics(userId: string): Promise<Metrics> {
+  const cacheKey = `service_provider_${userId}`;
+  const cachedMetrics = metricsCache.get(cacheKey);
+  
+  // Return cached data if it's less than 5 minutes old
+  if (cachedMetrics && (Date.now() - cachedMetrics.timestamp < 5 * 60 * 1000)) {
+    console.log("Using cached service provider metrics for user:", userId);
+    return cachedMetrics.data;
+  }
+  
   console.log("Fetching service provider metrics for user:", userId);
   
   const currentDate = new Date();
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
   const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
   
-  // Optimize by using a single query with count() and combining related queries
+  // Optimize by using a single query with specific select fields
   const { data, error } = await supabase
     .from("maintenance_requests")
     .select(`
@@ -61,46 +73,52 @@ async function fetchServiceProviderMetrics(userId: string): Promise<Metrics> {
     )
     .reduce((sum, job) => sum + (job.service_provider_fee || 0), 0) || 0;
 
-  return {
+  const metrics = {
     activeJobs,
     completedJobs,
     monthlyEarnings,
     pendingMaintenance: 0 // Required by type but not used for service providers
   };
+  
+  // Cache the results
+  metricsCache.set(cacheKey, { data: metrics, timestamp: Date.now() });
+  
+  return metrics;
 }
 
 async function fetchLandlordMetrics(userId: string): Promise<Metrics> {
+  const cacheKey = `landlord_${userId}`;
+  const cachedMetrics = metricsCache.get(cacheKey);
+  
+  // Return cached data if it's less than 5 minutes old
+  if (cachedMetrics && (Date.now() - cachedMetrics.timestamp < 5 * 60 * 1000)) {
+    console.log("Using cached landlord metrics for user:", userId);
+    return cachedMetrics.data;
+  }
+  
   console.log("Fetching landlord metrics for user:", userId);
   
   // Use a more efficient approach with fewer queries
   const currentDate = new Date();
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
   
-  // Get properties with active tenancies in a single query with proper joins
-  const { data: propertiesWithTenancies, error: propsError } = await supabase
+  // Get properties with active tenancies in a single query
+  const { data: propertiesData, error: propsError } = await supabase
     .from("properties")
     .select(`
       id,
       name,
-      monthly_rent,
-      tenancies!inner(
-        id,
-        status,
-        start_date,
-        end_date,
-        tenant_id
-      )
+      monthly_rent
     `)
-    .eq("landlord_id", userId)
-    .eq("tenancies.status", "active");
+    .eq("landlord_id", userId);
 
   if (propsError) {
     console.error("Error fetching properties:", propsError);
     throw propsError;
   }
 
-  if (!propertiesWithTenancies?.length) {
-    console.log("No properties with active tenancies found for landlord");
+  if (!propertiesData?.length) {
+    console.log("No properties found for landlord");
     return {
       totalProperties: 0,
       monthlyRevenue: 0,
@@ -110,27 +128,74 @@ async function fetchLandlordMetrics(userId: string): Promise<Metrics> {
     };
   }
 
+  // Get all property IDs 
+  const propertyIds = propertiesData.map(p => p.id);
+  
+  // Get active tenancies for these properties in a single query
+  const { data: tenanciesData, error: tenanciesError } = await supabase
+    .from("tenancies")
+    .select(`
+      id, 
+      property_id,
+      status
+    `)
+    .in("property_id", propertyIds)
+    .eq("status", "active");
+    
+  if (tenanciesError) {
+    console.error("Error fetching tenancies:", tenanciesError);
+    throw tenanciesError;
+  }
+
   // Get maintenance counts in a single query
-  const propertyIds = propertiesWithTenancies.map(p => p.id);
-  const { count: maintenanceCount } = await supabase
+  const { count: maintenanceCount, error: maintenanceError } = await supabase
     .from("maintenance_requests")
     .select("id", { count: "exact" })
     .eq("status", "pending")
     .in("property_id", propertyIds);
+    
+  if (maintenanceError) {
+    console.error("Error fetching maintenance:", maintenanceError);
+    throw maintenanceError;
+  }
 
-  // Get all payments for this month in a single query
-  const { data: payments } = await supabase
-    .from("payments")
-    .select(`
-      status,
-      tenancy_id
-    `)
-    .in("tenancy_id", propertiesWithTenancies.map(p => p.tenancies[0].id))
-    .gte("due_date", firstDayOfMonth);
+  // Get all active tenancy IDs
+  const activeTenancyIds = tenanciesData?.map(t => t.id) || [];
+  
+  // Get payments for this month in a single query (only if we have active tenancies)
+  let paymentsData = [];
+  if (activeTenancyIds.length > 0) {
+    const { data: payments, error: paymentsError } = await supabase
+      .from("payments")
+      .select(`
+        status,
+        tenancy_id,
+        amount,
+        due_date
+      `)
+      .in("tenancy_id", activeTenancyIds)
+      .gte("due_date", firstDayOfMonth);
+      
+    if (paymentsError) {
+      console.error("Error fetching payments:", paymentsError);
+      throw paymentsError;
+    }
+    
+    paymentsData = payments || [];
+  }
+
+  // Create a map of property_id to property for faster lookups
+  const propertyMap = new Map(propertiesData.map(p => [p.id, p]));
+  
+  // Create a map of active tenancies by property_id
+  const tenanciesByProperty = new Map();
+  tenanciesData?.forEach(tenancy => {
+    tenanciesByProperty.set(tenancy.property_id, tenancy);
+  });
 
   // Calculate totals and build response
+  const activeTenanciesCount = tenanciesData?.length || 0;
   let totalMonthlyRevenue = 0;
-  let activeTenanciesCount = 0;
   const revenueDetails: Array<{
     property_name: string;
     amount: number;
@@ -138,30 +203,50 @@ async function fetchLandlordMetrics(userId: string): Promise<Metrics> {
     status: string;
   }> = [];
 
-  for (const property of propertiesWithTenancies) {
-    totalMonthlyRevenue += Number(property.monthly_rent);
-    activeTenanciesCount++;
+  // Process revenue details
+  propertyIds.forEach(propertyId => {
+    const property = propertyMap.get(propertyId);
+    const tenancy = tenanciesByProperty.get(propertyId);
+    
+    if (property && tenancy) {
+      totalMonthlyRevenue += Number(property.monthly_rent);
+      
+      // Find payment for this tenancy
+      const payment = paymentsData.find(p => p.tenancy_id === tenancy.id);
+      
+      revenueDetails.push({
+        property_name: property.name,
+        amount: Number(property.monthly_rent),
+        due_date: payment?.due_date || firstDayOfMonth,
+        status: payment?.status || "pending"
+      });
+    }
+  });
 
-    const payment = payments?.find(p => p.tenancy_id === property.tenancies[0].id);
-
-    revenueDetails.push({
-      property_name: property.name,
-      amount: Number(property.monthly_rent),
-      due_date: firstDayOfMonth,
-      status: payment?.status || "pending"
-    });
-  }
-
-  return {
-    totalProperties: propertiesWithTenancies.length,
+  const metrics = {
+    totalProperties: propertiesData.length,
     monthlyRevenue: totalMonthlyRevenue,
     activeTenants: activeTenanciesCount,
     pendingMaintenance: maintenanceCount || 0,
     revenueDetails: revenueDetails
   };
+  
+  // Cache the results
+  metricsCache.set(cacheKey, { data: metrics, timestamp: Date.now() });
+  
+  return metrics;
 }
 
 async function fetchTenantMetrics(userId: string): Promise<Metrics> {
+  const cacheKey = `tenant_${userId}`;
+  const cachedMetrics = metricsCache.get(cacheKey);
+  
+  // Return cached data if it's less than 5 minutes old
+  if (cachedMetrics && (Date.now() - cachedMetrics.timestamp < 5 * 60 * 1000)) {
+    console.log("Using cached tenant metrics for user:", userId);
+    return cachedMetrics.data;
+  }
+  
   console.log("Fetching tenant metrics for user:", userId);
   
   if (!userId) return { pendingMaintenance: 0 };
@@ -248,12 +333,17 @@ async function fetchTenantMetrics(userId: string): Promise<Metrics> {
     });
   }
 
-  return {
+  const metrics = {
     totalProperties: propertiesCount,
     pendingMaintenance: maintenanceCount || 0,
     paymentStatus: latestPaymentData?.[0]?.status || "No payments",
     revenueDetails
   };
+  
+  // Cache the results
+  metricsCache.set(cacheKey, { data: metrics, timestamp: Date.now() });
+  
+  return metrics;
 }
 
 export function useMetrics(userId: string, userRole: "landlord" | "tenant" | "service_provider") {
@@ -278,5 +368,6 @@ export function useMetrics(userId: string, userRole: "landlord" | "tenant" | "se
     },
     staleTime: METRICS_CACHE_TIME,
     gcTime: METRICS_CACHE_TIME,
+    enabled: !!userId && !!userRole,
   });
 }
