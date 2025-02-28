@@ -9,6 +9,14 @@ import { useUserRole } from "@/hooks/use-user-role";
 import { useCurrency } from "@/hooks/useCurrency";
 import { supabase } from "@/integrations/supabase/client";
 import { endOfMonth, startOfMonth, format } from "date-fns";
+import { useProperties } from "@/hooks/useProperties";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface CalculationResult {
   rentTotal: number;
@@ -26,6 +34,15 @@ export function CostCalculator() {
   const [isLoading, setIsLoading] = useState(false);
   const { userRole, userId } = useUserRole();
   const { formatAmount } = useCurrency();
+  const { properties } = useProperties({ userRole: userRole || 'tenant' });
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string | undefined>(undefined);
+
+  // Set the first property as default when properties are loaded
+  useEffect(() => {
+    if (properties.length > 0 && !selectedPropertyId) {
+      setSelectedPropertyId(properties[0].id);
+    }
+  }, [properties, selectedPropertyId]);
 
   const calculateCosts = async () => {
     if (!dateRange?.from || !dateRange?.to || !userId) return;
@@ -38,9 +55,14 @@ export function CostCalculator() {
       const displayPeriod = `${format(dateRange.from, 'PP')} to ${format(dateRange.to, 'PP')}`;
 
       // Query parameters based on user role
-      const queryParams = userRole === 'landlord' 
+      let queryParams: any = userRole === 'landlord' 
         ? { landlord_id: userId }
         : { tenant_id: userId };
+
+      // Add property filter if a property is selected
+      if (selectedPropertyId) {
+        queryParams.property_id = selectedPropertyId;
+      }
 
       // Get rent information from properties and tenancies
       let rentTotal = 0;
@@ -56,6 +78,7 @@ export function CostCalculator() {
           `)
           .eq('tenant_id', userId)
           .eq('status', 'active')
+          .eq('property_id', selectedPropertyId)
           .maybeSingle();
 
         if (tenancy?.properties?.monthly_rent) {
@@ -65,7 +88,7 @@ export function CostCalculator() {
           rentTotal = days <= 31 ? (monthlyRent / 30) * days : monthlyRent;
         }
       } else if (userRole === 'landlord') {
-        // For landlords, sum up all active tenancies' rents
+        // For landlords, sum up all active tenancies' rents for the selected property
         const { data: properties } = await supabase
           .from('properties')
           .select(`
@@ -76,7 +99,8 @@ export function CostCalculator() {
               status
             )
           `)
-          .eq('landlord_id', userId);
+          .eq('landlord_id', userId)
+          .eq(selectedPropertyId ? 'id' : 'id', selectedPropertyId || undefined);
 
         if (properties) {
           for (const property of properties) {
@@ -128,15 +152,45 @@ export function CostCalculator() {
         <div className="space-y-4">
           <div>
             <p className="text-sm text-muted-foreground mb-2">
-              Select a date range to calculate your total expenses (rent + utilities)
+              Select a property and date range to calculate your total expenses (rent + utilities)
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
-              <div className="w-full sm:w-auto">
-                <DatePickerWithRange date={dateRange} setDate={setDateRange} />
+            <div className="flex flex-col gap-4">
+              {/* Property Selection */}
+              <div className="w-full">
+                <Select
+                  value={selectedPropertyId}
+                  onValueChange={(value) => setSelectedPropertyId(value)}
+                  disabled={properties.length === 0}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a property" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {properties.map((property) => (
+                      <SelectItem key={property.id} value={property.id}>
+                        {property.name}
+                      </SelectItem>
+                    ))}
+                    {properties.length === 0 && (
+                      <SelectItem value="no-property" disabled>
+                        No properties available
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
-              <Button onClick={calculateCosts} disabled={isLoading || !dateRange?.from || !dateRange?.to}>
-                {isLoading ? "Calculating..." : "Calculate"}
-              </Button>
+              
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
+                <div className="w-full sm:w-auto">
+                  <DatePickerWithRange date={dateRange} setDate={setDateRange} />
+                </div>
+                <Button 
+                  onClick={calculateCosts} 
+                  disabled={isLoading || !dateRange?.from || !dateRange?.to || !selectedPropertyId}
+                >
+                  {isLoading ? "Calculating..." : "Calculate"}
+                </Button>
+              </div>
             </div>
           </div>
 
