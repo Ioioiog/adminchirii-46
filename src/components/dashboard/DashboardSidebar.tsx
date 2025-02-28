@@ -26,6 +26,11 @@ export const DashboardSidebar = () => {
     markAsRead(type);
   };
 
+  const handleDashboardClick = () => {
+    console.log("Navigating to dashboard");
+    navigate("/dashboard");
+  };
+
   return (
     <Collapsible
       defaultOpen={true}
@@ -66,8 +71,6 @@ export const DashboardSidebar = () => {
               ? notifications?.find(n => n.type === item.notificationType)?.count || 0
               : 0;
               
-            console.log(`Menu item ${item.title}, href: ${item.href}, active: ${isActive(item.href)}`);
-            
             return (
               <SidebarMenuItem
                 key={item.href}
