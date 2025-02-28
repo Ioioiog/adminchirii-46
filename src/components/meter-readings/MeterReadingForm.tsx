@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 const formSchema = z.object({
   property_id: z.string().min(1, "Property is required"),
-  reading_type: z.enum(["electricity", "water", "gas"], {
+  reading_type: z.enum(["electricity", "water", "gas", "internet", "building maintenance"], {
     required_error: "Meter type is required",
   }),
   reading_value: z.number().min(0, "Reading value must be positive"),
@@ -45,7 +46,7 @@ interface MeterReadingFormProps {
   initialData?: {
     id: string;
     property_id: string;
-    reading_type: 'electricity' | 'water' | 'gas';
+    reading_type: 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
     reading_value: number;
     reading_date: string;
     notes?: string;
@@ -225,7 +226,10 @@ export function MeterReadingForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Meter Type</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select 
+                onValueChange={(value: "electricity" | "water" | "gas" | "internet" | "building maintenance") => field.onChange(value)} 
+                defaultValue={field.value}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select meter type" />
@@ -235,6 +239,8 @@ export function MeterReadingForm({
                   <SelectItem value="electricity">Electricity</SelectItem>
                   <SelectItem value="water">Water</SelectItem>
                   <SelectItem value="gas">Gas</SelectItem>
+                  <SelectItem value="internet">Internet</SelectItem>
+                  <SelectItem value="building maintenance">Building Maintenance</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
