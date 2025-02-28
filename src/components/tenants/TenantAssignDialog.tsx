@@ -1,39 +1,19 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Property } from "@/utils/propertyUtils";
-import { TenantAssignForm } from "./TenantAssignForm";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import { FileText } from "lucide-react";
 
 interface TenantAssignDialogProps {
   properties: Property[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onClose?: () => void; // Made optional to maintain backward compatibility
+  onClose?: () => void;
 }
 
 export function TenantAssignDialog({ properties, open, onOpenChange, onClose }: TenantAssignDialogProps) {
-  const { data: availableTenants = [], isLoading, error } = useQuery({
-    queryKey: ["available-tenants"],
-    queryFn: async () => {
-      try {
-        // Fetch tenants with role = tenant
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("role", "tenant");
-
-        if (error) throw error;
-        
-        console.log("Available tenants:", data);
-        return data || [];
-      } catch (e) {
-        console.error("Error fetching available tenants:", e);
-        throw e;
-      }
-    },
-    enabled: open, // Only run query when dialog is open
-  });
+  const navigate = useNavigate();
 
   const handleOpenChange = (newOpen: boolean) => {
     onOpenChange(newOpen);
@@ -42,27 +22,46 @@ export function TenantAssignDialog({ properties, open, onOpenChange, onClose }: 
     }
   };
 
+  const handleCreateContract = () => {
+    handleOpenChange(false);
+    navigate("/documents", { state: { activeTab: "contracts" } });
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Assign Existing Tenant</DialogTitle>
+          <DialogTitle>Add Tenant Through Contract</DialogTitle>
           <DialogDescription>
-            Select a tenant and assign them to a property. This will create a new tenancy record.
+            Tenants can only be added by creating a contract. This ensures proper documentation and legal compliance.
           </DialogDescription>
         </DialogHeader>
-        {error ? (
-          <div className="text-red-500 p-4 border border-red-200 rounded-md bg-red-50">
-            Error loading tenants. Please try again later.
+        
+        <div className="space-y-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-md p-4 text-amber-700">
+            <p className="text-sm">
+              Direct tenant assignment has been disabled. Tenants can now only be added by creating and signing a contract.
+            </p>
           </div>
-        ) : (
-          <TenantAssignForm 
-            properties={properties} 
-            availableTenants={availableTenants}
-            onClose={() => handleOpenChange(false)}
-            isLoading={isLoading}
-          />
-        )}
+          
+          <div className="flex flex-col gap-3">
+            <Button 
+              onClick={handleCreateContract}
+              className="w-full flex items-center justify-center gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              Go to Contracts
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              onClick={() => handleOpenChange(false)}
+              className="w-full"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -21,11 +21,11 @@ import {
 } from "@/components/ui/select";
 import { ProfileSchema } from "@/integrations/supabase/database-types/profile";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, FileText } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useNavigate } from "react-router-dom";
 
 const formSchema = z.object({
   propertyId: z.string().min(1, "Property is required"),
@@ -45,13 +45,13 @@ export interface TenantAssignFormProps {
 export function TenantAssignForm({
   properties,
   availableTenants,
-  onSubmit,
   isLoading = false,
   onClose,
 }: TenantAssignFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -63,183 +63,36 @@ export function TenantAssignForm({
     },
   });
 
-  const handleSubmit = async (data: z.infer<typeof formSchema>) => {
-    try {
-      setError(null);
-      
-      // Get the current authenticated user
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("You must be logged in to assign tenants");
-      }
-      
-      // First check if this property belongs to the current landlord
-      const { data: propertyData, error: propertyError } = await supabase
-        .from("properties")
-        .select("landlord_id")
-        .eq("id", data.propertyId)
-        .single();
-      
-      if (propertyError) {
-        throw propertyError;
-      }
-      
-      if (propertyData.landlord_id !== session.user.id) {
-        throw new Error("You don't have permission to assign tenants to this property");
-      }
-      
-      // Check if tenant is already assigned to this property
-      const { data: existingTenancy, error: tenancyError } = await supabase
-        .from("tenancies")
-        .select("id")
-        .eq("property_id", data.propertyId)
-        .eq("tenant_id", data.tenantId)
-        .eq("status", "active")
-        .maybeSingle();
-        
-      if (tenancyError) {
-        console.error("Error checking existing tenancy:", tenancyError);
-      }
-      
-      if (existingTenancy) {
-        throw new Error("This tenant is already assigned to this property");
-      }
-      
-      // Create the tenancy with a service role if possible, otherwise try direct insertion
-      const { error: insertError } = await supabase
-        .from("tenancies")
-        .insert({
-          property_id: data.propertyId,
-          tenant_id: data.tenantId,
-          start_date: data.startDate,
-          end_date: data.endDate || null,
-          status: "active",
-        });
-
-      if (insertError) {
-        console.error("Error creating tenancy:", insertError);
-        throw new Error(insertError.message || "Failed to assign tenant");
-      }
-
-      toast({
-        title: "Success",
-        description: "Tenant assigned successfully",
-      });
-
-      queryClient.invalidateQueries({ queryKey: ["tenants"] });
-      onClose();
-    } catch (error: any) {
-      console.error("Error assigning tenant:", error);
-      setError(error.message || "Failed to assign tenant");
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to assign tenant",
-      });
-    }
+  const handleCreateContract = () => {
+    onClose();
+    navigate("/documents", { state: { activeTab: "contracts" } });
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        
-        <FormField
-          control={form.control}
-          name="propertyId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Property</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a property" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {properties.map((property) => (
-                    <SelectItem key={property.id} value={property.id}>
-                      {property.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="tenantId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Tenant</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a tenant" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {availableTenants.map((tenant) => (
-                    <SelectItem key={tenant.id} value={tenant.id}>
-                      {tenant.first_name} {tenant.last_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="startDate"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Start Date</FormLabel>
-              <FormControl>
-                <input
-                  type="date"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="endDate"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>End Date (Optional)</FormLabel>
-              <FormControl>
-                <input
-                  type="date"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <Button type="submit" disabled={isLoading} className="w-full">
-          {isLoading ? "Assigning..." : "Assign Tenant"}
-        </Button>
-      </form>
-    </Form>
+    <div className="space-y-4">
+      <Alert variant="warning" className="bg-amber-50 border-amber-200">
+        <AlertCircle className="h-4 w-4 text-amber-700" />
+        <AlertTitle className="text-amber-700">Feature Disabled</AlertTitle>
+        <AlertDescription className="text-amber-700">
+          Direct tenant assignment has been disabled. Tenants can now only be added by creating and signing a contract.
+        </AlertDescription>
+      </Alert>
+      
+      <Button 
+        onClick={handleCreateContract}
+        className="w-full flex items-center justify-center gap-2"
+      >
+        <FileText className="h-4 w-4" />
+        Go to Contracts
+      </Button>
+      
+      <Button 
+        variant="outline" 
+        onClick={onClose}
+        className="w-full"
+      >
+        Cancel
+      </Button>
+    </div>
   );
 }
