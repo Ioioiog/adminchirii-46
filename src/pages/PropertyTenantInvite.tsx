@@ -98,6 +98,9 @@ const PropertyTenantInvite = () => {
         throw new Error("You must be logged in to invite tenants.");
       }
 
+      // Generate a unique token for the invitation
+      const token = crypto.randomUUID();
+
       // Create the tenant invitation
       const { data: invitation, error: invitationError } = await supabase
         .from("tenant_invitations")
@@ -105,10 +108,11 @@ const PropertyTenantInvite = () => {
           email: data.email,
           first_name: data.firstName,
           last_name: data.lastName,
-          landlord_id: session.user.id,
-          status: "pending",
           start_date: data.startDate,
           end_date: data.endDate || null,
+          status: "pending",
+          token: token,
+          used: false
         })
         .select("id")
         .single();
