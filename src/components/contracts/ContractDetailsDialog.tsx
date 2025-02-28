@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ContractTerminationForm } from "./ContractTerminationForm";
 import { useState } from "react";
+import { ScrollableContractContent } from "@/components/contract/ScrollableContractContent"; 
 
 interface ContractDetailsDialogProps {
   open: boolean;
@@ -115,7 +116,7 @@ export function ContractDetailsDialog({ open, onOpenChange, contract }: Contract
               )}
             </DialogHeader>
 
-            <div className="space-y-6 print:space-y-6">
+            <div className="space-y-6 print:space-y-6 max-h-[60vh] overflow-y-auto pr-2">
               <Card>
                 <CardHeader>
                   <CardTitle>Contract Information</CardTitle>
