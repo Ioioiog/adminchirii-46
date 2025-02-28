@@ -158,77 +158,90 @@ function ContractDetailsContent() {
       
       console.log('User profile:', userProfile);
       
-      const [contractResponse, signaturesResponse] = await Promise.all([
-        supabase
+      try {
+        // Wrap this in a try/catch to handle contract not found errors gracefully
+        const contractResponse = await supabase
           .from('contracts')
           .select('*, properties(name)')
           .eq('id', id)
-          .maybeSingle(),
-        supabase
+          .maybeSingle();
+
+        if (contractResponse.error) {
+          console.error('Contract fetch error:', contractResponse.error);
+          throw contractResponse.error;
+        }
+        
+        if (!contractResponse.data) {
+          console.error('Contract not found for ID:', id);
+          // Redirect to documents if contract not found
+          navigate('/documents', { 
+            replace: true,
+            state: { 
+              error: 'Contract not found or has been deleted. Please contact your landlord.'
+            }
+          });
+          throw new Error('Contract not found');
+        }
+
+        // Fetch signatures in parallel
+        const signaturesResponse = await supabase
           .from('contract_signatures')
           .select('*')
-          .eq('contract_id', id)
-      ]);
+          .eq('contract_id', id);
 
-      if (contractResponse.error) {
-        console.error('Contract fetch error:', contractResponse.error);
-        throw contractResponse.error;
+        const hasPermission = 
+          contractResponse.data.tenant_id === session.user.id || 
+          contractResponse.data.landlord_id === session.user.id ||
+          (contractResponse.data.status === 'pending_signature' && 
+          contractResponse.data.invitation_email === userProfile?.email);
+
+        console.log('Permission check:', {
+          userId: session.user.id,
+          tenantId: contractResponse.data.tenant_id,
+          landlordId: contractResponse.data.landlord_id,
+          hasPermission,
+          status: contractResponse.data.status,
+          invitationEmail: contractResponse.data.invitation_email,
+          userEmail: userProfile?.email
+        });
+
+        if (!hasPermission) {
+          throw new Error('You do not have permission to view this contract');
+        }
+
+        const metadata = contractResponse.data.metadata as unknown as { [key: string]: string | Asset[] };
+        const signatures = signaturesResponse.data || [];
+        
+        const tenantSignature = signatures.find(s => s.signer_role === 'tenant');
+        const ownerSignature = signatures.find(s => s.signer_role === 'landlord');
+
+        const typedMetadata: FormData = {
+          ...defaultFormData,
+          ...(metadata as any),
+          tenantSignatureName: tenantSignature?.signature_data || metadata.tenantSignatureName || '',
+          tenantSignatureImage: tenantSignature?.signature_image || metadata.tenantSignatureImage || '',
+          tenantSignatureDate: tenantSignature?.signed_at?.split('T')[0] || metadata.tenantSignatureDate || '',
+          ownerSignatureName: ownerSignature?.signature_data || metadata.ownerSignatureName || '',
+          ownerSignatureImage: ownerSignature?.signature_image || metadata.ownerSignatureImage || '',
+          ownerSignatureDate: ownerSignature?.signed_at?.split('T')[0] || metadata.ownerSignatureDate || ''
+        };
+        
+        console.log('Mapped signatures:', { 
+          tenantSignature, 
+          ownerSignature,
+          typedMetadata
+        });
+        
+        setFormData(typedMetadata);
+
+        return {
+          ...contractResponse.data,
+          metadata: typedMetadata,
+        } as Contract;
+      } catch (error) {
+        console.error('Failed to fetch contract:', error);
+        throw error;
       }
-      
-      if (!contractResponse.data) {
-        console.error('Contract not found:', { id });
-        throw new Error('Contract not found');
-      }
-
-      const hasPermission = 
-        contractResponse.data.tenant_id === session.user.id || 
-        contractResponse.data.landlord_id === session.user.id ||
-        (contractResponse.data.status === 'pending_signature' && 
-         contractResponse.data.invitation_email === userProfile?.email);
-
-      console.log('Permission check:', {
-        userId: session.user.id,
-        tenantId: contractResponse.data.tenant_id,
-        landlordId: contractResponse.data.landlord_id,
-        hasPermission,
-        status: contractResponse.data.status,
-        invitationEmail: contractResponse.data.invitation_email,
-        userEmail: userProfile?.email
-      });
-
-      if (!hasPermission) {
-        throw new Error('You do not have permission to view this contract');
-      }
-
-      const metadata = contractResponse.data.metadata as unknown as { [key: string]: string | Asset[] };
-      const signatures = signaturesResponse.data || [];
-      
-      const tenantSignature = signatures.find(s => s.signer_role === 'tenant');
-      const ownerSignature = signatures.find(s => s.signer_role === 'landlord');
-
-      const typedMetadata: FormData = {
-        ...defaultFormData,
-        ...(metadata as any),
-        tenantSignatureName: tenantSignature?.signature_data || metadata.tenantSignatureName || '',
-        tenantSignatureImage: tenantSignature?.signature_image || metadata.tenantSignatureImage || '',
-        tenantSignatureDate: tenantSignature?.signed_at?.split('T')[0] || metadata.tenantSignatureDate || '',
-        ownerSignatureName: ownerSignature?.signature_data || metadata.ownerSignatureName || '',
-        ownerSignatureImage: ownerSignature?.signature_image || metadata.ownerSignatureImage || '',
-        ownerSignatureDate: ownerSignature?.signed_at?.split('T')[0] || metadata.ownerSignatureDate || ''
-      };
-      
-      console.log('Mapped signatures:', { 
-        tenantSignature, 
-        ownerSignature,
-        typedMetadata
-      });
-      
-      setFormData(typedMetadata);
-
-      return {
-        ...contractResponse.data,
-        metadata: typedMetadata,
-      } as Contract;
     },
     enabled: !isAuthChecking,
     retry: false
