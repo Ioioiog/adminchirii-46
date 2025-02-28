@@ -60,10 +60,10 @@ export function DocumentPageHeader({
           {activeTab === "contracts" && (
             <Button 
               className="bg-purple-600 hover:bg-purple-700" 
-              onClick={onUploadLeaseClick || onUploadClick}
+              onClick={handleCreateContractClick}
             >
               <FileSignature className="h-4 w-4 mr-2" />
-              Upload Lease Agreement
+              Lease Agreement
             </Button>
           )}
           
