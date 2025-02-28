@@ -152,6 +152,27 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
     }
   };
 
+  // Sort utilities by issued_date (newest first)
+  // Fallback to created_at or due_date if issued_date is not available
+  const sortedUtilities = [...utilities].sort((a, b) => {
+    // First check if both have issued_date
+    if (a.issued_date && b.issued_date) {
+      return new Date(b.issued_date).getTime() - new Date(a.issued_date).getTime();
+    }
+    
+    // If one has issued_date and the other doesn't, prioritize the one with issued_date
+    if (a.issued_date && !b.issued_date) return -1;
+    if (!a.issued_date && b.issued_date) return 1;
+    
+    // If neither have issued_date, try created_at
+    if (a.created_at && b.created_at) {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
+    
+    // Last resort: sort by due_date
+    return new Date(b.due_date).getTime() - new Date(a.due_date).getTime();
+  });
+
   if (!Array.isArray(utilities)) {
     console.error("Utilities prop is not an array:", utilities);
     return (
@@ -177,7 +198,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
           </TableRow>
         </TableHeader>
         <TableBody>
-          {utilities.map((utility) => (
+          {sortedUtilities.map((utility) => (
             <TableRow key={utility.id}>
               <TableCell>
                 <div>
