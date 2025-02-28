@@ -2093,6 +2093,7 @@ export type Database = {
           invoice_number: string | null
           issued_date: string | null
           property_id: string
+          property_name: string | null
           status: string
           type: string
           updated_at: string
@@ -2107,6 +2108,7 @@ export type Database = {
           invoice_number?: string | null
           issued_date?: string | null
           property_id: string
+          property_name?: string | null
           status?: string
           type: string
           updated_at?: string
@@ -2121,6 +2123,7 @@ export type Database = {
           invoice_number?: string | null
           issued_date?: string | null
           property_id?: string
+          property_name?: string | null
           status?: string
           type?: string
           updated_at?: string

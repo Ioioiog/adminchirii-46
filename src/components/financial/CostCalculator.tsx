@@ -99,7 +99,7 @@ export function CostCalculator() {
         .lte('due_date', endDate)
         .match(queryParams);
 
-      const utilitiesTotal = utilities?.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0) || 0;
+      const utilitiesTotal = utilities?.reduce((sum, item) => sum + (parseFloat(item.amount.toString()) || 0), 0) || 0;
 
       // Set the results
       setResults({
