@@ -35,7 +35,7 @@ export function DocumentPageHeader({
             <FileText className="h-6 w-6 text-white" />
           </div>
           <h1 className="text-2xl font-semibold">
-            {activeTab === 'contracts' ? 'Contracts' : 'Documents'}
+            {activeTab === 'contracts' ? 'Contracts' : 'Property documents'}
           </h1>
         </div>
         <p className="text-gray-500">
