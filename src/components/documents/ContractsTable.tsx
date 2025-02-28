@@ -35,6 +35,7 @@ import { useNavigate } from "react-router-dom";
 import { ContractStatus } from "@/types/contract";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ContractDetailsDialog } from "@/components/contracts/ContractDetailsDialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface ContractsTableProps {
   contracts: ContractOrDocument[];
@@ -64,21 +65,50 @@ export function ContractsTable({
   handleTerminationSuccess
 }: ContractsTableProps) {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [documentToDelete, setDocumentToDelete] = useState<ContractOrDocument | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showContractDetailsDialog, setShowContractDetailsDialog] = useState(false);
   const [selectedContract, setSelectedContract] = useState<ContractOrDocument | null>(null);
 
+  // Debug log to check if the function is properly received
+  console.log("prepareContractTermination is a function:", typeof prepareContractTermination === 'function');
+  console.log("Props received:", { prepareContractTermination, contractToTerminate, showTerminationDialog });
+
   const confirmDelete = () => {
+    console.log("confirmDelete called with document:", documentToDelete);
+    
     if (documentToDelete) {
-      // Instead of deleting, prepare for termination
-      prepareContractTermination(documentToDelete);
+      try {
+        // Check if the function exists before calling it
+        if (typeof prepareContractTermination === 'function') {
+          console.log("Calling prepareContractTermination");
+          prepareContractTermination(documentToDelete);
+        } else {
+          // Fallback to direct deletion if termination function is not available
+          console.error("prepareContractTermination is not a function, falling back to direct deletion");
+          toast({
+            title: "Warning",
+            description: "Contract termination form is not available. Proceeding with direct deletion.",
+            variant: "destructive"
+          });
+          deleteContractMutation.mutate(documentToDelete.id);
+        }
+      } catch (error) {
+        console.error("Error in confirmDelete:", error);
+        toast({
+          title: "Error",
+          description: "Failed to process contract termination.",
+          variant: "destructive"
+        });
+      }
     }
     setShowDeleteDialog(false);
     setDocumentToDelete(null);
   };
 
   const handleCancelContract = (contract: ContractOrDocument) => {
+    console.log("handleCancelContract called with contract:", contract);
     setSelectedContract(contract);
     setShowContractDetailsDialog(true);
   };
@@ -303,15 +333,27 @@ export function ContractsTable({
         open={showContractDetailsDialog} 
         onOpenChange={setShowContractDetailsDialog}
         contract={selectedContract as any}
+        onSuccess={() => {
+          setShowContractDetailsDialog(false);
+          if (handleTerminationSuccess) {
+            handleTerminationSuccess();
+          }
+        }}
       />
 
       {/* Contract termination dialog */}
-      <ContractDetailsDialog 
-        open={showTerminationDialog} 
-        onOpenChange={closeTerminationDialog}
-        contract={contractToTerminate as any}
-        onSuccess={handleTerminationSuccess}
-      />
+      {typeof closeTerminationDialog === 'function' && (
+        <ContractDetailsDialog 
+          open={showTerminationDialog} 
+          onOpenChange={closeTerminationDialog}
+          contract={contractToTerminate as any}
+          onSuccess={() => {
+            if (handleTerminationSuccess) {
+              handleTerminationSuccess();
+            }
+          }}
+        />
+      )}
     </>
   );
 }
