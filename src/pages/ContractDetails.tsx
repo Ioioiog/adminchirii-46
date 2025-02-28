@@ -90,6 +90,7 @@ function ContractDetailsContent() {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<FormData>(defaultFormData);
   const { toast } = useToast();
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
 
   const { handlePrint } = useContractPrint({
     queryClient,
@@ -97,6 +98,43 @@ function ContractDetailsContent() {
     contractId: id || '',
     contractNumber: formData.contractNumber
   });
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        setIsAuthChecking(true);
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Auth check result:', { 
+          hasSession: !!session, 
+          hasToken: !!token,
+          contractId: id
+        });
+        
+        if (!session) {
+          if (token && id) {
+            // Redirect to tenant registration page with the contract ID and token
+            navigate(`/tenant-registration/${id}?invitation_token=${token}`);
+          } else {
+            navigate('/auth');
+          }
+          return;
+        }
+        
+        setIsAuthChecking(false);
+      } catch (error) {
+        console.error('Auth check error:', error);
+        setIsAuthChecking(false);
+        
+        if (token && id) {
+          navigate(`/tenant-registration/${id}?invitation_token=${token}`);
+        } else {
+          navigate('/auth');
+        }
+      }
+    };
+
+    checkAuth();
+  }, [token, id, navigate]);
 
   const { data: contract, isLoading, error } = useQuery({
     queryKey: ['contract', id],
@@ -192,34 +230,9 @@ function ContractDetailsContent() {
         metadata: typedMetadata,
       } as Contract;
     },
+    enabled: !isAuthChecking,
     retry: false
   });
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log('Auth check result:', { 
-          hasSession: !!session, 
-          hasToken: !!token,
-          contractId: id
-        });
-        
-        if (!session) {
-          if (token) {
-            navigate(`/tenant-registration/${id}?invitation_token=${token}`);
-          } else {
-            navigate('/auth');
-          }
-          return;
-        }
-      } catch (error) {
-        console.error('Auth check error:', error);
-      }
-    };
-
-    checkAuth();
-  }, [token, id, navigate]);
 
   const updateContractMutation = useMutation({
     mutationFn: async (updatedData: FormData) => {
@@ -361,7 +374,7 @@ function ContractDetailsContent() {
     }
   };
 
-  if (isLoading) {
+  if (isAuthChecking || isLoading) {
     return (
       <div className="flex bg-[#F8F9FC] min-h-screen">
         <DashboardSidebar />
