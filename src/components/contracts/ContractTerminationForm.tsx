@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -132,234 +133,236 @@ export function ContractTerminationForm({ contract, onSuccess }: ContractTermina
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Termination Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <FormField
-              control={form.control}
-              name="noticeDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notice Date</FormLabel>
-                  <FormControl>
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      disabled={(date) => date < new Date()}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="moveOutDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Move-out Date</FormLabel>
-                  <FormControl>
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      disabled={(date) => date < new Date()}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="noticePeriod"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Required Notice Period (days)</FormLabel>
-                  <FormControl>
-                    <Input type="number" {...field} onChange={e => field.onChange(Number(e.target.value))} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Financial Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <FormField
-              control={form.control}
-              name="outstandingRent"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Outstanding Rent Amount</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" {...field} onChange={e => field.onChange(Number(e.target.value))} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="securityDepositAmount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Security Deposit Amount</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" {...field} onChange={e => field.onChange(Number(e.target.value))} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="depositDeductions"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Deductions from Deposit</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      step="0.01" 
-                      {...field} 
-                      onChange={e => {
-                        const value = Number(e.target.value);
-                        field.onChange(value);
-                        handleDeductionsChange(value);
-                      }} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="deductionReasons"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Reason for Deductions</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="refundAmount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Refund Amount</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" {...field} readOnly />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="paymentMethod"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Payment Method</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+      <ScrollArea className="h-[65vh] pr-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Termination Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="noticeDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notice Date</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select payment method" />
-                      </SelectTrigger>
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => date < new Date()}
+                      />
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="check">Check</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Move-Out Instructions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <FormField
-              control={form.control}
-              name="inspectionDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Property Inspection Date</FormLabel>
-                  <FormControl>
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      disabled={(date) => date < new Date()}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="moveOutDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Move-out Date</FormLabel>
+                    <FormControl>
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => date < new Date()}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="keyReturnProcess"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Key & Access Device Return Process</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="noticePeriod"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Required Notice Period (days)</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} onChange={e => field.onChange(Number(e.target.value))} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
 
-            <FormField
-              control={form.control}
-              name="cleaningRequirements"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Cleaning & Repair Requirements</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Financial Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="outstandingRent"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Outstanding Rent Amount</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" {...field} onChange={e => field.onChange(Number(e.target.value))} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-        <Button type="submit" disabled={isSubmitting}>
-          Submit Termination Form
-        </Button>
-      </form>
+              <FormField
+                control={form.control}
+                name="securityDepositAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Security Deposit Amount</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" {...field} onChange={e => field.onChange(Number(e.target.value))} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="depositDeductions"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Deductions from Deposit</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        {...field} 
+                        onChange={e => {
+                          const value = Number(e.target.value);
+                          field.onChange(value);
+                          handleDeductionsChange(value);
+                        }} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="deductionReasons"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Reason for Deductions</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="refundAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Refund Amount</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" {...field} readOnly />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="paymentMethod"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Payment Method</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select payment method" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                        <SelectItem value="cash">Cash</SelectItem>
+                        <SelectItem value="check">Check</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Move-Out Instructions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="inspectionDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Property Inspection Date</FormLabel>
+                    <FormControl>
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => date < new Date()}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="keyReturnProcess"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Key & Access Device Return Process</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="cleaningRequirements"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cleaning & Repair Requirements</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          <Button type="submit" disabled={isSubmitting} className="mt-4 mb-6">
+            Submit Termination Form
+          </Button>
+        </form>
+      </ScrollArea>
     </Form>
   );
 }
