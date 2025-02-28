@@ -1,7 +1,8 @@
+
 import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface ProtectedRouteProps {
   isAuthenticated: boolean;
@@ -15,6 +16,8 @@ export function ProtectedRoute({
   redirectTo = "/auth" 
 }: ProtectedRouteProps) {
   const { toast } = useToast();
+  const [isValidating, setIsValidating] = useState(true);
+  const [isValid, setIsValid] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -34,12 +37,16 @@ export function ProtectedRoute({
             variant: "destructive",
           });
           await supabase.auth.signOut();
+          setIsValid(false);
+          setIsValidating(false);
           return;
         }
 
         if (!session) {
           console.log("No valid session found");
           await supabase.auth.signOut();
+          setIsValid(false);
+          setIsValidating(false);
           return;
         }
 
@@ -53,10 +60,14 @@ export function ProtectedRoute({
             variant: "destructive",
           });
           await supabase.auth.signOut();
+          setIsValid(false);
+          setIsValidating(false);
           return;
         }
 
         console.log("Session verified successfully for user:", session.user.id);
+        setIsValid(true);
+        setIsValidating(false);
       } catch (error) {
         console.error("Session verification error:", error);
         if (mounted) {
@@ -66,12 +77,17 @@ export function ProtectedRoute({
             variant: "destructive",
           });
           await supabase.auth.signOut();
+          setIsValid(false);
+          setIsValidating(false);
         }
       }
     };
 
     if (isAuthenticated) {
       checkSession();
+    } else {
+      setIsValidating(false);
+      setIsValid(false);
     }
 
     return () => {
@@ -79,7 +95,16 @@ export function ProtectedRoute({
     };
   }, [isAuthenticated, toast]);
 
-  if (!isAuthenticated) {
+  if (isValidating) {
+    // Show a loading state while validating the session
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || !isValid) {
     console.log("User not authenticated, redirecting to:", redirectTo);
     return <Navigate to={redirectTo} replace />;
   }

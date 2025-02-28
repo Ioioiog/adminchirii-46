@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -14,16 +14,15 @@ const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useTranslation();
-  const [userId, setUserId] = React.useState<string | null>(null);
   const [userName, setUserName] = React.useState<string>("");
-  const [isLoading, setIsLoading] = React.useState(true);
-  const { userRole } = useUserRole();
+  const { userRole, userId, isLoading: roleLoading, authError } = useUserRole();
+  const [isSessionLoading, setIsSessionLoading] = useState(true);
 
   useEffect(() => {
-    const checkUser = async () => {
+    const checkSession = async () => {
       try {
-        console.log("Initializing authentication state...");
-        setIsLoading(true);
+        console.log("Checking session in Index page...");
+        setIsSessionLoading(true);
         
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
@@ -39,11 +38,26 @@ const Index = () => {
           return;
         }
 
+        // Verify the user is still valid
+        const { error: userError } = await supabase.auth.getUser();
+        
+        if (userError) {
+          console.error("User verification error:", userError);
+          toast({
+            title: "Authentication Error",
+            description: userError.message || "Session expired. Please sign in again.",
+            variant: "destructive",
+          });
+          
+          await supabase.auth.signOut();
+          navigate("/auth");
+          return;
+        }
+
         const currentUserId = session.user.id;
         console.log("Current user ID:", currentUserId);
-        setUserId(currentUserId);
 
-        // Fetch profile with role
+        // Only fetch profile if we have a valid session and user
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('role, first_name, last_name')
@@ -84,25 +98,39 @@ const Index = () => {
         setUserName(fullName || "User");
 
       } catch (error: any) {
-        console.error("Error in checkUser:", error);
-        if (error.status === 401 || error.code === 'PGRST301') {
-          navigate("/auth");
-          return;
-        }
+        console.error("Error in checkSession:", error);
         toast({
           title: "Error",
           description: error.message || "An unexpected error occurred",
           variant: "destructive",
         });
+        
+        // If there's an auth error, redirect to auth page
+        if (error.status === 401 || error.code === 'PGRST301') {
+          navigate("/auth");
+        }
       } finally {
-        setIsLoading(false);
+        setIsSessionLoading(false);
       }
     };
 
-    checkUser();
+    checkSession();
+
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      console.log("Auth state changed in Index:", event);
+      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        navigate("/auth");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [navigate, toast, t]);
 
-  if (isLoading) {
+  // Show loading state while checking session or role
+  if (isSessionLoading || roleLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-screen">
@@ -112,10 +140,22 @@ const Index = () => {
     );
   }
 
+  // If there's an auth error, show it and redirect
+  if (authError) {
+    toast({
+      title: "Authentication Error",
+      description: authError,
+      variant: "destructive",
+    });
+    navigate("/auth");
+    return null;
+  }
+
   // Render different dashboards based on user role
   const renderDashboard = () => {
     if (!userId || !userRole) {
-      console.log("No userId or userRole available");
+      console.log("No userId or userRole available, redirecting to auth");
+      navigate("/auth");
       return null;
     }
 

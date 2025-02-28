@@ -7,30 +7,64 @@ export type UserRole = "landlord" | "tenant" | "service_provider" | null;
 export function useUserRole() {
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
 
     async function getUserRole() {
       try {
+        setIsLoading(true);
+        
+        // First check if we have a valid session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error("Error fetching session:", sessionError);
+          if (mounted) {
+            setUserRole(null);
+            setUserId(null);
+            setAuthError(sessionError.message);
+          }
+          return;
+        }
+
+        if (!session) {
+          console.log("No active session found");
+          if (mounted) {
+            setUserRole(null);
+            setUserId(null);
+          }
+          return;
+        }
+
+        // If we have a valid session, get the user
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         
         if (userError) {
           console.error("Error fetching user:", userError);
-          setUserRole(null);
-          setUserId(null);
+          if (mounted) {
+            setUserRole(null);
+            setUserId(null);
+            setAuthError(userError.message);
+          }
           return;
         }
 
         if (!user) {
           console.log("No authenticated user found");
-          setUserRole(null);
-          setUserId(null);
+          if (mounted) {
+            setUserRole(null);
+            setUserId(null);
+          }
           return;
         }
 
         console.log("Fetching role for user:", user.id);
-        setUserId(user.id);
+        if (mounted) {
+          setUserId(user.id);
+        }
 
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
@@ -43,6 +77,7 @@ export function useUserRole() {
           if (mounted) {
             setUserRole(null);
             setUserId(null);
+            setAuthError(profileError.message);
           }
           return;
         }
@@ -74,11 +109,16 @@ export function useUserRole() {
           setUserRole(profile.role as UserRole);
         }
 
-      } catch (error) {
+      } catch (error: any) {
         console.error("Unexpected error in getUserRole:", error);
         if (mounted) {
           setUserRole(null);
           setUserId(null);
+          setAuthError(error.message);
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
         }
       }
     }
@@ -86,11 +126,15 @@ export function useUserRole() {
     getUserRole();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
-      if (event === 'SIGNED_IN') {
+      console.log("Auth state changed:", event);
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         await getUserRole();
-      } else if (event === 'SIGNED_OUT') {
-        setUserRole(null);
-        setUserId(null);
+      } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        if (mounted) {
+          setUserRole(null);
+          setUserId(null);
+          setIsLoading(false);
+        }
       }
     });
 
@@ -100,5 +144,5 @@ export function useUserRole() {
     };
   }, []);
 
-  return { userRole, userId };
+  return { userRole, userId, isLoading, authError };
 }
