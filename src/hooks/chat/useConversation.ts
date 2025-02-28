@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -48,13 +49,14 @@ export function useConversation(currentUserId: string | null, selectedTenantId: 
             .eq('tenant_id', selectedTenantId);
         }
 
-        const { data: conversation, error: conversationError } = await query.maybeSingle();
+        // Removed .maybeSingle() to avoid 406 error
+        const { data: conversations, error: conversationError } = await query;
 
         if (conversationError) {
           throw conversationError;
         }
 
-        if (!conversation) {
+        if (!conversations || conversations.length === 0) {
           if (userProfile?.role === 'landlord' && selectedTenantId) {
             console.log("Creating new conversation between landlord and tenant");
             const { data: newConversation, error: createError } = await supabase
@@ -71,8 +73,9 @@ export function useConversation(currentUserId: string | null, selectedTenantId: 
             setConversationId(newConversation.id);
           }
         } else {
-          console.log("Found existing conversation:", conversation.id);
-          setConversationId(conversation.id);
+          // If there are conversations, use the first one
+          console.log("Found existing conversation:", conversations[0].id);
+          setConversationId(conversations[0].id);
         }
       } catch (error) {
         console.error("Error setting up conversation:", error);
