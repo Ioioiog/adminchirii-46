@@ -96,13 +96,22 @@ export function useAuthState() {
       async (event) => {
         console.log("Auth state changed:", event);
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          // Get the current user after sign in or token refresh
-          const { data: { user } } = await supabase.auth.getUser();
-          
-          if (mounted && user) {
-            setIsAuthenticated(true);
-            setCurrentUserId(user.id);
-            setAuthError(null);
+          try {
+            // Get the current user after sign in or token refresh
+            const { data: { user }, error } = await supabase.auth.getUser();
+            
+            if (error) {
+              console.error("Error getting user after auth state change:", error);
+              return;
+            }
+            
+            if (mounted && user) {
+              setIsAuthenticated(true);
+              setCurrentUserId(user.id);
+              setAuthError(null);
+            }
+          } catch (error) {
+            console.error("Error in auth state change handler:", error);
           }
         } else if (event === 'SIGNED_OUT') {
           if (mounted) {

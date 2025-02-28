@@ -39,7 +39,7 @@ const Index = () => {
         }
 
         // Verify the user is still valid
-        const { error: userError } = await supabase.auth.getUser();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
         
         if (userError) {
           console.error("User verification error:", userError);
@@ -50,6 +50,12 @@ const Index = () => {
           });
           
           await supabase.auth.signOut();
+          navigate("/auth");
+          return;
+        }
+
+        if (!user) {
+          console.error("No user returned from getUser");
           navigate("/auth");
           return;
         }

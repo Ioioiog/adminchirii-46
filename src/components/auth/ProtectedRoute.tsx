@@ -51,8 +51,8 @@ export function ProtectedRoute({
         }
 
         // Additional verification of the user
-        const { error: userError } = await supabase.auth.getUser();
-        if (userError) {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
           console.error("User verification error:", userError);
           toast({
             title: "Authentication Error",
