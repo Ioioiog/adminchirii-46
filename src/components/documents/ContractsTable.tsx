@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { 
   Download, 
   Trash2,
-  Eye
+  Eye,
+  X
 } from "lucide-react";
 import { ContractStatusBadge } from "@/components/contracts/ContractStatusBadge";
 import { format } from "date-fns";
@@ -32,6 +33,8 @@ import { useState } from "react";
 import { UseMutationResult } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { ContractStatus } from "@/types/contract";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ContractDetailsDialog } from "@/components/contracts/ContractDetailsDialog";
 
 interface ContractsTableProps {
   contracts: ContractOrDocument[];
@@ -53,6 +56,8 @@ export function ContractsTable({
   const navigate = useNavigate();
   const [documentToDelete, setDocumentToDelete] = useState<ContractOrDocument | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showContractDetailsDialog, setShowContractDetailsDialog] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<ContractOrDocument | null>(null);
 
   const confirmDelete = () => {
     if (documentToDelete) {
@@ -60,6 +65,11 @@ export function ContractsTable({
     }
     setShowDeleteDialog(false);
     setDocumentToDelete(null);
+  };
+
+  const handleCancelContract = (contract: ContractOrDocument) => {
+    setSelectedContract(contract);
+    setShowContractDetailsDialog(true);
   };
 
   const getDocumentStatus = (doc: ContractOrDocument): ContractStatus => {
@@ -105,6 +115,19 @@ export function ContractsTable({
     if ('id' in contract) {
       navigate(`/documents/contracts/${contract.id}`);
     }
+  };
+
+  // Check if a contract is a lease type
+  const isLeaseContract = (contract: ContractOrDocument): boolean => {
+    return contract.contract_type === "lease" || 
+           contract.contract_type === "lease_agreement";
+  };
+
+  // Check if contract is cancelable (lease and not already cancelled)
+  const isContractCancelable = (contract: ContractOrDocument): boolean => {
+    const isLease = isLeaseContract(contract);
+    const isSigned = getDocumentStatus(contract) === "signed";
+    return isLease && isSigned && userRole === "landlord";
   };
 
   if (isLoading) {
@@ -197,30 +220,45 @@ export function ContractsTable({
                       Delete
                     </Button>
                   )}
+
+                  {/* Cancel contract button */}
+                  {isContractCancelable(contract) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-orange-600 hover:bg-orange-50 hover:text-orange-700 border-orange-200"
+                      onClick={() => handleCancelContract(contract)}
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Cancel
+                    </Button>
+                  )}
                   
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      // For documents with file_path
-                      if ('file_path' in contract && contract.file_path) {
-                        handleDownloadDocument(contract.file_path);
-                      } 
-                      // For contracts with metadata that may contain a file_path
-                      else if ('metadata' in contract && contract.metadata && 
-                              typeof contract.metadata === 'object' && 
-                              'file_path' in (contract.metadata as any)) {
-                        handleDownloadDocument((contract.metadata as any).file_path);
-                      } 
-                      // For other contracts, generate PDF
-                      else {
-                        handleGeneratePDF(contract);
-                      }
-                    }}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download
-                  </Button>
+                  {!isLeaseContract(contract) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        // For documents with file_path
+                        if ('file_path' in contract && contract.file_path) {
+                          handleDownloadDocument(contract.file_path);
+                        } 
+                        // For contracts with metadata that may contain a file_path
+                        else if ('metadata' in contract && contract.metadata && 
+                                typeof contract.metadata === 'object' && 
+                                'file_path' in (contract.metadata as any)) {
+                          handleDownloadDocument((contract.metadata as any).file_path);
+                        } 
+                        // For other contracts, generate PDF
+                        else {
+                          handleGeneratePDF(contract);
+                        }
+                      }}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -228,6 +266,7 @@ export function ContractsTable({
         </Table>
       </div>
 
+      {/* Delete confirmation dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -248,6 +287,13 @@ export function ContractsTable({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Contract details dialog with termination form */}
+      <ContractDetailsDialog 
+        open={showContractDetailsDialog} 
+        onOpenChange={setShowContractDetailsDialog}
+        contract={selectedContract as any}
+      />
     </>
   );
 }
