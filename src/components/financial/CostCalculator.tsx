@@ -210,15 +210,15 @@ export function CostCalculator() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
                   <div>
                     <p className="text-sm text-muted-foreground">Rent</p>
-                    <p className="text-lg font-medium">{formatAmount(results.rentTotal)}</p>
+                    <p className="text-lg font-medium">{formatAmount(results.rentTotal, 'EUR')}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Utilities</p>
-                    <p className="text-lg font-medium">{formatAmount(results.utilitiesTotal)}</p>
+                    <p className="text-lg font-medium">{formatAmount(results.utilitiesTotal, 'EUR')}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Total</p>
-                    <p className="text-xl font-bold text-blue-600">{formatAmount(results.grandTotal)}</p>
+                    <p className="text-xl font-bold text-blue-600">{formatAmount(results.grandTotal, 'EUR')}</p>
                   </div>
                 </div>
               </div>
@@ -244,7 +244,7 @@ export function CostCalculator() {
                             <td className="px-3 py-2 whitespace-nowrap text-sm">{utility.invoice_number || 'N/A'}</td>
                             <td className="px-3 py-2 whitespace-nowrap text-sm">{new Date(utility.due_date).toLocaleDateString()}</td>
                             <td className="px-3 py-2 whitespace-nowrap text-sm text-right font-medium">
-                              {formatAmount(utility.amount, utility.currency)}
+                              {formatAmount(utility.amount, utility.currency || 'EUR')}
                             </td>
                           </tr>
                         ))}
@@ -252,7 +252,7 @@ export function CostCalculator() {
                       <tfoot className="bg-gray-50 dark:bg-gray-800">
                         <tr>
                           <td colSpan={3} className="px-3 py-2 text-sm font-medium text-right">Total Utilities:</td>
-                          <td className="px-3 py-2 text-sm font-bold text-right">{formatAmount(results.utilitiesTotal)}</td>
+                          <td className="px-3 py-2 text-sm font-bold text-right">{formatAmount(results.utilitiesTotal, 'EUR')}</td>
                         </tr>
                       </tfoot>
                     </table>
