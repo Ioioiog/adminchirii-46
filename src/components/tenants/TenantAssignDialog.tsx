@@ -44,6 +44,19 @@ export function TenantAssignDialog({ properties, open, onOpenChange, onClose }: 
             </p>
           </div>
           
+          <div className="bg-blue-50 border border-blue-100 rounded-md p-4 mb-3">
+            <h3 className="font-medium text-blue-800 mb-2">Guide to Adding a New Tenant:</h3>
+            <ol className="list-decimal ml-4 text-sm text-blue-700 space-y-1">
+              <li>Click "Go to Contracts" below</li>
+              <li>Select "Create New Contract"</li>
+              <li>Choose "Rental Agreement" as the contract type</li>
+              <li>Fill in tenant and property details</li>
+              <li>Review and finalize the contract</li>
+              <li>Send to tenant for digital signature</li>
+              <li>Once signed, the tenant will be automatically assigned to the property</li>
+            </ol>
+          </div>
+          
           <div className="flex flex-col gap-3">
             <Button 
               onClick={handleCreateContract}
