@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Property } from "@/utils/propertyUtils";
 import { TenantAssignForm } from "./TenantAssignForm";
@@ -12,17 +13,26 @@ interface TenantAssignDialogProps {
 }
 
 export function TenantAssignDialog({ properties, open, onOpenChange, onClose }: TenantAssignDialogProps) {
-  const { data: availableTenants = [] } = useQuery({
+  const { data: availableTenants = [], isLoading, error } = useQuery({
     queryKey: ["available-tenants"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("role", "tenant");
+      try {
+        // Fetch tenants with role = tenant
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("role", "tenant");
 
-      if (error) throw error;
-      return data;
+        if (error) throw error;
+        
+        console.log("Available tenants:", data);
+        return data || [];
+      } catch (e) {
+        console.error("Error fetching available tenants:", e);
+        throw e;
+      }
     },
+    enabled: open, // Only run query when dialog is open
   });
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -41,11 +51,18 @@ export function TenantAssignDialog({ properties, open, onOpenChange, onClose }: 
             Select a tenant and assign them to a property. This will create a new tenancy record.
           </DialogDescription>
         </DialogHeader>
-        <TenantAssignForm 
-          properties={properties} 
-          availableTenants={availableTenants}
-          onClose={() => handleOpenChange(false)}
-        />
+        {error ? (
+          <div className="text-red-500 p-4 border border-red-200 rounded-md bg-red-50">
+            Error loading tenants. Please try again later.
+          </div>
+        ) : (
+          <TenantAssignForm 
+            properties={properties} 
+            availableTenants={availableTenants}
+            onClose={() => handleOpenChange(false)}
+            isLoading={isLoading}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -22,6 +23,9 @@ import { ProfileSchema } from "@/integrations/supabase/database-types/profile";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const formSchema = z.object({
   propertyId: z.string().min(1, "Property is required"),
@@ -47,6 +51,8 @@ export function TenantAssignForm({
 }: TenantAssignFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -59,15 +65,61 @@ export function TenantAssignForm({
 
   const handleSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
-      const { error } = await supabase.from("tenancies").insert({
-        property_id: data.propertyId,
-        tenant_id: data.tenantId,
-        start_date: data.startDate,
-        end_date: data.endDate || null,
-        status: "active",
-      });
+      setError(null);
+      
+      // Get the current authenticated user
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("You must be logged in to assign tenants");
+      }
+      
+      // First check if this property belongs to the current landlord
+      const { data: propertyData, error: propertyError } = await supabase
+        .from("properties")
+        .select("landlord_id")
+        .eq("id", data.propertyId)
+        .single();
+      
+      if (propertyError) {
+        throw propertyError;
+      }
+      
+      if (propertyData.landlord_id !== session.user.id) {
+        throw new Error("You don't have permission to assign tenants to this property");
+      }
+      
+      // Check if tenant is already assigned to this property
+      const { data: existingTenancy, error: tenancyError } = await supabase
+        .from("tenancies")
+        .select("id")
+        .eq("property_id", data.propertyId)
+        .eq("tenant_id", data.tenantId)
+        .eq("status", "active")
+        .maybeSingle();
+        
+      if (tenancyError) {
+        console.error("Error checking existing tenancy:", tenancyError);
+      }
+      
+      if (existingTenancy) {
+        throw new Error("This tenant is already assigned to this property");
+      }
+      
+      // Create the tenancy with a service role if possible, otherwise try direct insertion
+      const { error: insertError } = await supabase
+        .from("tenancies")
+        .insert({
+          property_id: data.propertyId,
+          tenant_id: data.tenantId,
+          start_date: data.startDate,
+          end_date: data.endDate || null,
+          status: "active",
+        });
 
-      if (error) throw error;
+      if (insertError) {
+        console.error("Error creating tenancy:", insertError);
+        throw new Error(insertError.message || "Failed to assign tenant");
+      }
 
       toast({
         title: "Success",
@@ -78,6 +130,7 @@ export function TenantAssignForm({
       onClose();
     } catch (error: any) {
       console.error("Error assigning tenant:", error);
+      setError(error.message || "Failed to assign tenant");
       toast({
         variant: "destructive",
         title: "Error",
@@ -89,6 +142,14 @@ export function TenantAssignForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
         <FormField
           control={form.control}
           name="propertyId"
