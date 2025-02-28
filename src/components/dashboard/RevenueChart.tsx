@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,38 +11,43 @@ import { NoDataCard } from "./charts/NoDataCard";
 import { TimeRangeSelect } from "./charts/TimeRangeSelect";
 import { RevenueLineChart } from "./charts/RevenueLineChart";
 
+// Cache time increased to 10 minutes to reduce API calls
+const CACHE_TIME = 10 * 60 * 1000;
+
 async function fetchRevenueData(userId: string, timeRange: TimeRange): Promise<MonthlyRevenue[]> {
   console.log("Fetching revenue data for landlord:", userId);
   
   const months = getMonthsForRange(timeRange);
   console.log("Fetching data for months:", months);
 
-  const { data: properties, error: propertiesError } = await supabase
+  // Use a single query instead of fetching all properties first
+  const { data: propertyRevenueData, error } = await supabase
     .from("properties")
     .select(`
       id,
       name,
       monthly_rent,
-      tenancies (
+      tenancies!inner (
         id,
         start_date,
         end_date,
         status
       )
     `)
-    .eq("landlord_id", userId);
+    .eq("landlord_id", userId)
+    .eq("tenancies.status", "active");
 
-  if (propertiesError) {
-    console.error("Error fetching properties data:", propertiesError);
-    throw propertiesError;
+  if (error) {
+    console.error("Error fetching properties data:", error);
+    throw error;
   }
 
-  if (!properties) {
-    console.log("No properties found for user");
+  if (!propertyRevenueData?.length) {
+    console.log("No properties with active tenancies found for user");
     return [];
   }
 
-  console.log("Raw properties data:", properties);
+  console.log("Raw properties data:", propertyRevenueData);
 
   const monthlyRevenue = months.map(monthStart => {
     const monthDate = new Date(monthStart);
@@ -50,7 +56,7 @@ async function fetchRevenueData(userId: string, timeRange: TimeRange): Promise<M
     let totalRevenue = 0;
     const propertyBreakdown: Record<string, { name: string; total: number; count: number }> = {};
 
-    properties.forEach(property => {
+    propertyRevenueData.forEach(property => {
       if (!property) return;
       
       const activeTenantsInMonth = property.tenancies?.filter(tenancy => {
@@ -60,7 +66,6 @@ async function fetchRevenueData(userId: string, timeRange: TimeRange): Promise<M
         const endDate = tenancy.end_date ? new Date(tenancy.end_date) : null;
         
         return (
-          tenancy.status === 'active' &&
           startDate <= monthEnd &&
           (!endDate || endDate >= monthDate)
         );
@@ -100,6 +105,8 @@ export function RevenueChart({ userId }: { userId: string }) {
   const { data: revenueData, isLoading } = useQuery({
     queryKey: ["revenue-chart", userId, timeRange],
     queryFn: () => fetchRevenueData(userId, timeRange),
+    staleTime: CACHE_TIME, // Keep data fresh for 10 minutes
+    cacheTime: CACHE_TIME, // Cache data for 10 minutes
   });
 
   if (isLoading) {
