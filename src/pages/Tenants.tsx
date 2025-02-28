@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +13,7 @@ import { TenantDashboard } from "@/components/tenants/TenantDashboard";
 import { NoTenancy } from "@/components/tenants/NoTenancy";
 import { useTranslation } from "react-i18next";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, UserPlus, Mail } from "lucide-react";
+import { Users, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TenantInviteDialog } from "@/components/tenants/TenantInviteDialog";
 import { TenantAssignDialog } from "@/components/tenants/TenantAssignDialog";
@@ -209,13 +210,6 @@ const Tenants = () => {
                   >
                     <UserPlus className="h-4 w-4 text-gray-600" />
                     <span>{t('tenants.addTenant')}</span>
-                  </Button>
-                  <Button
-                    onClick={() => setShowInviteDialog(true)}
-                    className="w-full sm:w-auto flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition-colors"
-                  >
-                    <Mail className="h-4 w-4" />
-                    <span>{t('tenants.inviteTenant')}</span>
                   </Button>
                 </div>
               )}
