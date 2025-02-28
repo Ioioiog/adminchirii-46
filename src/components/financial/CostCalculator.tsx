@@ -24,6 +24,8 @@ interface CalculationResult {
   grandTotal: number;
   period: string;
   utilities: UtilityDetail[];
+  rentCurrency: string;
+  utilitiesCurrency: string;
 }
 
 interface UtilityDetail {
@@ -43,7 +45,7 @@ export function CostCalculator() {
   const [results, setResults] = useState<CalculationResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { userRole, userId } = useUserRole();
-  const { formatAmount } = useCurrency();
+  const { formatAmount, currency: preferredCurrency } = useCurrency();
   const { properties } = useProperties({ userRole: userRole || 'tenant' });
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | undefined>(undefined);
 
@@ -74,6 +76,8 @@ export function CostCalculator() {
 
       // Get rent information from properties and tenancies
       let rentTotal = 0;
+      const rentCurrency = 'EUR'; // Default rent currency
+      
       if (userRole === 'tenant') {
         // For tenants, get their active tenancy and property
         const { data: tenancy } = await supabase
@@ -123,7 +127,7 @@ export function CostCalculator() {
         }
       }
 
-      // Get detailed utilities for the selected property within the date range, filtering by issued_date instead of due_date
+      // Get detailed utilities for the selected property within the date range, filtering by issued_date
       const { data: utilities = [] } = await supabase
         .from('utilities')
         .select('id, type, amount, due_date, currency, invoice_number, issued_date')
@@ -133,14 +137,52 @@ export function CostCalculator() {
 
       // Calculate utilities total - each utility amount is in its own currency
       const utilitiesTotal = utilities.reduce((sum, item) => sum + (parseFloat(item.amount.toString()) || 0), 0);
+      const utilitiesCurrency = utilities.length > 0 ? (utilities[0].currency || 'RON') : 'RON';
 
-      // Create a final result object - calculating the grand total as rent + utilities
+      // Get exchange rates to convert everything to the user's preferred currency
+      const { data: { rates } } = await supabase.functions.invoke('get-exchange-rates');
+      
+      // Convert rent from EUR to preferred currency
+      let rentInPreferredCurrency = rentTotal;
+      if (rentCurrency !== preferredCurrency && rates) {
+        // First convert to RON (base currency)
+        const rentInRON = rentTotal * rates.EUR;
+        // Then convert from RON to preferred currency
+        rentInPreferredCurrency = preferredCurrency === 'RON' 
+          ? rentInRON 
+          : rentInRON / rates[preferredCurrency];
+      }
+      
+      // Convert utilities from RON to preferred currency
+      let utilitiesInPreferredCurrency = utilitiesTotal;
+      if (utilitiesCurrency !== preferredCurrency && rates) {
+        // If utilities are in RON and we need another currency
+        if (utilitiesCurrency === 'RON' && preferredCurrency !== 'RON') {
+          utilitiesInPreferredCurrency = utilitiesTotal / rates[preferredCurrency];
+        } 
+        // If utilities are in another currency and we need RON
+        else if (utilitiesCurrency !== 'RON' && preferredCurrency === 'RON') {
+          utilitiesInPreferredCurrency = utilitiesTotal * rates[utilitiesCurrency];
+        }
+        // If both are different currencies (not RON)
+        else if (utilitiesCurrency !== 'RON' && preferredCurrency !== 'RON') {
+          const inRON = utilitiesTotal * rates[utilitiesCurrency];
+          utilitiesInPreferredCurrency = inRON / rates[preferredCurrency];
+        }
+      }
+      
+      // Calculate grand total in preferred currency
+      const grandTotal = rentInPreferredCurrency + utilitiesInPreferredCurrency;
+
+      // Create a final result object
       setResults({
         rentTotal,
         utilitiesTotal,
-        grandTotal: rentTotal + utilitiesTotal, // Calculate grand total as rent + utilities
+        grandTotal,
         period: displayPeriod,
-        utilities: utilities
+        utilities: utilities,
+        rentCurrency,
+        utilitiesCurrency
       });
 
     } catch (error) {
@@ -211,21 +253,16 @@ export function CostCalculator() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
                   <div>
                     <p className="text-sm text-muted-foreground">Rent</p>
-                    <p className="text-lg font-medium">{formatAmount(results.rentTotal, 'EUR')}</p>
+                    <p className="text-lg font-medium">{formatAmount(results.rentTotal, results.rentCurrency)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Utilities</p>
-                    <p className="text-lg font-medium">{formatAmount(results.utilitiesTotal, 'RON')}</p>
+                    <p className="text-lg font-medium">{formatAmount(results.utilitiesTotal, results.utilitiesCurrency)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Total</p>
+                    <p className="text-sm text-muted-foreground">Grand Total</p>
                     <p className="text-xl font-bold text-blue-600">
-                      {/* Display total as rent + utilities with both currencies */}
-                      {formatAmount(results.utilitiesTotal, 'RON')}
-                      <br />
-                      <span className="text-sm font-normal text-gray-500">
-                        + {formatAmount(results.rentTotal, 'EUR')}
-                      </span>
+                      {formatAmount(results.grandTotal, preferredCurrency)}
                     </p>
                   </div>
                 </div>
@@ -259,8 +296,8 @@ export function CostCalculator() {
                       </tbody>
                       <tfoot className="bg-gray-50 dark:bg-gray-800">
                         <tr>
-                          <td colSpan={3} className="px-3 py-2 text-sm font-medium text-right">Total Utilities:</td>
-                          <td className="px-3 py-2 text-sm font-bold text-right">{formatAmount(results.utilitiesTotal, 'RON')}</td>
+                          <td colSpan={3} className="px-3 py-2 text-sm font-medium text-right">Total:</td>
+                          <td className="px-3 py-2 text-sm font-bold text-right">{formatAmount(results.grandTotal, preferredCurrency)}</td>
                         </tr>
                       </tfoot>
                     </table>
