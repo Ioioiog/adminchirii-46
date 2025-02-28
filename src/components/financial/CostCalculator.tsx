@@ -123,12 +123,12 @@ export function CostCalculator() {
         }
       }
 
-      // Get detailed utilities for the date range
+      // Get detailed utilities for the selected property within the date range, filtering by issued_date instead of due_date
       const { data: utilities = [] } = await supabase
         .from('utilities')
-        .select('id, type, amount, due_date, currency, invoice_number')
-        .gte('due_date', startDate)
-        .lte('due_date', endDate)
+        .select('id, type, amount, due_date, currency, invoice_number, issued_date')
+        .gte('issued_date', startDate)
+        .lte('issued_date', endDate)
         .eq('property_id', selectedPropertyId);
 
       const utilitiesTotal = utilities.reduce((sum, item) => sum + (parseFloat(item.amount.toString()) || 0), 0);
