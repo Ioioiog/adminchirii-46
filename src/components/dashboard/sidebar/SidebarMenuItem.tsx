@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { LucideIcon, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -34,15 +34,21 @@ export const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
   notificationCount = 0,
 }) => {
   const Icon = item.icon;
+  const navigate = useNavigate();
   
   console.log(`Rendering menu item ${item.title} with notification count:`, notificationCount);
 
   const handleClick = (e: React.MouseEvent) => {
+    console.log(`Clicked on menu item: ${item.title}, href: ${item.href}`);
+    
     if (item.notificationType && notificationCount > 0 && onNotificationClick) {
-      console.log(`Handling click for ${item.title} with ${notificationCount} notifications`);
+      console.log(`Handling notification click for ${item.title} with ${notificationCount} notifications`);
       e.preventDefault();
       onNotificationClick(item.notificationType);
+      // After handling notifications, navigate to the page
+      navigate(item.href);
     }
+    // Regular navigation happens via Link component
   };
 
   const linkContent = (
