@@ -1,5 +1,6 @@
+
 import { useState } from "react";
-import { DollarSign, FileText, CreditCard, BarChart2, Building } from "lucide-react";
+import { DollarSign, FileText, CreditCard, BarChart2, Building, Calculator } from "lucide-react";
 import { InvoiceList } from "@/components/invoices/InvoiceList";
 import { PaymentList } from "@/components/payments/PaymentList";
 import { InvoiceDialog } from "@/components/invoices/InvoiceDialog";
@@ -19,6 +20,7 @@ import { useProperties } from "@/hooks/useProperties";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useCurrency } from "@/hooks/useCurrency";
 import { startOfMonth, endOfMonth } from "date-fns";
+import { CostCalculator } from "@/components/financial/CostCalculator";
 
 type FinancialSection = 'invoices' | 'payments' | 'overview';
 
@@ -119,6 +121,10 @@ const Financial = () => {
           title="Financial Overview"
           description="Summary of your financial activities for the current month"
         />
+        
+        {/* Add Cost Calculator at the top */}
+        {isLandlordOrTenant && <CostCalculator />}
+        
         <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
