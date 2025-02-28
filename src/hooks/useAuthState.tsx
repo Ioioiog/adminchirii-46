@@ -58,24 +58,10 @@ export function useAuthState() {
 
     initializeAuth();
 
-    // Setup auth state change subscription
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        console.log('User signed in:', session.user.id);
-        setIsAuthenticated(true);
-        setCurrentUserId(session.user.id);
-      } else if (event === 'SIGNED_OUT') {
-        console.log('User signed out');
-        setIsAuthenticated(false);
-        setCurrentUserId(null);
-      }
-    });
-
     return () => {
       mounted = false;
-      subscription.unsubscribe();
     };
-  }, []);
+  }, []); // Removed toast from dependencies since we don't use it here
 
   return { isLoading, isAuthenticated, setIsAuthenticated, currentUserId };
 }

@@ -62,10 +62,9 @@ interface ContractDetailsDialogProps {
       securityDeposit?: string;
     };
   } | null;
-  onSuccess?: () => void;
 }
 
-export function ContractDetailsDialog({ open, onOpenChange, contract, onSuccess }: ContractDetailsDialogProps) {
+export function ContractDetailsDialog({ open, onOpenChange, contract }: ContractDetailsDialogProps) {
   const { userRole } = useUserRole();
   const [showTerminationForm, setShowTerminationForm] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
@@ -286,9 +285,6 @@ export function ContractDetailsDialog({ open, onOpenChange, contract, onSuccess 
               onSuccess={() => {
                 setShowTerminationForm(false);
                 onOpenChange(false);
-                if (onSuccess) {
-                  onSuccess();
-                }
               }}
             />
           </>

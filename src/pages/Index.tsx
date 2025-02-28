@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -14,14 +14,16 @@ const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useTranslation();
-  const [userName, setUserName] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(true);
-  const { userRole, userId, isLoading: roleLoading } = useUserRole();
+  const [userId, setUserId] = React.useState<string | null>(null);
+  const [userName, setUserName] = React.useState<string>("");
+  const [isLoading, setIsLoading] = React.useState(true);
+  const { userRole } = useUserRole();
 
   useEffect(() => {
     const checkUser = async () => {
       try {
         console.log("Initializing authentication state...");
+        setIsLoading(true);
         
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
@@ -39,11 +41,12 @@ const Index = () => {
 
         const currentUserId = session.user.id;
         console.log("Current user ID:", currentUserId);
+        setUserId(currentUserId);
 
-        // Fetch profile with name information (only once)
+        // Fetch profile with role
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('first_name, last_name')
+          .select('role, first_name, last_name')
           .eq('id', currentUserId)
           .single();
 
@@ -99,10 +102,7 @@ const Index = () => {
     checkUser();
   }, [navigate, toast, t]);
 
-  // Wait for both profile loading and role loading to complete
-  const totalLoading = isLoading || roleLoading;
-
-  if (totalLoading) {
+  if (isLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-screen">

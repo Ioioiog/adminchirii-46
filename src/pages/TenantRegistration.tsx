@@ -56,7 +56,6 @@ const TenantRegistration = () => {
   const [contract, setContract] = useState<Contract | null>(null);
   const [invitation, setInvitation] = useState<TenantInvitation | null>(null);
   const [invitationType, setInvitationType] = useState<'contract' | 'direct' | null>(null);
-  const [authInProgress, setAuthInProgress] = useState(false);
 
   // Instead of showing an error and navigating away,
   // let's just redirect to the auth page with a more gentle message
@@ -74,42 +73,16 @@ const TenantRegistration = () => {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
-          console.log('User already authenticated, preparing redirect checks');
-          
-          // Don't redirect immediately - let the authentication flow continue
-          // with the proper contract or invitation update first
-          
           if (contractId && token) {
-            // If user is already authenticated, we need to update the contract first
-            console.log('User authenticated, contract ID and token present:', contractId);
-            
-            try {
-              // Update contract with tenant_id and status
-              await supabase
-                .from('contracts')
-                .update({
-                  tenant_id: session.user.id,
-                  status: 'pending_signature'
-                })
-                .eq('id', contractId);
-              
-              console.log('Contract updated, now redirecting to contract details page');
-              navigate(`/documents/contracts/${contractId}?invitation_token=${token}`);
-              return true;
-            } catch (error) {
-              console.error('Error updating contract:', error);
-              // Continue to contract details anyway
-              navigate(`/documents/contracts/${contractId}?invitation_token=${token}`);
-              return true;
-            }
+            // If user is authenticated and has both contractId and token, 
+            // redirect to contract details
+            navigate(`/documents/contracts/${contractId}?invitation_token=${token}`);
+            return true; // Return true to indicate we've redirected
           } else if (token) {
             // If only token is present, process direct invitation
-            console.log('Processing direct invitation for authenticated user');
             await processDirectInvitation(token, session.user.id);
             return true;
           }
-        } else {
-          console.log('No active session, user needs to authenticate');
         }
         return false; // Return false to indicate no redirect happened
       } catch (error) {
@@ -331,61 +304,52 @@ const TenantRegistration = () => {
 
   useEffect(() => {
     const handleAuthStateChange = async (event: string, session: any) => {
-      console.log('Auth state changed:', event, session ? 'Session exists' : 'No session');
-      
       if (event === 'SIGNED_IN' && session) {
-        // Set auth in progress to prevent multiple redirects
-        if (authInProgress) {
-          console.log('Auth already in progress, skipping duplicate handler');
-          return;
-        }
-        
-        setAuthInProgress(true);
-        
         try {
-          console.log('User signed in, handling redirect...');
-          console.log('Contract ID:', contractId);
-          console.log('Invitation type:', invitationType);
-          console.log('Token:', token);
-          
-          // Wait a moment to ensure authentication is fully processed
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          if (contractId && token) {
-            // Contract flow - direct redirect to contract details regardless of invitationType state
-            console.log('Starting contract update for newly authenticated user');
-            
-            try {
-              // Update contract with tenant_id if needed
-              await supabase
-                .from('contracts')
-                .update({
-                  tenant_id: session.user.id,
-                  status: 'pending_signature'
-                })
-                .eq('id', contractId);
-              
-              console.log('Contract updated successfully, redirecting to sign page');
-            } catch (error) {
-              console.error('Error updating contract:', error);
-              // Continue anyway to the contract page
+          if (invitationType === 'contract' && contract) {
+            // Contract flow
+            const { error: contractError } = await supabase
+              .from('contracts')
+              .update({
+                tenant_id: session.user.id,
+                status: 'pending_signature'
+              })
+              .eq('id', contract.id);
+
+            if (contractError) {
+              console.error("Error updating contract:", contractError);
             }
-            
-            // Always redirect to contract regardless of state update success
-            // Use timeout to ensure redirection happens AFTER auth is complete
-            setTimeout(() => {
-              console.log('Now redirecting to contract details page');
-              navigate(`/documents/contracts/${contractId}?invitation_token=${token}`);
-            }, 800);
-            
-            return;
+
+            // Try to create tenancy even if the contract update fails
+            try {
+              const { error: tenancyError } = await supabase
+                .from('tenancies')
+                .insert({
+                  property_id: contract.property_id,
+                  tenant_id: session.user.id,
+                  start_date: contract.metadata.startDate || new Date().toISOString(),
+                  status: 'pending'
+                });
+
+              if (tenancyError) {
+                console.error("Error creating tenancy:", tenancyError);
+              }
+            } catch (err) {
+              console.error("Error creating tenancy:", err);
+            }
+
+            toast({
+              title: isExistingUser ? "Welcome Back!" : "Welcome!",
+              description: "You can now review and sign the contract.",
+            });
+
+            navigate(`/documents/contracts/${contract.id}?invitation_token=${token}`);
             
           } else if (invitationType === 'direct' && invitation) {
             // Direct invitation flow
             await processDirectInvitation(invitation.token, session.user.id);
           } else {
             // Fallback if something went wrong
-            console.log('No contract ID or invitation found, redirecting to dashboard');
             navigate("/dashboard");
           }
         } catch (error: any) {
@@ -396,8 +360,6 @@ const TenantRegistration = () => {
             variant: "destructive",
           });
           navigate("/dashboard");
-        } finally {
-          setAuthInProgress(false);
         }
       }
     };
@@ -405,7 +367,7 @@ const TenantRegistration = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
     return () => subscription.unsubscribe();
-  }, [invitationType, contract, invitation, navigate, toast, token, isExistingUser, contractId, authInProgress]);
+  }, [invitationType, contract, invitation, navigate, toast, token, isExistingUser]);
 
   if (isLoading) {
     return (

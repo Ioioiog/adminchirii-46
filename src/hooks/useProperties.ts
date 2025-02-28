@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Property } from "@/utils/propertyUtils";
 
@@ -11,96 +11,96 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchProperties = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      console.log(`Fetching properties for ${userRole} role`);
-      
-      if (userRole === "service_provider") {
-        setProperties([]);
-        return;
-      }
+  useEffect(() => {
+    const fetchProperties = async () => {
+      try {
+        if (userRole === "service_provider") {
+          setProperties([]);
+          setIsLoading(false);
+          return;
+        }
 
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) {
-        setProperties([]);
-        return;
-      }
+        // Different query based on user role
+        if (userRole === "tenant") {
+          // For tenants, only fetch properties where they have an active tenancy
+          const { data: userData } = await supabase.auth.getUser();
+          if (!userData.user) {
+            setProperties([]);
+            setIsLoading(false);
+            return;
+          }
 
-      // For tenants, only fetch properties where they have an active tenancy
-      if (userRole === "tenant") {
-        const { data, error } = await supabase
-          .from("properties")
-          .select(`
-            *,
-            tenancies!inner(
+          const { data, error } = await supabase
+            .from("properties")
+            .select(`
               id,
-              status,
-              tenant_id,
-              start_date,
-              end_date
-            )
-          `)
-          .eq('tenancies.tenant_id', userData.user.id)
-          .eq('tenancies.status', 'active');
+              name,
+              address,
+              monthly_rent,
+              type,
+              created_at,
+              updated_at,
+              description,
+              available_from,
+              landlord_id,
+              tenancies!inner (
+                id,
+                status,
+                tenant_id
+              )
+            `)
+            .eq('tenancies.tenant_id', userData.user.id)
+            .eq('tenancies.status', 'active');
 
-        if (error) throw error;
+          if (error) throw error;
 
-        // Process tenancy data on client side
-        const propertiesWithStatus = (data || []).map(property => {
-          const activeTenancies = property.tenancies?.filter(t => t.status === 'active') || [];
-          
-          return {
+          const propertiesWithStatus = (data || []).map(property => ({
             ...property,
-            status: activeTenancies.length > 0 ? 'occupied' : 'vacant',
-            tenant_count: activeTenancies.length,
-            tenancy: activeTenancies.length > 0 ? {
-              end_date: activeTenancies[0].end_date,
-              start_date: activeTenancies[0].start_date
-            } : undefined
-          };
-        }) as Property[];
+            status: property.tenancies?.some(t => t.status === 'active') ? 'occupied' : 'vacant',
+            tenant_count: property.tenancies?.filter(t => t.status === 'active').length || 0
+          })) as Property[];
 
-        setProperties(propertiesWithStatus);
-      } else {
-        // For landlords, fetch all their properties with optimized query
-        const { data, error } = await supabase
-          .from("properties")
-          .select(`
-            *,
-            tenancies(
+          setProperties(propertiesWithStatus);
+        } else {
+          // For landlords, fetch all their properties
+          const { data, error } = await supabase
+            .from("properties")
+            .select(`
               id,
-              status,
-              start_date,
-              end_date
-            )
-          `)
-          .eq('landlord_id', userData.user.id);
+              name,
+              address,
+              monthly_rent,
+              type,
+              created_at,
+              updated_at,
+              description,
+              available_from,
+              landlord_id,
+              tenancies (
+                id,
+                status
+              )
+            `);
 
-        if (error) throw error;
+          if (error) throw error;
 
-        const propertiesWithStatus = (data || []).map(property => {
-          const activeTenancies = property.tenancies?.filter(t => t.status === 'active') || [];
-          
-          return {
+          const propertiesWithStatus = (data || []).map(property => ({
             ...property,
-            status: activeTenancies.length > 0 ? 'occupied' : 'vacant',
-            tenant_count: activeTenancies.length
-          };
-        }) as Property[];
+            status: property.tenancies?.some(t => t.status === 'active') ? 'occupied' : 'vacant',
+            tenant_count: property.tenancies?.filter(t => t.status === 'active').length || 0
+          })) as Property[];
 
-        setProperties(propertiesWithStatus);
+          setProperties(propertiesWithStatus);
+        }
+      } catch (error) {
+        console.error("Error fetching properties:", error);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching properties:", error);
-    } finally {
-      setIsLoading(false);
-    }
+    };
+
+    fetchProperties();
   }, [userRole]);
 
-  useEffect(() => {
-    fetchProperties();
-  }, [fetchProperties]);
-
-  return { properties, isLoading, fetchProperties };
+  return { properties, isLoading };
 };

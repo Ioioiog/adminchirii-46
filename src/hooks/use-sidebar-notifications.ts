@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/use-user-role';
 import { Notification, NotificationType } from '@/types/notifications';
@@ -49,6 +49,18 @@ function isMessage(value: unknown): value is Message {
     'receiver_id' in msg &&
     'sender_id' in msg;
 
+  console.log('Message validation:', {
+    value,
+    isValid,
+    hasId: 'id' in msg,
+    hasReceiverId: 'receiver_id' in msg,
+    hasSenderId: 'sender_id' in msg,
+    receiverIdRaw: msg.receiver_id,
+    senderIdRaw: msg.sender_id,
+    receiverIdProcessed: getReceiverId(msg),
+    receiverIdType: msg.receiver_id === null ? 'null' : typeof msg.receiver_id
+  });
+
   return isValid;
 }
 
@@ -56,19 +68,8 @@ export function useSidebarNotifications() {
   const [data, setData] = useState<Notification[]>([]);
   const { userRole, userId } = useUserRole();
   const { toast } = useToast();
-  const lastFetchTimeRef = useRef<number>(0);
-  const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const debounceTimeMs = 5000; // 5 seconds debounce
 
   const fetchNotifications = useCallback(async () => {
-    // Skip if we've fetched recently
-    const currentTime = Date.now();
-    if (currentTime - lastFetchTimeRef.current < debounceTimeMs) {
-      return;
-    }
-    
-    lastFetchTimeRef.current = currentTime;
-    
     if (!userId) {
       console.log("No user ID available");
       return;
@@ -77,10 +78,28 @@ export function useSidebarNotifications() {
     console.log("Fetching notifications for user:", userId);
 
     try {
-      // Use parallel queries for improved performance
-      const [directMessagesResult, tenantMessagesResult, maintenanceResult, paymentsResult] = await Promise.all([
-        // Direct messages to the user
-        supabase
+      // First query: Direct messages to the user
+      const { data: directMessages, error: directMessagesError } = await supabase
+        .from('messages')
+        .select(`
+          *,
+          profiles:profile_id (
+            role
+          )
+        `)
+        .eq('receiver_id', userId)
+        .eq('read', false)
+        .order('created_at', { ascending: false });
+
+      if (directMessagesError) {
+        console.error('Error fetching direct messages:', directMessagesError);
+        throw directMessagesError;
+      }
+
+      // Second query: Messages from tenants with null receiver_id (if user is landlord)
+      let broadcastMessages = [];
+      if (userRole === 'landlord') {
+        const { data: tenantMessages, error: tenantMessagesError } = await supabase
           .from('messages')
           .select(`
             *,
@@ -88,51 +107,47 @@ export function useSidebarNotifications() {
               role
             )
           `)
-          .eq('receiver_id', userId)
+          .is('receiver_id', null)
           .eq('read', false)
-          .order('created_at', { ascending: false }),
-          
-        // Broadcast messages (only if user is landlord)
-        userRole === 'landlord' ? 
-          supabase
-            .from('messages')
-            .select(`
-              *,
-              profiles:profile_id (
-                role
-              )
-            `)
-            .is('receiver_id', null)
-            .eq('read', false)
-            .eq('profiles.role', 'tenant')
-            .order('created_at', { ascending: false }) : 
-          Promise.resolve({ data: [], error: null }),
-          
-        // Maintenance requests  
-        supabase
-          .from('maintenance_requests')
-          .select('*')
-          .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false),
-          
-        // Payments
-        supabase
-          .from('payments')
-          .select('*')
-          .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false)
-      ]);
+          .eq('profiles.role', 'tenant')
+          .order('created_at', { ascending: false });
 
-      if (directMessagesResult.error) throw directMessagesResult.error;
-      if (tenantMessagesResult.error) throw tenantMessagesResult.error;
-      if (maintenanceResult.error) throw maintenanceResult.error;
-      if (paymentsResult.error) throw paymentsResult.error;
+        if (tenantMessagesError) {
+          console.error('Error fetching tenant messages:', tenantMessagesError);
+        } else {
+          broadcastMessages = tenantMessages || [];
+        }
+      }
+
+      // Fetch maintenance requests
+      const { data: maintenance, error: maintenanceError } = await supabase
+        .from('maintenance_requests')
+        .select('*')
+        .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false);
+
+      if (maintenanceError) {
+        console.error('Error fetching maintenance:', maintenanceError);
+        throw maintenanceError;
+      }
+
+      // Fetch payments
+      const { data: payments, error: paymentsError } = await supabase
+        .from('payments')
+        .select('*')
+        .eq(userRole === 'landlord' ? 'read_by_landlord' : 'read_by_tenant', false);
+
+      if (paymentsError) {
+        console.error('Error fetching payments:', paymentsError);
+        throw paymentsError;
+      }
 
       // Combine both message types
-      const allMessages = [...(directMessagesResult.data || []), ...(tenantMessagesResult.data || [])];
+      const allMessages = [...(directMessages || []), ...broadcastMessages];
 
       console.log('Messages query result:', {
         total: allMessages.length,
-        directMessages: directMessagesResult.data?.length || 0,
-        broadcastMessages: tenantMessagesResult.data?.length || 0,
+        directMessages: directMessages?.length || 0,
+        broadcastMessages: broadcastMessages.length,
         messages: allMessages,
         userId,
       });
@@ -152,8 +167,8 @@ export function useSidebarNotifications() {
         },
         {
           type: 'maintenance',
-          count: maintenanceResult.data?.length || 0,
-          items: maintenanceResult.data?.map(m => ({
+          count: maintenance?.length || 0,
+          items: maintenance?.map(m => ({
             id: m.id,
             message: m.title,
             created_at: m.created_at,
@@ -162,8 +177,8 @@ export function useSidebarNotifications() {
         },
         {
           type: 'payments',
-          count: paymentsResult.data?.length || 0,
-          items: paymentsResult.data?.map(p => ({
+          count: payments?.length || 0,
+          items: payments?.map(p => ({
             id: p.id,
             message: `New payment: $${p.amount}`,
             created_at: p.created_at,
@@ -254,14 +269,8 @@ export function useSidebarNotifications() {
         )
       );
 
-      // Debounced refresh to ensure consistency but avoid immediate refetch
-      if (fetchTimeoutRef.current) {
-        clearTimeout(fetchTimeoutRef.current);
-      }
-      
-      fetchTimeoutRef.current = setTimeout(() => {
-        fetchNotifications();
-      }, 1000);
+      // After marking as read, refresh notifications to ensure consistency
+      await fetchNotifications();
 
     } catch (error) {
       console.error(`Error marking ${type} as read:`, error);
@@ -275,30 +284,18 @@ export function useSidebarNotifications() {
   }, [userId, userRole, toast, fetchNotifications]);
 
   useEffect(() => {
-    // Skip if we don't have userId or userRole yet
-    if (!userId || !userRole) {
-      return;
-    }
-    
     fetchNotifications();
 
     const channel = supabase.channel('db-changes')
       .on('postgres_changes', 
         { 
-          event: '*', 
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
           schema: 'public', 
           table: 'messages'
         },
-        async () => {
-          console.log('Message change detected');
-          // Debounce fetches to avoid repeated calls
-          if (fetchTimeoutRef.current) {
-            clearTimeout(fetchTimeoutRef.current);
-          }
-          
-          fetchTimeoutRef.current = setTimeout(() => {
-            fetchNotifications();
-          }, 300);
+        async (payload: RealtimePostgresChangesPayload<any>) => {
+          console.log('Message change detected:', payload);
+          await fetchNotifications(); // Immediately fetch new notifications
         }
       )
       .on('postgres_changes',
@@ -309,13 +306,7 @@ export function useSidebarNotifications() {
         },
         async () => {
           console.log('Maintenance change detected');
-          if (fetchTimeoutRef.current) {
-            clearTimeout(fetchTimeoutRef.current);
-          }
-          
-          fetchTimeoutRef.current = setTimeout(() => {
-            fetchNotifications();
-          }, 300);
+          await fetchNotifications();
         }
       )
       .on('postgres_changes',
@@ -326,21 +317,12 @@ export function useSidebarNotifications() {
         },
         async () => {
           console.log('Payment change detected');
-          if (fetchTimeoutRef.current) {
-            clearTimeout(fetchTimeoutRef.current);
-          }
-          
-          fetchTimeoutRef.current = setTimeout(() => {
-            fetchNotifications();
-          }, 300);
+          await fetchNotifications();
         }
       )
       .subscribe();
 
     return () => {
-      if (fetchTimeoutRef.current) {
-        clearTimeout(fetchTimeoutRef.current);
-      }
       supabase.removeChannel(channel);
     };
   }, [userId, userRole, fetchNotifications]);

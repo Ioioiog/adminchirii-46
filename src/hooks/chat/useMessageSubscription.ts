@@ -1,80 +1,156 @@
-
-import { useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Message } from "./types";
-
-// Track active subscriptions to prevent duplicates
-const activeSubscriptions = new Set<string>();
+import { useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Message } from './types';
+import { useToast } from '@/hooks/use-toast';
 
 export function useMessageSubscription(
   conversationId: string | null,
   onMessageUpdate: (message: Message) => void,
   onMessageDelete: (messageId: string) => void
 ) {
-  useEffect(() => {
-    if (!conversationId) return;
+  const { toast } = useToast();
+
+  const handleNewMessage = useCallback(async (payload: any) => {
+    console.log('New message received:', payload);
     
-    // Don't create duplicate subscriptions
-    const subscriptionKey = `messages:${conversationId}`;
-    if (activeSubscriptions.has(subscriptionKey)) {
-      console.log("Subscription already exists for:", subscriptionKey);
+    if (!payload.new) {
+      console.log('No new message data in payload');
       return;
     }
-    
-    console.log("Setting up subscription for conversation:", conversationId);
-    activeSubscriptions.add(subscriptionKey);
 
-    // One optimized channel for all message operations
-    const channel = supabase
-      .channel(subscriptionKey)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          console.log("New message received:", payload.new.id);
-          onMessageUpdate(payload.new as Message);
+    const newMessage = payload.new;
+
+    try {
+      // Fetch the complete message with sender information
+      const { data: messageWithSender, error } = await supabase
+        .from('messages')
+        .select(`
+          id,
+          sender_id,
+          content,
+          created_at,
+          status,
+          read,
+          profile_id,
+          conversation_id,
+          profiles!messages_profile_id_fkey (
+            first_name,
+            last_name
+          )
+        `)
+        .eq('id', newMessage.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching message details:', error);
+        throw error;
+      }
+
+      if (!messageWithSender) {
+        console.log('No message found with id:', newMessage.id);
+        return;
+      }
+
+      console.log('Fetched message with sender:', messageWithSender);
+
+      // Transform the message for frontend use
+      const typedMessage: Message = {
+        id: messageWithSender.id,
+        sender_id: messageWithSender.sender_id,
+        content: messageWithSender.content,
+        created_at: messageWithSender.created_at,
+        sender: messageWithSender.profiles || null,
+        status: (messageWithSender.status || 'sent') as 'sent' | 'delivered' | 'read',
+        read: messageWithSender.read || false,
+        conversation_id: messageWithSender.conversation_id
+      };
+
+      // Cache the message in IndexedDB - prepare data for upsert
+      const messageForUpsert = {
+        id: typedMessage.id,
+        sender_id: typedMessage.sender_id,
+        content: typedMessage.content,
+        created_at: typedMessage.created_at,
+        status: typedMessage.status,
+        read: typedMessage.read,
+        profile_id: messageWithSender.profile_id,
+        conversation_id: messageWithSender.conversation_id
+      };
+
+      try {
+        const { error: upsertError } = await supabase
+          .from('messages')
+          .upsert(messageForUpsert);
+
+        if (upsertError) {
+          console.error('Error upserting message:', upsertError);
+          throw upsertError;
         }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "messages",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          console.log("Message updated:", payload.new.id);
-          onMessageUpdate(payload.new as Message);
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "DELETE",
-          schema: "public",
-          table: "messages",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          console.log("Message deleted:", payload.old.id);
-          onMessageDelete(payload.old.id);
-        }
-      )
-      .subscribe((status) => {
-        console.log(`Subscription status for ${subscriptionKey}:`, status);
+
+        // Notify the parent component about the new/updated message
+        onMessageUpdate(typedMessage);
+      } catch (error) {
+        console.error('Error caching message:', error);
+        toast({
+          title: "Error",
+          description: "Failed to cache message. Please refresh the page.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error processing new message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process new message. Please refresh the page.",
+        variant: "destructive",
       });
+    }
+  }, [onMessageUpdate, toast]);
 
-    // Clean up subscription
+  const handleDeletedMessage = useCallback((payload: any) => {
+    console.log('Message deleted:', payload);
+    
+    if (payload.old?.id) {
+      onMessageDelete(payload.old.id);
+    }
+  }, [onMessageDelete]);
+
+  useEffect(() => {
+    if (!conversationId) {
+      console.log('No conversation ID provided');
+      return;
+    }
+
+    console.log('Setting up message subscription for conversation:', conversationId);
+
+    // Subscribe to messages for this conversation
+    const subscription = supabase
+      .channel(`messages:${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`
+        },
+        handleNewMessage
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`
+        },
+        handleDeletedMessage
+      )
+      .subscribe();
+
     return () => {
-      console.log("Cleaning up subscription for:", subscriptionKey);
-      supabase.removeChannel(channel);
-      activeSubscriptions.delete(subscriptionKey);
+      console.log('Cleaning up message subscription');
+      subscription.unsubscribe();
     };
-  }, [conversationId, onMessageUpdate, onMessageDelete]);
+  }, [conversationId, handleNewMessage, handleDeletedMessage]);
 }

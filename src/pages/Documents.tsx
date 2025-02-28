@@ -58,31 +58,6 @@ function Documents() {
     endDate: string | null;
   }>({ startDate: null, endDate: null });
 
-  // Custom function to terminate contracts (as a fallback)
-  const [contractToTerminate, setContractToTerminate] = useState<ContractOrDocument | null>(null);
-  const [showTerminationDialog, setShowTerminationDialog] = useState(false);
-
-  // Termination related functions - fallback implementations
-  const localPrepareContractTermination = (contract: ContractOrDocument) => {
-    console.log("localPrepareContractTermination called with contract:", contract);
-    setContractToTerminate(contract);
-    setShowTerminationDialog(true);
-  };
-
-  const localCloseTerminationDialog = () => {
-    setShowTerminationDialog(false);
-    setContractToTerminate(null);
-  };
-
-  const localHandleTerminationSuccess = () => {
-    setShowTerminationDialog(false);
-    setContractToTerminate(null);
-    // Refetch contracts
-    if (refetchContracts) {
-      refetchContracts();
-    }
-  };
-
   // Fetch properties data
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["properties"],
@@ -145,21 +120,8 @@ function Documents() {
     isLoadingContracts, 
     deleteContractMutation,
     handleGeneratePDF,
-    handleDownloadDocument,
-    prepareContractTermination,
-    contractToTerminate: hookContractToTerminate,
-    showTerminationDialog: hookShowTerminationDialog,
-    closeTerminationDialog: hookCloseTerminationDialog,
-    handleTerminationSuccess: hookHandleTerminationSuccess,
-    refetchContracts
+    handleDownloadDocument
   } = useDocuments(userId, userRole);
-
-  // Log hook values
-  console.log("useDocuments hook values:", {
-    prepareContractTermination: typeof prepareContractTermination,
-    closeTerminationDialog: typeof hookCloseTerminationDialog,
-    handleTerminationSuccess: typeof hookHandleTerminationSuccess
-  });
 
   useEffect(() => {
     const checkUser = async () => {
@@ -411,21 +373,10 @@ function Documents() {
           <ContractsTable 
             contracts={filteredContracts}
             isLoading={isLoadingContracts}
-            userRole={userRole || "tenant"}
+            userRole={userRole}
             handleDownloadDocument={handleDownloadDocument}
             handleGeneratePDF={handleGeneratePDF}
             deleteContractMutation={deleteContractMutation}
-            prepareContractTermination={typeof prepareContractTermination === 'function' 
-              ? prepareContractTermination 
-              : localPrepareContractTermination}
-            contractToTerminate={hookContractToTerminate || contractToTerminate}
-            showTerminationDialog={hookShowTerminationDialog || showTerminationDialog}
-            closeTerminationDialog={typeof hookCloseTerminationDialog === 'function' 
-              ? hookCloseTerminationDialog 
-              : localCloseTerminationDialog}
-            handleTerminationSuccess={typeof hookHandleTerminationSuccess === 'function' 
-              ? hookHandleTerminationSuccess 
-              : localHandleTerminationSuccess}
           />
         </div>
       );
@@ -511,14 +462,6 @@ function Documents() {
         open={showContractDetails} 
         onOpenChange={setShowContractDetails} 
         contract={selectedContract} 
-      />
-      
-      {/* Local termination dialog as fallback */}
-      <ContractDetailsDialog 
-        open={showTerminationDialog} 
-        onOpenChange={localCloseTerminationDialog}
-        contract={contractToTerminate as any}
-        onSuccess={localHandleTerminationSuccess}
       />
     </PageLayout>
   );
