@@ -19,6 +19,40 @@ interface Metrics {
   }>;
 }
 
+// Type definition for service provider metrics response
+interface ServiceProviderMetricsResponse {
+  active_jobs: number;
+  completed_jobs: number;
+  monthly_earnings: number;
+}
+
+// Type definition for landlord metrics response
+interface LandlordMetricsResponse {
+  total_properties: number;
+  monthly_revenue: number;
+  active_tenants: number;
+  pending_maintenance: number;
+  revenue_details: Array<{
+    property_name: string;
+    amount: number;
+    due_date: string;
+    status: string;
+  }>;
+}
+
+// Type definition for tenant metrics response
+interface TenantMetricsResponse {
+  total_properties: number;
+  pending_maintenance: number;
+  payment_status: string;
+  revenue_details: Array<{
+    property_name: string;
+    amount: number;
+    due_date: string;
+    status: string;
+  }>;
+}
+
 // Increased cache time to reduce API calls
 const METRICS_CACHE_TIME = 5 * 60 * 1000; // 5 minutes
 
@@ -29,81 +63,52 @@ async function fetchServiceProviderMetrics(userId: string): Promise<Metrics> {
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
   const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
-  // Fetch all data in a single query with count aggregation
-  const { data, error } = await supabase.rpc('get_service_provider_metrics', {
-    user_id: userId,
-    month_start: firstDayOfMonth.toISOString(),
-    month_end: lastDayOfMonth.toISOString()
-  });
+  // Use a traditional query approach instead of the RPC since it's not in the database types
+  const activeJobsPromise = supabase
+    .from("maintenance_requests")
+    .select("id", { count: "exact" })
+    .eq("assigned_to", userId)
+    .eq("status", "in_progress");
 
-  if (error) {
-    console.error("Error fetching service provider metrics:", error);
-    
-    // Fallback to traditional queries if the RPC fails
-    const [activeJobs, completedJobs, earnings] = await Promise.all([
-      supabase
-        .from("maintenance_requests")
-        .select("id", { count: "exact" })
-        .eq("assigned_to", userId)
-        .eq("status", "in_progress"),
-      supabase
-        .from("maintenance_requests")
-        .select("id", { count: "exact" })
-        .eq("assigned_to", userId)
-        .eq("status", "completed")
-        .gte("updated_at", firstDayOfMonth.toISOString())
-        .lte("updated_at", lastDayOfMonth.toISOString()),
-      supabase
-        .from("maintenance_requests")
-        .select("service_provider_fee")
-        .eq("assigned_to", userId)
-        .eq("status", "completed")
-        .gte("updated_at", firstDayOfMonth.toISOString())
-        .lte("updated_at", lastDayOfMonth.toISOString())
-    ]);
+  const completedJobsPromise = supabase
+    .from("maintenance_requests")
+    .select("id", { count: "exact" })
+    .eq("assigned_to", userId)
+    .eq("status", "completed")
+    .gte("updated_at", firstDayOfMonth.toISOString())
+    .lte("updated_at", lastDayOfMonth.toISOString());
 
-    const monthlyEarnings = earnings.data?.reduce((sum, job) => sum + (job.service_provider_fee || 0), 0) || 0;
+  const earningsPromise = supabase
+    .from("maintenance_requests")
+    .select("service_provider_fee")
+    .eq("assigned_to", userId)
+    .eq("status", "completed")
+    .gte("updated_at", firstDayOfMonth.toISOString())
+    .lte("updated_at", lastDayOfMonth.toISOString());
 
-    return {
-      activeJobs: activeJobs.count || 0,
-      completedJobs: completedJobs.count || 0,
-      monthlyEarnings: monthlyEarnings,
-      pendingMaintenance: 0 // Required by type but not used for service providers
-    };
-  }
+  const [activeJobs, completedJobs, earnings] = await Promise.all([
+    activeJobsPromise,
+    completedJobsPromise,
+    earningsPromise
+  ]);
 
-  // If the RPC was successful, use its data
+  const monthlyEarnings = earnings.data?.reduce(
+    (sum, job) => sum + (job.service_provider_fee || 0), 
+    0
+  ) || 0;
+
   return {
-    activeJobs: data.active_jobs || 0,
-    completedJobs: data.completed_jobs || 0,
-    monthlyEarnings: data.monthly_earnings || 0,
-    pendingMaintenance: 0
+    activeJobs: activeJobs.count || 0,
+    completedJobs: completedJobs.count || 0,
+    monthlyEarnings: monthlyEarnings,
+    pendingMaintenance: 0 // Required by type but not used for service providers
   };
 }
 
 async function fetchLandlordMetrics(userId: string): Promise<Metrics> {
   console.log("Fetching landlord metrics for user:", userId);
   
-  // First try to get metrics from the RPC function (which you would need to create)
-  try {
-    const { data, error } = await supabase.rpc('get_landlord_metrics', { 
-      user_id: userId 
-    });
-    
-    if (!error && data) {
-      return {
-        totalProperties: data.total_properties || 0,
-        monthlyRevenue: data.monthly_revenue || 0,
-        activeTenants: data.active_tenants || 0,
-        pendingMaintenance: data.pending_maintenance || 0,
-        revenueDetails: data.revenue_details || []
-      };
-    }
-  } catch (err) {
-    console.log("RPC not available, falling back to regular queries");
-  }
-  
-  // Fallback to existing code if RPC fails or doesn't exist
+  // Use traditional queries instead of RPC
   const currentDate = new Date();
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
   const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
@@ -195,26 +200,6 @@ async function fetchTenantMetrics(userId: string): Promise<Metrics> {
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
   const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
-  // Try to use an RPC for better performance
-  try {
-    const { data, error } = await supabase.rpc('get_tenant_metrics', { 
-      user_id: userId,
-      month_start: firstDayOfMonth.toISOString(),
-      month_end: lastDayOfMonth.toISOString()
-    });
-    
-    if (!error && data) {
-      return {
-        totalProperties: data.total_properties || 0,
-        pendingMaintenance: data.pending_maintenance || 0,
-        paymentStatus: data.payment_status || "No payments",
-        revenueDetails: data.revenue_details || []
-      };
-    }
-  } catch (err) {
-    console.log("RPC not available, falling back to regular queries");
-  }
-
   // More efficient single query with JOIN to get tenancies
   const { data: tenanciesWithProperties, error: tenancyError } = await supabase
     .from("tenancies")
@@ -293,6 +278,6 @@ export function useMetrics(userId: string, userRole: "landlord" | "tenant" | "se
       }
     },
     staleTime: METRICS_CACHE_TIME,
-    cacheTime: METRICS_CACHE_TIME,
+    gcTime: METRICS_CACHE_TIME, // Changed from cacheTime to gcTime for TanStack Query v5
   });
 }

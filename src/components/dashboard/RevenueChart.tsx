@@ -106,7 +106,7 @@ export function RevenueChart({ userId }: { userId: string }) {
     queryKey: ["revenue-chart", userId, timeRange],
     queryFn: () => fetchRevenueData(userId, timeRange),
     staleTime: CACHE_TIME, // Keep data fresh for 10 minutes
-    cacheTime: CACHE_TIME, // Cache data for 10 minutes
+    gcTime: CACHE_TIME, // Cache data for 10 minutes (renamed from cacheTime)
   });
 
   if (isLoading) {
