@@ -131,13 +131,14 @@ export function CostCalculator() {
         .lte('issued_date', endDate)
         .eq('property_id', selectedPropertyId);
 
+      // Calculate utilities total - each utility amount is in its own currency
       const utilitiesTotal = utilities.reduce((sum, item) => sum + (parseFloat(item.amount.toString()) || 0), 0);
 
-      // Set the results with detailed utility information
+      // Create a final result object - displaying different currencies
       setResults({
         rentTotal,
         utilitiesTotal,
-        grandTotal: rentTotal + utilitiesTotal,
+        grandTotal: utilitiesTotal, // We'll display the currencies separately since they may be different
         period: displayPeriod,
         utilities: utilities
       });
@@ -214,11 +215,18 @@ export function CostCalculator() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Utilities</p>
-                    <p className="text-lg font-medium">{formatAmount(results.utilitiesTotal, 'EUR')}</p>
+                    <p className="text-lg font-medium">{formatAmount(results.utilitiesTotal, 'RON')}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Total</p>
-                    <p className="text-xl font-bold text-blue-600">{formatAmount(results.grandTotal, 'EUR')}</p>
+                    <p className="text-sm text-muted-foreground">Total (RON)</p>
+                    <p className="text-xl font-bold text-blue-600">
+                      {/* Display total utilities in RON */}
+                      {formatAmount(results.utilitiesTotal, 'RON')}
+                      <br />
+                      <span className="text-sm font-normal text-gray-500">
+                        + rent ({formatAmount(results.rentTotal, 'EUR')})
+                      </span>
+                    </p>
                   </div>
                 </div>
               </div>
@@ -244,7 +252,7 @@ export function CostCalculator() {
                             <td className="px-3 py-2 whitespace-nowrap text-sm">{utility.invoice_number || 'N/A'}</td>
                             <td className="px-3 py-2 whitespace-nowrap text-sm">{new Date(utility.due_date).toLocaleDateString()}</td>
                             <td className="px-3 py-2 whitespace-nowrap text-sm text-right font-medium">
-                              {formatAmount(utility.amount, utility.currency || 'EUR')}
+                              {formatAmount(utility.amount, utility.currency || 'RON')}
                             </td>
                           </tr>
                         ))}
@@ -252,7 +260,7 @@ export function CostCalculator() {
                       <tfoot className="bg-gray-50 dark:bg-gray-800">
                         <tr>
                           <td colSpan={3} className="px-3 py-2 text-sm font-medium text-right">Total Utilities:</td>
-                          <td className="px-3 py-2 text-sm font-bold text-right">{formatAmount(results.utilitiesTotal, 'EUR')}</td>
+                          <td className="px-3 py-2 text-sm font-bold text-right">{formatAmount(results.utilitiesTotal, 'RON')}</td>
                         </tr>
                       </tfoot>
                     </table>
