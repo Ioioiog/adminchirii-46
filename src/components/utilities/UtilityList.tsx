@@ -170,6 +170,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
             <TableHead>Type</TableHead>
             <TableHead>Invoice #</TableHead>
             <TableHead>Amount</TableHead>
+            <TableHead>Issued Date</TableHead>
             <TableHead>Due Date</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
@@ -188,6 +189,9 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
               <TableCell>{utility.invoice_number || 'N/A'}</TableCell>
               <TableCell className="font-medium text-blue-600">
                 {formatAmount(utility.amount, utility.currency)}
+              </TableCell>
+              <TableCell>
+                {utility.issued_date ? new Date(utility.issued_date).toLocaleDateString() : 'N/A'}
               </TableCell>
               <TableCell>{new Date(utility.due_date).toLocaleDateString()}</TableCell>
               <TableCell>
@@ -234,7 +238,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
           ))}
           {utilities.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+              <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                 No utility bills found.
               </TableCell>
             </TableRow>
