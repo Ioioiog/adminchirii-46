@@ -58,10 +58,31 @@ export function useAuthState() {
 
     initializeAuth();
 
+    // Set up auth state change listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log("Auth state changed:", event);
+        if (session?.user) {
+          if (mounted) {
+            setIsAuthenticated(true);
+            setCurrentUserId(session.user.id);
+          }
+        } else {
+          if (mounted) {
+            setIsAuthenticated(false);
+            setCurrentUserId(null);
+          }
+        }
+      }
+    );
+
     return () => {
       mounted = false;
+      if (authListener && authListener.subscription) {
+        authListener.subscription.unsubscribe();
+      }
     };
-  }, []); // Removed toast from dependencies since we don't use it here
+  }, []);
 
   return { isLoading, isAuthenticated, setIsAuthenticated, currentUserId };
 }

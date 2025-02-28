@@ -57,6 +57,28 @@ export const useInvoices = () => {
 
   useEffect(() => {
     fetchInvoices();
+
+    // Set up real-time subscription for invoices table
+    const channel = supabase
+      .channel('invoices_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all changes
+          schema: 'public',
+          table: 'invoices'
+        },
+        (payload) => {
+          console.log('Invoice change detected:', payload);
+          fetchInvoices(); // Refresh the data
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription when component unmounts
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return {

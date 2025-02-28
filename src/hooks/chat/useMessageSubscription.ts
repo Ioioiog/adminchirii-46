@@ -1,3 +1,4 @@
+
 import { useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Message } from './types';
@@ -33,7 +34,7 @@ export function useMessageSubscription(
           read,
           profile_id,
           conversation_id,
-          profiles!messages_profile_id_fkey (
+          sender:profiles!messages_profile_id_fkey (
             first_name,
             last_name
           )
@@ -59,7 +60,7 @@ export function useMessageSubscription(
         sender_id: messageWithSender.sender_id,
         content: messageWithSender.content,
         created_at: messageWithSender.created_at,
-        sender: messageWithSender.profiles || null,
+        sender: messageWithSender.sender || null,
         status: (messageWithSender.status || 'sent') as 'sent' | 'delivered' | 'read',
         read: messageWithSender.read || false,
         conversation_id: messageWithSender.conversation_id

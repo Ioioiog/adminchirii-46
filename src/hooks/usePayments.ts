@@ -49,6 +49,28 @@ export const usePayments = () => {
 
   useEffect(() => {
     fetchPayments();
+
+    // Set up real-time subscription for payments table
+    const channel = supabase
+      .channel('payments_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'payments'
+        },
+        (payload) => {
+          console.log('Payment change detected:', payload);
+          fetchPayments(); // Refresh the data when a change is detected
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription when component unmounts
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return {
