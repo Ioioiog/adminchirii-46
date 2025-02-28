@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AuthBackground } from "@/components/auth/AuthBackground";
+import { FloatingIconsLayout } from "@/components/auth/FloatingIconsLayout";
 
 interface TenantInvitation {
   id: string;
@@ -369,8 +371,9 @@ const TenantRegistration = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-[#0EA5E9]/5 via-transparent to-[#1EAEDB]/5">
+        <AuthBackground />
+        <Card className="w-full max-w-md bg-transparent backdrop-blur-[2px] relative z-10 border-white/5">
           <CardHeader>
             <CardTitle className="text-center">
               <Skeleton className="h-8 w-3/4 mx-auto" />
@@ -406,13 +409,24 @@ const TenantRegistration = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-center">{title}</CardTitle>
-          <CardDescription className="text-center">{description}</CardDescription>
-        </CardHeader>
-        <CardContent>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-[#0EA5E9]/5 via-transparent to-[#1EAEDB]/5">
+      <FloatingIconsLayout variant="auth-form" />
+      <AuthBackground />
+      <Card className="w-full max-w-md bg-transparent backdrop-blur-[2px] relative z-10 border-white/5">
+        <CardContent className="space-y-6 px-8">
+          <div className="flex items-center justify-center mb-6 bg-transparent">
+            <img 
+              src="/lovable-uploads/dcfa5555-90d2-43ca-9aad-65f0a8c8f211.png" 
+              alt="AdminChirii Logo" 
+              className="h-20 drop-shadow-md"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <h2 className="text-2xl font-medium text-center text-slate-800">{title}</h2>
+            <p className="text-center text-slate-600">{description}</p>
+          </div>
+
           <Auth
             supabaseClient={supabase}
             view={isExistingUser ? "sign_in" : "sign_up"}
