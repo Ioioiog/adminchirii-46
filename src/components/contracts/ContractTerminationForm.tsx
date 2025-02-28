@@ -147,12 +147,14 @@ export function ContractTerminationForm({ contract, onSuccess }: ContractTermina
                   <FormItem>
                     <FormLabel>Notice Date</FormLabel>
                     <FormControl>
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) => date < new Date()}
-                      />
+                      <div className="flex justify-center">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => date < new Date()}
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -166,12 +168,14 @@ export function ContractTerminationForm({ contract, onSuccess }: ContractTermina
                   <FormItem>
                     <FormLabel>Move-out Date</FormLabel>
                     <FormControl>
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) => date < new Date()}
-                      />
+                      <div className="flex justify-center">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => date < new Date()}
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -316,12 +320,14 @@ export function ContractTerminationForm({ contract, onSuccess }: ContractTermina
                   <FormItem>
                     <FormLabel>Property Inspection Date</FormLabel>
                     <FormControl>
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) => date < new Date()}
-                      />
+                      <div className="flex justify-center">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => date < new Date()}
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
