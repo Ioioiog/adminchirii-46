@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PropertyForm } from "@/components/properties/PropertyForm";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface PropertyTabProps {
   property: Property;
@@ -35,6 +36,8 @@ export function PropertyTab({
   handleSave,
   getStatusColor,
 }: PropertyTabProps) {
+  const { formatAmount } = useCurrency();
+  
   const formatDate = (date: string | null | undefined) => {
     if (!date) return "N/A";
     return new Date(date).toLocaleDateString();
