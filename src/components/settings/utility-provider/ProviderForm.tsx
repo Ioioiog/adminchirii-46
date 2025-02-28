@@ -68,6 +68,9 @@ export function ProviderForm({ onClose, onSuccess, provider }: ProviderFormProps
         throw new Error("No authenticated user found");
       }
 
+      // Cast utility_type to a string to avoid type issues with the database
+      const utilityTypeValue = formData.utility_type as string;
+
       const operation = provider ? 
         supabase
           .from("utility_provider_credentials")
@@ -77,7 +80,7 @@ export function ProviderForm({ onClose, onSuccess, provider }: ProviderFormProps
             encrypted_password: formData.password || undefined,
             location_name: formData.location_name,
             property_id: formData.property_id || null,
-            utility_type: formData.utility_type,
+            utility_type: utilityTypeValue,
             start_day: startDayNum,
             end_day: endDayNum
           })
@@ -91,7 +94,7 @@ export function ProviderForm({ onClose, onSuccess, provider }: ProviderFormProps
             location_name: formData.location_name,
             property_id: formData.property_id || null,
             landlord_id: user.id,
-            utility_type: formData.utility_type,
+            utility_type: utilityTypeValue,
             start_day: startDayNum,
             end_day: endDayNum
           });
@@ -194,7 +197,7 @@ export function ProviderForm({ onClose, onSuccess, provider }: ProviderFormProps
         <Label htmlFor="utility_type">Utility Type</Label>
         <Select
           value={formData.utility_type}
-          onValueChange={(value: 'electricity' | 'water' | 'gas' | 'internet') => 
+          onValueChange={(value) => 
             setFormData({ ...formData, utility_type: value })}
           disabled={formData.provider_name === 'engie_romania'}
         >
@@ -206,6 +209,7 @@ export function ProviderForm({ onClose, onSuccess, provider }: ProviderFormProps
             <SelectItem value="water">Water</SelectItem>
             <SelectItem value="gas">Gas</SelectItem>
             <SelectItem value="internet">Internet</SelectItem>
+            <SelectItem value="building maintenance">Building Maintenance</SelectItem>
           </SelectContent>
         </Select>
       </div>

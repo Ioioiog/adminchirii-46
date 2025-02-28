@@ -9,7 +9,7 @@ export interface UtilityProvider {
     name: string;
     address: string;
   };
-  utility_type?: 'electricity' | 'water' | 'gas' | 'internet';
+  utility_type?: 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
   start_day?: number;
   end_day?: number;
   location_name?: string;
