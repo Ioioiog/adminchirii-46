@@ -75,6 +75,7 @@ export function UtilityFilters({
           <SelectItem value="water">Water</SelectItem>
           <SelectItem value="gas">Gas</SelectItem>
           <SelectItem value="internet">Internet</SelectItem>
+          <SelectItem value="building maintenance">Building Maintenance</SelectItem>
         </SelectContent>
       </Select>
     </div>

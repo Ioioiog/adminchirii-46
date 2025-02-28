@@ -6,7 +6,8 @@ export const detectUtilityType = (
   propertyId: string, 
   properties: Property[]
 ): string => {
-  const maintenanceKeywords = ['water', 'cleaning', 'electricity', 'maintenance', 'cleaning'];
+  // Add "internet" to the list of maintenance keywords
+  const maintenanceKeywords = ['water', 'cleaning', 'electricity', 'maintenance', 'cleaning', 'internet'];
   const keywordMatches = maintenanceKeywords.filter(keyword => 
     extractedText.toLowerCase().includes(keyword)
   );
@@ -25,6 +26,11 @@ export const detectUtilityType = (
       isBelvedere60: !!isBelvedere60
     });
     return "Building Maintenance";
+  }
+
+  // If "internet" is detected in the text, return "internet" type
+  if (extractedText.toLowerCase().includes('internet')) {
+    return "internet";
   }
 
   return "";

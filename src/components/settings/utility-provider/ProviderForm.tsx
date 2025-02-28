@@ -194,7 +194,7 @@ export function ProviderForm({ onClose, onSuccess, provider }: ProviderFormProps
         <Label htmlFor="utility_type">Utility Type</Label>
         <Select
           value={formData.utility_type}
-          onValueChange={(value: 'electricity' | 'water' | 'gas') => 
+          onValueChange={(value: 'electricity' | 'water' | 'gas' | 'internet') => 
             setFormData({ ...formData, utility_type: value })}
           disabled={formData.provider_name === 'engie_romania'}
         >
@@ -205,6 +205,7 @@ export function ProviderForm({ onClose, onSuccess, provider }: ProviderFormProps
             <SelectItem value="electricity">Electricity</SelectItem>
             <SelectItem value="water">Water</SelectItem>
             <SelectItem value="gas">Gas</SelectItem>
+            <SelectItem value="internet">Internet</SelectItem>
           </SelectContent>
         </Select>
       </div>
