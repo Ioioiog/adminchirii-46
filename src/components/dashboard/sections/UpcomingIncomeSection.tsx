@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,18 +24,24 @@ export function UpcomingIncomeSection({ userId }: { userId: string }) {
   const { data: upcomingPayments, isLoading } = useQuery({
     queryKey: ["upcoming-payments", userId],
     queryFn: async () => {
+      if (!userId) {
+        console.warn("No userId provided to UpcomingIncomeSection");
+        return [];
+      }
+      
       console.log("Fetching upcoming payments for landlord:", userId);
       
+      // Use a more efficient query with simplified join structure
       const { data, error } = await supabase
         .from("payments")
         .select(`
           amount,
           due_date,
-          tenancy:tenancies (
-            property:properties (
+          tenancy:tenancies!inner (
+            property:properties!inner (
               name
             ),
-            tenant:profiles (
+            tenant:profiles!inner (
               first_name,
               last_name
             )
@@ -56,7 +63,9 @@ export function UpcomingIncomeSection({ userId }: { userId: string }) {
         property: payment.tenancy.property,
         tenant: payment.tenancy.tenant
       })) as UpcomingPayment[];
-    }
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes
   });
 
   if (isLoading) {
