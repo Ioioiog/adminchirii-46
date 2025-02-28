@@ -168,6 +168,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
           <TableRow>
             <TableHead>Property</TableHead>
             <TableHead>Type</TableHead>
+            <TableHead>Invoice #</TableHead>
             <TableHead>Amount</TableHead>
             <TableHead>Due Date</TableHead>
             <TableHead>Status</TableHead>
@@ -184,6 +185,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
                 </div>
               </TableCell>
               <TableCell className="capitalize">{utility.type}</TableCell>
+              <TableCell>{utility.invoice_number || 'N/A'}</TableCell>
               <TableCell className="font-medium text-blue-600">
                 {formatAmount(utility.amount, utility.currency)}
               </TableCell>
@@ -232,7 +234,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
           ))}
           {utilities.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+              <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                 No utility bills found.
               </TableCell>
             </TableRow>
