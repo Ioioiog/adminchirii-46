@@ -107,6 +107,12 @@ export function ContractsTable({
     }
   };
 
+  // Helper function to check if a contract is a lease type
+  const isLeaseContract = (contract: ContractOrDocument): boolean => {
+    return contract.contract_type === "lease" || 
+           contract.contract_type === "lease_agreement";
+  };
+
   if (isLoading) {
     return <div className="text-center py-4">Loading contracts...</div>;
   }
@@ -198,29 +204,32 @@ export function ContractsTable({
                     </Button>
                   )}
                   
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      // For documents with file_path
-                      if ('file_path' in contract && contract.file_path) {
-                        handleDownloadDocument(contract.file_path);
-                      } 
-                      // For contracts with metadata that may contain a file_path
-                      else if ('metadata' in contract && contract.metadata && 
-                              typeof contract.metadata === 'object' && 
-                              'file_path' in (contract.metadata as any)) {
-                        handleDownloadDocument((contract.metadata as any).file_path);
-                      } 
-                      // For other contracts, generate PDF
-                      else {
-                        handleGeneratePDF(contract);
-                      }
-                    }}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download
-                  </Button>
+                  {/* Only show Download button if it's not a lease contract */}
+                  {!isLeaseContract(contract) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        // For documents with file_path
+                        if ('file_path' in contract && contract.file_path) {
+                          handleDownloadDocument(contract.file_path);
+                        } 
+                        // For contracts with metadata that may contain a file_path
+                        else if ('metadata' in contract && contract.metadata && 
+                                typeof contract.metadata === 'object' && 
+                                'file_path' in (contract.metadata as any)) {
+                          handleDownloadDocument((contract.metadata as any).file_path);
+                        } 
+                        // For other contracts, generate PDF
+                        else {
+                          handleGeneratePDF(contract);
+                        }
+                      }}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
