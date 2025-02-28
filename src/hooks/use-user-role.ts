@@ -129,7 +129,7 @@ export function useUserRole() {
       console.log("Auth state changed:", event);
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         await getUserRole();
-      } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+      } else if (event === 'SIGNED_OUT') {
         if (mounted) {
           setUserRole(null);
           setUserId(null);

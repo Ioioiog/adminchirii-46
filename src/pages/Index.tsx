@@ -119,7 +119,7 @@ const Index = () => {
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       console.log("Auth state changed in Index:", event);
-      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+      if (event === 'SIGNED_OUT') {
         navigate("/auth");
       }
     });
