@@ -93,12 +93,15 @@ export function useAuthState() {
 
     // Set up auth state change listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event) => {
+      async (event) => {
         console.log("Auth state changed:", event);
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          if (mounted) {
+          // Get the current user after sign in or token refresh
+          const { data: { user } } = await supabase.auth.getUser();
+          
+          if (mounted && user) {
             setIsAuthenticated(true);
-            setCurrentUserId(session?.user.id || null);
+            setCurrentUserId(user.id);
             setAuthError(null);
           }
         } else if (event === 'SIGNED_OUT') {
