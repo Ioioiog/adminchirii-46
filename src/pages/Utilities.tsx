@@ -1,9 +1,10 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Gauge, Plug, Building2 } from "lucide-react";
+import { Gauge, Plug, Building2, FileSpreadsheet } from "lucide-react";
 import { useUserRole } from "@/hooks/use-user-role";
 import { UtilityDialog } from "@/components/utilities/UtilityDialog";
 import { UtilityList } from "@/components/utilities/UtilityList";
@@ -16,6 +17,7 @@ import { ProviderList } from "@/components/settings/utility-provider/ProviderLis
 import { ProviderForm } from "@/components/settings/utility-provider/ProviderForm";
 import { useToast } from "@/hooks/use-toast";
 import { UtilityFilters } from "@/components/utilities/UtilityFilters";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 type UtilitiesSection = 'bills' | 'readings' | 'providers';
 
@@ -46,6 +48,9 @@ const Utilities = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [propertyFilter, setPropertyFilter] = useState("all");
+  const [showCsvImporter, setShowCsvImporter] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   const { userRole } = useUserRole();
   const { toast } = useToast();
@@ -157,6 +162,109 @@ const Utilities = () => {
     setShowProviderForm(true);
   };
 
+  const handleCsvFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      setCsvFile(files[0]);
+    }
+  };
+
+  const handleCsvImport = async () => {
+    if (!csvFile) {
+      toast({
+        title: "Error",
+        description: "Please select a CSV file first",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const csv = e.target?.result as string;
+        if (!csv) {
+          throw new Error("Failed to read CSV file");
+        }
+
+        // Parse CSV
+        const lines = csv.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim());
+        
+        // Expected headers: property_id,type,amount,currency,due_date,issued_date,invoice_number
+        const requiredHeaders = ['property_id', 'type', 'amount', 'due_date'];
+        const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+        
+        if (missingHeaders.length > 0) {
+          throw new Error(`CSV is missing required headers: ${missingHeaders.join(', ')}`);
+        }
+
+        const utilityBills = [];
+        
+        // Process each line
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+          
+          const values = lines[i].split(',').map(v => v.trim());
+          const bill: any = {};
+          
+          headers.forEach((header, index) => {
+            bill[header] = values[index] || null;
+          });
+          
+          // Validate required fields
+          if (!bill.property_id || !bill.type || !bill.amount || !bill.due_date) {
+            continue; // Skip incomplete rows
+          }
+          
+          // Convert amount to number
+          bill.amount = parseFloat(bill.amount);
+          
+          // Set default status
+          bill.status = 'pending';
+          
+          utilityBills.push(bill);
+        }
+        
+        if (utilityBills.length === 0) {
+          throw new Error("No valid utility bills found in CSV");
+        }
+        
+        // Insert bills into database
+        const { data, error } = await supabase
+          .from('utilities')
+          .insert(utilityBills)
+          .select();
+          
+        if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: `Imported ${utilityBills.length} utility bills successfully`
+        });
+        
+        // Refresh the list
+        queryClient.invalidateQueries({ queryKey: ['utilities'] });
+        
+        // Close the dialog and reset state
+        setShowCsvImporter(false);
+        setCsvFile(null);
+      };
+      
+      reader.readAsText(csvFile);
+    } catch (error) {
+      console.error("Error importing CSV:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to import utility bills",
+        variant: "destructive"
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   if (!userRole || userRole === "service_provider") {
     return <div className="flex h-screen items-center justify-center">
       <div className="text-center">
@@ -180,7 +288,8 @@ const Utilities = () => {
     ...(userRole === 'landlord' ? [{
       id: 'providers' as UtilitiesSection,
       label: 'Utility Providers',
-      icon: Building2
+      icon: Building2,
+      hideForRole: 'tenant'
     }] : [])
   ];
 
@@ -204,9 +313,21 @@ const Utilities = () => {
                   </div>
                 </div>
               </div>
-              {userRole === "landlord" && properties && (
-                <UtilityDialog properties={properties} onUtilityCreated={() => {}} />
-              )}
+              <div className="flex gap-2">
+                {userRole === "landlord" && properties && (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => setShowCsvImporter(true)}
+                    >
+                      <FileSpreadsheet className="h-4 w-4" />
+                      Import CSV
+                    </Button>
+                    <UtilityDialog properties={properties} onUtilityCreated={() => {}} />
+                  </>
+                )}
+              </div>
             </div>
 
             <UtilityFilters
@@ -226,6 +347,51 @@ const Utilities = () => {
               userRole={userRole}
               onStatusUpdate={() => {}}
             />
+
+            {/* CSV Import Dialog */}
+            <Dialog open={showCsvImporter} onOpenChange={setShowCsvImporter}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Import Utility Bills from CSV</DialogTitle>
+                  <DialogDescription>
+                    Upload a CSV file with utility bill data. The CSV must include these headers: property_id, type, amount, due_date
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4 py-2">
+                  <div className="grid gap-2">
+                    <label className="text-sm font-medium" htmlFor="csvFile">
+                      CSV File
+                    </label>
+                    <input
+                      id="csvFile"
+                      type="file"
+                      accept=".csv"
+                      onChange={handleCsvFileChange}
+                      className="cursor-pointer rounded-md border border-input bg-transparent px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
+                    />
+                  </div>
+
+                  <div className="pt-2">
+                    <Button 
+                      onClick={handleCsvImport} 
+                      disabled={!csvFile || isImporting}
+                      className="w-full"
+                    >
+                      {isImporting ? "Importing..." : "Import Utility Bills"}
+                    </Button>
+
+                    <div className="mt-4 text-xs text-gray-500">
+                      <p className="font-semibold">CSV Format Example:</p>
+                      <pre className="bg-gray-100 p-2 rounded mt-1 overflow-x-auto">
+                        property_id,type,amount,currency,due_date,issued_date,invoice_number{"\n"}
+                        uuid-here,Electricity,150.50,USD,2023-11-15,2023-10-15,INV-12345
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         );
       case 'readings':
