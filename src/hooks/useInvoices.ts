@@ -42,7 +42,9 @@ export const useInvoices = () => {
       
       // Apply status filter at the database level
       if (statusFilter !== "all") {
-        query = query.eq("status", statusFilter);
+        // Type assertion for status filter
+        const typedStatus = statusFilter as "pending" | "paid" | "overdue";
+        query = query.eq("status", typedStatus);
       }
       
       // Apply date range filter at the database level if set
@@ -60,7 +62,28 @@ export const useInvoices = () => {
       if (invoicesError) throw invoicesError;
 
       console.log("Fetched invoices:", invoicesData);
-      setInvoices(invoicesData as Invoice[]);
+      
+      // Process data to match the Invoice type
+      const processedInvoices = invoicesData.map(invoice => {
+        // Extract tenant data from the first tenant entry
+        const tenantData = invoice.tenant?.[0] || {
+          first_name: '',
+          last_name: '',
+          email: ''
+        };
+        
+        return {
+          ...invoice,
+          // Replace the tenant array with a single tenant object
+          tenant: {
+            first_name: tenantData.first_name,
+            last_name: tenantData.last_name,
+            email: tenantData.email
+          }
+        };
+      }) as Invoice[];
+      
+      setInvoices(processedInvoices);
     } catch (error) {
       console.error("Error fetching invoices:", error);
       toast({

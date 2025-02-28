@@ -25,25 +25,7 @@ async function fetchRevenueData(userId: string, timeRange: TimeRange): Promise<M
   const months = getMonthsForRange(timeRange);
   console.log("Fetching data for months:", months);
 
-  // Try to use a more efficient RPC function if available
-  try {
-    const { data: rpcData, error: rpcError } = await supabase.rpc(
-      'get_revenue_by_months', 
-      { 
-        p_user_id: userId,
-        p_months: months 
-      }
-    );
-    
-    if (!rpcError && rpcData) {
-      console.log("Retrieved revenue data via RPC");
-      return rpcData;
-    }
-  } catch (err) {
-    console.log("RPC function not available, using standard query");
-  }
-
-  // Fallback to standard query if RPC fails or isn't available
+  // Fallback to standard query since we can't use RPC function
   // Use a single optimized query for all properties with active tenancies
   const { data: propertyRevenueData, error } = await supabase
     .from("properties")

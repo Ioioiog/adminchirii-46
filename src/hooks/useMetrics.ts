@@ -75,104 +75,89 @@ async function fetchLandlordMetrics(userId: string): Promise<Metrics> {
   // Use a more efficient approach with fewer queries
   const currentDate = new Date();
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
-
-  // Get properties with active tenancies and maintenance counts in one query using Postgres CTEs
-  const { data, error } = await supabase.rpc('get_dashboard_metrics', { 
-    p_user_id: userId, 
-    p_first_day_of_month: firstDayOfMonth 
-  }).maybeSingle();
-
-  // Fallback to manual queries if RPC is not available
-  if (error && error.message.includes('does not exist')) {
-    console.log("RPC function not available, using standard queries");
-    
-    // Get properties with active tenancies in a single query with proper joins
-    const { data: propertiesWithTenancies, error: propsError } = await supabase
-      .from("properties")
-      .select(`
+  
+  // Get properties with active tenancies in a single query with proper joins
+  const { data: propertiesWithTenancies, error: propsError } = await supabase
+    .from("properties")
+    .select(`
+      id,
+      name,
+      monthly_rent,
+      tenancies!inner(
         id,
-        name,
-        monthly_rent,
-        tenancies!inner(
-          id,
-          status,
-          start_date,
-          end_date,
-          tenant_id
-        )
-      `)
-      .eq("landlord_id", userId)
-      .eq("tenancies.status", "active");
-
-    if (propsError) {
-      console.error("Error fetching properties:", propsError);
-      throw propsError;
-    }
-
-    if (!propertiesWithTenancies?.length) {
-      console.log("No properties with active tenancies found for landlord");
-      return {
-        totalProperties: 0,
-        monthlyRevenue: 0,
-        activeTenants: 0,
-        pendingMaintenance: 0,
-        revenueDetails: []
-      };
-    }
-
-    // Get maintenance counts in a single query
-    const propertyIds = propertiesWithTenancies.map(p => p.id);
-    const { count: maintenanceCount } = await supabase
-      .from("maintenance_requests")
-      .select("id", { count: "exact" })
-      .eq("status", "pending")
-      .in("property_id", propertyIds);
-
-    // Get all payments for this month in a single query
-    const { data: payments } = await supabase
-      .from("payments")
-      .select(`
         status,
-        tenancy_id
-      `)
-      .in("tenancy_id", propertiesWithTenancies.map(p => p.tenancies[0].id))
-      .gte("due_date", firstDayOfMonth);
+        start_date,
+        end_date,
+        tenant_id
+      )
+    `)
+    .eq("landlord_id", userId)
+    .eq("tenancies.status", "active");
 
-    // Calculate totals and build response
-    let totalMonthlyRevenue = 0;
-    let activeTenanciesCount = 0;
-    const revenueDetails = [];
+  if (propsError) {
+    console.error("Error fetching properties:", propsError);
+    throw propsError;
+  }
 
-    for (const property of propertiesWithTenancies) {
-      totalMonthlyRevenue += Number(property.monthly_rent);
-      activeTenanciesCount++;
-
-      const payment = payments?.find(p => p.tenancy_id === property.tenancies[0].id);
-
-      revenueDetails.push({
-        property_name: property.name,
-        amount: Number(property.monthly_rent),
-        due_date: firstDayOfMonth,
-        status: payment?.status || "pending"
-      });
-    }
-
+  if (!propertiesWithTenancies?.length) {
+    console.log("No properties with active tenancies found for landlord");
     return {
-      totalProperties: propertiesWithTenancies.length,
-      monthlyRevenue: totalMonthlyRevenue,
-      activeTenants: activeTenanciesCount,
-      pendingMaintenance: maintenanceCount || 0,
-      revenueDetails: revenueDetails
+      totalProperties: 0,
+      monthlyRevenue: 0,
+      activeTenants: 0,
+      pendingMaintenance: 0,
+      revenueDetails: []
     };
   }
-  
-  // If RPC was successful, use its data
+
+  // Get maintenance counts in a single query
+  const propertyIds = propertiesWithTenancies.map(p => p.id);
+  const { count: maintenanceCount } = await supabase
+    .from("maintenance_requests")
+    .select("id", { count: "exact" })
+    .eq("status", "pending")
+    .in("property_id", propertyIds);
+
+  // Get all payments for this month in a single query
+  const { data: payments } = await supabase
+    .from("payments")
+    .select(`
+      status,
+      tenancy_id
+    `)
+    .in("tenancy_id", propertiesWithTenancies.map(p => p.tenancies[0].id))
+    .gte("due_date", firstDayOfMonth);
+
+  // Calculate totals and build response
+  let totalMonthlyRevenue = 0;
+  let activeTenanciesCount = 0;
+  const revenueDetails: Array<{
+    property_name: string;
+    amount: number;
+    due_date: string;
+    status: string;
+  }> = [];
+
+  for (const property of propertiesWithTenancies) {
+    totalMonthlyRevenue += Number(property.monthly_rent);
+    activeTenanciesCount++;
+
+    const payment = payments?.find(p => p.tenancy_id === property.tenancies[0].id);
+
+    revenueDetails.push({
+      property_name: property.name,
+      amount: Number(property.monthly_rent),
+      due_date: firstDayOfMonth,
+      status: payment?.status || "pending"
+    });
+  }
+
   return {
-    totalProperties: data?.total_properties || 0,
-    monthlyRevenue: data?.monthly_revenue || 0,
-    activeTenants: data?.active_tenants || 0,
-    pendingMaintenance: data?.pending_maintenance || 0,
-    revenueDetails: data?.revenue_details || []
+    totalProperties: propertiesWithTenancies.length,
+    monthlyRevenue: totalMonthlyRevenue,
+    activeTenants: activeTenanciesCount,
+    pendingMaintenance: maintenanceCount || 0,
+    revenueDetails: revenueDetails
   };
 }
 
@@ -233,7 +218,13 @@ async function fetchTenantMetrics(userId: string): Promise<Metrics> {
   const propertiesCount = tenanciesWithProperties?.length || 0;
   
   // Only fetch revenue details if there are tenancies
-  let revenueDetails = [];
+  let revenueDetails: Array<{
+    property_name: string;
+    amount: number;
+    due_date: string;
+    status: string;
+  }> = [];
+  
   if (tenancyIds.length > 0) {
     const { data: revenueData } = await supabase
       .from("payments")
@@ -246,7 +237,7 @@ async function fetchTenantMetrics(userId: string): Promise<Metrics> {
       .in("tenancy_id", tenancyIds)
       .gte("due_date", firstDayOfMonth);
       
-    revenueDetails = revenueData?.map(payment => {
+    revenueDetails = (revenueData || []).map(payment => {
       const tenancy = tenanciesWithProperties?.find(t => t.id === payment.tenancy_id);
       return {
         property_name: tenancy?.property?.name || 'Unknown',
@@ -254,7 +245,7 @@ async function fetchTenantMetrics(userId: string): Promise<Metrics> {
         due_date: payment.due_date,
         status: payment.status
       };
-    }) || [];
+    });
   }
 
   return {
