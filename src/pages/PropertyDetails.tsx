@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Home, User, Receipt, UserCircle } from "lucide-react";
@@ -101,17 +100,7 @@ const PropertyDetails = () => {
         .single();
 
       if (error) throw error;
-      
-      // Add the missing properties required by the Property type
-      const propertyWithExtras = {
-        ...data,
-        status: data.tenancies?.some((t: any) => t.status === 'active') 
-          ? 'occupied' as PropertyStatus 
-          : 'vacant' as PropertyStatus,
-        tenant_count: data.tenancies?.filter((t: any) => t.status === 'active').length || 0
-      };
-      
-      return propertyWithExtras;
+      return data;
     },
   });
 

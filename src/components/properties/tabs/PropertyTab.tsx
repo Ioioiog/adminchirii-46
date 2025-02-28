@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Edit, Save, X } from "lucide-react";
+import { Format } from "@/components/ui/format";
 import { Property, PropertyStatus } from "@/utils/propertyUtils";
 import {
   Card,
