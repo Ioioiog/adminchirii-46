@@ -120,7 +120,12 @@ function Documents() {
     isLoadingContracts, 
     deleteContractMutation,
     handleGeneratePDF,
-    handleDownloadDocument
+    handleDownloadDocument,
+    prepareContractTermination,
+    contractToTerminate,
+    showTerminationDialog,
+    closeTerminationDialog,
+    handleTerminationSuccess
   } = useDocuments(userId, userRole);
 
   useEffect(() => {
@@ -373,10 +378,15 @@ function Documents() {
           <ContractsTable 
             contracts={filteredContracts}
             isLoading={isLoadingContracts}
-            userRole={userRole}
+            userRole={userRole || "tenant"}
             handleDownloadDocument={handleDownloadDocument}
             handleGeneratePDF={handleGeneratePDF}
             deleteContractMutation={deleteContractMutation}
+            prepareContractTermination={prepareContractTermination}
+            contractToTerminate={contractToTerminate}
+            showTerminationDialog={showTerminationDialog}
+            closeTerminationDialog={closeTerminationDialog}
+            handleTerminationSuccess={handleTerminationSuccess}
           />
         </div>
       );
