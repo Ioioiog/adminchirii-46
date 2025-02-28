@@ -19,6 +19,7 @@ export function ProtectedRoute({
   const navigate = useNavigate();
   const [isChecking, setIsChecking] = useState(true);
   const [hasCheckedForContracts, setHasCheckedForContracts] = useState(false);
+  const [hasValidSession, setHasValidSession] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -39,6 +40,7 @@ export function ProtectedRoute({
           });
           await supabase.auth.signOut();
           setIsChecking(false);
+          setHasValidSession(false);
           return;
         }
 
@@ -46,8 +48,12 @@ export function ProtectedRoute({
           console.log("No valid session found");
           await supabase.auth.signOut();
           setIsChecking(false);
+          setHasValidSession(false);
           return;
         }
+
+        // Set valid session to true as we've confirmed we have a session
+        setHasValidSession(true);
 
         // Additional verification of the user
         const { error: userError, data: userData } = await supabase.auth.getUser();
@@ -60,6 +66,7 @@ export function ProtectedRoute({
           });
           await supabase.auth.signOut();
           setIsChecking(false);
+          setHasValidSession(false);
           return;
         }
 
@@ -85,7 +92,8 @@ export function ProtectedRoute({
             
           if (contractError) {
             console.error("Error checking for pending contracts:", contractError);
-          } else if (pendingContracts && pendingContracts.length > 0) {
+          } else if (pendingContracts && pendingContracts.length > 0 && 
+                    !(window.location.pathname.includes(pendingContracts[0].id))) {
             console.log("Found pending contract:", pendingContracts[0]);
             setHasCheckedForContracts(true);
             navigate(`/documents/contracts/${pendingContracts[0].id}?invitation_token=${pendingContracts[0].invitation_token}`);
@@ -106,6 +114,7 @@ export function ProtectedRoute({
           });
           await supabase.auth.signOut();
           setIsChecking(false);
+          setHasValidSession(false);
         }
       }
     };
@@ -121,7 +130,7 @@ export function ProtectedRoute({
     };
   }, [isAuthenticated, toast, navigate, hasCheckedForContracts]);
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !hasValidSession) {
     console.log("User not authenticated, redirecting to:", redirectTo);
     return <Navigate to={redirectTo} replace />;
   }
