@@ -134,11 +134,11 @@ export function CostCalculator() {
       // Calculate utilities total - each utility amount is in its own currency
       const utilitiesTotal = utilities.reduce((sum, item) => sum + (parseFloat(item.amount.toString()) || 0), 0);
 
-      // Create a final result object - displaying different currencies
+      // Create a final result object - calculating the grand total as rent + utilities
       setResults({
         rentTotal,
         utilitiesTotal,
-        grandTotal: utilitiesTotal, // We'll display the currencies separately since they may be different
+        grandTotal: rentTotal + utilitiesTotal, // Calculate grand total as rent + utilities
         period: displayPeriod,
         utilities: utilities
       });
@@ -218,13 +218,13 @@ export function CostCalculator() {
                     <p className="text-lg font-medium">{formatAmount(results.utilitiesTotal, 'RON')}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Total (RON)</p>
+                    <p className="text-sm text-muted-foreground">Total</p>
                     <p className="text-xl font-bold text-blue-600">
-                      {/* Display total utilities in RON */}
+                      {/* Display total as rent + utilities with both currencies */}
                       {formatAmount(results.utilitiesTotal, 'RON')}
                       <br />
                       <span className="text-sm font-normal text-gray-500">
-                        + rent ({formatAmount(results.rentTotal, 'EUR')})
+                        + {formatAmount(results.rentTotal, 'EUR')}
                       </span>
                     </p>
                   </div>

@@ -2494,7 +2494,12 @@ export type Database = {
         | "completed"
         | "cancelled"
       maintenance_status: "pending" | "completed" | "cancelled"
-      meter_type: "electricity" | "water" | "gas"
+      meter_type:
+        | "electricity"
+        | "water"
+        | "gas"
+        | "internet"
+        | "building maintenance"
       property_type: "Apartment" | "House" | "Condo" | "Commercial"
       scraping_status: "pending" | "in_progress" | "completed" | "failed"
       service_category:
@@ -2517,6 +2522,12 @@ export type Database = {
         | "tenancy_ended"
       termination_payment_method: "bank_transfer" | "cash" | "check" | "other"
       utility_reading_type: "electricity" | "water" | "gas"
+      utility_type:
+        | "electricity"
+        | "gas"
+        | "water"
+        | "internet"
+        | "building maintenance"
     }
     CompositeTypes: {
       provider_credentials: {
