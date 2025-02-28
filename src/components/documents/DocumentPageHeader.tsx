@@ -59,16 +59,6 @@ export function DocumentPageHeader({
           
           {activeTab === "contracts" && (
             <Button 
-              className="bg-purple-600 hover:bg-purple-700" 
-              onClick={handleCreateContractClick}
-            >
-              <FileSignature className="h-4 w-4 mr-2" />
-              Lease Agreement
-            </Button>
-          )}
-          
-          {activeTab === "contracts" && (
-            <Button 
               onClick={handleCreateContractClick} 
               className="bg-green-600 hover:bg-green-700"
             >
