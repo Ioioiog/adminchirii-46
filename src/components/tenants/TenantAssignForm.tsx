@@ -70,7 +70,7 @@ export function TenantAssignForm({
 
   return (
     <div className="space-y-4">
-      <Alert variant="warning" className="bg-amber-50 border-amber-200">
+      <Alert className="bg-amber-50 border-amber-200">
         <AlertCircle className="h-4 w-4 text-amber-700" />
         <AlertTitle className="text-amber-700">Feature Disabled</AlertTitle>
         <AlertDescription className="text-amber-700">
