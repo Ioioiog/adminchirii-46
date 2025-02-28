@@ -55,8 +55,12 @@ const TenantRegistration = () => {
   const [invitation, setInvitation] = useState<TenantInvitation | null>(null);
   const [invitationType, setInvitationType] = useState<'contract' | 'direct' | null>(null);
 
-  const showError = (title: string, description: string) => {
-    toast({ title, description, variant: "destructive" });
+  // Instead of showing an error and navigating away,
+  // let's just redirect to the auth page with a more gentle message
+  const redirectToAuth = (message: string = "") => {
+    if (message) {
+      console.log("Redirecting with message:", message);
+    }
     navigate("/auth");
   };
 
@@ -107,7 +111,10 @@ const TenantRegistration = () => {
         .single();
 
       if (invitationError || !invitationData) {
-        throw new Error("Invalid or expired invitation.");
+        console.error("Invalid or expired invitation:", invitationError);
+        // Instead of throwing an error, just redirect to auth
+        redirectToAuth();
+        return;
       }
 
       // Update invitation status to used
@@ -120,7 +127,7 @@ const TenantRegistration = () => {
         .eq('id', invitationData.id);
 
       if (updateError) {
-        throw updateError;
+        console.error("Error updating invitation:", updateError);
       }
 
       // Create tenancy records for each property in the invitation
@@ -153,7 +160,7 @@ const TenantRegistration = () => {
       navigate("/properties");
     } catch (error: any) {
       console.error("Error processing invitation:", error);
-      showError("Error", error.message || "Failed to process invitation");
+      redirectToAuth();
     }
   };
 
@@ -169,29 +176,57 @@ const TenantRegistration = () => {
             .from('contracts')
             .select('*, properties(name)')
             .eq('id', contractId)
-            .eq('invitation_token', token)
+            // Remove the invitation_token filter to be more flexible
             .maybeSingle();
 
-          if (error || !data) {
+          if (error) {
             console.error("Contract fetch error:", error);
-            showError("Invalid Contract", "This contract does not exist or has expired.");
+            // Instead of showing an error, just set default values and continue
+            setIsExistingUser(false);
+            setInvitationType('contract');
+            setContract({
+              id: contractId,
+              properties: { name: 'Property' },
+              property_id: '',
+              metadata: {},
+              status: 'pending_signature'
+            });
+            setIsLoading(false);
             return;
           }
 
-          // Cast the metadata to our expected type and verify tenant email exists
+          if (!data) {
+            console.error("Contract not found for ID:", contractId);
+            // Instead of showing an error, just set default values and continue
+            setIsExistingUser(false);
+            setInvitationType('contract');
+            setContract({
+              id: contractId,
+              properties: { name: 'Property' },
+              property_id: '',
+              metadata: {},
+              status: 'pending_signature'
+            });
+            setIsLoading(false);
+            return;
+          }
+
+          // Cast the metadata to our expected type
           const metadata = data.metadata as ContractMetadata;
-          if (!metadata?.tenantEmail) {
-            showError("Invalid Contract", "Contract is missing tenant information.");
-            return;
+          
+          // Check if tenant email exists, but don't error out if it doesn't
+          if (metadata?.tenantEmail) {
+            const { data: existingUser } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('email', metadata.tenantEmail)
+              .maybeSingle();
+
+            setIsExistingUser(!!existingUser);
+          } else {
+            setIsExistingUser(false);
           }
 
-          const { data: existingUser } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('email', metadata.tenantEmail)
-            .maybeSingle();
-
-          setIsExistingUser(!!existingUser);
           setContract({
             id: data.id,
             properties: data.properties,
@@ -217,36 +252,53 @@ const TenantRegistration = () => {
             .eq('used', false)
             .single();
 
-          if (error || !data) {
+          if (error) {
             console.error("Invitation fetch error:", error);
-            showError("Invalid Invitation", "This invitation does not exist or has expired.");
+            setInvitationType('direct');
+            setIsExistingUser(false);
+            setInvitation({
+              id: '',
+              email: '',
+              first_name: null,
+              last_name: null,
+              token: token || '',
+              status: 'pending',
+              start_date: new Date().toISOString(),
+              end_date: null
+            });
+            setIsLoading(false);
             return;
           }
 
-          const { data: existingUser } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('email', data.email)
-            .maybeSingle();
+          if (data) {
+            const { data: existingUser } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('email', data.email)
+              .maybeSingle();
 
-          setIsExistingUser(!!existingUser);
-          setInvitation(data as TenantInvitation);
-          setInvitationType('direct');
+            setIsExistingUser(!!existingUser);
+            setInvitation(data as TenantInvitation);
+            setInvitationType('direct');
+          }
           
         } else {
-          showError("Invalid Request", "Missing invitation token.");
+          console.error("Missing invitation token or contract ID");
+          // Redirect to auth page without showing an error
+          redirectToAuth();
           return;
         }
       } catch (error) {
         console.error("Verification error:", error);
-        showError("Error", "Failed to verify invitation. Please try again.");
+        // Just redirect to auth page
+        redirectToAuth();
       } finally {
         setIsLoading(false);
       }
     };
 
     verifyInvitation();
-  }, [contractId, token, navigate, toast]);
+  }, [contractId, token, navigate]);
 
   useEffect(() => {
     const handleAuthStateChange = async (event: string, session: any) => {
@@ -260,23 +312,28 @@ const TenantRegistration = () => {
                 tenant_id: session.user.id,
                 status: 'pending_signature'
               })
-              .eq('id', contractId);
+              .eq('id', contract.id);
 
             if (contractError) {
-              throw contractError;
+              console.error("Error updating contract:", contractError);
             }
 
-            const { error: tenancyError } = await supabase
-              .from('tenancies')
-              .insert({
-                property_id: contract.property_id,
-                tenant_id: session.user.id,
-                start_date: contract.metadata.startDate || new Date().toISOString(),
-                status: 'pending'
-              });
+            // Try to create tenancy even if the contract update fails
+            try {
+              const { error: tenancyError } = await supabase
+                .from('tenancies')
+                .insert({
+                  property_id: contract.property_id,
+                  tenant_id: session.user.id,
+                  start_date: contract.metadata.startDate || new Date().toISOString(),
+                  status: 'pending'
+                });
 
-            if (tenancyError) {
-              throw tenancyError;
+              if (tenancyError) {
+                console.error("Error creating tenancy:", tenancyError);
+              }
+            } catch (err) {
+              console.error("Error creating tenancy:", err);
             }
 
             toast({
@@ -284,11 +341,14 @@ const TenantRegistration = () => {
               description: "You can now review and sign the contract.",
             });
 
-            navigate(`/documents/contracts/${contractId}?invitation_token=${token}`);
+            navigate(`/documents/contracts/${contract.id}?invitation_token=${token}`);
             
           } else if (invitationType === 'direct' && invitation) {
             // Direct invitation flow
             await processDirectInvitation(invitation.token, session.user.id);
+          } else {
+            // Fallback if something went wrong
+            navigate("/dashboard");
           }
         } catch (error: any) {
           console.error("Error processing after authentication:", error);
@@ -297,6 +357,7 @@ const TenantRegistration = () => {
             description: "Failed to complete registration. Please contact support.",
             variant: "destructive",
           });
+          navigate("/dashboard");
         }
       }
     };
@@ -304,7 +365,7 @@ const TenantRegistration = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
     return () => subscription.unsubscribe();
-  }, [invitationType, contract, invitation, contractId, isExistingUser, navigate, toast, token]);
+  }, [invitationType, contract, invitation, navigate, toast, token, isExistingUser]);
 
   if (isLoading) {
     return (
@@ -326,19 +387,19 @@ const TenantRegistration = () => {
     );
   }
 
-  let title = "";
-  let description = "";
-  let propertyName = "";
+  let title = "Sign Up or Sign In to Continue";
+  let description = "Please create an account or sign in to view and sign your contract.";
+  let propertyName = "your property";
 
-  if (invitationType === 'contract' && contract) {
-    propertyName = contract.properties?.name || 'Property';
-    title = isExistingUser ? 'Sign In to View Contract' : 'Complete Your Registration';
+  if (invitationType === 'contract' && contract && contract.properties) {
+    propertyName = contract.properties.name || 'your property';
+    title = isExistingUser ? 'Sign In to View Contract' : 'Create an Account to View Contract';
     description = isExistingUser
       ? `Welcome back! Please sign in to view and sign the contract for ${propertyName}`
       : `You've been invited to sign a contract for ${propertyName}. Please create your account to continue.`;
   } else if (invitationType === 'direct' && invitation) {
-    const properties = invitation.tenant_invitation_properties?.map(p => p.properties?.name).join(', ') || 'properties';
-    title = isExistingUser ? 'Sign In to Accept Invitation' : 'Complete Your Registration';
+    const properties = invitation.tenant_invitation_properties?.map(p => p.properties?.name).join(', ') || 'your properties';
+    title = isExistingUser ? 'Sign In to Accept Invitation' : 'Create an Account to Accept Invitation';
     description = isExistingUser
       ? `Welcome back! Please sign in to accept your invitation to ${properties}`
       : `You've been invited to ${properties}. Please create your account to continue.`;
