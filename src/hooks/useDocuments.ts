@@ -204,6 +204,52 @@ export function useDocuments(userId: string | null, userRole: "landlord" | "tena
       });
     }
   };
+  
+  // Set up real-time subscription for contracts
+  useEffect(() => {
+    if (!userId) return;
+    
+    console.log("Setting up real-time subscription for contracts");
+    
+    const channel = supabase
+      .channel('contracts_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'contracts'
+        },
+        (payload) => {
+          console.log('Contract change detected:', payload);
+          refetchContracts(); // Refresh the contracts data
+        }
+      )
+      .subscribe();
+      
+    // Set up subscription for documents too
+    const documentsChannel = supabase
+      .channel('documents_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'documents'
+        },
+        (payload) => {
+          console.log('Document change detected:', payload);
+          queryClient.invalidateQueries({ queryKey: ["documents"] });
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscriptions when component unmounts
+    return () => {
+      supabase.removeChannel(channel);
+      supabase.removeChannel(documentsChannel);
+    };
+  }, [userId, refetchContracts, queryClient]);
 
   return {
     contracts,

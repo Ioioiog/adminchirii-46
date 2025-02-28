@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Json } from "@/integrations/supabase/types/json";
 import { toast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 interface Property {
   name: string;
@@ -87,6 +88,35 @@ export function useMaintenanceRequest(requestId?: string) {
       return data;
     }
   });
+
+  // Set up real-time subscription for maintenance request changes
+  useEffect(() => {
+    if (!requestId) return;
+
+    console.log("Setting up real-time subscription for maintenance request:", requestId);
+    
+    const channel = supabase
+      .channel(`maintenance_request_${requestId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all changes
+          schema: 'public',
+          table: 'maintenance_requests',
+          filter: `id=eq.${requestId}`
+        },
+        (payload) => {
+          console.log('Maintenance request change detected:', payload);
+          queryClient.invalidateQueries({ queryKey: ['maintenance-request', requestId] });
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription when component unmounts or requestId changes
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [requestId, queryClient]);
 
   const createMutation = useMutation({
     mutationFn: async (data: MaintenanceRequest) => {
