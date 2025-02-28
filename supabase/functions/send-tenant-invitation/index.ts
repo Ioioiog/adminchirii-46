@@ -1,72 +1,70 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
-console.log("Hello from send-tenant-invitation!");
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { invitationId, email, firstName, lastName } = await req.json();
+    // Parse the request body
+    const requestData = await req.json();
+    console.log("Received invitation request:", JSON.stringify(requestData));
+
+    // Extract required fields
+    const { email, firstName, lastName, token, properties } = requestData;
     
     // Validate required fields
-    if (!invitationId || !email || !firstName || !lastName) {
-      throw new Error("Missing required fields: invitationId, email, firstName, lastName");
+    if (!email) {
+      throw new Error("Missing required field: email");
     }
     
-    // Fetch the invitation details including the associated properties
-    const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = Deno.env.toObject();
-    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    
-    // Fetch the invitation
-    const { data: invitation, error: invitationError } = await supabaseClient
-      .from("tenant_invitations")
-      .select("*, tenant_invitation_properties(*, properties(name, address))")
-      .eq("id", invitationId)
-      .single();
-      
-    if (invitationError) {
-      throw new Error(`Error fetching invitation: ${invitationError.message}`);
-    }
-    
-    if (!invitation) {
-      throw new Error("Invitation not found");
-    }
-    
-    const properties = invitation.tenant_invitation_properties.map(tip => tip.properties);
-    
-    // Get the site URL from environment
-    const siteUrl = Deno.env.get("PUBLIC_SITE_URL") || "https://www.adminchirii.ro";
+    // Get the site URL from environment or use a default
+    const siteUrl = Deno.env.get("PUBLIC_SITE_URL") || "http://localhost:5173";
     
     // Create the registration link with the token
-    const registrationLink = `${siteUrl}/tenant-registration/${invitation.token}`;
+    const registrationLink = `${siteUrl}/tenant-registration?token=${token}`;
     
     // Generate email content
-    const propertiesList = properties.map(p => `<li>${p.name} - ${p.address}</li>`).join('');
+    let propertiesList = '';
+    if (properties && Array.isArray(properties)) {
+      propertiesList = properties.map(p => `<li>${p.name} - ${p.address}</li>`).join('');
+    } else {
+      propertiesList = '<li>Property details not available</li>';
+    }
     
+    // Get Resend API key
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    if (!resendApiKey) {
+      throw new Error("RESEND_API_KEY environment variable is not set");
+    }
+
     // Send email using Resend
+    console.log("Sending email to:", email);
     const emailResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
+        'Authorization': `Bearer ${resendApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Admin Chirii <no-reply@adminchirii.ro>',
+        from: 'Admin Chirii <onboarding@resend.dev>',
         to: email,
         subject: 'Invitation to Admin Chirii as a Tenant',
         html: `
           <h2>Welcome to Admin Chirii!</h2>
-          <p>Dear ${firstName} ${lastName},</p>
+          <p>Dear ${firstName || ''} ${lastName || ''},</p>
           <p>You have been invited as a tenant for the following properties:</p>
           <ul>
             ${propertiesList}
           </ul>
-          <p>Start Date: ${new Date(invitation.start_date).toLocaleDateString()}</p>
-          ${invitation.end_date ? `<p>End Date: ${new Date(invitation.end_date).toLocaleDateString()}</p>` : ''}
           <p>Please click the link below to complete your registration:</p>
           <a href="${registrationLink}">Complete Registration</a>
           <p>This invitation will expire in 7 days.</p>
@@ -75,52 +73,27 @@ serve(async (req) => {
       }),
     });
 
+    // Check if email was sent successfully
     if (!emailResponse.ok) {
       const errorData = await emailResponse.json();
+      console.error("Resend API error:", JSON.stringify(errorData));
       throw new Error(`Failed to send email: ${JSON.stringify(errorData)}`);
     }
+
+    const emailResult = await emailResponse.json();
+    console.log("Email sent successfully:", JSON.stringify(emailResult));
 
     // Return success response
     return new Response(
       JSON.stringify({ success: true, message: "Invitation email sent successfully" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-
   } catch (error) {
-    console.error('Error in send-tenant-invitation:', error);
+    console.error('Error in send-tenant-invitation:', error.message);
+    // Return a proper error response
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || "Failed to process invitation" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
-
-// Helper function to create Supabase client (similar to the one in _shared folder)
-function createClient(supabaseUrl, supabaseKey) {
-  return {
-    from: (table) => ({
-      select: (columns) => ({
-        eq: (column, value) => ({
-          single: async () => {
-            const url = `${supabaseUrl}/rest/v1/${table}?select=${columns}&${column}=eq.${value}`;
-            const response = await fetch(url, {
-              headers: {
-                Authorization: `Bearer ${supabaseKey}`,
-                apikey: supabaseKey,
-                "Content-Type": "application/json",
-              },
-            });
-            
-            if (!response.ok) {
-              const error = await response.json();
-              return { data: null, error };
-            }
-            
-            const data = await response.json();
-            return { data: data[0] || null, error: null };
-          }
-        })
-      })
-    })
-  };
-}

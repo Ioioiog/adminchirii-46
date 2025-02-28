@@ -135,13 +135,26 @@ const PropertyTenantInvite = () => {
         throw propertyMappingError;
       }
 
+      // Get property details for the email
+      const { data: propertyDetails, error: propDetailsError } = await supabase
+        .from('properties')
+        .select('name, address')
+        .in('id', data.propertyIds);
+      
+      if (propDetailsError) {
+        console.error("Error fetching property details:", propDetailsError);
+        // Continue anyway, as the invitation is created
+      }
+
       // Call the Edge Function to send the invitation email
-      const { error: functionError } = await supabase.functions.invoke("send-tenant-invitation", {
+      const { data: functionData, error: functionError } = await supabase.functions.invoke("send-tenant-invitation", {
         body: {
           invitationId: invitation.id,
           email: data.email,
           firstName: data.firstName,
           lastName: data.lastName,
+          token: token,
+          properties: propertyDetails || [],
         },
       });
 
@@ -150,7 +163,7 @@ const PropertyTenantInvite = () => {
         // We don't throw here because the invitation was created successfully
         toast({
           title: "Invitation Created",
-          description: "Invitation created, but there was an issue sending the email.",
+          description: "Invitation created, but there was an issue sending the email. You may need to contact the tenant directly.",
           variant: "default",
         });
       } else {
