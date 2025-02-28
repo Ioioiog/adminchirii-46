@@ -23,6 +23,16 @@ interface CalculationResult {
   utilitiesTotal: number;
   grandTotal: number;
   period: string;
+  utilities: UtilityDetail[];
+}
+
+interface UtilityDetail {
+  id: string;
+  type: string;
+  amount: number;
+  invoice_number: string | null;
+  due_date: string;
+  currency: string;
 }
 
 export function CostCalculator() {
@@ -113,22 +123,23 @@ export function CostCalculator() {
         }
       }
 
-      // Get utilities for the date range
-      const { data: utilities } = await supabase
+      // Get detailed utilities for the date range
+      const { data: utilities = [] } = await supabase
         .from('utilities')
-        .select('amount')
+        .select('id, type, amount, due_date, currency, invoice_number')
         .gte('due_date', startDate)
         .lte('due_date', endDate)
         .eq('property_id', selectedPropertyId);
 
-      const utilitiesTotal = utilities?.reduce((sum, item) => sum + (parseFloat(item.amount.toString()) || 0), 0) || 0;
+      const utilitiesTotal = utilities.reduce((sum, item) => sum + (parseFloat(item.amount.toString()) || 0), 0);
 
-      // Set the results
+      // Set the results with detailed utility information
       setResults({
         rentTotal,
         utilitiesTotal,
         grandTotal: rentTotal + utilitiesTotal,
-        period: displayPeriod
+        period: displayPeriod,
+        utilities: utilities
       });
 
     } catch (error) {
@@ -193,22 +204,61 @@ export function CostCalculator() {
           </div>
 
           {results && (
-            <div className="mt-4 space-y-2 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-md">
-              <h3 className="font-medium">Cost Summary for {results.period}</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">Rent</p>
-                  <p className="text-lg font-medium">{formatAmount(results.rentTotal)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Utilities</p>
-                  <p className="text-lg font-medium">{formatAmount(results.utilitiesTotal)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total</p>
-                  <p className="text-xl font-bold text-blue-600">{formatAmount(results.grandTotal)}</p>
+            <div className="mt-4 space-y-4">
+              <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-md">
+                <h3 className="font-medium">Cost Summary for {results.period}</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Rent</p>
+                    <p className="text-lg font-medium">{formatAmount(results.rentTotal)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Utilities</p>
+                    <p className="text-lg font-medium">{formatAmount(results.utilitiesTotal)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total</p>
+                    <p className="text-xl font-bold text-blue-600">{formatAmount(results.grandTotal)}</p>
+                  </div>
                 </div>
               </div>
+
+              {/* Utility Details Section */}
+              {results.utilities.length > 0 && (
+                <div className="p-4 border rounded-md">
+                  <h3 className="font-medium mb-3">Utility Details</h3>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Invoice #</th>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Due Date</th>
+                          <th scope="col" className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                        {results.utilities.map((utility) => (
+                          <tr key={utility.id}>
+                            <td className="px-3 py-2 whitespace-nowrap text-sm capitalize">{utility.type}</td>
+                            <td className="px-3 py-2 whitespace-nowrap text-sm">{utility.invoice_number || 'N/A'}</td>
+                            <td className="px-3 py-2 whitespace-nowrap text-sm">{new Date(utility.due_date).toLocaleDateString()}</td>
+                            <td className="px-3 py-2 whitespace-nowrap text-sm text-right font-medium">
+                              {formatAmount(utility.amount, utility.currency)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className="bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                          <td colSpan={3} className="px-3 py-2 text-sm font-medium text-right">Total Utilities:</td>
+                          <td className="px-3 py-2 text-sm font-bold text-right">{formatAmount(results.utilitiesTotal)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
