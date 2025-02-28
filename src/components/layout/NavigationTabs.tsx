@@ -11,6 +11,7 @@ interface NavigationTab {
   label: string;
   icon: LucideIcon;
   showForTenant?: boolean;
+  hideForRole?: string;
 }
 
 interface NavigationTabsProps {
@@ -23,8 +24,20 @@ export function NavigationTabs({ tabs, activeTab, onTabChange }: NavigationTabsP
   const { userRole } = useUserRole();
   const isTenant = userRole === 'tenant';
 
-  // Only filter tabs if user is a tenant and tab has showForTenant property defined
-  const visibleTabs = tabs.filter(tab => !isTenant || tab.showForTenant !== false);
+  // Filter tabs based on both tenant status and roles to hide
+  const visibleTabs = tabs.filter(tab => {
+    // Hide if user is tenant and tab shouldn't show for tenants
+    if (isTenant && tab.showForTenant === false) {
+      return false;
+    }
+    
+    // Hide if tab specifies it should be hidden for current role
+    if (tab.hideForRole && tab.hideForRole === userRole) {
+      return false;
+    }
+    
+    return true;
+  });
 
   return (
     <Card className="p-4 bg-white/80 backdrop-blur-sm border shadow-sm">
