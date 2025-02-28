@@ -209,7 +209,7 @@ const Tenants = () => {
                     className="w-full sm:w-auto flex items-center gap-2 hover:bg-gray-50 transition-colors"
                   >
                     <UserPlus className="h-4 w-4 text-gray-600" />
-                    <span>{t('tenants.addTenant')}</span>
+                    <span>Add Tenant</span>
                   </Button>
                 </div>
               )}
