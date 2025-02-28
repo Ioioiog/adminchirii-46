@@ -55,10 +55,8 @@ export function CostCalculator() {
       const displayPeriod = `${format(dateRange.from, 'PP')} to ${format(dateRange.to, 'PP')}`;
 
       // Query parameters based on user role
-      let queryParams: any = userRole === 'landlord' 
-        ? { landlord_id: userId }
-        : { tenant_id: userId };
-
+      let queryParams: any = {}; 
+      
       // Add property filter if a property is selected
       if (selectedPropertyId) {
         queryParams.property_id = selectedPropertyId;
@@ -121,7 +119,7 @@ export function CostCalculator() {
         .select('amount')
         .gte('due_date', startDate)
         .lte('due_date', endDate)
-        .match(queryParams);
+        .eq('property_id', selectedPropertyId);
 
       const utilitiesTotal = utilities?.reduce((sum, item) => sum + (parseFloat(item.amount.toString()) || 0), 0) || 0;
 
