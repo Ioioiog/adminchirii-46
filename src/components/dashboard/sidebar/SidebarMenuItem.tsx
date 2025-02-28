@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { LucideIcon, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -34,6 +34,7 @@ export const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
   notificationCount = 0,
 }) => {
   const Icon = item.icon;
+  const navigate = useNavigate();
   
   console.log(`Rendering menu item ${item.title} with notification count:`, notificationCount);
 
@@ -42,6 +43,8 @@ export const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
       console.log(`Handling click for ${item.title} with ${notificationCount} notifications`);
       e.preventDefault();
       onNotificationClick(item.notificationType);
+      // Navigate to the page after handling notifications
+      navigate(item.href);
     }
   };
 
