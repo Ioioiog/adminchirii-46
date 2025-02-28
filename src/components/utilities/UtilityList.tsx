@@ -1,9 +1,8 @@
-
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { FileText, Trash2 } from "lucide-react";
+import { FileText, Trash2, ArrowUpDown } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { UtilityPaymentActions } from "./UtilityPaymentActions";
 import {
@@ -14,6 +13,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Utility {
   id: string;
@@ -39,9 +45,14 @@ interface UtilityListProps {
   onStatusUpdate?: () => void;
 }
 
+type SortField = "due_date" | "issued_date" | "amount" | "type" | "status";
+type SortDirection = "asc" | "desc";
+
 export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityListProps) {
   const { toast } = useToast();
   const { formatAmount } = useCurrency();
+  const [sortField, setSortField] = useState<SortField>("due_date");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   console.log('UtilityList - Received utilities:', utilities);
   console.log('UtilityList - User role:', userRole);
@@ -152,25 +163,54 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
     }
   };
 
-  // Sort utilities by issued_date (newest first)
-  // Fallback to created_at or due_date if issued_date is not available
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle direction if already sorting by this field
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Otherwise set new field and default to descending
+      setSortField(field);
+      setSortDirection("desc");
+    }
+  };
+
+  // Sort utilities based on current sort settings
   const sortedUtilities = [...utilities].sort((a, b) => {
-    // First check if both have issued_date
-    if (a.issued_date && b.issued_date) {
-      return new Date(b.issued_date).getTime() - new Date(a.issued_date).getTime();
+    let valueA, valueB;
+    
+    // Handle different field types
+    switch (sortField) {
+      case "amount":
+        valueA = a.amount;
+        valueB = b.amount;
+        break;
+      case "due_date":
+        valueA = new Date(a.due_date).getTime();
+        valueB = new Date(b.due_date).getTime();
+        break;
+      case "issued_date":
+        valueA = a.issued_date ? new Date(a.issued_date).getTime() : 0;
+        valueB = b.issued_date ? new Date(b.issued_date).getTime() : 0;
+        break;
+      case "type":
+        valueA = a.type.toLowerCase();
+        valueB = b.type.toLowerCase();
+        break;
+      case "status":
+        valueA = a.status.toLowerCase();
+        valueB = b.status.toLowerCase();
+        break;
+      default:
+        valueA = new Date(a.due_date).getTime();
+        valueB = new Date(b.due_date).getTime();
     }
     
-    // If one has issued_date and the other doesn't, prioritize the one with issued_date
-    if (a.issued_date && !b.issued_date) return -1;
-    if (!a.issued_date && b.issued_date) return 1;
+    // Apply sort direction
+    const sortFactor = sortDirection === "asc" ? 1 : -1;
     
-    // If neither have issued_date, try created_at
-    if (a.created_at && b.created_at) {
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    }
-    
-    // Last resort: sort by due_date
-    return new Date(b.due_date).getTime() - new Date(a.due_date).getTime();
+    if (valueA < valueB) return -1 * sortFactor;
+    if (valueA > valueB) return 1 * sortFactor;
+    return 0;
   });
 
   if (!Array.isArray(utilities)) {
@@ -184,6 +224,33 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
 
   return (
     <div className="rounded-md border">
+      <div className="p-4 bg-gray-50 flex justify-end border-b">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="ml-auto flex items-center gap-2">
+              <ArrowUpDown className="h-4 w-4" />
+              Sort By
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleSort("due_date")}>
+              Due Date {sortField === "due_date" && (sortDirection === "asc" ? "↑" : "↓")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleSort("issued_date")}>
+              Issued Date {sortField === "issued_date" && (sortDirection === "asc" ? "↑" : "↓")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleSort("amount")}>
+              Amount {sortField === "amount" && (sortDirection === "asc" ? "↑" : "↓")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleSort("type")}>
+              Type {sortField === "type" && (sortDirection === "asc" ? "↑" : "↓")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleSort("status")}>
+              Status {sortField === "status" && (sortDirection === "asc" ? "↑" : "↓")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
       <Table>
         <TableHeader>
           <TableRow>
