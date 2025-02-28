@@ -96,12 +96,14 @@ export function ProviderForm({ onClose, onSuccess, provider }: ProviderFormProps
         // After the update completes successfully, update the utility_type with
         // a raw SQL query to bypass TypeScript checking
         if (!error) {
-          await supabase.rpc('update_provider_utility_type', { 
-            p_provider_id: provider.id,
-            p_utility_type: utility_type
-          }).catch(err => {
+          try {
+            await supabase.rpc('update_provider_utility_type', { 
+              p_provider_id: provider.id,
+              p_utility_type: utility_type
+            });
+          } catch (err) {
             console.error("Failed to update utility type:", err);
-          });
+          }
         } else {
           throw error;
         }
@@ -120,12 +122,14 @@ export function ProviderForm({ onClose, onSuccess, provider }: ProviderFormProps
         // After the insert completes successfully, update the utility_type with
         // a raw SQL query to bypass TypeScript checking
         if (!error && insertedData && insertedData.length > 0) {
-          await supabase.rpc('update_provider_utility_type', { 
-            p_provider_id: insertedData[0].id,
-            p_utility_type: utility_type
-          }).catch(err => {
+          try {
+            await supabase.rpc('update_provider_utility_type', { 
+              p_provider_id: insertedData[0].id,
+              p_utility_type: utility_type
+            });
+          } catch (err) {
             console.error("Failed to update utility type:", err);
-          });
+          }
         } else {
           throw error;
         }
@@ -225,7 +229,7 @@ export function ProviderForm({ onClose, onSuccess, provider }: ProviderFormProps
         <Label htmlFor="utility_type">Utility Type</Label>
         <Select
           value={formData.utility_type}
-          onValueChange={(value: any) => 
+          onValueChange={(value) => 
             setFormData({ ...formData, utility_type: value })}
           disabled={formData.provider_name === 'engie_romania'}
         >

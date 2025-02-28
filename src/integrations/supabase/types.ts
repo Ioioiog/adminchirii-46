@@ -2469,6 +2469,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_provider_utility_type: {
+        Args: {
+          p_provider_id: string
+          p_utility_type: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       contract_status:
