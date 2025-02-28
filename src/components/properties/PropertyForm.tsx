@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -81,11 +82,11 @@ export function PropertyForm({ onSubmit, initialData, isSubmitting }: PropertyFo
           name="monthly_rent"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Monthly Rent</FormLabel>
+              <FormLabel>Monthly Rent (€)</FormLabel>
               <FormControl>
                 <Input 
                   type="number" 
-                  placeholder="Enter monthly rent" 
+                  placeholder="Enter monthly rent in EUR" 
                   {...field}
                   onChange={(e) => field.onChange(e.target.valueAsNumber)}
                 />
