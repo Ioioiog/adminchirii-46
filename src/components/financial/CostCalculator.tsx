@@ -220,35 +220,13 @@ export function CostCalculator() {
                   <div>
                     <p className="text-sm text-muted-foreground">Total</p>
                     <p className="text-xl font-bold text-blue-600">
+                      {/* Display total as rent + utilities with both currencies */}
                       {formatAmount(results.utilitiesTotal, 'RON')}
                       <br />
                       <span className="text-sm font-normal text-gray-500">
                         + {formatAmount(results.rentTotal, 'EUR')}
                       </span>
                     </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Grand Total Section - Added with a highlighted look */}
-              <div className="p-4 bg-gradient-to-r from-blue-100 to-blue-50 dark:from-blue-950/50 dark:to-blue-900/30 rounded-md border border-blue-200 dark:border-blue-800">
-                <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-2">Grand Total Cost</h3>
-                <div className="flex flex-col">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600 dark:text-gray-400">Rent (EUR)</span>
-                    <span className="font-medium">{formatAmount(results.rentTotal, 'EUR')}</span>
-                  </div>
-                  <div className="flex justify-between items-center mt-1">
-                    <span className="text-gray-600 dark:text-gray-400">Utilities (RON)</span>
-                    <span className="font-medium">{formatAmount(results.utilitiesTotal, 'RON')}</span>
-                  </div>
-                  <div className="h-px bg-blue-200 dark:bg-blue-700 my-2"></div>
-                  <div className="flex justify-between items-center mt-1">
-                    <span className="text-blue-800 dark:text-blue-300 font-semibold">Monthly Payment</span>
-                    <div className="text-right">
-                      <p className="text-xl font-bold text-blue-700 dark:text-blue-400">{formatAmount(results.rentTotal, 'EUR')}</p>
-                      <p className="text-lg font-semibold text-blue-700 dark:text-blue-400">+ {formatAmount(results.utilitiesTotal, 'RON')}</p>
-                    </div>
                   </div>
                 </div>
               </div>
