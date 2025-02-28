@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Edit, Save, X } from "lucide-react";
-import { Format } from "@/components/ui/format";
 import { Property, PropertyStatus } from "@/utils/propertyUtils";
 import {
   Card,
@@ -40,6 +39,13 @@ export function PropertyTab({
     if (!date) return "N/A";
     return new Date(date).toLocaleDateString();
   };
+
+  // Calculate total estimated monthly utilities
+  const estimatedUtilities = 
+    (property.monthly_electricity_cost || 0) + 
+    (property.monthly_water_cost || 0) + 
+    (property.monthly_gas_cost || 0) + 
+    (property.monthly_other_utilities_cost || 0);
 
   return (
     <div className="space-y-6">
@@ -112,6 +118,14 @@ export function PropertyTab({
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-gray-500">
+                    Estimated Monthly Utilities
+                  </h4>
+                  <p className="text-base text-gray-900 mt-1">
+                    €{estimatedUtilities.toLocaleString()}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">
                     Availability
                   </h4>
                   <p className="text-base text-gray-900 mt-1">
@@ -125,9 +139,41 @@ export function PropertyTab({
 
             <Card>
               <CardHeader>
-                <CardTitle>Additional Information</CardTitle>
+                <CardTitle>Property Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">
+                    Bedrooms
+                  </h4>
+                  <p className="text-base text-gray-900 mt-1">
+                    {property.bedrooms || 0}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">
+                    Bathrooms
+                  </h4>
+                  <p className="text-base text-gray-900 mt-1">
+                    {property.bathrooms || 0}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">
+                    Total Area
+                  </h4>
+                  <p className="text-base text-gray-900 mt-1">
+                    {property.total_area || 0} m²
+                  </p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">
+                    Construction Year
+                  </h4>
+                  <p className="text-base text-gray-900 mt-1">
+                    {property.construction_year || "N/A"}
+                  </p>
+                </div>
                 <div>
                   <h4 className="text-sm font-medium text-gray-500">
                     Description
@@ -138,6 +184,60 @@ export function PropertyTab({
                 </div>
               </CardContent>
             </Card>
+            
+            {estimatedUtilities > 0 && (
+              <Card className="md:col-span-3">
+                <CardHeader>
+                  <CardTitle>Utility Cost Breakdown</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500">
+                        Electricity
+                      </h4>
+                      <p className="text-base text-gray-900 mt-1">
+                        €{property.monthly_electricity_cost?.toLocaleString() || 0}/month
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500">
+                        Water
+                      </h4>
+                      <p className="text-base text-gray-900 mt-1">
+                        €{property.monthly_water_cost?.toLocaleString() || 0}/month
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500">
+                        Gas
+                      </h4>
+                      <p className="text-base text-gray-900 mt-1">
+                        €{property.monthly_gas_cost?.toLocaleString() || 0}/month
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500">
+                        Other Utilities
+                      </h4>
+                      <p className="text-base text-gray-900 mt-1">
+                        €{property.monthly_other_utilities_cost?.toLocaleString() || 0}/month
+                      </p>
+                    </div>
+                  </div>
+                  {property.other_utilities_description && (
+                    <div className="mt-4">
+                      <h4 className="text-sm font-medium text-gray-500">
+                        Other Utilities Description
+                      </h4>
+                      <p className="text-base text-gray-900 mt-1">
+                        {property.other_utilities_description}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </>
       )}
