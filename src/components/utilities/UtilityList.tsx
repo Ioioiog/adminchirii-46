@@ -2,10 +2,10 @@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { PaymentActions } from "@/components/payments/PaymentActions";
 import { Button } from "@/components/ui/button";
 import { FileText, Trash2 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
+import { UtilityPaymentActions } from "./UtilityPaymentActions";
 import {
   Table,
   TableBody,
@@ -246,8 +246,8 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
                     </Button>
                   )}
                   {(userRole === "landlord" || utility.status !== "paid") && (
-                    <PaymentActions
-                      paymentId={utility.id}
+                    <UtilityPaymentActions
+                      utilityId={utility.id}
                       status={utility.status}
                       userRole={userRole}
                       onStatusChange={onStatusUpdate}
