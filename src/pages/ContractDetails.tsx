@@ -1,9 +1,11 @@
+
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { QueryClient, QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useEffect, useState } from "react";
 import { ContractContent } from "@/components/contract/ContractContent";
+import { ScrollableContractContent } from "@/components/contract/ScrollableContractContent";
 import { ContractSignatures } from "@/components/contract/ContractSignatures";
 import { ContractHeader } from "@/components/contract/ContractHeader";
 import { ContractError } from "@/components/contract/ContractError";
@@ -410,7 +412,7 @@ function ContractDetailsContent() {
             showActions={true}
           />
           
-          <ContractContent 
+          <ScrollableContractContent 
             formData={formData} 
             isEditing={isEditing} 
             onFieldChange={handleFieldChange}
