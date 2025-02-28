@@ -11,13 +11,20 @@ export function useConversation(currentUserId: string | null, selectedTenantId: 
   useEffect(() => {
     if (!currentUserId) {
       console.log("No current user ID yet");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!selectedTenantId && currentUserId) {
+      console.log("No tenant selected for conversation");
+      setIsLoading(false);
       return;
     }
 
     const setupConversation = async () => {
       setIsLoading(true);
       try {
-        console.log("Setting up conversation for user:", currentUserId);
+        console.log("Setting up conversation for user:", currentUserId, "with tenant:", selectedTenantId);
         
         const { data: userProfile, error: profileError } = await supabase
           .from('profiles')
@@ -32,50 +39,44 @@ export function useConversation(currentUserId: string | null, selectedTenantId: 
 
         console.log("User profile:", userProfile);
 
-        let query = supabase
+        // First check if the conversation already exists
+        let { data: existingConversations, error: existingError } = await supabase
           .from('conversations')
-          .select('id');
+          .select('id')
+          .eq(userProfile?.role === 'tenant' ? 'tenant_id' : 'landlord_id', currentUserId)
+          .eq(userProfile?.role === 'tenant' ? 'landlord_id' : 'tenant_id', selectedTenantId);
 
-        if (userProfile?.role === 'tenant') {
-          query = query.eq('tenant_id', currentUserId);
-        } else {
-          if (!selectedTenantId) {
-            console.log("No tenant selected for landlord");
-            setIsLoading(false);
-            return;
-          }
-          query = query
-            .eq('landlord_id', currentUserId)
-            .eq('tenant_id', selectedTenantId);
+        if (existingError) {
+          console.error("Error checking existing conversations:", existingError);
+          throw existingError;
         }
 
-        // Removed .maybeSingle() to avoid 406 error
-        const { data: conversations, error: conversationError } = await query;
+        if (existingConversations && existingConversations.length > 0) {
+          // Use the first existing conversation
+          console.log("Found existing conversation:", existingConversations[0].id);
+          setConversationId(existingConversations[0].id);
+        } else if (userProfile?.role === 'landlord') {
+          // Create a new conversation for landlord
+          console.log("Creating new conversation between landlord and tenant");
+          const { data: newConversation, error: createError } = await supabase
+            .from('conversations')
+            .insert({
+              landlord_id: currentUserId,
+              tenant_id: selectedTenantId,
+            })
+            .select('id')
+            .single();
 
-        if (conversationError) {
-          throw conversationError;
-        }
-
-        if (!conversations || conversations.length === 0) {
-          if (userProfile?.role === 'landlord' && selectedTenantId) {
-            console.log("Creating new conversation between landlord and tenant");
-            const { data: newConversation, error: createError } = await supabase
-              .from('conversations')
-              .insert({
-                landlord_id: currentUserId,
-                tenant_id: selectedTenantId,
-              })
-              .select('id')
-              .single();
-
-            if (createError) throw createError;
-            console.log("Created new conversation:", newConversation.id);
-            setConversationId(newConversation.id);
+          if (createError) {
+            console.error("Error creating conversation:", createError);
+            throw createError;
           }
+
+          console.log("Created new conversation:", newConversation.id);
+          setConversationId(newConversation.id);
         } else {
-          // If there are conversations, use the first one
-          console.log("Found existing conversation:", conversations[0].id);
-          setConversationId(conversations[0].id);
+          console.log("No conversation found and not authorized to create one");
+          setConversationId(null);
         }
       } catch (error) {
         console.error("Error setting up conversation:", error);
