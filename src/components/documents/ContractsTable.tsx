@@ -43,6 +43,11 @@ interface ContractsTableProps {
   handleDownloadDocument: (filePath: string) => Promise<void>;
   handleGeneratePDF: (contract: ContractOrDocument) => void;
   deleteContractMutation: UseMutationResult<void, Error, string, unknown>;
+  prepareContractTermination: (contract: ContractOrDocument) => void;
+  contractToTerminate: ContractOrDocument | null;
+  showTerminationDialog: boolean;
+  closeTerminationDialog: () => void;
+  handleTerminationSuccess: () => void;
 }
 
 export function ContractsTable({ 
@@ -51,7 +56,12 @@ export function ContractsTable({
   isLoading,
   handleDownloadDocument,
   handleGeneratePDF,
-  deleteContractMutation
+  deleteContractMutation,
+  prepareContractTermination,
+  contractToTerminate,
+  showTerminationDialog,
+  closeTerminationDialog,
+  handleTerminationSuccess
 }: ContractsTableProps) {
   const navigate = useNavigate();
   const [documentToDelete, setDocumentToDelete] = useState<ContractOrDocument | null>(null);
@@ -61,7 +71,8 @@ export function ContractsTable({
 
   const confirmDelete = () => {
     if (documentToDelete) {
-      deleteContractMutation.mutate(documentToDelete.id);
+      // Instead of deleting, prepare for termination
+      prepareContractTermination(documentToDelete);
     }
     setShowDeleteDialog(false);
     setDocumentToDelete(null);
@@ -272,8 +283,7 @@ export function ContractsTable({
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete this document
-              {documentToDelete?.contract_type ? ` of type "${documentToDelete.contract_type}"` : ''}.
+              This will terminate the contract. You'll need to fill out the termination form to proceed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -282,7 +292,7 @@ export function ContractsTable({
               onClick={confirmDelete} 
               className="bg-destructive text-destructive-foreground"
             >
-              Delete
+              Proceed to Termination
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -293,6 +303,14 @@ export function ContractsTable({
         open={showContractDetailsDialog} 
         onOpenChange={setShowContractDetailsDialog}
         contract={selectedContract as any}
+      />
+
+      {/* Contract termination dialog */}
+      <ContractDetailsDialog 
+        open={showTerminationDialog} 
+        onOpenChange={closeTerminationDialog}
+        contract={contractToTerminate as any}
+        onSuccess={handleTerminationSuccess}
       />
     </>
   );

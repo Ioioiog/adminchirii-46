@@ -27,6 +27,8 @@ interface RawContract {
 export function useDocuments(userId: string | null, userRole: "landlord" | "tenant" | null) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [contractToTerminate, setContractToTerminate] = useState<ContractOrDocument | null>(null);
+  const [showTerminationDialog, setShowTerminationDialog] = useState(false);
 
   // Query for fetching contracts
   const { 
@@ -111,6 +113,24 @@ export function useDocuments(userId: string | null, userRole: "landlord" | "tena
       });
     }
   });
+
+  // Function to prepare contract termination
+  const prepareContractTermination = (contract: ContractOrDocument) => {
+    setContractToTerminate(contract);
+    setShowTerminationDialog(true);
+  };
+
+  // Function to close termination dialog
+  const closeTerminationDialog = () => {
+    setShowTerminationDialog(false);
+    setContractToTerminate(null);
+  };
+
+  // Function to handle successful termination
+  const handleTerminationSuccess = () => {
+    closeTerminationDialog();
+    refetchContracts();
+  };
 
   // Function to generate PDF
   const handleGeneratePDF = async (contract: ContractOrDocument) => {
@@ -211,6 +231,11 @@ export function useDocuments(userId: string | null, userRole: "landlord" | "tena
     deleteContractMutation,
     handleGeneratePDF,
     handleDownloadDocument,
-    refetchContracts
+    refetchContracts,
+    prepareContractTermination,
+    contractToTerminate,
+    showTerminationDialog,
+    closeTerminationDialog,
+    handleTerminationSuccess
   };
 }
