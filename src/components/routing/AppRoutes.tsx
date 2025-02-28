@@ -1,5 +1,4 @@
 
-
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import AuthPage from "@/pages/Auth";
@@ -179,16 +178,14 @@ export function AppRoutes({ isAuthenticated }: AppRoutesProps) {
           </ProtectedRoute>
         }
       />
-      {userRole !== 'service_provider' && (
-        <Route
-          path="/chat"
-          element={
-            <ProtectedRoute isAuthenticated={isAuthenticated}>
-              <Chat />
-            </ProtectedRoute>
-          }
-        />
-      )}
+      <Route
+        path="/chat"
+        element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <Chat />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/maintenance"
         element={
