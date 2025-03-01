@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +13,8 @@ import { MaintenanceRequestList } from "@/components/maintenance/MaintenanceRequ
 import { PaymentList } from "@/components/payments/PaymentList";
 import { DocumentList } from "@/components/documents/DocumentList";
 import { UtilityAnalysisChart } from "@/components/properties/UtilityAnalysisChart";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const PropertyDetails = () => {
   const { propertyId } = useParams<{ propertyId: string }>();
@@ -20,6 +23,54 @@ const PropertyDetails = () => {
   const { userRole } = useUserRole();
   const { properties } = useProperties({
     userRole: userRole === "landlord" || userRole === "tenant" ? userRole : "tenant"
+  });
+
+  const { data: tenants = [] } = useQuery({
+    queryKey: ['property-tenants', propertyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tenancies')
+        .select(`
+          id,
+          tenant_id,
+          start_date,
+          end_date,
+          status,
+          tenant:profiles(id, first_name, last_name, email, phone)
+        `)
+        .eq('property_id', propertyId)
+        .eq('status', 'active');
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!propertyId
+  });
+
+  const { data: payments = [] } = useQuery({
+    queryKey: ['property-payments', propertyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('payments')
+        .select(`
+          id,
+          amount,
+          status,
+          due_date,
+          paid_date,
+          tenancy:tenancies(
+            id, 
+            tenant:profiles(id, first_name, last_name, email),
+            property:properties(id, name, address)
+          )
+        `)
+        .eq('tenancy.property_id', propertyId)
+        .order('due_date', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!propertyId
   });
 
   useEffect(() => {
@@ -51,10 +102,53 @@ const PropertyDetails = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <PropertyUpdateDialog property={property} />
               <PropertyDeleteDialog property={property} />
-              <TenantList propertyId={propertyId} />
+              
+              {/* Pass the proper props for TenantList */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tenants</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <TenantList tenants={tenants.map(t => t.tenant)} isLandlord={userRole === "landlord"} />
+                </CardContent>
+              </Card>
+              
               <MaintenanceRequestList propertyId={propertyId} />
-              <PaymentList propertyId={propertyId} />
-              <DocumentList propertyId={propertyId} />
+              
+              {/* Pass the proper props for PaymentList */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Payments</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <PaymentList 
+                    payments={payments} 
+                    isLoading={false} 
+                    userRole={userRole as "landlord" | "tenant"} 
+                    userId={""} 
+                    propertyFilter={""} 
+                    statusFilter={""} 
+                    searchTerm={""}
+                  />
+                </CardContent>
+              </Card>
+              
+              {/* Pass the proper props for DocumentList */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Documents</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <DocumentList 
+                    filter={{ 
+                      propertyId: propertyId, 
+                      documentType: "", 
+                      searchTerm: "" 
+                    }} 
+                  />
+                </CardContent>
+              </Card>
+              
               <div className="md:col-span-2">
                 <UtilityAnalysisChart propertyId={propertyId} />
               </div>
