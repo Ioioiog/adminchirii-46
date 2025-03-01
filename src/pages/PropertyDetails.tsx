@@ -15,7 +15,7 @@ import { DocumentList } from "@/components/documents/DocumentList";
 import { UtilityAnalysisChart } from "@/components/properties/UtilityAnalysisChart";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Tenant } from "@/types/tenant"; // Import Tenant type
+import { Tenant } from "@/types/tenant";
 import { useToast } from "@/hooks/use-toast";
 
 const PropertyDetails = () => {
@@ -24,7 +24,31 @@ const PropertyDetails = () => {
   const [property, setProperty] = useState(null);
   const { userRole } = useUserRole();
   const { toast } = useToast();
+
+  // Direct property fetch with propertyId
+  const { data: propertyData, isLoading: propertyLoading, error: propertyError } = useQuery({
+    queryKey: ['property', propertyId],
+    queryFn: async () => {
+      console.log('Fetching direct property data for ID:', propertyId);
+      const { data, error } = await supabase
+        .from('properties')
+        .select('*')
+        .eq('id', propertyId)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching property:', error);
+        throw error;
+      }
+      
+      console.log('Direct property data:', data);
+      return data;
+    },
+    enabled: !!propertyId,
+    retry: 2
+  });
   
+  // Legacy properties fetch for backward compatibility
   const { properties, isLoading: propertiesLoading } = useProperties({
     userRole: userRole === "landlord" || userRole === "tenant" ? userRole : "tenant"
   });
@@ -59,14 +83,14 @@ const PropertyDetails = () => {
 
   // Convert tenancy data to proper Tenant type format
   const tenants: Tenant[] = tenanciesData.map(tenancy => ({
-    id: tenancy.tenant.id,
-    first_name: tenancy.tenant.first_name,
-    last_name: tenancy.tenant.last_name,
-    email: tenancy.tenant.email,
-    phone: tenancy.tenant.phone,
-    role: 'tenant', // Assuming tenants have role 'tenant'
-    created_at: new Date().toISOString(), // Use current date as fallback
-    updated_at: new Date().toISOString(), // Use current date as fallback
+    id: tenancy.tenant?.id,
+    first_name: tenancy.tenant?.first_name,
+    last_name: tenancy.tenant?.last_name,
+    email: tenancy.tenant?.email,
+    phone: tenancy.tenant?.phone,
+    role: 'tenant',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
     property: {
       id: propertyId,
       name: property?.name || "",
@@ -115,26 +139,35 @@ const PropertyDetails = () => {
     enabled: !!propertyId
   });
 
+  // Use the directly fetched property data first, and fall back to legacy method
   useEffect(() => {
-    if (!propertiesLoading && properties && propertyId) {
-      console.log('Properties loaded. Looking for propertyId:', propertyId);
-      console.log('Available properties:', properties);
-      
-      const foundProperty = properties.find((p) => p.id === propertyId);
-      if (foundProperty) {
-        console.log('Found property:', foundProperty);
-        setProperty(foundProperty);
-      } else {
-        console.log('Property not found in properties list:', propertyId);
-        toast({
-          title: "Property not found",
-          description: "The requested property could not be found in your properties.",
-          variant: "destructive"
-        });
-      }
+    if (!propertyLoading && propertyData) {
+      console.log('Setting property from direct fetch:', propertyData);
+      setProperty(propertyData);
       setIsLoading(false);
+    } else if (propertyError) {
+      console.log('Direct property fetch failed, trying legacy method');
+      
+      if (!propertiesLoading && properties && propertyId) {
+        console.log('Properties loaded from legacy method. Looking for propertyId:', propertyId);
+        console.log('Available properties:', properties);
+        
+        const foundProperty = properties.find((p) => p.id === propertyId);
+        if (foundProperty) {
+          console.log('Found property in legacy properties list:', foundProperty);
+          setProperty(foundProperty);
+        } else {
+          console.log('Property not found in properties list:', propertyId);
+          toast({
+            title: "Property not found",
+            description: "The requested property could not be found in your properties.",
+            variant: "destructive"
+          });
+        }
+        setIsLoading(false);
+      }
     }
-  }, [properties, propertyId, propertiesLoading, toast]);
+  }, [propertyData, propertyLoading, propertyError, properties, propertyId, propertiesLoading, toast]);
 
   // If it's taking too long to load, show an error
   useEffect(() => {
@@ -142,7 +175,7 @@ const PropertyDetails = () => {
     if (isLoading) {
       timeout = setTimeout(() => {
         if (isLoading) {
-          console.log("Loading timeout reached. Properties:", properties);
+          console.log("Loading timeout reached. PropertyData:", propertyData, "Properties:", properties);
           setIsLoading(false);
           toast({
             title: "Loading timeout",
@@ -154,7 +187,7 @@ const PropertyDetails = () => {
     }
     
     return () => clearTimeout(timeout);
-  }, [isLoading, properties, toast]);
+  }, [isLoading, propertyData, properties, toast]);
 
   return (
     <div className="min-h-screen bg-[#F8F9FC]">
