@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Home, User, Receipt, UserCircle, BarChart2, BookOpen } from "lucide-react";
@@ -325,7 +324,7 @@ const PropertyDetails = () => {
                 <LandlordTab propertyId={id || ''} />
               )}
               {activeTab === "handbook" && (
-                <TenantHandbookTab />
+                <TenantHandbookTab propertyId={id || ''} />
               )}
             </div>
           </div>

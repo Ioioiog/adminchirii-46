@@ -13,11 +13,196 @@ import {
   Home, 
   CalendarDays, 
   PhoneCall, 
-  AlertCircle 
+  AlertCircle,
+  Save,
+  X
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/use-user-role";
+import { supabase } from "@/integrations/supabase/client";
 
-export function TenantHandbookTab() {
+interface HandbookSection {
+  title: string;
+  content: string;
+}
+
+interface HandbookData {
+  [sectionId: string]: HandbookSection;
+}
+
+export function TenantHandbookTab({ propertyId }: { propertyId: string }) {
   const [section, setSection] = useState("beginning");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingSection, setEditingSection] = useState<string | null>(null);
+  const [handbookData, setHandbookData] = useState<HandbookData>({
+    welcome: { title: "Welcome Letter", content: "Welcome to your new home! We're delighted to have you as a tenant and look forward to a positive relationship. This handbook contains important information to help you during your tenancy." },
+    starting: { title: "Starting a Tenancy", content: "Your tenancy officially begins on the date specified in your contract. Please make sure to read your contract thoroughly and reach out if you have any questions." },
+    paying: { title: "Paying Rent, Deposit and Inventories", content: "Your rent is due on the date specified in your contract. The security deposit has been protected with a government-approved scheme. A detailed inventory has been provided - please review it within 7 days of moving in." },
+    checklist: { title: "Moving in Checklist", content: "• Confirm utilities are connected and in your name\n• Test smoke and carbon monoxide detectors\n• Locate main water shut-off valve\n• Check all windows and doors lock properly\n• Review and return the property inventory" },
+    meters: { title: "Taking Meter Readings", content: "Take meter readings immediately upon moving in and notify utility providers. This ensures you're only charged for your usage. Take photos of the meters as evidence." },
+    home: { title: "Looking After Your Home", content: "Regular cleaning and maintenance will keep your home in good condition. Report any maintenance issues promptly to prevent further damage." },
+    electricity: { title: "Turning Off Electricity", content: "The main electricity switch is usually located near the meter. In case of emergency, switch it off before calling an electrician." },
+    pipes: { title: "Leaking, Bursting and Frozen Pipes", content: "In case of a leak, turn off the water at the main valve. For frozen pipes, gently warm them using a hairdryer on a low setting. Never use open flames." },
+    heating: { title: "Controlling Your Central Heating", content: "Set your thermostat to a reasonable temperature (18-21°C). For efficiency, it's often better to keep heating at a consistent low temperature rather than frequently turning it on and off." },
+    condensation: { title: "Condensation", content: "To reduce condensation, ensure proper ventilation, use extractor fans when cooking or showering, and avoid drying clothes indoors when possible." },
+    washing: { title: "Washing Machine", content: "Make sure the washing machine is level and not overloaded. Clean the filter regularly and leave the door ajar after use to prevent mold." },
+    blockages: { title: "Clearing Blockages", content: "For sink blockages, try using a plunger or drain unblocker. For toilets, use a toilet plunger. Avoid using harsh chemicals as they can damage pipes." },
+    lightbulbs: { title: "Changing Light Bulbs and Batteries", content: "Tenants are responsible for replacing light bulbs and batteries in smoke detectors. Ensure the power is off before changing bulbs." },
+    troubleshooting: { title: "Troubleshooting", content: "Before reporting an issue, check if it's something simple like a tripped circuit breaker, blocked filter, or needs a new battery. Many minor issues can be resolved without a callout." },
+    change: { title: "Change of Tenancy", content: "If there's a change in tenants during an ongoing contract, all tenants must agree and a new contract must be drawn up. Contact us to arrange this." },
+    renewing: { title: "Renewing a Contract", content: "We'll contact you approximately 2 months before your tenancy end date to discuss renewal options. If you wish to renew, let us know as early as possible." },
+    ending: { title: "Ending Your Tenancy", content: "Provide notice as specified in your contract (typically 1-2 months). Clean the property thoroughly, remove all belongings, and return all keys." },
+    deposit: { title: "Deposit Refund", content: "Your deposit will be returned within 10 days of the end of your tenancy, less any agreed deductions for damages beyond normal wear and tear or unpaid rent." },
+    fire: { title: "Fire", content: "In case of fire, evacuate immediately and call emergency services (112 or local equivalent). Only attempt to extinguish small fires if safe to do so." },
+    gas: { title: "Gas", content: "If you smell gas, open windows, don't use electrical switches or naked flames, turn off the gas at the meter if possible, and call the gas emergency number immediately." },
+    waterleak: { title: "Water Leak", content: "Turn off the water at the main stopcock, switch off electrical appliances in the affected area, and contact us immediately." },
+    electricityloss: { title: "Loss of Electricity", content: "Check if it's a power outage in the area or just your property. Check the circuit breakers in your fuse box. If you can't restore power, contact us." },
+    office: { title: "In Case Our Office is Closed", content: "For genuine emergencies outside office hours, call our emergency contact number provided in your welcome pack. For non-urgent matters, please wait until office hours." },
+    property: { title: "Property Management Contacts", content: "Office Hours: Monday to Friday, 9am to 5pm\nPhone: +XX XXX XXX XXX\nEmail: support@propertymanagement.com\nEmergency (out of hours): +XX XXX XXX XXX" },
+    utility: { title: "Utility Providers", content: "Electricity: Contact details will be in your welcome pack\nGas: Contact details will be in your welcome pack\nWater: Contact details will be in your welcome pack\nInternet: Contact details will be in your welcome pack" },
+    misc: { title: "Miscellaneous", content: "Local Council: Details will be in your welcome pack\nWaste Collection: Details will be in your welcome pack\nLocal Police (non-emergency): Local number will be in your welcome pack\nEmergency Services: 112 (or local equivalent)" },
+  });
+  const [editContent, setEditContent] = useState("");
+  const [originalContent, setOriginalContent] = useState("");
+  const { toast } = useToast();
+  const { userRole } = useUserRole();
+
+  const isLandlord = userRole === "landlord";
+
+  const fetchHandbookData = async () => {
+    try {
+      if (!propertyId) return;
+      
+      const { data, error } = await supabase
+        .from('property_handbook')
+        .select('handbook_data')
+        .eq('property_id', propertyId)
+        .single();
+      
+      if (error) {
+        console.error("Error fetching handbook data:", error);
+        return;
+      }
+      
+      if (data && data.handbook_data) {
+        setHandbookData(data.handbook_data);
+      }
+    } catch (error) {
+      console.error("Error in fetchHandbookData:", error);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchHandbookData();
+  }, [propertyId]);
+
+  const startEditing = (sectionId: string) => {
+    setEditingSection(sectionId);
+    setOriginalContent(handbookData[sectionId].content);
+    setEditContent(handbookData[sectionId].content);
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setEditingSection(null);
+    setIsEditing(false);
+  };
+
+  const saveEditing = async () => {
+    if (!editingSection) return;
+
+    try {
+      // Update local state
+      const updatedData = {
+        ...handbookData,
+        [editingSection]: {
+          ...handbookData[editingSection],
+          content: editContent
+        }
+      };
+      
+      setHandbookData(updatedData);
+
+      // Save to database
+      const { error } = await supabase
+        .from('property_handbook')
+        .upsert({
+          property_id: propertyId,
+          handbook_data: updatedData,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Success",
+        description: "Handbook section updated successfully",
+      });
+    } catch (error) {
+      console.error("Error saving handbook data:", error);
+      // Revert to original content if save fails
+      setHandbookData({
+        ...handbookData,
+        [editingSection]: {
+          ...handbookData[editingSection],
+          content: originalContent
+        }
+      });
+      
+      toast({
+        title: "Error",
+        description: "Failed to update handbook section",
+        variant: "destructive",
+      });
+    } finally {
+      setEditingSection(null);
+      setIsEditing(false);
+    }
+  };
+
+  const renderAccordionContent = (sectionId: string) => {
+    if (isEditing && editingSection === sectionId) {
+      return (
+        <div className="space-y-4">
+          <Textarea 
+            value={editContent} 
+            onChange={(e) => setEditContent(e.target.value)} 
+            className="min-h-[150px]"
+          />
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" size="sm" onClick={cancelEditing}>
+              <X className="h-4 w-4 mr-1" /> Cancel
+            </Button>
+            <Button size="sm" onClick={saveEditing}>
+              <Save className="h-4 w-4 mr-1" /> Save
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div>
+        <p className="text-gray-700">
+          {handbookData[sectionId]?.content || "Content not available"}
+        </p>
+        {isLandlord && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="mt-2 text-gray-500 hover:text-primary" 
+            onClick={() => startEditing(sectionId)}
+          >
+            Edit
+          </Button>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -57,49 +242,35 @@ export function TenantHandbookTab() {
               <AccordionItem value="welcome">
                 <AccordionTrigger>Welcome Letter</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    Welcome to your new home! We're delighted to have you as a tenant and look forward to a positive relationship. This handbook contains important information to help you during your tenancy.
-                  </p>
+                  {renderAccordionContent("welcome")}
                 </AccordionContent>
               </AccordionItem>
               
               <AccordionItem value="starting">
                 <AccordionTrigger>Starting a Tenancy</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    Your tenancy officially begins on the date specified in your contract. Please make sure to read your contract thoroughly and reach out if you have any questions.
-                  </p>
+                  {renderAccordionContent("starting")}
                 </AccordionContent>
               </AccordionItem>
               
               <AccordionItem value="paying">
                 <AccordionTrigger>Paying Rent, Deposit and Inventories</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    Your rent is due on the date specified in your contract. The security deposit has been protected with a government-approved scheme. A detailed inventory has been provided - please review it within 7 days of moving in.
-                  </p>
+                  {renderAccordionContent("paying")}
                 </AccordionContent>
               </AccordionItem>
               
               <AccordionItem value="checklist">
                 <AccordionTrigger>Moving in Checklist</AccordionTrigger>
                 <AccordionContent>
-                  <ul className="list-disc pl-5 space-y-2 text-gray-700">
-                    <li>Confirm utilities are connected and in your name</li>
-                    <li>Test smoke and carbon monoxide detectors</li>
-                    <li>Locate main water shut-off valve</li>
-                    <li>Check all windows and doors lock properly</li>
-                    <li>Review and return the property inventory</li>
-                  </ul>
+                  {renderAccordionContent("checklist")}
                 </AccordionContent>
               </AccordionItem>
               
               <AccordionItem value="meters">
                 <AccordionTrigger>Taking Meter Readings</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    Take meter readings immediately upon moving in and notify utility providers. This ensures you're only charged for your usage. Take photos of the meters as evidence.
-                  </p>
+                  {renderAccordionContent("meters")}
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
@@ -112,81 +283,63 @@ export function TenantHandbookTab() {
               <AccordionItem value="home">
                 <AccordionTrigger>Looking After Your Home</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    Regular cleaning and maintenance will keep your home in good condition. Report any maintenance issues promptly to prevent further damage.
-                  </p>
+                  {renderAccordionContent("home")}
                 </AccordionContent>
               </AccordionItem>
               
               <AccordionItem value="electricity">
                 <AccordionTrigger>Turning Off Electricity</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    The main electricity switch is usually located near the meter. In case of emergency, switch it off before calling an electrician.
-                  </p>
+                  {renderAccordionContent("electricity")}
                 </AccordionContent>
               </AccordionItem>
               
               <AccordionItem value="pipes">
                 <AccordionTrigger>Leaking, Bursting and Frozen Pipes</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    In case of a leak, turn off the water at the main valve. For frozen pipes, gently warm them using a hairdryer on a low setting. Never use open flames.
-                  </p>
+                  {renderAccordionContent("pipes")}
                 </AccordionContent>
               </AccordionItem>
               
               <AccordionItem value="heating">
                 <AccordionTrigger>Controlling Your Central Heating</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    Set your thermostat to a reasonable temperature (18-21°C). For efficiency, it's often better to keep heating at a consistent low temperature rather than frequently turning it on and off.
-                  </p>
+                  {renderAccordionContent("heating")}
                 </AccordionContent>
               </AccordionItem>
               
               <AccordionItem value="condensation">
                 <AccordionTrigger>Condensation</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    To reduce condensation, ensure proper ventilation, use extractor fans when cooking or showering, and avoid drying clothes indoors when possible.
-                  </p>
+                  {renderAccordionContent("condensation")}
                 </AccordionContent>
               </AccordionItem>
               
               <AccordionItem value="washing">
                 <AccordionTrigger>Washing Machine</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    Make sure the washing machine is level and not overloaded. Clean the filter regularly and leave the door ajar after use to prevent mold.
-                  </p>
+                  {renderAccordionContent("washing")}
                 </AccordionContent>
               </AccordionItem>
               
               <AccordionItem value="blockages">
                 <AccordionTrigger>Clearing Blockages</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    For sink blockages, try using a plunger or drain unblocker. For toilets, use a toilet plunger. Avoid using harsh chemicals as they can damage pipes.
-                  </p>
+                  {renderAccordionContent("blockages")}
                 </AccordionContent>
               </AccordionItem>
               
               <AccordionItem value="lightbulbs">
                 <AccordionTrigger>Changing Light Bulbs and Batteries</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    Tenants are responsible for replacing light bulbs and batteries in smoke detectors. Ensure the power is off before changing bulbs.
-                  </p>
+                  {renderAccordionContent("lightbulbs")}
                 </AccordionContent>
               </AccordionItem>
               
               <AccordionItem value="troubleshooting">
                 <AccordionTrigger>Troubleshooting</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    Before reporting an issue, check if it's something simple like a tripped circuit breaker, blocked filter, or needs a new battery. Many minor issues can be resolved without a callout.
-                  </p>
+                  {renderAccordionContent("troubleshooting")}
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
@@ -199,36 +352,28 @@ export function TenantHandbookTab() {
               <AccordionItem value="change">
                 <AccordionTrigger>Change of Tenancy</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    If there's a change in tenants during an ongoing contract, all tenants must agree and a new contract must be drawn up. Contact us to arrange this.
-                  </p>
+                  {renderAccordionContent("change")}
                 </AccordionContent>
               </AccordionItem>
               
               <AccordionItem value="renewing">
                 <AccordionTrigger>Renewing a Contract</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    We'll contact you approximately 2 months before your tenancy end date to discuss renewal options. If you wish to renew, let us know as early as possible.
-                  </p>
+                  {renderAccordionContent("renewing")}
                 </AccordionContent>
               </AccordionItem>
               
               <AccordionItem value="ending">
                 <AccordionTrigger>Ending Your Tenancy</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    Provide notice as specified in your contract (typically 1-2 months). Clean the property thoroughly, remove all belongings, and return all keys.
-                  </p>
+                  {renderAccordionContent("ending")}
                 </AccordionContent>
               </AccordionItem>
               
               <AccordionItem value="deposit">
                 <AccordionTrigger>Deposit Refund</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    Your deposit will be returned within 10 days of the end of your tenancy, less any agreed deductions for damages beyond normal wear and tear or unpaid rent.
-                  </p>
+                  {renderAccordionContent("deposit")}
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
@@ -241,45 +386,35 @@ export function TenantHandbookTab() {
               <AccordionItem value="fire">
                 <AccordionTrigger>Fire</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    In case of fire, evacuate immediately and call emergency services (112 or local equivalent). Only attempt to extinguish small fires if safe to do so.
-                  </p>
+                  {renderAccordionContent("fire")}
                 </AccordionContent>
               </AccordionItem>
               
               <AccordionItem value="gas">
                 <AccordionTrigger>Gas</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    If you smell gas, open windows, don't use electrical switches or naked flames, turn off the gas at the meter if possible, and call the gas emergency number immediately.
-                  </p>
+                  {renderAccordionContent("gas")}
                 </AccordionContent>
               </AccordionItem>
               
               <AccordionItem value="waterleak">
                 <AccordionTrigger>Water Leak</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    Turn off the water at the main stopcock, switch off electrical appliances in the affected area, and contact us immediately.
-                  </p>
+                  {renderAccordionContent("waterleak")}
                 </AccordionContent>
               </AccordionItem>
               
-              <AccordionItem value="electricity">
+              <AccordionItem value="electricityloss">
                 <AccordionTrigger>Loss of Electricity</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    Check if it's a power outage in the area or just your property. Check the circuit breakers in your fuse box. If you can't restore power, contact us.
-                  </p>
+                  {renderAccordionContent("electricityloss")}
                 </AccordionContent>
               </AccordionItem>
               
               <AccordionItem value="office">
                 <AccordionTrigger>In Case Our Office is Closed</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-gray-700">
-                    For genuine emergencies outside office hours, call our emergency contact number provided in your welcome pack. For non-urgent matters, please wait until office hours.
-                  </p>
+                  {renderAccordionContent("office")}
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
@@ -292,36 +427,21 @@ export function TenantHandbookTab() {
               <AccordionItem value="property">
                 <AccordionTrigger>Property Management Contacts</AccordionTrigger>
                 <AccordionContent>
-                  <div className="space-y-2 text-gray-700">
-                    <p><strong>Office Hours:</strong> Monday to Friday, 9am to 5pm</p>
-                    <p><strong>Phone:</strong> +XX XXX XXX XXX</p>
-                    <p><strong>Email:</strong> support@propertymanagement.com</p>
-                    <p><strong>Emergency (out of hours):</strong> +XX XXX XXX XXX</p>
-                  </div>
+                  {renderAccordionContent("property")}
                 </AccordionContent>
               </AccordionItem>
               
               <AccordionItem value="utility">
                 <AccordionTrigger>Utility Providers</AccordionTrigger>
                 <AccordionContent>
-                  <div className="space-y-2 text-gray-700">
-                    <p><strong>Electricity:</strong> Contact details will be in your welcome pack</p>
-                    <p><strong>Gas:</strong> Contact details will be in your welcome pack</p>
-                    <p><strong>Water:</strong> Contact details will be in your welcome pack</p>
-                    <p><strong>Internet:</strong> Contact details will be in your welcome pack</p>
-                  </div>
+                  {renderAccordionContent("utility")}
                 </AccordionContent>
               </AccordionItem>
               
               <AccordionItem value="misc">
                 <AccordionTrigger>Miscellaneous</AccordionTrigger>
                 <AccordionContent>
-                  <div className="space-y-2 text-gray-700">
-                    <p><strong>Local Council:</strong> Details will be in your welcome pack</p>
-                    <p><strong>Waste Collection:</strong> Details will be in your welcome pack</p>
-                    <p><strong>Local Police (non-emergency):</strong> Local number will be in your welcome pack</p>
-                    <p><strong>Emergency Services:</strong> 112 (or local equivalent)</p>
-                  </div>
+                  {renderAccordionContent("misc")}
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
