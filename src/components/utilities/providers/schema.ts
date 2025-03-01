@@ -15,6 +15,19 @@ export const formSchema = z.object({
   location_name: z.string().optional(),
   start_day: z.coerce.number().int().min(1).max(31).optional(),
   end_day: z.coerce.number().int().min(1).max(31).optional(),
-});
+})
+.refine(
+  (data) => {
+    // Skip validation if either value is missing
+    if (data.start_day === undefined || data.end_day === undefined) {
+      return true;
+    }
+    return data.start_day < data.end_day;
+  },
+  {
+    message: "Start day must be before end day",
+    path: ["end_day"], // Show error on the end day field
+  }
+);
 
 export type FormData = z.infer<typeof formSchema>;

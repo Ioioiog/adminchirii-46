@@ -104,7 +104,16 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
 
       if (provider) {
         // When updating a provider
-        const updateData = {
+        const updateData: {
+          provider_name: string;
+          property_id: string;
+          utility_type: UtilityType;
+          username: string;
+          password?: string;
+          location_name: string | null;
+          start_day: number;
+          end_day: number;
+        } = {
           provider_name: finalProviderName,
           property_id: data.property_id,
           utility_type: data.utility_type,
@@ -116,7 +125,7 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
 
         // Only include password if it was provided
         if (data.password) {
-          updateData['password'] = data.password;
+          updateData.password = data.password;
         }
 
         const { error } = await supabase
@@ -130,22 +139,22 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
           description: "Utility provider updated successfully",
         });
       } else {
-        // When creating a new provider
-        const insertData = {
-          provider_name: finalProviderName,
-          property_id: data.property_id,
-          utility_type: data.utility_type,
-          username: data.username,
-          password: data.password,
-          landlord_id: userData.user.id,
-          location_name: data.location_name || null,
-          start_day: data.start_day || 1,
-          end_day: data.end_day || 28,
-        };
-
+        // When creating a new provider - here we need to specify encrypted_password
+        // but since the backend handles encryption, we use the password field
+        // and let the database trigger handle the encryption
         const { error } = await supabase
           .from("utility_provider_credentials")
-          .insert(insertData);
+          .insert({
+            provider_name: finalProviderName,
+            property_id: data.property_id,
+            utility_type: data.utility_type,
+            username: data.username,
+            password: data.password, // This will be encrypted by the database trigger
+            landlord_id: userData.user.id,
+            location_name: data.location_name || null,
+            start_day: data.start_day || 1,
+            end_day: data.end_day || 28,
+          });
 
         if (error) throw error;
         toast({
