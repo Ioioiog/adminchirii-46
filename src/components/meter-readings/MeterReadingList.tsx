@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import {
   Table,
@@ -52,7 +51,7 @@ const transformProperty = (property: any): Property => ({
 interface MeterReading {
   id: string;
   property_id: string;
-  reading_type: 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
+  reading_type: 'electricity' | 'water' | 'gas';
   reading_value: number;
   reading_date: string;
   notes: string | null;
@@ -142,7 +141,7 @@ export function MeterReadingList({
         }
 
         console.log("Fetched meter readings:", data);
-        setReadings(data as MeterReading[]);
+        setReadings(data || []);
       } catch (error: any) {
         console.error("Error in fetchReadings:", error);
         toast({

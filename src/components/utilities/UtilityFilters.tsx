@@ -1,96 +1,83 @@
 
+import React from "react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DateRange } from "react-day-picker";
-import { DatePickerWithRange } from "@/components/ui/date-range-picker";
-
-// Define utility types as a union type
-export type UtilityType = "all" | "electricity" | "water" | "gas" | "internet" | "building maintenance";
-export type StatusType = "all" | "pending" | "paid" | "overdue";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Property } from "@/utils/propertyUtils";
 
 interface UtilityFiltersProps {
-  utilityType: UtilityType;
-  status: StatusType;
-  dateRange: DateRange | undefined;
-  onUtilityTypeChange: (value: UtilityType) => void;
-  onStatusChange: (value: StatusType) => void;
-  onDateRangeChange: (value: DateRange | undefined) => void;
+  searchTerm: string;
+  onSearchChange: (value: string) => void;
+  statusFilter: string;
+  onStatusChange: (value: string) => void;
+  typeFilter: string;
+  onTypeChange: (value: string) => void;
+  propertyFilter: string;
+  onPropertyChange: (value: string) => void;
+  properties: Property[];
 }
 
-// Define utility types as enum values
-const UTILITY_TYPES = [
-  { value: 'electricity', label: 'Electricity' },
-  { value: 'gas', label: 'Gas' },
-  { value: 'water', label: 'Water' },
-  { value: 'internet', label: 'Internet' },
-  { value: 'building maintenance', label: 'Building Maintenance' }
-];
-
-// Define status types
-const STATUS_TYPES = [
-  { value: 'pending', label: 'Pending' },
-  { value: 'paid', label: 'Paid' },
-  { value: 'overdue', label: 'Overdue' }
-];
-
 export function UtilityFilters({
-  utilityType,
-  status,
-  dateRange,
-  onUtilityTypeChange,
+  searchTerm,
+  onSearchChange,
+  statusFilter,
   onStatusChange,
-  onDateRangeChange
+  typeFilter,
+  onTypeChange,
+  propertyFilter,
+  onPropertyChange,
+  properties,
 }: UtilityFiltersProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div className="space-y-2">
-        <Label htmlFor="type-filter">Utility Type</Label>
-        <Select 
-          value={utilityType} 
-          onValueChange={(value) => onUtilityTypeChange(value as UtilityType)}
-        >
-          <SelectTrigger id="type-filter">
-            <SelectValue placeholder="All types" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All types</SelectItem>
-            {UTILITY_TYPES.map(type => (
-              <SelectItem key={type.value} value={type.value}>
-                {type.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="status-filter">Status</Label>
-        <Select 
-          value={status} 
-          onValueChange={(value) => onStatusChange(value as StatusType)}
-        >
-          <SelectTrigger id="status-filter">
-            <SelectValue placeholder="All statuses" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            {STATUS_TYPES.map(status => (
-              <SelectItem key={status.value} value={status.value}>
-                {status.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div className="space-y-2">
-        <Label>Date Range</Label>
-        <DatePickerWithRange
-          date={dateRange}
-          setDate={onDateRangeChange}
-        />
-      </div>
+    <div className="flex flex-col sm:flex-row gap-4 mb-6">
+      <Input
+        placeholder="Search utilities..."
+        value={searchTerm}
+        onChange={(e) => onSearchChange(e.target.value)}
+        className="max-w-sm"
+      />
+      <Select value={propertyFilter} onValueChange={onPropertyChange}>
+        <SelectTrigger className="w-[200px]">
+          <SelectValue placeholder="Filter by property" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Properties</SelectItem>
+          {properties.map((property) => (
+            <SelectItem key={property.id} value={property.id}>
+              {property.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={statusFilter} onValueChange={onStatusChange}>
+        <SelectTrigger className="w-[180px]">
+          <SelectValue placeholder="Filter by status" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Status</SelectItem>
+          <SelectItem value="pending">Pending</SelectItem>
+          <SelectItem value="paid">Paid</SelectItem>
+          <SelectItem value="overdue">Overdue</SelectItem>
+        </SelectContent>
+      </Select>
+      <Select value={typeFilter} onValueChange={onTypeChange}>
+        <SelectTrigger className="w-[180px]">
+          <SelectValue placeholder="Filter by type" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Types</SelectItem>
+          <SelectItem value="electricity">Electricity</SelectItem>
+          <SelectItem value="water">Water</SelectItem>
+          <SelectItem value="gas">Gas</SelectItem>
+          <SelectItem value="internet">Internet</SelectItem>
+          <SelectItem value="building maintenance">Building Maintenance</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 }

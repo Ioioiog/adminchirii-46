@@ -1,123 +1,113 @@
 
-import { 
-  Home, 
-  Building2, 
-  Users, 
-  FileText, 
-  Settings, 
-  CreditCard, 
-  Droplets, 
-  MessageSquare,
+import {
+  LayoutDashboard,
+  Home,
+  Users,
   Wrench,
-  MapPin,
-  Briefcase,
-  CircleDollarSign
+  FileText,
+  CreditCard,
+  Settings,
+  Droplets,
+  MessageCircle,
+  Clipboard,
+  UserCog,
+  Building2,
+  Wallet,
 } from "lucide-react";
-
-export const standardMenuItems = [
-  {
-    name: "Dashboard",
-    href: "/dashboard",
-    icon: Home,
-    roles: ["landlord", "tenant", "service_provider"],
-  },
-  {
-    name: "Properties",
-    href: "/properties",
-    icon: Building2,
-    roles: ["landlord", "tenant"],
-  },
-  {
-    name: "Tenants",
-    href: "/tenants",
-    icon: Users,
-    roles: ["landlord"],
-  },
-  {
-    name: "Documents",
-    href: "/documents",
-    icon: FileText,
-    roles: ["landlord", "tenant"],
-  },
-  {
-    name: "Financial",
-    href: "/financial",
-    icon: CreditCard,
-    roles: ["landlord", "tenant"],
-  },
-  {
-    name: "Utilities",
-    href: "/utilities",
-    icon: Droplets,
-    roles: ["landlord", "tenant"],
-  },
-  {
-    name: "Chat",
-    href: "/chat",
-    icon: MessageSquare,
-    roles: ["landlord", "tenant", "service_provider"],
-  },
-  {
-    name: "Maintenance",
-    href: "/maintenance",
-    icon: Wrench,
-    roles: ["landlord", "tenant", "service_provider"],
-  },
-  {
-    name: "Settings",
-    href: "/settings",
-    icon: Settings,
-    roles: ["landlord", "tenant", "service_provider"],
-  },
-];
+import { NotificationType } from "@/types/notifications";
 
 export const serviceProviderMenuItems = [
   {
-    name: "Dashboard",
+    title: "Dashboard",
+    icon: LayoutDashboard,
     href: "/dashboard",
-    icon: Home,
     roles: ["service_provider"],
+    notificationType: "maintenance" as NotificationType
   },
   {
-    name: "Profile",
+    title: "Profile",
+    icon: UserCog,
     href: "/service-provider-profile",
-    icon: Users,
     roles: ["service_provider"],
   },
   {
-    name: "Service Areas",
-    href: "/service-areas",
-    icon: MapPin,
-    roles: ["service_provider"],
-  },
-  {
-    name: "Services",
-    href: "/services",
-    icon: Briefcase,
-    roles: ["service_provider"],
-  },
-  {
-    name: "Earnings",
-    href: "/earnings",
-    icon: CircleDollarSign,
-    roles: ["service_provider"],
-  },
-  {
-    name: "Maintenance",
+    title: "Job Requests",
+    icon: Clipboard,
     href: "/maintenance",
-    icon: Wrench,
     roles: ["service_provider"],
+    notificationType: "maintenance" as NotificationType
   },
   {
-    name: "Chat",
-    href: "/chat",
-    icon: MessageSquare,
+    title: "Earnings",
+    icon: Wallet,
+    href: "/earnings",
     roles: ["service_provider"],
+    notificationType: "payments" as NotificationType
   },
   {
-    name: "Settings",
-    href: "/settings",
+    title: "Settings",
     icon: Settings,
+    href: "/settings",
     roles: ["service_provider"],
+  },
+];
+
+export const standardMenuItems = [
+  {
+    title: "Dashboard",
+    icon: LayoutDashboard,
+    href: "/dashboard",
+    roles: ["landlord", "tenant"],
+  },
+  {
+    title: "Properties",
+    icon: Home,
+    href: "/properties",
+    roles: ["landlord", "tenant"],
+  },
+  {
+    title: "Tenants",
+    icon: Users,
+    href: "/tenants",
+    roles: ["landlord"],
+  },
+  {
+    title: "Maintenance",
+    icon: Wrench,
+    href: "/maintenance",
+    roles: ["landlord", "tenant"],
+    notificationType: "maintenance" as NotificationType
+  },
+  {
+    title: "Documents",
+    icon: FileText,
+    href: "/documents",
+    roles: ["landlord", "tenant"],
+  },
+  {
+    title: "Financial",
+    icon: Wallet,
+    href: "/financial",
+    roles: ["landlord", "tenant"],
+    notificationType: "payments" as NotificationType
+  },
+  {
+    title: "Utilities",
+    icon: Droplets,
+    href: "/utilities",
+    roles: ["landlord", "tenant"],
+  },
+  {
+    title: "Chat",
+    icon: MessageCircle,
+    href: "/chat",
+    roles: ["landlord", "tenant"],
+    notificationType: "messages" as NotificationType
+  },
+  {
+    title: "Settings",
+    icon: Settings,
+    href: "/settings",
+    roles: ["landlord", "tenant"],
   },
 ];

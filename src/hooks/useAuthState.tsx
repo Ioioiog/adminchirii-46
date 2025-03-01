@@ -7,9 +7,6 @@ export function useAuthState() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [user, setUser] = useState<any | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const { toast } = useToast();
 
   useEffect(() => {
     let mounted = true;
@@ -26,8 +23,6 @@ export function useAuthState() {
           if (mounted) {
             setIsAuthenticated(false);
             setCurrentUserId(null);
-            setUser(null);
-            setUserRole(null);
             setIsLoading(false);
           }
           return;
@@ -38,26 +33,12 @@ export function useAuthState() {
           if (mounted) {
             setIsAuthenticated(true);
             setCurrentUserId(session.user.id);
-            setUser(session.user);
-            
-            // Fetch user role from profiles
-            const { data: profileData, error: profileError } = await supabase
-              .from("profiles")
-              .select("role")
-              .eq("id", session.user.id)
-              .single();
-              
-            if (!profileError && profileData) {
-              setUserRole(profileData.role);
-            }
           }
         } else {
           console.log("No active session found");
           if (mounted) {
             setIsAuthenticated(false);
             setCurrentUserId(null);
-            setUser(null);
-            setUserRole(null);
           }
         }
 
@@ -71,8 +52,6 @@ export function useAuthState() {
           setIsLoading(false);
           setIsAuthenticated(false);
           setCurrentUserId(null);
-          setUser(null);
-          setUserRole(null);
         }
       }
     };
@@ -81,31 +60,17 @@ export function useAuthState() {
 
     // Set up auth state change listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log("Auth state changed:", event);
         if (session?.user) {
           if (mounted) {
             setIsAuthenticated(true);
             setCurrentUserId(session.user.id);
-            setUser(session.user);
-            
-            // Fetch user role from profiles
-            const { data: profileData, error: profileError } = await supabase
-              .from("profiles")
-              .select("role")
-              .eq("id", session.user.id)
-              .single();
-              
-            if (!profileError && profileData) {
-              setUserRole(profileData.role);
-            }
           }
         } else {
           if (mounted) {
             setIsAuthenticated(false);
             setCurrentUserId(null);
-            setUser(null);
-            setUserRole(null);
           }
         }
       }
@@ -119,5 +84,5 @@ export function useAuthState() {
     };
   }, []);
 
-  return { isLoading, isAuthenticated, setIsAuthenticated, currentUserId, user, userRole };
+  return { isLoading, isAuthenticated, setIsAuthenticated, currentUserId };
 }

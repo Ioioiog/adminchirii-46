@@ -1,46 +1,150 @@
 
-import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { UtilityForm } from "./components/UtilityForm";
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { Property } from "@/utils/propertyUtils";
+import { Plus } from "lucide-react";
+import { useCurrency } from "@/hooks/useCurrency";
+import { findMatchingProperty } from "./utils/propertyMatcher";
+import { detectUtilityType } from "./utils/utilityTypeDetector";
+import { FileUploader } from "./components/FileUploader";
+import { UtilityForm } from "./components/UtilityForm";
 
 interface UtilityDialogProps {
-  isDialogOpen: boolean;
-  setIsDialogOpen: (open: boolean) => void;
+  properties: Property[];
   onUtilityCreated: () => void;
-  properties: any[];
 }
 
-// Define the allowed utility types
-type UtilityType = "electricity" | "water" | "gas" | "internet" | "building maintenance";
-
-export function UtilityDialog({
-  isDialogOpen,
-  setIsDialogOpen,
-  onUtilityCreated,
-  properties = [] // Default to empty array if properties is undefined
-}: UtilityDialogProps) {
+export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogProps) {
+  const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
-  const [propertyId, setPropertyId] = useState("");
-  const [utilityType, setUtilityType] = useState<UtilityType>("electricity");
-  const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState("RON");
-  const [dueDate, setDueDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [issuedDate, setIssuedDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [invoiceNumber, setInvoiceNumber] = useState("");
-  const [loading, setLoading] = useState(false);
-  
-  // Sample currencies array
-  const availableCurrencies = [
-    { code: "RON", name: "Romanian Leu" },
-    { code: "EUR", name: "Euro" },
-    { code: "USD", name: "US Dollar" },
-  ];
+  const { availableCurrencies } = useCurrency();
 
-  const handleClose = () => {
-    setIsDialogOpen(false);
+  const [utilityType, setUtilityType] = useState("");
+  const [amount, setAmount] = useState("");
+  const [currency, setCurrency] = useState("");
+  const [propertyId, setPropertyId] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [issuedDate, setIssuedDate] = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [processingError, setProcessingError] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(true);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+
+    if (!selectedFile.type.startsWith('image/')) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please upload an image file (JPEG, PNG, etc.).",
+      });
+      return;
+    }
+
+    setFile(selectedFile);
+    const fileName = `${crypto.randomUUID()}.${selectedFile.name.split('.').pop()}`;
+    
+    try {
+      setIsProcessing(true);
+      setProcessingError(null);
+      setShowForm(false);
+      
+      const { error: uploadError } = await supabase.storage
+        .from('utility-invoices')
+        .upload(fileName, selectedFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data, error } = await supabase.functions.invoke('process-utility-pdf', {
+        body: { filePath: fileName }
+      });
+
+      if (error) throw error;
+
+      if (data?.data) {
+        const extractedData = data.data;
+        console.log('Extracted data:', extractedData);
+
+        if (extractedData.property_details) {
+          const matchingProperty = findMatchingProperty(extractedData.property_details, properties);
+          
+          if (matchingProperty) {
+            setPropertyId(matchingProperty.id);
+            toast({
+              title: "Property Matched",
+              description: `Matched to property: ${matchingProperty.name}`,
+            });
+          } else {
+            toast({
+              variant: "destructive",
+              title: "No Match Found",
+              description: "Please select the property manually.",
+            });
+          }
+        }
+
+        const detectedType = detectUtilityType(
+          extractedData.raw_text || '',
+          propertyId,
+          properties
+        );
+
+        if (detectedType) {
+          setUtilityType(detectedType);
+        } else if (extractedData.utility_type) {
+          setUtilityType(extractedData.utility_type.charAt(0).toUpperCase() + 
+                      extractedData.utility_type.slice(1).toLowerCase());
+        }
+
+        if (extractedData.amount) {
+          setAmount(extractedData.amount.toString());
+        }
+        if (extractedData.currency) {
+          setCurrency(extractedData.currency.toUpperCase());
+        }
+        if (extractedData.due_date) {
+          setDueDate(extractedData.due_date);
+        }
+        if (extractedData.issued_date) {
+          setIssuedDate(extractedData.issued_date);
+        }
+        if (extractedData.invoice_number) {
+          setInvoiceNumber(extractedData.invoice_number);
+        }
+
+        setShowForm(true);
+        toast({
+          title: "Success",
+          description: "Successfully processed utility bill!",
+        });
+      } else {
+        throw new Error("No data extracted from the image");
+      }
+    } catch (error: any) {
+      console.error("Error handling file:", error);
+      setProcessingError(error.message || "Failed to process utility bill.");
+      setShowForm(true);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to process utility bill.",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -48,101 +152,139 @@ export function UtilityDialog({
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Please fill in all required fields"
+        description: "Please fill out all required fields.",
       });
       return;
     }
 
-    setLoading(true);
     try {
-      // Get property details
-      const { data: propertyData, error: propertyError } = await supabase
-        .from("properties")
-        .select("landlord_id")
-        .eq("id", propertyId)
+      setIsSubmitting(true);
+      
+      const { data: utility, error: utilityError } = await supabase
+        .from("utilities")
+        .insert([
+          {
+            type: utilityType,
+            amount: parseFloat(amount),
+            currency: currency,
+            property_id: propertyId,
+            due_date: dueDate,
+            issued_date: issuedDate,
+            status: "pending",
+            invoice_number: invoiceNumber || null,
+          },
+        ])
+        .select()
         .single();
 
-      if (propertyError) throw propertyError;
+      if (utilityError) throw utilityError;
 
-      // Insert new utility bill with properly typed data
-      const { data, error } = await supabase
-        .from("utilities")
-        .insert({
-          property_id: propertyId,
-          type: utilityType, // This is now properly typed
-          amount: parseFloat(amount),
-          currency,
-          due_date: dueDate,
-          issued_date: issuedDate,
-          invoice_number: invoiceNumber || null,
-          status: "pending",
-          created_by: propertyData.landlord_id
-        });
+      if (file) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${crypto.randomUUID()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('utility-invoices')
+          .upload(fileName, file);
 
-      if (error) throw error;
-      
+        if (uploadError) throw uploadError;
+
+        const { error: invoiceError } = await supabase
+          .from("utility_invoices")
+          .insert({
+            utility_id: utility.id,
+            amount: parseFloat(amount),
+            due_date: dueDate,
+            status: "pending",
+            pdf_path: fileName,
+            invoice_number: invoiceNumber || null,
+          });
+
+        if (invoiceError) throw invoiceError;
+      }
+
       toast({
         title: "Success",
-        description: "Utility bill added successfully"
+        description: "Utility bill recorded successfully!",
       });
-      
-      if (onUtilityCreated) {
-        onUtilityCreated();
-      }
-    } catch (error) {
-      console.error("Error creating utility:", error);
+      setOpen(false);
+      onUtilityCreated();
+    } catch (error: any) {
+      console.error("Error recording utility bill:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to add utility bill"
+        description: error.message || "Failed to record utility bill.",
       });
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-      <DialogContent className="max-w-2xl">
+    <Dialog open={open} onOpenChange={(newOpen) => {
+      setOpen(newOpen);
+      if (!newOpen) {
+        setIsProcessing(false);
+        setProcessingError(null);
+        setShowForm(true);
+        setFile(null);
+        setUtilityType("");
+        setAmount("");
+        setCurrency("");
+        setPropertyId("");
+        setDueDate("");
+        setIssuedDate("");
+        setInvoiceNumber("");
+      }
+    }}>
+      <DialogTrigger asChild>
+        <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-2">
+          <Plus className="h-4 w-4" />
+          Add Utility Bill
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Utility Bill</DialogTitle>
+          <DialogTitle>Add Utility Bill</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <UtilityForm
-            properties={properties || []}
-            propertyId={propertyId}
-            setPropertyId={setPropertyId}
-            utilityType={utilityType}
-            setUtilityType={(value) => setUtilityType(value as UtilityType)}
-            amount={amount}
-            setAmount={setAmount}
-            currency={currency}
-            setCurrency={setCurrency}
-            dueDate={dueDate}
-            setDueDate={setDueDate}
-            issuedDate={issuedDate}
-            setIssuedDate={setIssuedDate}
-            invoiceNumber={invoiceNumber}
-            setInvoiceNumber={setInvoiceNumber}
-            availableCurrencies={availableCurrencies}
+        <div className="grid gap-4 py-4">
+          <FileUploader
+            isProcessing={isProcessing}
+            processingError={processingError}
+            onFileChange={handleFileChange}
           />
-          <div className="flex justify-end gap-2 mt-4">
-            <button 
-              className="px-4 py-2 border rounded-md text-sm font-medium" 
-              onClick={handleClose}
-              type="button"
-            >
-              Cancel
-            </button>
-            <button 
-              className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              onClick={handleSubmit}
-              disabled={loading}
-              type="button"
-            >
-              {loading ? "Adding..." : "Add Utility Bill"}
-            </button>
-          </div>
+
+          {showForm && (
+            <UtilityForm
+              properties={properties}
+              propertyId={propertyId}
+              setPropertyId={setPropertyId}
+              utilityType={utilityType}
+              setUtilityType={setUtilityType}
+              amount={amount}
+              setAmount={setAmount}
+              currency={currency}
+              setCurrency={setCurrency}
+              dueDate={dueDate}
+              setDueDate={setDueDate}
+              issuedDate={issuedDate}
+              setIssuedDate={setIssuedDate}
+              invoiceNumber={invoiceNumber}
+              setInvoiceNumber={setInvoiceNumber}
+              availableCurrencies={availableCurrencies}
+            />
+          )}
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          {showForm && (
+            <Button onClick={handleSubmit} disabled={isSubmitting}>
+              {isSubmitting ? "Adding..." : "Add Utility Bill"}
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,9 +7,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Plus } from "lucide-react";
 import { MeterReadingForm } from "./MeterReadingForm";
 import { Property } from "@/utils/propertyUtils";
-import { PlusCircle } from "lucide-react";
 
 interface MeterReadingDialogProps {
   properties: Property[];
@@ -23,20 +22,16 @@ export function MeterReadingDialog({
   properties,
   onReadingCreated,
   userRole,
-  userId,
+  userId
 }: MeterReadingDialogProps) {
   const [open, setOpen] = useState(false);
-
-  if (properties.length === 0) {
-    return null;
-  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Meter Reading
+        <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-2">
+          <Plus className="h-4 w-4" />
+          Add Reading
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">

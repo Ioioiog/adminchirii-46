@@ -71,10 +71,6 @@ export interface Database {
         Args: { p_message_id: string; p_emoji: string };
         Returns: boolean;
       };
-      update_provider_utility_type: {
-        Args: { p_provider_id: string; p_utility_type: string };
-        Returns: void;
-      };
     };
   };
 }

@@ -15,7 +15,7 @@ interface UtilityProvider {
   provider_name: string;
   username: string;
   property_id?: string;
-  utility_type?: 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
+  utility_type?: 'electricity' | 'water' | 'gas';
   start_day?: number;
   end_day?: number;
 }
@@ -30,7 +30,7 @@ export function UtilityProviderForm() {
     username: "",
     password: "",
     property_id: "",
-    utility_type: "electricity" as 'electricity'| 'water' | 'gas' | 'internet' | 'building maintenance',
+    utility_type: "electricity" as 'electricity' | 'water' | 'gas',
     start_day: "",
     end_day: "",
   });

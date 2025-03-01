@@ -68,72 +68,40 @@ export function ProviderForm({ onClose, onSuccess, provider }: ProviderFormProps
         throw new Error("No authenticated user found");
       }
 
-      // Explicitly remove the utility_type field for the database operation
-      // and handle it separately to avoid type checking errors
-      const {
-        utility_type,
-        ...formDataWithoutUtilityType
-      } = formData;
+      // Cast utility_type to a string to avoid type issues with the database
+      const utilityTypeValue = formData.utility_type as string;
 
-      // Create the base data object without the utility_type
-      const baseData = {
-        ...formDataWithoutUtilityType,
-        start_day: startDayNum,
-        end_day: endDayNum
-      };
-
-      // If updating an existing provider
-      if (provider) {
-        const { error } = await supabase
+      const operation = provider ? 
+        supabase
           .from("utility_provider_credentials")
           .update({
-            ...baseData,
+            provider_name: formData.provider_name,
+            username: formData.username,
             encrypted_password: formData.password || undefined,
+            location_name: formData.location_name,
             property_id: formData.property_id || null,
+            utility_type: utilityTypeValue,
+            start_day: startDayNum,
+            end_day: endDayNum
           })
-          .eq('id', provider.id);
-
-        // After the update completes successfully, update the utility_type with
-        // a raw SQL query to bypass TypeScript checking
-        if (!error) {
-          try {
-            await supabase.rpc('update_provider_utility_type', { 
-              p_provider_id: provider.id,
-              p_utility_type: utility_type
-            });
-          } catch (err) {
-            console.error("Failed to update utility type:", err);
-          }
-        } else {
-          throw error;
-        }
-      } else {
-        // If creating a new provider
-        const { data: insertedData, error } = await supabase
+          .eq('id', provider.id) :
+        supabase
           .from("utility_provider_credentials")
           .insert({
-            ...baseData,
+            provider_name: formData.provider_name,
+            username: formData.username,
             encrypted_password: formData.password,
+            location_name: formData.location_name,
             property_id: formData.property_id || null,
             landlord_id: user.id,
-          })
-          .select();
+            utility_type: utilityTypeValue,
+            start_day: startDayNum,
+            end_day: endDayNum
+          });
 
-        // After the insert completes successfully, update the utility_type with
-        // a raw SQL query to bypass TypeScript checking
-        if (!error && insertedData && insertedData.length > 0) {
-          try {
-            await supabase.rpc('update_provider_utility_type', { 
-              p_provider_id: insertedData[0].id,
-              p_utility_type: utility_type
-            });
-          } catch (err) {
-            console.error("Failed to update utility type:", err);
-          }
-        } else {
-          throw error;
-        }
-      }
+      const { error } = await operation;
+
+      if (error) throw error;
 
       toast({
         title: "Success",
@@ -229,7 +197,7 @@ export function ProviderForm({ onClose, onSuccess, provider }: ProviderFormProps
         <Label htmlFor="utility_type">Utility Type</Label>
         <Select
           value={formData.utility_type}
-          onValueChange={(value: "electricity" | "water" | "gas" | "internet" | "building maintenance") => 
+          onValueChange={(value) => 
             setFormData({ ...formData, utility_type: value })}
           disabled={formData.provider_name === 'engie_romania'}
         >
