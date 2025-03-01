@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Edit, Save, X } from "lucide-react";
 import { Property, PropertyStatus } from "@/utils/propertyUtils";
@@ -14,7 +14,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { PropertyForm } from "@/components/properties/PropertyForm";
 import { useCurrency } from "@/hooks/useCurrency";
-import { supabase } from "@/integrations/supabase/client";
 
 interface PropertyTabProps {
   property: Property;
@@ -38,33 +37,6 @@ export function PropertyTab({
   getStatusColor,
 }: PropertyTabProps) {
   const { formatAmount } = useCurrency();
-  const [utilityAverage, setUtilityAverage] = useState<number | null>(null);
-  const [isLoadingUtilities, setIsLoadingUtilities] = useState<boolean>(false);
-  
-  useEffect(() => {
-    async function fetchUtilityStats() {
-      if (!property.id) return;
-      
-      setIsLoadingUtilities(true);
-      try {
-        const { data, error } = await supabase.rpc('get_property_utility_stats', {
-          property_id: property.id
-        });
-        
-        if (error) throw error;
-        
-        if (data && data.average_monthly_cost) {
-          setUtilityAverage(data.average_monthly_cost);
-        }
-      } catch (err) {
-        console.error("Error fetching utility statistics:", err);
-      } finally {
-        setIsLoadingUtilities(false);
-      }
-    }
-    
-    fetchUtilityStats();
-  }, [property.id]);
   
   const formatDate = (date: string | null | undefined) => {
     if (!date) return "N/A";
@@ -144,7 +116,7 @@ export function PropertyTab({
                     Monthly Rent
                   </h4>
                   <p className="text-base text-gray-900 mt-1">
-                    {formatAmount(property.monthly_rent || 0, 'RON')}
+                    €{property.monthly_rent?.toLocaleString() || 0}
                   </p>
                 </div>
                 <div>
@@ -152,13 +124,7 @@ export function PropertyTab({
                     Estimated Monthly Utilities
                   </h4>
                   <p className="text-base text-gray-900 mt-1">
-                    {isLoadingUtilities ? (
-                      <span className="text-gray-400">Loading...</span>
-                    ) : utilityAverage ? (
-                      formatAmount(utilityAverage, 'RON')
-                    ) : (
-                      formatAmount(estimatedUtilities, 'RON')
-                    )}
+                    €{estimatedUtilities.toLocaleString()}
                   </p>
                 </div>
                 <div>
