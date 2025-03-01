@@ -26,7 +26,7 @@ export function NavigationTabs({ tabs, activeTab, onTabChange }: NavigationTabsP
 
   // Filter tabs based on both tenant status and roles to hide
   const visibleTabs = tabs.filter(tab => {
-    // Hide if user is tenant and tab shouldn't show for tenants
+    // Hide if user is tenant and tab explicitly shouldn't show for tenants
     if (isTenant && tab.showForTenant === false) {
       return false;
     }

@@ -253,7 +253,7 @@ const PropertyDetails = () => {
     { id: "invoice", label: "Invoice Settings", icon: Receipt, showForTenant: false },
     { id: "utilities", label: "Utility Costs", icon: BarChart2, showForTenant: true },
     { id: "landlord", label: "Landlord", icon: UserCircle, showForTenant: true },
-    { id: "handbook", label: "Tenant Handbook", icon: BookOpen, hideForRole: "landlord" },
+    { id: "handbook", label: "Tenant Handbook", icon: BookOpen, showForTenant: true },
   ];
 
   const activeTenants = property.tenancies?.filter((t: any) => t.status === 'active') || [];
