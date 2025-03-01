@@ -2095,7 +2095,7 @@ export type Database = {
           property_id: string
           property_name: string | null
           status: string
-          type: string
+          type: Database["public"]["Enums"]["utility_type"]
           updated_at: string
           utility_provider_id: string | null
         }
@@ -2110,7 +2110,7 @@ export type Database = {
           property_id: string
           property_name?: string | null
           status?: string
-          type: string
+          type: Database["public"]["Enums"]["utility_type"]
           updated_at?: string
           utility_provider_id?: string | null
         }
@@ -2125,7 +2125,7 @@ export type Database = {
           property_id?: string
           property_name?: string | null
           status?: string
-          type?: string
+          type?: Database["public"]["Enums"]["utility_type"]
           updated_at?: string
           utility_provider_id?: string | null
         }

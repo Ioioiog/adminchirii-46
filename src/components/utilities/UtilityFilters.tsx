@@ -1,14 +1,12 @@
 
-import React from "react";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Property } from "@/utils/propertyUtils";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+interface Property {
+  id: string;
+  name: string;
+}
 
 interface UtilityFiltersProps {
   searchTerm: string;
@@ -22,6 +20,23 @@ interface UtilityFiltersProps {
   properties: Property[];
 }
 
+// Define utility types as enum values
+const UTILITY_TYPES = [
+  { value: 'electricity', label: 'Electricity' },
+  { value: 'gas', label: 'Gas' },
+  { value: 'water', label: 'Water' },
+  { value: 'internet', label: 'Internet' },
+  { value: 'building maintenance', label: 'Building Maintenance' }
+];
+
+// Define status types
+const STATUS_TYPES = [
+  { value: 'pending', label: 'Pending' },
+  { value: 'paid', label: 'Paid' },
+  { value: 'overdue', label: 'Overdue' },
+  { value: 'cancelled', label: 'Cancelled' }
+];
+
 export function UtilityFilters({
   searchTerm,
   onSearchChange,
@@ -31,53 +46,70 @@ export function UtilityFilters({
   onTypeChange,
   propertyFilter,
   onPropertyChange,
-  properties,
+  properties
 }: UtilityFiltersProps) {
   return (
-    <div className="flex flex-col sm:flex-row gap-4 mb-6">
-      <Input
-        placeholder="Search utilities..."
-        value={searchTerm}
-        onChange={(e) => onSearchChange(e.target.value)}
-        className="max-w-sm"
-      />
-      <Select value={propertyFilter} onValueChange={onPropertyChange}>
-        <SelectTrigger className="w-[200px]">
-          <SelectValue placeholder="Filter by property" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Properties</SelectItem>
-          {properties.map((property) => (
-            <SelectItem key={property.id} value={property.id}>
-              {property.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Select value={statusFilter} onValueChange={onStatusChange}>
-        <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder="Filter by status" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Status</SelectItem>
-          <SelectItem value="pending">Pending</SelectItem>
-          <SelectItem value="paid">Paid</SelectItem>
-          <SelectItem value="overdue">Overdue</SelectItem>
-        </SelectContent>
-      </Select>
-      <Select value={typeFilter} onValueChange={onTypeChange}>
-        <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder="Filter by type" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Types</SelectItem>
-          <SelectItem value="electricity">Electricity</SelectItem>
-          <SelectItem value="water">Water</SelectItem>
-          <SelectItem value="gas">Gas</SelectItem>
-          <SelectItem value="internet">Internet</SelectItem>
-          <SelectItem value="building maintenance">Building Maintenance</SelectItem>
-        </SelectContent>
-      </Select>
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="space-y-2">
+        <Label htmlFor="search">Search</Label>
+        <Input
+          id="search"
+          placeholder="Search utilities..."
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="status-filter">Status</Label>
+        <Select value={statusFilter} onValueChange={onStatusChange}>
+          <SelectTrigger id="status-filter">
+            <SelectValue placeholder="All statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            {STATUS_TYPES.map(status => (
+              <SelectItem key={status.value} value={status.value}>
+                {status.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="type-filter">Type</Label>
+        <Select value={typeFilter} onValueChange={onTypeChange}>
+          <SelectTrigger id="type-filter">
+            <SelectValue placeholder="All types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All types</SelectItem>
+            {UTILITY_TYPES.map(type => (
+              <SelectItem key={type.value} value={type.value}>
+                {type.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="property-filter">Property</Label>
+        <Select value={propertyFilter} onValueChange={onPropertyChange}>
+          <SelectTrigger id="property-filter">
+            <SelectValue placeholder="All properties" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All properties</SelectItem>
+            {properties.map(property => (
+              <SelectItem key={property.id} value={property.id}>
+                {property.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     </div>
   );
 }
