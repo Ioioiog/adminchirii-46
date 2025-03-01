@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -15,6 +15,10 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import html2canvas from "html2canvas";
 
 interface UtilityCostAnalysisProps {
   propertyId: string;
@@ -38,6 +42,9 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
   const { formatAmount } = useCurrency();
   const [error, setError] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodOption>("last_6_months");
+  const analysisRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     async function fetchUtilityData() {
@@ -126,6 +133,46 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
     }
   }, [propertyId, selectedPeriod]);
 
+  const handleExportAnalysis = async () => {
+    if (!analysisRef.current) return;
+    
+    try {
+      setIsExporting(true);
+      toast({
+        title: "Exporting...",
+        description: "Preparing your utility analysis export",
+      });
+      
+      const element = analysisRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        backgroundColor: "#FFFFFF"
+      });
+      
+      const image = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = image;
+      link.download = `utility-analysis-${format(new Date(), 'yyyy-MM-dd')}.png`;
+      link.click();
+      
+      toast({
+        title: "Export complete",
+        description: "Your utility analysis has been exported successfully",
+      });
+    } catch (err) {
+      console.error("Error exporting analysis:", err);
+      toast({
+        title: "Export failed",
+        description: "There was an error exporting your analysis",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Card className="mt-6">
@@ -170,7 +217,7 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
     <Card className="mt-6">
       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
         <CardTitle>Monthly Utility Costs</CardTitle>
-        <div className="mt-2 sm:mt-0">
+        <div className="mt-2 sm:mt-0 flex flex-col sm:flex-row gap-2 items-end sm:items-center">
           <Select 
             value={selectedPeriod} 
             onValueChange={(value) => setSelectedPeriod(value as PeriodOption)}
@@ -185,6 +232,16 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
               <SelectItem value="last_12_months">Last 12 Months</SelectItem>
             </SelectContent>
           </Select>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleExportAnalysis} 
+            disabled={isExporting || utilityData.length === 0}
+            className="whitespace-nowrap"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Export Analysis
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -193,7 +250,7 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
             No utility data available for this property.
           </div>
         ) : (
-          <>
+          <div ref={analysisRef}>
             <div className="mb-6">
               <h3 className="text-lg font-medium mb-3">Monthly Average Costs</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
@@ -275,7 +332,7 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
                 </table>
               </div>
             </div>
-          </>
+          </div>
         )}
       </CardContent>
     </Card>
