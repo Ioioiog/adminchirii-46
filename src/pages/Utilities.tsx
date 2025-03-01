@@ -32,13 +32,29 @@ export default function Utilities() {
   const [utilities, setUtilities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { user, userRole } = useAuthState();
+  const { currentUserId, isAuthenticated } = useAuthState();
+  // We need to get userRole from a different way since it's not in useAuthState
+  const [userRole, setUserRole] = useState<string>("tenant");
 
   useEffect(() => {
-    if (user) {
+    if (currentUserId) {
+      // Fetch user role
+      const fetchUserRole = async () => {
+        const { data: profileData, error } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", currentUserId)
+          .single();
+          
+        if (!error && profileData) {
+          setUserRole(profileData.role);
+        }
+      };
+      
+      fetchUserRole();
       fetchUtilities();
     }
-  }, [user, utilityType, status, dateRange, activeTab]);
+  }, [currentUserId, utilityType, status, dateRange, activeTab]);
 
   const fetchUtilities = async () => {
     try {
@@ -71,7 +87,7 @@ export default function Utilities() {
         const { data: properties } = await supabase
           .from("properties")
           .select("id")
-          .eq("landlord_id", user?.id);
+          .eq("landlord_id", currentUserId);
 
         if (properties && properties.length > 0) {
           const propertyIds = properties.map((p) => p.id);
@@ -87,7 +103,7 @@ export default function Utilities() {
         const { data: tenancies } = await supabase
           .from("tenancies")
           .select("property_id")
-          .eq("tenant_id", user?.id)
+          .eq("tenant_id", currentUserId)
           .eq("status", "active");
 
         if (tenancies && tenancies.length > 0) {
@@ -215,8 +231,8 @@ export default function Utilities() {
               utilityType={utilityType}
               status={status}
               dateRange={dateRange}
-              onUtilityTypeChange={setUtilityType}
-              onStatusChange={setStatus}
+              onUtilityTypeChange={(value) => setUtilityType(value as UtilityType)}
+              onStatusChange={(value) => setStatus(value as StatusType)}
               onDateRangeChange={setDateRange}
             />
           </Card>
@@ -233,8 +249,8 @@ export default function Utilities() {
               utilityType={utilityType}
               status={status}
               dateRange={dateRange}
-              onUtilityTypeChange={setUtilityType}
-              onStatusChange={setStatus}
+              onUtilityTypeChange={(value) => setUtilityType(value as UtilityType)}
+              onStatusChange={(value) => setStatus(value as StatusType)}
               onDateRangeChange={setDateRange}
             />
           </Card>
@@ -251,8 +267,8 @@ export default function Utilities() {
               utilityType={utilityType}
               status={status}
               dateRange={dateRange}
-              onUtilityTypeChange={setUtilityType}
-              onStatusChange={setStatus}
+              onUtilityTypeChange={(value) => setUtilityType(value as UtilityType)}
+              onStatusChange={(value) => setStatus(value as StatusType)}
               onDateRangeChange={setDateRange}
             />
           </Card>
@@ -269,8 +285,8 @@ export default function Utilities() {
               utilityType={utilityType}
               status={status}
               dateRange={dateRange}
-              onUtilityTypeChange={setUtilityType}
-              onStatusChange={setStatus}
+              onUtilityTypeChange={(value) => setUtilityType(value as UtilityType)}
+              onStatusChange={(value) => setStatus(value as StatusType)}
               onDateRangeChange={setDateRange}
             />
           </Card>
@@ -283,16 +299,15 @@ export default function Utilities() {
 
         <TabsContent value="analysis" className="space-y-6">
           <UtilityCostAnalysis 
-            userId={user?.id || ''}
+            userId={currentUserId || ''}
             userRole={userRole as "landlord" | "tenant"}
           />
         </TabsContent>
       </Tabs>
 
       <UtilityDialog
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        onClose={onDialogClose}
+        properties={[]} // This needs to be filled with property data
+        onUtilityCreated={onDialogClose}
       />
     </div>
   );
