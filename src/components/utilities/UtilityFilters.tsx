@@ -5,12 +5,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DateRange } from "react-day-picker";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 
+// Define utility types as a union type
+export type UtilityType = "all" | "electricity" | "gas" | "water" | "internet" | "building maintenance";
+export type StatusType = "all" | "pending" | "paid" | "overdue";
+
 interface UtilityFiltersProps {
-  utilityType: string;
-  status: string;
+  utilityType: UtilityType;
+  status: StatusType;
   dateRange: DateRange | undefined;
-  onUtilityTypeChange: (value: string) => void;
-  onStatusChange: (value: string) => void;
+  onUtilityTypeChange: (value: UtilityType) => void;
+  onStatusChange: (value: StatusType) => void;
   onDateRangeChange: (value: DateRange | undefined) => void;
 }
 
@@ -42,7 +46,10 @@ export function UtilityFilters({
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div className="space-y-2">
         <Label htmlFor="type-filter">Utility Type</Label>
-        <Select value={utilityType} onValueChange={onUtilityTypeChange}>
+        <Select 
+          value={utilityType} 
+          onValueChange={(value) => onUtilityTypeChange(value as UtilityType)}
+        >
           <SelectTrigger id="type-filter">
             <SelectValue placeholder="All types" />
           </SelectTrigger>
@@ -59,7 +66,10 @@ export function UtilityFilters({
       
       <div className="space-y-2">
         <Label htmlFor="status-filter">Status</Label>
-        <Select value={status} onValueChange={onStatusChange}>
+        <Select 
+          value={status} 
+          onValueChange={(value) => onStatusChange(value as StatusType)}
+        >
           <SelectTrigger id="status-filter">
             <SelectValue placeholder="All statuses" />
           </SelectTrigger>

@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/tabs";
 import { UtilityList } from "@/components/utilities/UtilityList";
 import { UtilityDialog } from "@/components/utilities/UtilityDialog";
-import { UtilityFilters } from "@/components/utilities/UtilityFilters";
+import { UtilityFilters, UtilityType, StatusType } from "@/components/utilities/UtilityFilters";
 import { UtilityCostAnalysis } from "@/components/utilities/UtilityCostAnalysis";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -18,9 +18,6 @@ import { PlusCircle } from "lucide-react";
 import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { Card } from "@/components/ui/card";
-
-type UtilityType = "all" | "electricity" | "water" | "gas" | "internet" | "building maintenance";
-type StatusType = "all" | "pending" | "paid" | "overdue";
 
 export default function Utilities() {
   const [utilityType, setUtilityType] = useState<UtilityType>("all");
@@ -195,6 +192,14 @@ export default function Utilities() {
     fetchUtilities();
   };
 
+  const handleUtilityTypeChange = (value: UtilityType) => {
+    setUtilityType(value);
+  };
+
+  const handleStatusChange = (value: StatusType) => {
+    setStatus(value);
+  };
+
   return (
     <div className="container mx-auto py-8">
       <div className="mb-6">
@@ -255,8 +260,8 @@ export default function Utilities() {
               utilityType={utilityType}
               status={status}
               dateRange={dateRange}
-              onUtilityTypeChange={setUtilityType}
-              onStatusChange={setStatus}
+              onUtilityTypeChange={handleUtilityTypeChange}
+              onStatusChange={handleStatusChange}
               onDateRangeChange={setDateRange}
             />
           </Card>
@@ -273,8 +278,8 @@ export default function Utilities() {
               utilityType={utilityType}
               status={status}
               dateRange={dateRange}
-              onUtilityTypeChange={setUtilityType}
-              onStatusChange={setStatus}
+              onUtilityTypeChange={handleUtilityTypeChange}
+              onStatusChange={handleStatusChange}
               onDateRangeChange={setDateRange}
             />
           </Card>
@@ -291,8 +296,8 @@ export default function Utilities() {
               utilityType={utilityType}
               status={status}
               dateRange={dateRange}
-              onUtilityTypeChange={setUtilityType}
-              onStatusChange={setStatus}
+              onUtilityTypeChange={handleUtilityTypeChange}
+              onStatusChange={handleStatusChange}
               onDateRangeChange={setDateRange}
             />
           </Card>
@@ -309,8 +314,8 @@ export default function Utilities() {
               utilityType={utilityType}
               status={status}
               dateRange={dateRange}
-              onUtilityTypeChange={setUtilityType}
-              onStatusChange={setStatus}
+              onUtilityTypeChange={handleUtilityTypeChange}
+              onStatusChange={handleStatusChange}
               onDateRangeChange={setDateRange}
             />
           </Card>
