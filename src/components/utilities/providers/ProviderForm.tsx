@@ -139,9 +139,9 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
           description: "Utility provider updated successfully",
         });
       } else {
-        // When creating a new provider - here we need to specify encrypted_password
-        // but since the backend handles encryption, we use the password field
-        // and let the database trigger handle the encryption
+        // When creating a new provider
+        // NOTE: We don't need to explicitly include encrypted_password
+        // The database trigger will handle the encryption and set encrypted_password
         const { error } = await supabase
           .from("utility_provider_credentials")
           .insert({
