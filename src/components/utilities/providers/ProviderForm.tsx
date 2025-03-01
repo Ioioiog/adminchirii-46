@@ -2,46 +2,22 @@
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Form } from "@/components/ui/form";
 import { supabase } from "@/integrations/supabase/client";
 import { useProperties } from "@/hooks/useProperties";
 import { useUserRole } from "@/hooks/use-user-role";
 import { useToast } from "@/hooks/use-toast";
 import { PROVIDER_OPTIONS, UtilityType } from "./types";
 import { UtilityProviderCredentials } from "@/integrations/supabase/types/utility";
-
-const formSchema = z.object({
-  provider_name: z.string().min(1, "Provider name is required"),
-  custom_provider_name: z.string().optional(),
-  property_id: z.string().min(1, "Property is required"),
-  utility_type: z.enum(["electricity", "water", "gas", "internet", "building maintenance"] as const),
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
-  location_name: z.string().optional(),
-  start_day: z.coerce.number().int().min(1).max(31).optional(),
-  end_day: z.coerce.number().int().min(1).max(31).optional(),
-});
-
-type FormData = z.infer<typeof formSchema>;
+import { formSchema, FormData } from "./schema";
+import { ProviderSelector } from "./components/ProviderSelector";
+import { CustomProviderInput } from "./components/CustomProviderInput";
+import { PropertySelector } from "./components/PropertySelector";
+import { UtilityTypeSelector } from "./components/UtilityTypeSelector";
+import { CredentialsInput } from "./components/CredentialsInput";
+import { BillingPeriodInput } from "./components/BillingPeriodInput";
+import { FormActions } from "./components/FormActions";
 
 interface ProviderFormProps {
   onClose: () => void;
@@ -93,6 +69,16 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
       });
     }
   }, [provider, form]);
+
+  const handleProviderChange = (value: string) => {
+    setIsCustomProvider(value === "custom");
+    
+    const selectedProvider = PROVIDER_OPTIONS.find(option => option.value === value);
+    
+    if (value !== "custom" && selectedProvider?.default_type) {
+      form.setValue("utility_type", selectedProvider.default_type as UtilityType);
+    }
+  };
 
   const onSubmit = async (data: FormData) => {
     if (userRole !== "landlord") {
@@ -207,20 +193,12 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
     }
   };
 
-  const handleProviderChange = (value: string) => {
-    setIsCustomProvider(value === "custom");
-    
-    const selectedProvider = PROVIDER_OPTIONS.find(option => option.value === value);
-    
-    if (value !== "custom" && selectedProvider?.default_type) {
-      form.setValue("utility_type", selectedProvider.default_type as UtilityType);
-    }
-  };
-
   if (isLoading) {
-    return <div className="flex items-center justify-center p-6">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-    </div>;
+    return (
+      <div className="flex items-center justify-center p-6">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   return (
@@ -231,194 +209,27 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="provider_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Provider</FormLabel>
-                  <Select 
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      handleProviderChange(value);
-                    }}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a provider" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {PROVIDER_OPTIONS.map((provider) => (
-                        <SelectItem key={provider.value} value={provider.value}>
-                          {provider.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+            <ProviderSelector 
+              form={form} 
+              isCustomProvider={isCustomProvider} 
+              handleProviderChange={handleProviderChange} 
             />
+            
+            <CustomProviderInput form={form} isCustomProvider={isCustomProvider} />
+            
+            <PropertySelector form={form} properties={properties} />
+            
+            <UtilityTypeSelector form={form} />
+            
+            <CredentialsInput form={form} isEditing={!!provider} />
+            
+            <BillingPeriodInput form={form} />
 
-            {isCustomProvider && (
-              <FormField
-                control={form.control}
-                name="custom_provider_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Custom Provider Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter provider name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            <FormField
-              control={form.control}
-              name="property_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Property</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a property" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {properties?.map((property) => (
-                        <SelectItem key={property.id} value={property.id}>
-                          {property.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+            <FormActions 
+              onClose={onClose}
+              isSubmitting={isSubmitting}
+              isEditing={!!provider}
             />
-
-            <FormField
-              control={form.control}
-              name="utility_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Utility Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a utility type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="electricity">Electricity</SelectItem>
-                      <SelectItem value="water">Water</SelectItem>
-                      <SelectItem value="gas">Gas</SelectItem>
-                      <SelectItem value="internet">Internet</SelectItem>
-                      <SelectItem value="building maintenance">Building Maintenance</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="username"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Username</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Username for provider" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Username used to login to the provider's website
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{provider ? "New Password" : "Password"}</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="Password for provider" {...field} />
-                  </FormControl>
-                  {provider && (
-                    <FormDescription>
-                      Leave empty to keep the current password
-                    </FormDescription>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="location_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Location Name (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Location identifier" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Some utility providers need a specific location identifier
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="start_day"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Billing Start Day</FormLabel>
-                    <FormControl>
-                      <Input type="number" min={1} max={31} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="end_day"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Billing End Day</FormLabel>
-                    <FormControl>
-                      <Input type="number" min={1} max={31} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" type="button" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : provider ? "Update Provider" : "Add Provider"}
-              </Button>
-            </div>
           </form>
         </Form>
       </CardContent>

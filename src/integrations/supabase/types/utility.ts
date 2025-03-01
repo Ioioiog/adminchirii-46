@@ -57,7 +57,7 @@ export interface UtilityProviderCredentials {
     id?: string;
     provider_name: string;
     username: string;
-    password?: string | null;
+    password: string;
     property_id?: string | null;
     landlord_id: string;
     location_name?: string | null;
