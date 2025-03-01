@@ -1,113 +1,123 @@
 
-import {
-  LayoutDashboard,
-  Home,
-  Users,
+import { 
+  Home, 
+  Building2, 
+  Users, 
+  FileText, 
+  Settings, 
+  CreditCard, 
+  Droplets, 
+  MessageSquare,
   Wrench,
-  FileText,
-  CreditCard,
-  Settings,
-  Droplets,
-  MessageCircle,
-  Clipboard,
-  UserCog,
-  Building2,
-  Wallet,
+  MapPin,
+  Briefcase,
+  CircleDollarSign
 } from "lucide-react";
-import { NotificationType } from "@/types/notifications";
-
-export const serviceProviderMenuItems = [
-  {
-    title: "Dashboard",
-    icon: LayoutDashboard,
-    href: "/dashboard",
-    roles: ["service_provider"],
-    notificationType: "maintenance" as NotificationType
-  },
-  {
-    title: "Profile",
-    icon: UserCog,
-    href: "/service-provider-profile",
-    roles: ["service_provider"],
-  },
-  {
-    title: "Job Requests",
-    icon: Clipboard,
-    href: "/maintenance",
-    roles: ["service_provider"],
-    notificationType: "maintenance" as NotificationType
-  },
-  {
-    title: "Earnings",
-    icon: Wallet,
-    href: "/earnings",
-    roles: ["service_provider"],
-    notificationType: "payments" as NotificationType
-  },
-  {
-    title: "Settings",
-    icon: Settings,
-    href: "/settings",
-    roles: ["service_provider"],
-  },
-];
 
 export const standardMenuItems = [
   {
-    title: "Dashboard",
-    icon: LayoutDashboard,
+    name: "Dashboard",
     href: "/dashboard",
-    roles: ["landlord", "tenant"],
-  },
-  {
-    title: "Properties",
     icon: Home,
+    roles: ["landlord", "tenant", "service_provider"],
+  },
+  {
+    name: "Properties",
     href: "/properties",
+    icon: Building2,
     roles: ["landlord", "tenant"],
   },
   {
-    title: "Tenants",
-    icon: Users,
+    name: "Tenants",
     href: "/tenants",
+    icon: Users,
     roles: ["landlord"],
   },
   {
-    title: "Maintenance",
-    icon: Wrench,
-    href: "/maintenance",
-    roles: ["landlord", "tenant"],
-    notificationType: "maintenance" as NotificationType
-  },
-  {
-    title: "Documents",
-    icon: FileText,
+    name: "Documents",
     href: "/documents",
+    icon: FileText,
     roles: ["landlord", "tenant"],
   },
   {
-    title: "Financial",
-    icon: Wallet,
+    name: "Financial",
     href: "/financial",
+    icon: CreditCard,
     roles: ["landlord", "tenant"],
-    notificationType: "payments" as NotificationType
   },
   {
-    title: "Utilities",
-    icon: Droplets,
+    name: "Utilities",
     href: "/utilities",
+    icon: Droplets,
     roles: ["landlord", "tenant"],
   },
   {
-    title: "Chat",
-    icon: MessageCircle,
+    name: "Chat",
     href: "/chat",
-    roles: ["landlord", "tenant"],
-    notificationType: "messages" as NotificationType
+    icon: MessageSquare,
+    roles: ["landlord", "tenant", "service_provider"],
   },
   {
-    title: "Settings",
-    icon: Settings,
+    name: "Maintenance",
+    href: "/maintenance",
+    icon: Wrench,
+    roles: ["landlord", "tenant", "service_provider"],
+  },
+  {
+    name: "Settings",
     href: "/settings",
-    roles: ["landlord", "tenant"],
+    icon: Settings,
+    roles: ["landlord", "tenant", "service_provider"],
+  },
+];
+
+export const serviceProviderMenuItems = [
+  {
+    name: "Dashboard",
+    href: "/dashboard",
+    icon: Home,
+    roles: ["service_provider"],
+  },
+  {
+    name: "Profile",
+    href: "/service-provider-profile",
+    icon: Users,
+    roles: ["service_provider"],
+  },
+  {
+    name: "Service Areas",
+    href: "/service-areas",
+    icon: MapPin,
+    roles: ["service_provider"],
+  },
+  {
+    name: "Services",
+    href: "/services",
+    icon: Briefcase,
+    roles: ["service_provider"],
+  },
+  {
+    name: "Earnings",
+    href: "/earnings",
+    icon: CircleDollarSign,
+    roles: ["service_provider"],
+  },
+  {
+    name: "Maintenance",
+    href: "/maintenance",
+    icon: Wrench,
+    roles: ["service_provider"],
+  },
+  {
+    name: "Chat",
+    href: "/chat",
+    icon: MessageSquare,
+    roles: ["service_provider"],
+  },
+  {
+    name: "Settings",
+    href: "/settings",
+    icon: Settings,
+    roles: ["service_provider"],
   },
 ];
