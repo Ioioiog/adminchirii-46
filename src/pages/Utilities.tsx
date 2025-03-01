@@ -29,6 +29,7 @@ export default function Utilities() {
   const [activeTab, setActiveTab] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [utilities, setUtilities] = useState<any[]>([]);
+  const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { currentUserId, isAuthenticated, userRole } = useAuthState();
@@ -36,8 +37,46 @@ export default function Utilities() {
   useEffect(() => {
     if (currentUserId) {
       fetchUtilities();
+      fetchProperties();
     }
   }, [currentUserId, utilityType, status, dateRange, activeTab, userRole]);
+
+  const fetchProperties = async () => {
+    try {
+      let query = supabase.from("properties").select("*");
+      
+      if (userRole === "landlord") {
+        query = query.eq("landlord_id", currentUserId);
+      } else if (userRole === "tenant") {
+        const { data: tenancies } = await supabase
+          .from("tenancies")
+          .select("property_id")
+          .eq("tenant_id", currentUserId)
+          .eq("status", "active");
+
+        if (tenancies && tenancies.length > 0) {
+          const propertyIds = tenancies.map(t => t.property_id);
+          query = query.in("id", propertyIds);
+        } else {
+          setProperties([]);
+          return;
+        }
+      }
+
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      setProperties(data || []);
+    } catch (error) {
+      console.error("Error fetching properties:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load properties",
+      });
+      setProperties([]);
+    }
+  };
 
   const fetchUtilities = async () => {
     try {
@@ -123,6 +162,7 @@ export default function Utilities() {
         title: "Error",
         description: "Failed to load utility bills",
       });
+      setUtilities([]);
     } finally {
       setLoading(false);
     }
@@ -215,14 +255,14 @@ export default function Utilities() {
               utilityType={utilityType}
               status={status}
               dateRange={dateRange}
-              onUtilityTypeChange={(value) => setUtilityType(value as UtilityType)}
-              onStatusChange={(value) => setStatus(value as StatusType)}
+              onUtilityTypeChange={setUtilityType}
+              onStatusChange={setStatus}
               onDateRangeChange={setDateRange}
             />
           </Card>
           <UtilityList 
             utilities={utilities} 
-            userRole={userRole as "landlord" | "tenant"} 
+            userRole={userRole as "landlord" | "tenant" || "tenant"} 
             onStatusUpdate={handleStatusUpdate} 
           />
         </TabsContent>
@@ -233,14 +273,14 @@ export default function Utilities() {
               utilityType={utilityType}
               status={status}
               dateRange={dateRange}
-              onUtilityTypeChange={(value) => setUtilityType(value as UtilityType)}
-              onStatusChange={(value) => setStatus(value as StatusType)}
+              onUtilityTypeChange={setUtilityType}
+              onStatusChange={setStatus}
               onDateRangeChange={setDateRange}
             />
           </Card>
           <UtilityList 
             utilities={utilities} 
-            userRole={userRole as "landlord" | "tenant"} 
+            userRole={userRole as "landlord" | "tenant" || "tenant"} 
             onStatusUpdate={handleStatusUpdate} 
           />
         </TabsContent>
@@ -251,14 +291,14 @@ export default function Utilities() {
               utilityType={utilityType}
               status={status}
               dateRange={dateRange}
-              onUtilityTypeChange={(value) => setUtilityType(value as UtilityType)}
-              onStatusChange={(value) => setStatus(value as StatusType)}
+              onUtilityTypeChange={setUtilityType}
+              onStatusChange={setStatus}
               onDateRangeChange={setDateRange}
             />
           </Card>
           <UtilityList 
             utilities={utilities} 
-            userRole={userRole as "landlord" | "tenant"} 
+            userRole={userRole as "landlord" | "tenant" || "tenant"} 
             onStatusUpdate={handleStatusUpdate} 
           />
         </TabsContent>
@@ -269,14 +309,14 @@ export default function Utilities() {
               utilityType={utilityType}
               status={status}
               dateRange={dateRange}
-              onUtilityTypeChange={(value) => setUtilityType(value as UtilityType)}
-              onStatusChange={(value) => setStatus(value as StatusType)}
+              onUtilityTypeChange={setUtilityType}
+              onStatusChange={setStatus}
               onDateRangeChange={setDateRange}
             />
           </Card>
           <UtilityList 
             utilities={utilities} 
-            userRole={userRole as "landlord" | "tenant"} 
+            userRole={userRole as "landlord" | "tenant" || "tenant"} 
             onStatusUpdate={handleStatusUpdate} 
           />
         </TabsContent>
@@ -284,15 +324,17 @@ export default function Utilities() {
         <TabsContent value="analysis" className="space-y-6">
           <UtilityCostAnalysis 
             userId={currentUserId || ''}
-            userRole={userRole as "landlord" | "tenant"}
+            userRole={userRole as "landlord" | "tenant" || "tenant"}
           />
         </TabsContent>
       </Tabs>
 
       {isDialogOpen && (
         <UtilityDialog
-          properties={[]} // This needs to be filled with property data
+          isDialogOpen={isDialogOpen}
+          setIsDialogOpen={setIsDialogOpen}
           onUtilityCreated={onDialogClose}
+          properties={properties || []}
         />
       )}
     </div>
