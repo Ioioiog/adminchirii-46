@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { 
   Accordion,
@@ -87,8 +86,7 @@ export function TenantHandbookTab({ propertyId }: { propertyId: string }) {
       }
       
       if (data && data.handbook_data) {
-        // Convert the JSON data to HandbookData type
-        setHandbookData(data.handbook_data as HandbookData);
+        setHandbookData(data.handbook_data as unknown as HandbookData);
       }
     } catch (error) {
       console.error("Error in fetchHandbookData:", error);
@@ -115,7 +113,6 @@ export function TenantHandbookTab({ propertyId }: { propertyId: string }) {
     if (!editingSection) return;
 
     try {
-      // Update local state
       const updatedData = {
         ...handbookData,
         [editingSection]: {
@@ -126,12 +123,11 @@ export function TenantHandbookTab({ propertyId }: { propertyId: string }) {
       
       setHandbookData(updatedData);
 
-      // Save to database
       const { error } = await supabase
         .from('property_handbook')
         .upsert({
           property_id: propertyId,
-          handbook_data: updatedData as any, // Type assertion to resolve JSON compatibility
+          handbook_data: updatedData as any,
           updated_at: new Date().toISOString()
         });
 
@@ -145,7 +141,6 @@ export function TenantHandbookTab({ propertyId }: { propertyId: string }) {
       });
     } catch (error) {
       console.error("Error saving handbook data:", error);
-      // Revert to original content if save fails
       setHandbookData({
         ...handbookData,
         [editingSection]: {

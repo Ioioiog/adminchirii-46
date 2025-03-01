@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
@@ -435,14 +434,31 @@ const Utilities = () => {
                 Add Provider
               </Button>
             </div>
-            {showProviderForm ? <ProviderForm onClose={() => {
-            setShowProviderForm(false);
-            setEditingProvider(null);
-          }} onSuccess={() => {
-            setShowProviderForm(false);
-            setEditingProvider(null);
-            queryClient.invalidateQueries({ queryKey: ["utility-providers"] });
-          }} provider={editingProvider} /> : <ProviderList providers={providers} onDelete={handleDeleteProvider} onEdit={handleEditProvider} isLoading={providersLoading} />}
+            {showProviderForm ? (
+              <ProviderForm 
+                landlordId={userRole === 'landlord' ? (supabase.auth.getUser() || {}).data?.user?.id || '' : ''} 
+                onSubmit={() => {
+                  queryClient.invalidateQueries({ queryKey: ["utility-providers"] });
+                }}
+                onClose={() => {
+                  setShowProviderForm(false);
+                  setEditingProvider(null);
+                }} 
+                onSuccess={() => {
+                  setShowProviderForm(false);
+                  setEditingProvider(null);
+                  queryClient.invalidateQueries({ queryKey: ["utility-providers"] });
+                }} 
+                provider={editingProvider} 
+              />
+            ) : (
+              <ProviderList 
+                providers={providers} 
+                onDelete={handleDeleteProvider} 
+                onEdit={handleEditProvider} 
+                isLoading={providersLoading} 
+              />
+            )}
           </div>;
       default:
         return null;

@@ -1,133 +1,112 @@
-import { useState } from "react";
+import React, { useEffect, useState } from 'react';
+import { Button } from "@/components/ui/button";
+import { ProviderForm } from "@/components/utilities/providers/ProviderForm";
+import { ProviderList } from "@/components/utilities/providers/ProviderList";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ProviderList } from "@/components/utilities/providers/ProviderList";
-import { ProviderForm } from "@/components/utilities/providers/ProviderForm";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { UtilityProvider } from "@/types/utilities";
 
-interface UtilityProvider {
-  id: string;
-  provider_name: string;
-  username: string;
-  property_id?: string;
-  property?: {
-    name: string;
-    address: string;
-  };
-  utility_type?: 'electricity' | 'water' | 'gas';
-  start_day?: number;
-  end_day?: number;
+interface PropertyProvidersSettingsProps {
+  propertyId: string;
 }
 
-export function PropertyProvidersSettings() {
-  const [showForm, setShowForm] = useState(false);
+export function PropertyProvidersSettings({ propertyId }: PropertyProvidersSettingsProps) {
+  const [providers, setProviders] = useState<UtilityProvider[]>([]);
+  const [showProviderForm, setShowProviderForm] = useState(false);
   const [editingProvider, setEditingProvider] = useState<UtilityProvider | null>(null);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  const { data: providers = [], isLoading } = useQuery({
-    queryKey: ["utility-providers"],
-    queryFn: async () => {
-      console.log("Fetching utility providers");
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError) {
-        console.error("Error fetching user:", userError);
-        throw userError;
-      }
-
-      if (!user) {
-        console.error("No authenticated user found");
-        return [];
-      }
-
+  useEffect(() => {
+    const fetchProviders = async () => {
       const { data, error } = await supabase
-        .from("utility_provider_credentials")
-        .select(`
-          *,
-          property:properties (
-            name,
-            address
-          )
-        `)
-        .eq("landlord_id", user.id);
+        .from('utility_provider_credentials')
+        .select('*')
+        .eq('property_id', propertyId);
 
       if (error) {
-        console.error("Error fetching providers:", error);
+        console.error('Error fetching providers:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch providers.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setProviders(data || []);
+    };
+
+    fetchProviders();
+  }, [propertyId]);
+
+  const handleDeleteProvider = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('utility_provider_credentials')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
         throw error;
       }
 
-      console.log("Fetched providers:", data);
-      return data as UtilityProvider[];
-    }
-  });
-
-  const handleDelete = async (id: string) => {
-    try {
-      console.log("Deleting utility provider:", id);
-      const { error } = await supabase
-        .from("utility_provider_credentials")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
-
       toast({
         title: "Success",
-        description: "Utility provider deleted successfully",
+        description: "Provider deleted successfully.",
       });
 
-      queryClient.invalidateQueries({ queryKey: ["utility-providers"] });
+      setProviders((prev) => prev.filter(provider => provider.id !== id));
     } catch (error) {
       console.error("Error deleting provider:", error);
       toast({
         title: "Error",
-        description: "Failed to delete utility provider",
+        description: "Failed to delete provider.",
         variant: "destructive",
       });
     }
   };
 
-  const handleEdit = (provider: UtilityProvider) => {
+  const handleEditProvider = (provider: UtilityProvider) => {
     setEditingProvider(provider);
-    setShowForm(true);
+    setShowProviderForm(true);
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium">Utility Providers</h3>
-        <Button 
-          onClick={() => setShowForm(true)} 
-          disabled={showForm}
-          className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
+      <div className="flex justify-between items-start">
+        <div className="space-y-4">
+          <h2 className="text-2xl">Utility Providers</h2>
+          <p className="text-gray-500">Manage your utility providers for this property.</p>
+        </div>
+        <Button onClick={() => setShowProviderForm(true)} className="bg-blue-600 hover:bg-blue-700 text-white transition-colors">
           Add Provider
         </Button>
       </div>
 
-      {showForm ? (
-        <ProviderForm
+      {showProviderForm ? (
+        <ProviderForm 
+          landlordId={supabase.auth.getUser()?.data?.user?.id || ''} 
+          onSubmit={() => {
+            setShowProviderForm(false);
+            setEditingProvider(null);
+          }}
           onClose={() => {
-            setShowForm(false);
+            setShowProviderForm(false);
             setEditingProvider(null);
-          }}
+          }} 
           onSuccess={() => {
-            setShowForm(false);
+            setShowProviderForm(false);
             setEditingProvider(null);
-            queryClient.invalidateQueries({ queryKey: ["utility-providers"] });
-          }}
-          provider={editingProvider}
+            // Refresh providers list
+            fetchProviders();
+          }} 
+          provider={editingProvider} 
         />
       ) : (
-        <ProviderList
-          providers={providers}
-          onDelete={handleDelete}
-          onEdit={handleEdit}
-          isLoading={isLoading}
+        <ProviderList 
+          providers={providers} 
+          onDelete={handleDeleteProvider} 
+          onEdit={handleEditProvider} 
         />
       )}
     </div>

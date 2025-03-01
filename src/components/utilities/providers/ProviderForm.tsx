@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Form,
@@ -33,6 +34,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { DatePicker } from '@/components/ui/date-picker';
 
 const formSchema = z.object({
   provider_name: z.string().min(2, {
@@ -49,14 +51,14 @@ const formSchema = z.object({
   }),
   password: z.string().min(8, {
     message: "Password must be at least 8 characters.",
-  }),
+  }).optional().or(z.literal('')),
   landlord_id: z.string().uuid().optional(),
   location_name: z.string().optional(),
   start_day: z.date().optional(),
   end_day: z.date().optional(),
 })
 
-interface ProviderFormProps {
+export interface ProviderFormProps {
   landlordId: string;
   onSubmit: () => void;
   onClose?: () => void;
@@ -93,7 +95,7 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
       property_id: provider?.property_id || "",
       utility_type: provider?.utility_type || UtilityType.Electricity,
       username: provider?.username || "",
-      password: "",
+      password: "", // Don't prefill password for security reasons
       landlord_id: landlordId,
       location_name: provider?.location_name || "",
       start_day: provider?.start_day ? new Date(provider.start_day) : undefined,
@@ -103,17 +105,22 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
 
   async function onSubmitForm(values: z.infer<typeof formSchema>) {
     try {
+      // Prepare the data - convert Date objects to proper format
       const dataToInsert = {
         provider_name: values.provider_name,
         property_id: values.property_id,
         utility_type: values.utility_type,
         username: values.username,
-        password: values.password,
-        landlord_id: values.landlord_id,
+        landlord_id: landlordId,
         location_name: values.location_name,
-        start_day: values.start_day,
-        end_day: values.end_day
+        start_day: values.start_day ? values.start_day.getDate() : null,
+        end_day: values.end_day ? values.end_day.getDate() : null
       };
+
+      // Add password only if provided (for updates)
+      if (values.password) {
+        Object.assign(dataToInsert, { password: values.password });
+      }
 
       // Handle update vs insert
       if (provider?.id) {
@@ -137,6 +144,16 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
           description: "Utility provider updated successfully!",
         });
       } else {
+        // For new records, password is required
+        if (!values.password) {
+          toast({
+            title: "Error",
+            description: "Password is required for new utility providers.",
+            variant: "destructive",
+          });
+          return;
+        }
+
         const { error } = await supabase
           .from('utility_provider_credentials')
           .insert(dataToInsert);
@@ -264,12 +281,14 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>{provider?.id ? "New Password (leave blank to keep current)" : "Password"}</FormLabel>
               <FormControl>
                 <Input type="password" placeholder="Password" {...field} />
               </FormControl>
               <FormDescription>
-                This is the password for the utility provider account.
+                {provider?.id 
+                  ? "Enter a new password only if you want to change the current one."
+                  : "This is the password for the utility provider account."}
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -297,7 +316,7 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
             name="start_day"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel>Start Date (Optional)</FormLabel>
+                <FormLabel>Billing Start Day (Optional)</FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -318,7 +337,7 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
                     </FormControl>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <DatePicker
+                    <Calendar
                       mode="single"
                       selected={field.value}
                       onSelect={field.onChange}
@@ -339,7 +358,7 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
             name="end_day"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel>End Date (Optional)</FormLabel>
+                <FormLabel>Billing End Day (Optional)</FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -360,7 +379,7 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
                     </FormControl>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <DatePicker
+                    <Calendar
                       mode="single"
                       selected={field.value}
                       onSelect={field.onChange}
