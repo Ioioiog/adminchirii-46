@@ -120,7 +120,9 @@ const Utilities = () => {
       utility.type.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === "all" || utility.status === statusFilter;
-    const matchesType = typeFilter === "all" || utility.type === typeFilter;
+    // Fix type comparison to use case-insensitive comparison for reliability
+    const matchesType = typeFilter === "all" || 
+      utility.type.toLowerCase() === typeFilter.toLowerCase();
     const matchesProperty = propertyFilter === "all" || utility.property_id === propertyFilter;
 
     return matchesSearch && matchesStatus && matchesType && matchesProperty;

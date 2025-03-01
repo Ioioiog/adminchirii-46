@@ -2521,7 +2521,12 @@ export type Database = {
         | "tenant_assigned"
         | "tenancy_ended"
       termination_payment_method: "bank_transfer" | "cash" | "check" | "other"
-      utility_reading_type: "electricity" | "water" | "gas"
+      utility_reading_type:
+        | "electricity"
+        | "water"
+        | "gas"
+        | "internet"
+        | "building maintenance"
       utility_type:
         | "electricity"
         | "gas"
