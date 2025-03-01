@@ -20,7 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 
 type UtilitiesSection = 'bills' | 'readings' | 'providers';
 
-type UtilityType = 'electricity' | 'gas' | 'water' | 'internet' | 'building maintenance';
+type UtilityType = 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
 
 interface UtilityWithProperty {
   id: string;
@@ -172,6 +172,24 @@ const Utilities = () => {
     }
   };
 
+  const validateUtilityType = (type: string): UtilityType => {
+    type = type.toLowerCase().trim();
+    const validTypes: UtilityType[] = ['electricity', 'water', 'gas', 'internet', 'building maintenance'];
+    
+    if (validTypes.includes(type as UtilityType)) {
+      return type as UtilityType;
+    }
+    
+    // Try some common mappings
+    if (type === 'electric' || type === 'power') return 'electricity';
+    if (type === 'natural gas') return 'gas';
+    if (type === 'wifi' || type === 'broadband') return 'internet';
+    if (type.includes('maintenance') || type.includes('building')) return 'building maintenance';
+    
+    // Default fallback
+    return 'electricity';
+  };
+
   const handleCsvImport = async () => {
     if (!csvFile) {
       toast({
@@ -220,7 +238,7 @@ const Utilities = () => {
           bill.amount = parseFloat(bill.amount);
           
           if (bill.type) {
-            bill.type = bill.type.toLowerCase();
+            bill.type = validateUtilityType(bill.type);
           }
           
           bill.status = 'pending';

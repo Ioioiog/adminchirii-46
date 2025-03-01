@@ -4,6 +4,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+// Define utility type
+type UtilityType = 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
+
 interface UtilityFormProps {
   properties: Property[];
   propertyId: string;
@@ -66,12 +69,11 @@ export function UtilityForm({
             <SelectValue placeholder="Select type" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="Building Maintenance">Building Maintenance</SelectItem>
-            <SelectItem value="Electricity">Electricity</SelectItem>
-            <SelectItem value="Water">Water</SelectItem>
-            <SelectItem value="Gas">Gas</SelectItem>
-            <SelectItem value="Internet">Internet</SelectItem>
-            <SelectItem value="Other">Other</SelectItem>
+            <SelectItem value="electricity">Electricity</SelectItem>
+            <SelectItem value="water">Water</SelectItem>
+            <SelectItem value="gas">Gas</SelectItem>
+            <SelectItem value="internet">Internet</SelectItem>
+            <SelectItem value="building maintenance">Building Maintenance</SelectItem>
           </SelectContent>
         </Select>
       </div>

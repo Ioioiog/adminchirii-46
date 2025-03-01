@@ -3,7 +3,7 @@ export interface Utility {
   Row: {
     id: string;
     property_id: string;
-    type: string;
+    type: 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
     amount: number;
     currency: string;
     due_date: string;
@@ -16,7 +16,7 @@ export interface Utility {
   Insert: {
     id?: string;
     property_id: string;
-    type: string;
+    type: 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
     amount: number;
     currency: string;
     due_date: string;
@@ -25,7 +25,7 @@ export interface Utility {
     status?: string;
   };
   Update: {
-    type?: string;
+    type?: 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
     amount?: number;
     currency?: string;
     due_date?: string;

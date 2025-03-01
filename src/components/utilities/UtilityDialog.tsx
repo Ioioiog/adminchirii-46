@@ -18,6 +18,9 @@ import { detectUtilityType } from "./utils/utilityTypeDetector";
 import { FileUploader } from "./components/FileUploader";
 import { UtilityForm } from "./components/UtilityForm";
 
+// Define valid utility types as a type
+type UtilityType = 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
+
 interface UtilityDialogProps {
   properties: Property[];
   onUtilityCreated: () => void;
@@ -30,7 +33,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
   const { toast } = useToast();
   const { availableCurrencies } = useCurrency();
 
-  const [utilityType, setUtilityType] = useState("");
+  const [utilityType, setUtilityType] = useState<UtilityType>("electricity");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("");
   const [propertyId, setPropertyId] = useState("");
@@ -40,6 +43,25 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
   const [file, setFile] = useState<File | null>(null);
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(true);
+
+  // Helper function to ensure we have a valid utility type
+  const validateUtilityType = (type: string): UtilityType => {
+    const validTypes: UtilityType[] = ['electricity', 'water', 'gas', 'internet', 'building maintenance'];
+    const normalizedType = type.toLowerCase();
+    
+    // Check if the normalized type is valid
+    if (validTypes.includes(normalizedType as UtilityType)) {
+      return normalizedType as UtilityType;
+    }
+    
+    // If first letter is capitalized, try lowercase
+    if (validTypes.includes(type.toLowerCase() as UtilityType)) {
+      return type.toLowerCase() as UtilityType;
+    }
+    
+    // Default to electricity if no match
+    return 'electricity';
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -96,18 +118,22 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
           }
         }
 
-        const detectedType = detectUtilityType(
-          extractedData.raw_text || '',
-          propertyId,
-          properties
-        );
-
-        if (detectedType) {
-          setUtilityType(detectedType);
-        } else if (extractedData.utility_type) {
-          setUtilityType(extractedData.utility_type.charAt(0).toUpperCase() + 
-                      extractedData.utility_type.slice(1).toLowerCase());
+        // Detect utility type with better validation
+        let detectedType: UtilityType = 'electricity';
+        if (extractedData.raw_text) {
+          const suggestedType = detectUtilityType(
+            extractedData.raw_text || '',
+            propertyId,
+            properties
+          );
+          
+          if (suggestedType) {
+            detectedType = validateUtilityType(suggestedType);
+          } else if (extractedData.utility_type) {
+            detectedType = validateUtilityType(extractedData.utility_type);
+          }
         }
+        setUtilityType(detectedType);
 
         if (extractedData.amount) {
           setAmount(extractedData.amount.toString());
@@ -162,18 +188,16 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       
       const { data: utility, error: utilityError } = await supabase
         .from("utilities")
-        .insert([
-          {
-            type: utilityType,
-            amount: parseFloat(amount),
-            currency: currency,
-            property_id: propertyId,
-            due_date: dueDate,
-            issued_date: issuedDate,
-            status: "pending",
-            invoice_number: invoiceNumber || null,
-          },
-        ])
+        .insert({
+          type: utilityType,
+          amount: parseFloat(amount),
+          currency: currency,
+          property_id: propertyId,
+          due_date: dueDate,
+          issued_date: issuedDate,
+          status: "pending",
+          invoice_number: invoiceNumber || null,
+        })
         .select()
         .single();
 
@@ -229,7 +253,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
         setProcessingError(null);
         setShowForm(true);
         setFile(null);
-        setUtilityType("");
+        setUtilityType("electricity");
         setAmount("");
         setCurrency("");
         setPropertyId("");
@@ -261,7 +285,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
               propertyId={propertyId}
               setPropertyId={setPropertyId}
               utilityType={utilityType}
-              setUtilityType={setUtilityType}
+              setUtilityType={setUtilityType as (value: string) => void}
               amount={amount}
               setAmount={setAmount}
               currency={currency}
