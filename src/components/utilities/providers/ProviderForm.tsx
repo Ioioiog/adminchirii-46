@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -130,6 +131,8 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
 
         // Only include password if it was changed
         if (data.password) {
+          // For update, we can set the password directly
+          // The Supabase trigger will handle encryption
           updateData.password = data.password;
         }
 
@@ -144,7 +147,8 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
           description: "Utility provider updated successfully",
         });
       } else {
-        // Create new provider
+        // For new providers, the password needs to be set
+        // The Supabase trigger will handle encryption
         const { error } = await supabase.from("utility_provider_credentials").insert({
           provider_name: finalProviderName,
           property_id: data.property_id,

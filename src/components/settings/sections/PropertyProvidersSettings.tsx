@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ProviderList } from "../utility-provider/ProviderList";
-import { ProviderForm } from "../utility-provider/ProviderForm";
+import { ProviderList } from "@/components/utilities/providers/ProviderList";
+import { ProviderForm } from "@/components/utilities/providers/ProviderForm";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
