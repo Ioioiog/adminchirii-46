@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   Dialog,
@@ -17,6 +16,7 @@ import { findMatchingProperty } from "./utils/propertyMatcher";
 import { detectUtilityType } from "./utils/utilityTypeDetector";
 import { FileUploader } from "./components/FileUploader";
 import { UtilityForm } from "./components/UtilityForm";
+import { UtilityType } from "@/integrations/supabase/types/utility";
 
 interface UtilityDialogProps {
   properties: Property[];
@@ -160,8 +160,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
     try {
       setIsSubmitting(true);
       
-      // Cast utilityType to the expected utility type for the database
-      const safeUtilityType = utilityType as 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
+      const safeUtilityType = utilityType as UtilityType;
       
       const { data: utility, error: utilityError } = await supabase
         .from("utilities")

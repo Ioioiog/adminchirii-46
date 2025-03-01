@@ -106,7 +106,7 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
 
     setIsSubmitting(true);
     try {
-      const { user, error: userError } = await supabase.auth.getUser();
+      const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
 
       const finalProviderName = data.provider_name === "custom" 
@@ -120,7 +120,7 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
           .update({
             provider_name: finalProviderName,
             property_id: data.property_id,
-            utility_type: data.utility_type,
+            utility_type: data.utility_type as UtilityType,
             username: data.username,
             ...(data.password ? { password: data.password } : {}),
             location_name: data.location_name,
@@ -135,14 +135,14 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
           description: "Utility provider updated successfully",
         });
       } else {
-        // Create new provider - don't include encrypted_password field
+        // Create new provider
         const { error } = await supabase.from("utility_provider_credentials").insert({
           provider_name: finalProviderName,
           property_id: data.property_id,
-          utility_type: data.utility_type,
+          utility_type: data.utility_type as UtilityType,
           username: data.username,
           password: data.password,
-          landlord_id: user?.id,
+          landlord_id: userData.user?.id,
           location_name: data.location_name,
           start_day: data.start_day,
           end_day: data.end_day,
@@ -158,7 +158,7 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
         const { data: providerData, error: providerError } = await supabase
           .from("utility_provider_credentials")
           .select("id")
-          .eq("landlord_id", user?.id)
+          .eq("landlord_id", userData.user?.id)
           .eq("provider_name", finalProviderName)
           .eq("username", data.username)
           .limit(1)
@@ -182,7 +182,7 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
       }
 
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving provider:", error);
       toast({
         title: "Error",

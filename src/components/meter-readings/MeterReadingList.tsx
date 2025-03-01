@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import {
   Table,
@@ -33,7 +32,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthState } from "@/hooks/useAuthState";
 import { Property, PropertyStatus } from "@/utils/propertyUtils";
-import { UtilityType } from "@/components/settings/utility-provider/types";
+import { UtilityType } from "@/integrations/supabase/types/utility";
 
 const transformProperty = (property: any): Property => ({
   id: property.id,
@@ -111,7 +110,6 @@ export function MeterReadingList({
           `);
 
         if (userRole === 'tenant') {
-          // First get the properties the tenant is assigned to
           const { data: tenancies, error: tenanciesError } = await supabase
             .from('tenancies')
             .select('property_id')
@@ -143,8 +141,7 @@ export function MeterReadingList({
         }
 
         console.log("Fetched meter readings:", data);
-        // Cast the data to MeterReading[] type to fix type issues
-        setReadings(data as MeterReading[]);
+        setReadings(data as unknown as MeterReading[]);
       } catch (error: any) {
         console.error("Error in fetchReadings:", error);
         toast({
@@ -158,7 +155,6 @@ export function MeterReadingList({
     if (currentUserId) {
       fetchReadings();
 
-      // Set up realtime subscription
       const channel = supabase
         .channel('meter_readings_changes')
         .on(
@@ -272,7 +268,6 @@ export function MeterReadingList({
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        // Handle sending reading to provider
                         toast({
                           title: "Sending reading",
                           description: "Your meter reading is being sent to the provider.",
