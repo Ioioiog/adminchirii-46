@@ -17,6 +17,7 @@ import { ProviderForm } from "@/components/settings/utility-provider/ProviderFor
 import { useToast } from "@/hooks/use-toast";
 import { UtilityFilters } from "@/components/utilities/UtilityFilters";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type UtilitiesSection = 'bills' | 'readings' | 'providers';
 
@@ -358,11 +359,13 @@ const Utilities = () => {
               properties={properties || []}
             />
 
-            <UtilityList 
-              utilities={filteredUtilities}
-              userRole={userRole}
-              onStatusUpdate={() => {}}
-            />
+            <ScrollArea className="h-[60vh]">
+              <UtilityList 
+                utilities={filteredUtilities}
+                userRole={userRole}
+                onStatusUpdate={() => {}}
+              />
+            </ScrollArea>
 
             <Dialog open={showCsvImporter} onOpenChange={setShowCsvImporter}>
               <DialogContent className="sm:max-w-md">
