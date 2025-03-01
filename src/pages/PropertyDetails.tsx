@@ -1,9 +1,10 @@
 
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
-import { useProperties } from "@/hooks/useProperties";
 import { useUserRole } from "@/hooks/use-user-role";
 import { PropertyDetailsCard } from "@/components/properties/PropertyDetailsCard";
 import { PropertyUpdateDialog } from "@/components/properties/PropertyUpdateDialog";
@@ -13,47 +14,70 @@ import { MaintenanceRequestList } from "@/components/maintenance/MaintenanceRequ
 import { PaymentList } from "@/components/payments/PaymentList";
 import { DocumentList } from "@/components/documents/DocumentList";
 import { UtilityAnalysisChart } from "@/components/properties/UtilityAnalysisChart";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Tenant } from "@/types/tenant";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const PropertyDetails = () => {
   const { propertyId } = useParams<{ propertyId: string }>();
-  const [isLoading, setIsLoading] = useState(true);
-  const [property, setProperty] = useState(null);
-  const { userRole } = useUserRole();
+  const { userRole, userId } = useUserRole();
   const { toast } = useToast();
-
-  // Direct property fetch with propertyId
-  const { data: propertyData, isLoading: propertyLoading, error: propertyError } = useQuery({
-    queryKey: ['property', propertyId],
+  const navigate = useNavigate();
+  
+  // Fetch property data directly using propertyId
+  const { 
+    data: property, 
+    isLoading: propertyLoading,
+    error: propertyError
+  } = useQuery({
+    queryKey: ['property-details', propertyId],
     queryFn: async () => {
-      console.log('Fetching direct property data for ID:', propertyId);
-      const { data, error } = await supabase
+      console.log('Fetching property data for ID:', propertyId);
+      
+      let query = supabase
         .from('properties')
         .select('*')
-        .eq('id', propertyId)
-        .single();
+        .eq('id', propertyId);
+        
+      // Apply different condition based on user role
+      if (userRole === 'tenant' && userId) {
+        // For tenants, only allow access to properties they're renting
+        query = supabase
+          .from('properties')
+          .select(`
+            *,
+            tenancies!inner (
+              id, 
+              status,
+              tenant_id
+            )
+          `)
+          .eq('id', propertyId)
+          .eq('tenancies.tenant_id', userId)
+          .eq('tenancies.status', 'active');
+      }
+      
+      const { data, error } = await query.single();
       
       if (error) {
         console.error('Error fetching property:', error);
         throw error;
       }
       
-      console.log('Direct property data:', data);
+      console.log('Property data fetched:', data);
       return data;
     },
-    enabled: !!propertyId,
-    retry: 2
-  });
-  
-  // Legacy properties fetch for backward compatibility
-  const { properties, isLoading: propertiesLoading } = useProperties({
-    userRole: userRole === "landlord" || userRole === "tenant" ? userRole : "tenant"
+    enabled: !!propertyId && !!userRole,
+    retry: 1,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  const { data: tenanciesData = [], isLoading: tenanciesLoading } = useQuery({
+  // Fetch tenants information
+  const { 
+    data: tenanciesData = [], 
+    isLoading: tenantsLoading 
+  } = useQuery({
     queryKey: ['property-tenants', propertyId],
     queryFn: async () => {
       console.log('Fetching tenancies for property:', propertyId);
@@ -78,33 +102,14 @@ const PropertyDetails = () => {
       console.log('Tenancies data:', data);
       return data || [];
     },
-    enabled: !!propertyId
+    enabled: !!propertyId && !propertyLoading && !!property,
   });
 
-  // Convert tenancy data to proper Tenant type format
-  const tenants: Tenant[] = tenanciesData.map(tenancy => ({
-    id: tenancy.tenant?.id,
-    first_name: tenancy.tenant?.first_name,
-    last_name: tenancy.tenant?.last_name,
-    email: tenancy.tenant?.email,
-    phone: tenancy.tenant?.phone,
-    role: 'tenant',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    property: {
-      id: propertyId,
-      name: property?.name || "",
-      address: property?.address || ""
-    },
-    tenancy: {
-      id: tenancy.id,
-      start_date: tenancy.start_date,
-      end_date: tenancy.end_date,
-      status: tenancy.status
-    }
-  }));
-
-  const { data: paymentsData = [], isLoading: paymentsLoading } = useQuery({
+  // Fetch payments information
+  const { 
+    data: paymentsData = [], 
+    isLoading: paymentsLoading 
+  } = useQuery({
     queryKey: ['property-payments', propertyId],
     queryFn: async () => {
       console.log('Fetching payments for property:', propertyId);
@@ -136,59 +141,50 @@ const PropertyDetails = () => {
       console.log('Payments data:', data);
       return data || [];
     },
-    enabled: !!propertyId
+    enabled: !!propertyId && !propertyLoading && !!property,
   });
 
-  // Use the directly fetched property data first, and fall back to legacy method
+  // Format tenancy data to Tenant type
+  const tenants: Tenant[] = tenanciesData.map(tenancy => ({
+    id: tenancy.tenant?.id,
+    first_name: tenancy.tenant?.first_name,
+    last_name: tenancy.tenant?.last_name,
+    email: tenancy.tenant?.email,
+    phone: tenancy.tenant?.phone,
+    role: 'tenant',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    property: {
+      id: propertyId,
+      name: property?.name || "",
+      address: property?.address || ""
+    },
+    tenancy: {
+      id: tenancy.id,
+      start_date: tenancy.start_date,
+      end_date: tenancy.end_date,
+      status: tenancy.status
+    }
+  }));
+
+  // Handle error state
   useEffect(() => {
-    if (!propertyLoading && propertyData) {
-      console.log('Setting property from direct fetch:', propertyData);
-      setProperty(propertyData);
-      setIsLoading(false);
-    } else if (propertyError) {
-      console.log('Direct property fetch failed, trying legacy method');
+    if (propertyError) {
+      console.error('Error loading property:', propertyError);
+      toast({
+        title: "Property not found",
+        description: "The requested property could not be found or you don't have access to it.",
+        variant: "destructive"
+      });
       
-      if (!propertiesLoading && properties && propertyId) {
-        console.log('Properties loaded from legacy method. Looking for propertyId:', propertyId);
-        console.log('Available properties:', properties);
-        
-        const foundProperty = properties.find((p) => p.id === propertyId);
-        if (foundProperty) {
-          console.log('Found property in legacy properties list:', foundProperty);
-          setProperty(foundProperty);
-        } else {
-          console.log('Property not found in properties list:', propertyId);
-          toast({
-            title: "Property not found",
-            description: "The requested property could not be found in your properties.",
-            variant: "destructive"
-          });
-        }
-        setIsLoading(false);
-      }
+      // Navigate back to properties page after error
+      setTimeout(() => {
+        navigate('/properties');
+      }, 3000);
     }
-  }, [propertyData, propertyLoading, propertyError, properties, propertyId, propertiesLoading, toast]);
+  }, [propertyError, toast, navigate]);
 
-  // If it's taking too long to load, show an error
-  useEffect(() => {
-    let timeout;
-    if (isLoading) {
-      timeout = setTimeout(() => {
-        if (isLoading) {
-          console.log("Loading timeout reached. PropertyData:", propertyData, "Properties:", properties);
-          setIsLoading(false);
-          toast({
-            title: "Loading timeout",
-            description: "There was an issue loading the property details. Please try again.",
-            variant: "destructive"
-          });
-        }
-      }, 10000); // 10 second timeout
-    }
-    
-    return () => clearTimeout(timeout);
-  }, [isLoading, propertyData, properties, toast]);
-
+  // Render property details page
   return (
     <div className="min-h-screen bg-[#F8F9FC]">
       <DashboardSidebar />
@@ -199,7 +195,7 @@ const PropertyDetails = () => {
           </CardTitle>
         </div>
         
-        {isLoading ? (
+        {propertyLoading ? (
           <div className="flex h-screen items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
           </div>
@@ -207,26 +203,39 @@ const PropertyDetails = () => {
           <div className="flex flex-col items-center justify-center h-64">
             <h3 className="text-xl font-semibold mb-2">Property Not Found</h3>
             <p className="text-muted-foreground">The property you're looking for doesn't exist or you don't have access to it.</p>
+            <Button 
+              variant="outline" 
+              className="mt-4"
+              onClick={() => navigate('/properties')}
+            >
+              Back to Properties
+            </Button>
           </div>
         ) : (
           <div className="space-y-6">
             <PropertyDetailsCard property={property} />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <PropertyUpdateDialog property={property} />
-              <PropertyDeleteDialog property={property} />
+              {userRole === "landlord" && (
+                <>
+                  <PropertyUpdateDialog property={property} />
+                  <PropertyDeleteDialog property={property} />
+                </>
+              )}
               
               <Card>
                 <CardHeader>
                   <CardTitle>Tenants</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {tenanciesLoading ? (
+                  {tenantsLoading ? (
                     <div className="flex justify-center py-4">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
                     </div>
-                  ) : (
+                  ) : tenants.length > 0 ? (
                     <TenantList tenants={tenants} isLandlord={userRole === "landlord"} />
+                  ) : (
+                    <p className="text-muted-foreground text-center py-4">No tenants assigned to this property.</p>
                   )}
                 </CardContent>
               </Card>
@@ -247,7 +256,7 @@ const PropertyDetails = () => {
                       payments={paymentsData} 
                       isLoading={false} 
                       userRole={userRole as "landlord" | "tenant"} 
-                      userId={""} 
+                      userId={userId || ""} 
                       propertyFilter={""} 
                       statusFilter={""} 
                       searchTerm={""}
