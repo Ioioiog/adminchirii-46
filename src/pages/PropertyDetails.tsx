@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Home, User, Receipt, UserCircle, BarChart2 } from "lucide-react";
+import { ArrowLeft, Home, User, Receipt, UserCircle, BarChart2, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -15,6 +16,7 @@ import { InvoiceSettingsTab } from "@/components/properties/tabs/InvoiceSettings
 import { NavigationTabs } from "@/components/layout/NavigationTabs";
 import { LandlordTab } from "@/components/properties/tabs/LandlordTab";
 import { UtilityCostAnalysis } from "@/components/utilities/UtilityCostAnalysis";
+import { TenantHandbookTab } from "@/components/properties/tabs/TenantHandbookTab";
 
 const PropertyDetails = () => {
   const { id } = useParams();
@@ -252,6 +254,7 @@ const PropertyDetails = () => {
     { id: "invoice", label: "Invoice Settings", icon: Receipt, showForTenant: false },
     { id: "utilities", label: "Utility Costs", icon: BarChart2, showForTenant: true },
     { id: "landlord", label: "Landlord", icon: UserCircle, showForTenant: true },
+    { id: "handbook", label: "Tenant Handbook", icon: BookOpen, hideForRole: "landlord" },
   ];
 
   const activeTenants = property.tenancies?.filter((t: any) => t.status === 'active') || [];
@@ -320,6 +323,9 @@ const PropertyDetails = () => {
               )}
               {activeTab === "landlord" && (
                 <LandlordTab propertyId={id || ''} />
+              )}
+              {activeTab === "handbook" && (
+                <TenantHandbookTab />
               )}
             </div>
           </div>
