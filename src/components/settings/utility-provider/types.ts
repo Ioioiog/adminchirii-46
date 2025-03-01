@@ -27,10 +27,10 @@ export interface ScrapingJob {
 
 export const PROVIDER_OPTIONS = [
   { value: 'engie_romania', label: 'ENGIE Romania', default_type: 'gas' },
-  { value: 'enel_romania', label: 'ENEL Romania', default_type: 'electricity' },
-  { value: 'aqua_nova', label: 'Aqua Nova', default_type: 'water' },
+  { value: 'engie_romania', label: 'ENGIE Romania', default_type: 'electricity' },
+  { value: 'apa_nova', label: 'Apa Nova', default_type: 'water' },
   { value: 'digi', label: 'Digi Romania', default_type: 'internet' },
-  { value: 'building_admin', label: 'Building Administration', default_type: 'building maintenance' }
+  { value: 'e-bloc', label: 'building maintenance', default_type: 'building maintenance' }
 ] as const;
 
 export type ProviderName = typeof PROVIDER_OPTIONS[number]['value'];
