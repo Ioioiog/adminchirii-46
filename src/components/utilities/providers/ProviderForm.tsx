@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,6 +27,7 @@ import { useProperties } from "@/hooks/useProperties";
 import { useUserRole } from "@/hooks/use-user-role";
 import { useToast } from "@/hooks/use-toast";
 import { PROVIDER_OPTIONS, UtilityType } from "./types";
+import { UtilityProviderCredentials } from "@/integrations/supabase/types/utility";
 
 const formSchema = z.object({
   provider_name: z.string().min(1, "Provider name is required"),
@@ -116,16 +118,18 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
         : data.provider_name;
 
       if (provider) {
-        const updateData: any = {
+        // When updating a provider
+        const updateData: UtilityProviderCredentials["Update"] = {
           provider_name: finalProviderName,
           property_id: data.property_id,
           utility_type: data.utility_type,
           username: data.username,
-          location_name: data.location_name,
-          start_day: data.start_day,
-          end_day: data.end_day,
+          location_name: data.location_name || null,
+          start_day: data.start_day || 1,
+          end_day: data.end_day || 28,
         };
 
+        // Only include password if it was provided
         if (data.password) {
           updateData.password = data.password;
         }
@@ -141,19 +145,22 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
           description: "Utility provider updated successfully",
         });
       } else {
+        // When creating a new provider
+        const insertData: UtilityProviderCredentials["Insert"] = {
+          provider_name: finalProviderName,
+          property_id: data.property_id,
+          utility_type: data.utility_type,
+          username: data.username,
+          password: data.password,
+          landlord_id: userData.user.id,
+          location_name: data.location_name || null,
+          start_day: data.start_day || 1,
+          end_day: data.end_day || 28,
+        };
+
         const { error } = await supabase
           .from("utility_provider_credentials")
-          .insert({
-            provider_name: finalProviderName,
-            property_id: data.property_id,
-            utility_type: data.utility_type,
-            username: data.username,
-            password: data.password,
-            landlord_id: userData.user.id,
-            location_name: data.location_name || null,
-            start_day: data.start_day || 1,
-            end_day: data.end_day || 28,
-          });
+          .insert(insertData);
 
         if (error) throw error;
         toast({
