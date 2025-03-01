@@ -2,7 +2,7 @@
 export interface UtilityProvider {
   id: string;
   provider_name: string;
-  username: string;
+  username?: string; // Make username optional to match database structure
   encrypted_password?: string;
   password?: string;
   property_id?: string;

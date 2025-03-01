@@ -45,7 +45,8 @@ export function UtilityProvidersTab({ propertyId, userId }: UtilityProvidersTabP
         .eq("property_id", propertyId);
 
       if (error) throw error;
-      setProviders(data || []);
+      // Cast to UtilityProvider[] since we've updated the interface to match the DB structure
+      setProviders(data as UtilityProvider[] || []);
       console.log("Fetched utility providers:", data);
     } catch (error) {
       console.error("Error fetching utility providers:", error);
@@ -91,8 +92,11 @@ export function UtilityProvidersTab({ propertyId, userId }: UtilityProvidersTabP
         return;
       }
 
+      // Ensure required fields are present before insertion
       const newProvider = {
         ...formData,
+        provider_name: formData.provider_name as string, // Ensure provider_name is provided
+        utility_type: formData.utility_type as string, // Ensure utility_type is provided
         property_id: propertyId,
         landlord_id: userId,
         start_day: formData.start_day ? parseInt(formData.start_day.toString()) : 1,
@@ -112,7 +116,7 @@ export function UtilityProvidersTab({ propertyId, userId }: UtilityProvidersTabP
       });
 
       // Update local state with the new provider
-      setProviders([...(providers || []), data[0]]);
+      setProviders([...(providers || []), data[0] as UtilityProvider]);
       setIsAddingProvider(false);
       setFormData({
         provider_name: PROVIDER_OPTIONS[0].value,
