@@ -14,6 +14,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface UtilityCostAnalysisProps {
   propertyId: string;
@@ -29,11 +30,14 @@ interface UtilityData {
   total: number;
 }
 
+type PeriodOption = "last_month" | "last_3_months" | "last_6_months" | "last_12_months";
+
 export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
   const [utilityData, setUtilityData] = useState<UtilityData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { formatAmount } = useCurrency();
   const [error, setError] = useState<string | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodOption>("last_6_months");
 
   useEffect(() => {
     async function fetchUtilityData() {
@@ -41,8 +45,26 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
       setError(null);
       
       try {
-        // Get data for the last 6 months
-        const lastSixMonths = Array.from({ length: 6 }, (_, i) => {
+        // Determine how many months to fetch based on the selected period
+        let monthsToFetch = 6; // default
+        
+        switch (selectedPeriod) {
+          case "last_month":
+            monthsToFetch = 1;
+            break;
+          case "last_3_months":
+            monthsToFetch = 3;
+            break;
+          case "last_6_months":
+            monthsToFetch = 6;
+            break;
+          case "last_12_months":
+            monthsToFetch = 12;
+            break;
+        }
+        
+        // Get data for the selected period
+        const lastMonths = Array.from({ length: monthsToFetch }, (_, i) => {
           const date = subMonths(new Date(), i);
           return {
             startDate: format(startOfMonth(date), 'yyyy-MM-dd'),
@@ -53,7 +75,7 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
 
         const monthlyData: UtilityData[] = [];
         
-        for (const { startDate, endDate, month } of lastSixMonths) {
+        for (const { startDate, endDate, month } of lastMonths) {
           // Fetch utilities for this month
           const { data: utilities, error } = await supabase
             .from('utilities')
@@ -101,7 +123,7 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
     if (propertyId) {
       fetchUtilityData();
     }
-  }, [propertyId]);
+  }, [propertyId, selectedPeriod]);
 
   if (isLoading) {
     return (
@@ -145,8 +167,24 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
 
   return (
     <Card className="mt-6">
-      <CardHeader>
+      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
         <CardTitle>Monthly Utility Costs</CardTitle>
+        <div className="mt-2 sm:mt-0">
+          <Select 
+            value={selectedPeriod} 
+            onValueChange={(value) => setSelectedPeriod(value as PeriodOption)}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="last_month">Last Month</SelectItem>
+              <SelectItem value="last_3_months">Last 3 Months</SelectItem>
+              <SelectItem value="last_6_months">Last 6 Months</SelectItem>
+              <SelectItem value="last_12_months">Last 12 Months</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
       <CardContent>
         {utilityData.length === 0 ? (
