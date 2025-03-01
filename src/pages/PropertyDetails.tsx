@@ -1,289 +1,320 @@
 
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Home, User, Receipt, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
-import { useUserRole } from "@/hooks/use-user-role";
-import { PropertyDetailsCard } from "@/components/properties/PropertyDetailsCard";
-import { PropertyUpdateDialog } from "@/components/properties/PropertyUpdateDialog";
-import { PropertyDeleteDialog } from "@/components/properties/PropertyDeleteDialog";
-import { TenantList } from "@/components/tenants/TenantList";
-import { MaintenanceRequestList } from "@/components/maintenance/MaintenanceRequestList";
-import { PaymentList } from "@/components/payments/PaymentList";
-import { DocumentList } from "@/components/documents/DocumentList";
-import { UtilityAnalysisChart } from "@/components/properties/UtilityAnalysisChart";
-import { Tenant } from "@/types/tenant";
-import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { PropertyStatus } from "@/utils/propertyUtils";
+import { useToast } from "@/hooks/use-toast";
+import { InvoiceSettings } from "@/types/invoice";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PropertyTab } from "@/components/properties/tabs/PropertyTab";
+import { TenantsTab } from "@/components/properties/tabs/TenantsTab";
+import { InvoiceSettingsTab } from "@/components/properties/tabs/InvoiceSettingsTab";
+import { NavigationTabs } from "@/components/layout/NavigationTabs";
+import { LandlordTab } from "@/components/properties/tabs/LandlordTab";
 
 const PropertyDetails = () => {
-  const { propertyId } = useParams<{ propertyId: string }>();
-  const { userRole, userId } = useUserRole();
-  const { toast } = useToast();
+  const { id } = useParams();
   const navigate = useNavigate();
-  
-  // Fetch property data directly using propertyId
-  const { 
-    data: property, 
-    isLoading: propertyLoading,
-    error: propertyError
-  } = useQuery({
-    queryKey: ['property-details', propertyId],
-    queryFn: async () => {
-      console.log('Fetching property data for ID:', propertyId);
-      
-      let query = supabase
-        .from('properties')
-        .select('*')
-        .eq('id', propertyId);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedData, setEditedData] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState("property");
+  const [userId, setUserId] = useState<string | null>(null);
+  const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>({
+    apply_vat: false,
+    auto_generate: true,
+    generate_day: 1,
+    company_name: '',
+    company_address: '',
+    bank_name: '',
+    bank_account_number: '',
+    additional_notes: ''
+  });
+
+  useEffect(() => {
+    const fetchUserId = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+    };
+    fetchUserId();
+  }, []);
+
+  useEffect(() => {
+    const fetchInvoiceSettings = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('invoice_info')
+          .eq('id', user.id)
+          .single();
+
+        if (error) throw error;
         
-      // Apply different condition based on user role
-      if (userRole === 'tenant' && userId) {
-        // For tenants, only allow access to properties they're renting
-        query = supabase
-          .from('properties')
-          .select(`
-            *,
-            tenancies!inner (
-              id, 
-              status,
-              tenant_id
+        if (data?.invoice_info && typeof data.invoice_info === 'object') {
+          const info = data.invoice_info as Record<string, any>;
+          setInvoiceSettings({
+            apply_vat: info.apply_vat || false,
+            auto_generate: info.auto_generate || true,
+            generate_day: info.generate_day || 1,
+            company_name: info.company_name || '',
+            company_address: info.company_address || '',
+            bank_name: info.bank_name || '',
+            bank_account_number: info.bank_account_number || '',
+            additional_notes: info.additional_notes || ''
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching invoice settings:", error);
+      }
+    };
+
+    fetchInvoiceSettings();
+  }, []);
+
+  const { data: property, isLoading } = useQuery({
+    queryKey: ["property", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("properties")
+        .select(`
+          *,
+          tenancies(
+            id,
+            status,
+            tenant:profiles(
+              id,
+              first_name,
+              last_name,
+              email
             )
-          `)
-          .eq('id', propertyId)
-          .eq('tenancies.tenant_id', userId)
-          .eq('tenancies.status', 'active');
-      }
-      
-      const { data, error } = await query.single();
-      
-      if (error) {
-        console.error('Error fetching property:', error);
-        throw error;
-      }
-      
-      console.log('Property data fetched:', data);
-      return data;
-    },
-    enabled: !!propertyId && !!userRole,
-    retry: 1,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  // Fetch tenants information
-  const { 
-    data: tenanciesData = [], 
-    isLoading: tenantsLoading 
-  } = useQuery({
-    queryKey: ['property-tenants', propertyId],
-    queryFn: async () => {
-      console.log('Fetching tenancies for property:', propertyId);
-      const { data, error } = await supabase
-        .from('tenancies')
-        .select(`
-          id,
-          tenant_id,
-          start_date,
-          end_date,
-          status,
-          tenant:profiles(id, first_name, last_name, email, phone)
-        `)
-        .eq('property_id', propertyId)
-        .eq('status', 'active');
-      
-      if (error) {
-        console.error('Error fetching tenancies:', error);
-        throw error;
-      }
-      
-      console.log('Tenancies data:', data);
-      return data || [];
-    },
-    enabled: !!propertyId && !propertyLoading && !!property,
-  });
-
-  // Fetch payments information
-  const { 
-    data: paymentsData = [], 
-    isLoading: paymentsLoading 
-  } = useQuery({
-    queryKey: ['property-payments', propertyId],
-    queryFn: async () => {
-      console.log('Fetching payments for property:', propertyId);
-      const { data, error } = await supabase
-        .from('payments')
-        .select(`
-          id,
-          amount,
-          status,
-          due_date,
-          paid_date,
-          created_at,
-          updated_at,
-          tenancy_id,
-          tenancy:tenancies(
-            id, 
-            tenant:profiles(id, first_name, last_name, email),
-            property:properties(id, name, address)
           )
         `)
-        .eq('tenancy.property_id', propertyId)
-        .order('due_date', { ascending: false });
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
       
-      if (error) {
-        console.error('Error fetching payments:', error);
-        throw error;
-      }
+      // Add the missing properties required by the Property type
+      const propertyWithStatus = {
+        ...data,
+        status: data.tenancies?.some((t: any) => t.status === 'active') ? 'occupied' as PropertyStatus : 'vacant' as PropertyStatus,
+        tenant_count: data.tenancies?.filter((t: any) => t.status === 'active').length || 0
+      };
       
-      console.log('Payments data:', data);
-      return data || [];
+      return propertyWithStatus;
     },
-    enabled: !!propertyId && !propertyLoading && !!property,
   });
 
-  // Format tenancy data to Tenant type
-  const tenants: Tenant[] = tenanciesData.map(tenancy => ({
-    id: tenancy.tenant?.id,
-    first_name: tenancy.tenant?.first_name,
-    last_name: tenancy.tenant?.last_name,
-    email: tenancy.tenant?.email,
-    phone: tenancy.tenant?.phone,
-    role: 'tenant',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    property: {
-      id: propertyId,
-      name: property?.name || "",
-      address: property?.address || ""
-    },
-    tenancy: {
-      id: tenancy.id,
-      start_date: tenancy.start_date,
-      end_date: tenancy.end_date,
-      status: tenancy.status
-    }
-  }));
+  const handleEdit = () => {
+    setEditedData({
+      name: property.name,
+      address: property.address,
+      type: property.type,
+      monthly_rent: property.monthly_rent,
+      description: property.description,
+      available_from: property.available_from,
+    });
+    setIsEditing(true);
+  };
 
-  // Handle error state
-  useEffect(() => {
-    if (propertyError) {
-      console.error('Error loading property:', propertyError);
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditedData(null);
+  };
+
+  const handleSave = async () => {
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .update(editedData)
+        .eq('id', id);
+
+      if (error) throw error;
+
       toast({
-        title: "Property not found",
-        description: "The requested property could not be found or you don't have access to it.",
-        variant: "destructive"
+        title: "Success",
+        description: "Property updated successfully",
       });
-      
-      // Navigate back to properties page after error
-      setTimeout(() => {
-        navigate('/properties');
-      }, 3000);
-    }
-  }, [propertyError, toast, navigate]);
 
-  // Render property details page
-  return (
-    <div className="min-h-screen bg-[#F8F9FC]">
-      <DashboardSidebar />
-      <main className="flex-1 p-8">
-        <div className="mb-4">
-          <CardTitle className="text-2xl font-bold">
-            Property Details
-          </CardTitle>
-        </div>
-        
-        {propertyLoading ? (
-          <div className="flex h-screen items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
-          </div>
-        ) : !property ? (
-          <div className="flex flex-col items-center justify-center h-64">
-            <h3 className="text-xl font-semibold mb-2">Property Not Found</h3>
-            <p className="text-muted-foreground">The property you're looking for doesn't exist or you don't have access to it.</p>
-            <Button 
-              variant="outline" 
-              className="mt-4"
-              onClick={() => navigate('/properties')}
-            >
-              Back to Properties
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <PropertyDetailsCard property={property} />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {userRole === "landlord" && (
-                <>
-                  <PropertyUpdateDialog property={property} />
-                  <PropertyDeleteDialog property={property} />
-                </>
-              )}
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Tenants</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {tenantsLoading ? (
-                    <div className="flex justify-center py-4">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
-                    </div>
-                  ) : tenants.length > 0 ? (
-                    <TenantList tenants={tenants} isLandlord={userRole === "landlord"} />
-                  ) : (
-                    <p className="text-muted-foreground text-center py-4">No tenants assigned to this property.</p>
-                  )}
-                </CardContent>
-              </Card>
-              
-              <MaintenanceRequestList propertyId={propertyId} />
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Payments</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {paymentsLoading ? (
-                    <div className="flex justify-center py-4">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
-                    </div>
-                  ) : (
-                    <PaymentList 
-                      payments={paymentsData} 
-                      isLoading={false} 
-                      userRole={userRole as "landlord" | "tenant"} 
-                      userId={userId || ""} 
-                      propertyFilter={""} 
-                      statusFilter={""} 
-                      searchTerm={""}
-                    />
-                  )}
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Documents</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <DocumentList 
-                    propertyId={propertyId}
-                    documentType="" 
-                    searchTerm="" 
-                  />
-                </CardContent>
-              </Card>
-              
-              <div className="md:col-span-2">
-                <UtilityAnalysisChart propertyId={propertyId} />
+      queryClient.invalidateQueries({ queryKey: ["property", id] });
+      setIsEditing(false);
+      setEditedData(null);
+    } catch (error) {
+      console.error('Error updating property:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update property",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleInvoiceSettingChange = async (updates: Partial<InvoiceSettings>) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const newSettings = { ...invoiceSettings, ...updates };
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ invoice_info: newSettings })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setInvoiceSettings(newSettings);
+      toast({
+        title: "Success",
+        description: "Invoice settings updated successfully",
+      });
+    } catch (error) {
+      console.error("Error updating invoice settings:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update invoice settings",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getStatusColor = (status: PropertyStatus) => {
+    if (!status) return 'bg-gray-100 text-gray-800';
+    
+    switch (status.toLowerCase()) {
+      case 'occupied':
+        return 'bg-green-100 text-green-800';
+      case 'vacant':
+        return 'bg-red-100 text-red-800';
+      case 'maintenance':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex bg-[#F8F9FC] min-h-screen">
+        <DashboardSidebar />
+        <main className="flex-1 p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="animate-pulse flex space-x-4">
+              <div className="flex-1 space-y-6">
+                <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+                <div className="h-32 bg-gray-200 rounded"></div>
+                <div className="space-y-3">
+                  <div className="h-4 bg-gray-200 rounded"></div>
+                  <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                </div>
               </div>
             </div>
           </div>
-        )}
+        </main>
+      </div>
+    );
+  }
+
+  if (!property) {
+    return (
+      <div className="flex bg-[#F8F9FC] min-h-screen">
+        <DashboardSidebar />
+        <main className="flex-1 p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center bg-white rounded-xl shadow-soft-xl p-8">
+              <h2 className="text-2xl font-medium text-gray-900">Property not found</h2>
+              <p className="mt-2 text-gray-600">The property you're looking for doesn't exist.</p>
+              <Button
+                onClick={() => navigate("/properties")}
+                className="mt-6"
+                variant="outline"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Properties
+              </Button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  const tabs = [
+    { id: "property", label: "Property Details", icon: Home, showForTenant: true },
+    { id: "tenants", label: "Tenants", icon: User, showForTenant: false },
+    { id: "invoice", label: "Invoice Settings", icon: Receipt, showForTenant: false },
+    { id: "landlord", label: "Landlord", icon: UserCircle, showForTenant: true },
+  ];
+
+  const activeTenants = property.tenancies?.filter((t: any) => t.status === 'active') || [];
+
+  if (!userId) {
+    return null; // or some loading/error state
+  }
+
+  return (
+    <div className="flex bg-[#F8F9FC] min-h-screen">
+      <DashboardSidebar />
+      <main className="flex-1 p-8">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div className="flex items-center gap-4 mb-6">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/properties")}
+              className="rounded-lg hover:bg-gray-50"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-soft-xl">
+            <NavigationTabs
+              tabs={tabs}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+            />
+
+            <div className="p-8">
+              {activeTab === "property" && (
+                <PropertyTab
+                  property={property}
+                  isEditing={isEditing}
+                  editedData={editedData}
+                  setEditedData={setEditedData}
+                  handleEdit={handleEdit}
+                  handleCancel={handleCancel}
+                  handleSave={handleSave}
+                  getStatusColor={getStatusColor}
+                />
+              )}
+              {activeTab === "tenants" && (
+                <TenantsTab
+                  property={property}
+                  activeTenants={activeTenants}
+                />
+              )}
+              {activeTab === "invoice" && (
+                <InvoiceSettingsTab
+                  propertyId={id || ''}
+                  userId={userId}
+                />
+              )}
+              {activeTab === "landlord" && (
+                <LandlordTab propertyId={id || ''} />
+              )}
+            </div>
+          </div>
+        </div>
       </main>
     </div>
   );

@@ -1,44 +1,82 @@
-
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { ProviderList } from "./utility-provider/ProviderList";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { PropertySelect } from "@/components/documents/PropertySelect";
-import { useProperties } from "@/hooks/useProperties";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, EyeOff } from "lucide-react";
-import { UtilityProvider } from "./utility-provider/types";
+import { useUserRole } from "@/hooks/use-user-role";
+import { useProperties } from "@/hooks/useProperties";
+import { Label } from "@/components/ui/label";
 
-interface UtilityProviderFormProps {
-  onClose: () => void;
-  onSuccess: () => void;
-  provider?: UtilityProvider | null;
+interface UtilityProvider {
+  id: string;
+  provider_name: string;
+  username: string;
+  property_id?: string;
+  utility_type?: 'electricity' | 'water' | 'gas';
+  start_day?: number;
+  end_day?: number;
 }
 
-export function UtilityProviderForm({ onClose, onSuccess, provider }: UtilityProviderFormProps) {
-  const { properties } = useProperties({ userRole: "landlord" });
-  const { toast } = useToast();
+export function UtilityProviderForm() {
+  const [providers, setProviders] = useState<UtilityProvider[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    provider_name: provider?.provider_name || "",
-    username: provider?.username || "",
+  const [isEditing, setIsEditing] = useState(false);
+  const [newProvider, setNewProvider] = useState({
+    id: "",
+    provider_name: "",
+    username: "",
     password: "",
-    location_name: provider?.location_name || "",
-    property_id: provider?.property_id || "",
-    utility_type: provider?.utility_type || "electricity" as const,
-    start_day: provider?.start_day?.toString() || "1",
-    end_day: provider?.end_day?.toString() || "28"
+    property_id: "",
+    utility_type: "electricity" as 'electricity' | 'water' | 'gas',
+    start_day: "",
+    end_day: "",
   });
+
+  const { toast } = useToast();
+  const { userRole } = useUserRole();
+  // Convert UserRole to the expected type for useProperties
+  const role = userRole === "service_provider" ? "tenant" : userRole || "tenant";
+  const { properties } = useProperties({ userRole: role });
+
+  const fetchProviders = async () => {
+    try {
+      console.log('Fetching utility providers');
+      setIsLoading(true);
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("No user found");
+
+      const { data, error } = await supabase
+        .from("utility_provider_credentials")
+        .select("id, provider_name, username, property_id, utility_type, start_day, end_day");
+
+      if (error) throw error;
+      console.log('Fetched providers:', data);
+      setProviders(data || []);
+    } catch (error) {
+      console.error("Error fetching providers:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load utility providers",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProviders();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    const startDayNum = parseInt(formData.start_day);
-    const endDayNum = parseInt(formData.end_day);
+    const startDayNum = parseInt(newProvider.start_day);
+    const endDayNum = parseInt(newProvider.end_day);
 
     if (startDayNum < 1 || startDayNum > 31 || endDayNum < 1 || endDayNum > 31) {
       toast({
@@ -51,63 +89,69 @@ export function UtilityProviderForm({ onClose, onSuccess, provider }: UtilityPro
     }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error("No authenticated user found");
-      }
+      console.log(isEditing ? 'Updating utility provider' : 'Adding new utility provider');
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("No user found");
 
-      // Explicitly define the utility type to ensure it matches the expected type
-      const utilityType: 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance' = 
-        formData.utility_type as 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
-
-      // If updating an existing provider
-      if (provider) {
+      if (isEditing) {
         const { error } = await supabase
           .from("utility_provider_credentials")
           .update({
-            provider_name: formData.provider_name,
-            username: formData.username,
-            encrypted_password: formData.password || undefined,
-            location_name: formData.location_name,
-            property_id: formData.property_id || null,
-            utility_type: utilityType,
+            provider_name: newProvider.provider_name,
+            username: newProvider.username,
+            ...(newProvider.password && { encrypted_password: newProvider.password }),
+            property_id: newProvider.property_id || null,
+            utility_type: newProvider.utility_type,
             start_day: startDayNum,
-            end_day: endDayNum
+            end_day: endDayNum,
           })
-          .eq('id', provider.id);
+          .eq('id', newProvider.id);
 
         if (error) throw error;
+
+        toast({
+          title: "Success",
+          description: "Utility provider updated successfully",
+        });
       } else {
-        // If creating a new provider
         const { error } = await supabase
           .from("utility_provider_credentials")
           .insert({
-            provider_name: formData.provider_name,
-            username: formData.username,
-            encrypted_password: formData.password,
-            location_name: formData.location_name,
-            property_id: formData.property_id || null,
-            utility_type: utilityType,
+            provider_name: newProvider.provider_name,
+            username: newProvider.username,
+            encrypted_password: newProvider.password,
+            property_id: newProvider.property_id || null,
+            utility_type: newProvider.utility_type,
             start_day: startDayNum,
             end_day: endDayNum,
-            landlord_id: user.id,
+            landlord_id: userData.user.id
           });
 
         if (error) throw error;
+
+        toast({
+          title: "Success",
+          description: "Utility provider credentials added successfully",
+        });
       }
 
-      toast({
-        title: "Success",
-        description: `Provider ${provider ? 'updated' : 'added'} successfully`,
+      setNewProvider({
+        id: "",
+        provider_name: "",
+        username: "",
+        password: "",
+        property_id: "",
+        utility_type: "electricity",
+        start_day: "",
+        end_day: "",
       });
-
-      onSuccess();
+      setIsEditing(false);
+      fetchProviders();
     } catch (error) {
       console.error("Error saving provider:", error);
       toast({
         title: "Error",
-        description: `Failed to ${provider ? 'update' : 'add'} provider`,
+        description: `Failed to ${isEditing ? 'update' : 'add'} utility provider`,
         variant: "destructive",
       });
     } finally {
@@ -115,134 +159,204 @@ export function UtilityProviderForm({ onClose, onSuccess, provider }: UtilityPro
     }
   };
 
+  const handleEdit = (provider: UtilityProvider) => {
+    setIsEditing(true);
+    setNewProvider({
+      id: provider.id,
+      provider_name: provider.provider_name,
+      username: provider.username,
+      password: "",
+      property_id: provider.property_id || "",
+      utility_type: provider.utility_type || "electricity",
+      start_day: provider.start_day?.toString() || "",
+      end_day: provider.end_day?.toString() || "",
+    });
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      console.log('Deleting utility provider:', id);
+      setIsLoading(true);
+
+      const { error: scrapingJobsError } = await supabase
+        .from("scraping_jobs")
+        .delete()
+        .eq("utility_provider_id", id);
+
+      if (scrapingJobsError) {
+        console.error("Error deleting scraping jobs:", scrapingJobsError);
+        throw scrapingJobsError;
+      }
+
+      const { error } = await supabase
+        .from("utility_provider_credentials")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Utility provider removed successfully",
+      });
+
+      fetchProviders();
+    } catch (error) {
+      console.error("Error removing provider:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove utility provider",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (userRole !== 'landlord') {
+    return null;
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="provider_name">Provider Name</Label>
-        <Input
-          id="provider_name"
-          value={formData.provider_name}
-          onChange={(e) => setFormData({ ...formData, provider_name: e.target.value })}
-          placeholder="Enter provider name"
-          required
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="username">Username</Label>
-        <Input
-          id="username"
-          value={formData.username}
-          onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-          placeholder="Enter username"
-          required
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <div className="relative">
-          <Input
-            id="password"
-            type={showPassword ? "text" : "password"}
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            placeholder="Enter password"
-            required={!provider}
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="absolute right-2 top-1/2 -translate-y-1/2"
-            onClick={() => setShowPassword(!showPassword)}
-          >
-            {showPassword ? (
-              <EyeOff className="h-4 w-4 text-gray-500" />
-            ) : (
-              <Eye className="h-4 w-4 text-gray-500" />
-            )}
-          </Button>
-        </div>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="location_name">Location Name</Label>
-        <Input
-          id="location_name"
-          value={formData.location_name}
-          onChange={(e) => setFormData({ ...formData, location_name: e.target.value })}
-          placeholder="Enter location name (e.g. Main Building, Apartment 3B)"
-        />
-      </div>
-      <div className="space-y-2">
-        <PropertySelect
-          properties={properties}
-          selectedPropertyId={formData.property_id}
-          onPropertyChange={(value) => setFormData({ ...formData, property_id: value })}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="utility_type">Utility Type</Label>
-        <Select
-          value={formData.utility_type}
-          onValueChange={(value: "electricity" | "water" | "gas" | "internet" | "building maintenance") => 
-            setFormData({ ...formData, utility_type: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select utility type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="electricity">Electricity</SelectItem>
-            <SelectItem value="water">Water</SelectItem>
-            <SelectItem value="gas">Gas</SelectItem>
-            <SelectItem value="internet">Internet</SelectItem>
-            <SelectItem value="building maintenance">Building Maintenance</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="start_day">Reading Period Start Day</Label>
-          <Input
-            id="start_day"
-            type="number"
-            min="1"
-            max="31"
-            value={formData.start_day}
-            onChange={(e) => setFormData({ ...formData, start_day: e.target.value })}
-            placeholder="Enter start day (1-31)"
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="end_day">Reading Period End Day</Label>
-          <Input
-            id="end_day"
-            type="number"
-            min="1"
-            max="31"
-            value={formData.end_day}
-            onChange={(e) => setFormData({ ...formData, end_day: e.target.value })}
-            placeholder="Enter end day (1-31)"
-            required
-          />
-        </div>
-      </div>
-      <div className="flex gap-4">
-        <Button 
-          type="submit" 
-          disabled={isLoading}
-          className="flex-1"
-        >
-          {isLoading ? "Saving..." : (provider ? "Update" : "Add Provider")}
-        </Button>
-        <Button 
-          type="button" 
-          variant="outline"
-          onClick={onClose}
-          className="flex-1"
-        >
-          Cancel
-        </Button>
-      </div>
-    </form>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Utility Provider Settings</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-6">
+            <ProviderList 
+              providers={providers}
+              onDelete={handleDelete}
+              onEdit={handleEdit}
+              isLoading={isLoading}
+            />
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Provider Name</Label>
+                  <Input
+                    value={newProvider.provider_name}
+                    onChange={(e) => setNewProvider({ ...newProvider, provider_name: e.target.value })}
+                    placeholder="Enter provider name"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Username</Label>
+                  <Input
+                    value={newProvider.username}
+                    onChange={(e) => setNewProvider({ ...newProvider, username: e.target.value })}
+                    placeholder="Enter username"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Password</Label>
+                  <Input
+                    type="password"
+                    value={newProvider.password}
+                    onChange={(e) => setNewProvider({ ...newProvider, password: e.target.value })}
+                    placeholder="Enter password"
+                    required={!isEditing}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Property</Label>
+                  <Select
+                    value={newProvider.property_id}
+                    onValueChange={(value) => setNewProvider({ ...newProvider, property_id: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select property" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {properties?.map((property) => (
+                        <SelectItem key={property.id} value={property.id}>
+                          {property.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Utility Type</Label>
+                  <Select
+                    value={newProvider.utility_type}
+                    onValueChange={(value: 'electricity' | 'water' | 'gas') => 
+                      setNewProvider({ ...newProvider, utility_type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select utility type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="electricity">Electricity</SelectItem>
+                      <SelectItem value="water">Water</SelectItem>
+                      <SelectItem value="gas">Gas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Start Day</Label>
+                  <Input
+                    type="number"
+                    placeholder="Start Day (1-31)"
+                    min="1"
+                    max="31"
+                    value={newProvider.start_day}
+                    onChange={(e) => setNewProvider({ ...newProvider, start_day: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>End Day</Label>
+                  <Input
+                    type="number"
+                    placeholder="End Day (1-31)"
+                    min="1"
+                    max="31"
+                    value={newProvider.end_day}
+                    onChange={(e) => setNewProvider({ ...newProvider, end_day: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? (isEditing ? "Updating..." : "Adding...") : (isEditing ? "Update Provider" : "Add Provider")}
+              </Button>
+              {isEditing && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="ml-2"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setNewProvider({
+                      id: "",
+                      provider_name: "",
+                      username: "",
+                      password: "",
+                      property_id: "",
+                      utility_type: "electricity",
+                      start_day: "",
+                      end_day: "",
+                    });
+                  }}
+                >
+                  Cancel Edit
+                </Button>
+              )}
+            </form>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

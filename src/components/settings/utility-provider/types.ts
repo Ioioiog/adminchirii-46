@@ -1,3 +1,4 @@
+
 export interface UtilityProvider {
   id: string;
   provider_name: string;
@@ -20,9 +21,8 @@ export interface ScrapingJob {
   error_message: string | null;
 }
 
-// Keeping this for backward compatibility but will no longer limit provider options in the UI
 export const PROVIDER_OPTIONS = [
   { value: 'engie_romania', label: 'ENGIE Romania', default_type: 'gas' }
 ] as const;
 
-export type ProviderName = string; // Changed from specific options to any string
+export type ProviderName = typeof PROVIDER_OPTIONS[number]['value'];
