@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Home, User, Receipt, UserCircle } from "lucide-react";
+import { ArrowLeft, Home, User, Receipt, UserCircle, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -15,6 +14,7 @@ import { TenantsTab } from "@/components/properties/tabs/TenantsTab";
 import { InvoiceSettingsTab } from "@/components/properties/tabs/InvoiceSettingsTab";
 import { NavigationTabs } from "@/components/layout/NavigationTabs";
 import { LandlordTab } from "@/components/properties/tabs/LandlordTab";
+import { UtilityCostAnalysis } from "@/components/utilities/UtilityCostAnalysis";
 
 const PropertyDetails = () => {
   const { id } = useParams();
@@ -102,7 +102,6 @@ const PropertyDetails = () => {
 
       if (error) throw error;
       
-      // Add the missing properties required by the Property type
       const propertyWithStatus = {
         ...data,
         status: data.tenancies?.some((t: any) => t.status === 'active') ? 'occupied' as PropertyStatus : 'vacant' as PropertyStatus,
@@ -251,13 +250,14 @@ const PropertyDetails = () => {
     { id: "property", label: "Property Details", icon: Home, showForTenant: true },
     { id: "tenants", label: "Tenants", icon: User, showForTenant: false },
     { id: "invoice", label: "Invoice Settings", icon: Receipt, showForTenant: false },
+    { id: "utilities", label: "Utility Costs", icon: BarChart2, showForTenant: true },
     { id: "landlord", label: "Landlord", icon: UserCircle, showForTenant: true },
   ];
 
   const activeTenants = property.tenancies?.filter((t: any) => t.status === 'active') || [];
 
   if (!userId) {
-    return null; // or some loading/error state
+    return null;
   }
 
   return (
@@ -308,6 +308,15 @@ const PropertyDetails = () => {
                   propertyId={id || ''}
                   userId={userId}
                 />
+              )}
+              {activeTab === "utilities" && (
+                <div className="space-y-6">
+                  <h3 className="text-xl font-medium">Utility Cost Analysis</h3>
+                  <p className="text-gray-600">
+                    Monthly breakdown of utility costs for this property based on recorded utility bills.
+                  </p>
+                  <UtilityCostAnalysis propertyId={id || ''} />
+                </div>
               )}
               {activeTab === "landlord" && (
                 <LandlordTab propertyId={id || ''} />

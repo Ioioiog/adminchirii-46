@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -76,7 +75,6 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
         (option) => option.value === provider.provider_name
       );
       
-      // Check if it's a custom provider
       const isCustom = !providerOption && provider.provider_name !== "";
       setIsCustomProvider(isCustom);
       
@@ -118,7 +116,6 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
         : data.provider_name;
 
       if (provider) {
-        // Update existing provider
         const updateData: any = {
           provider_name: finalProviderName,
           property_id: data.property_id,
@@ -129,10 +126,7 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
           end_day: data.end_day,
         };
 
-        // Only include password if it was changed
         if (data.password) {
-          // For update, we can set the password directly
-          // The Supabase trigger will handle encryption
           updateData.password = data.password;
         }
 
@@ -147,9 +141,6 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
           description: "Utility provider updated successfully",
         });
       } else {
-        // For new providers
-        // The encrypted_password field is managed by a Supabase database trigger
-        // that encrypts the password field and sets it to encrypted_password
         const { error } = await supabase
           .from("utility_provider_credentials")
           .insert({
@@ -162,8 +153,7 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
             location_name: data.location_name || null,
             start_day: data.start_day || 1,
             end_day: data.end_day || 28,
-            // Don't include encrypted_password in the insert, it will be handled by the trigger
-          } as any); // Using 'as any' to bypass the TypeScript error temporarily
+          });
 
         if (error) throw error;
         toast({
@@ -171,7 +161,6 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
           description: "Utility provider added successfully",
         });
 
-        // Set up scraping job
         const { data: providerData, error: providerError } = await supabase
           .from("utility_provider_credentials")
           .select("id")
@@ -211,15 +200,11 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
     }
   };
 
-  // Handle provider selection change
   const handleProviderChange = (value: string) => {
-    // Set isCustomProvider flag
     setIsCustomProvider(value === "custom");
     
-    // Find the selected provider option
     const selectedProvider = PROVIDER_OPTIONS.find(option => option.value === value);
     
-    // If not custom and has a default type, set it
     if (value !== "custom" && selectedProvider?.default_type) {
       form.setValue("utility_type", selectedProvider.default_type as UtilityType);
     }
