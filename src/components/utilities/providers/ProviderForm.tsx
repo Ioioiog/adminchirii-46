@@ -9,7 +9,6 @@ import { useProperties } from "@/hooks/useProperties";
 import { useUserRole } from "@/hooks/use-user-role";
 import { useToast } from "@/hooks/use-toast";
 import { PROVIDER_OPTIONS, UtilityType } from "./types";
-import { UtilityProviderCredentials } from "@/integrations/supabase/types/utility";
 import { formSchema, FormData } from "./schema";
 import { ProviderSelector } from "./components/ProviderSelector";
 import { CustomProviderInput } from "./components/CustomProviderInput";
@@ -105,7 +104,7 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
 
       if (provider) {
         // When updating a provider
-        const updateData: UtilityProviderCredentials["Update"] = {
+        const updateData = {
           provider_name: finalProviderName,
           property_id: data.property_id,
           utility_type: data.utility_type,
@@ -117,7 +116,7 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
 
         // Only include password if it was provided
         if (data.password) {
-          updateData.password = data.password;
+          updateData['password'] = data.password;
         }
 
         const { error } = await supabase
@@ -132,7 +131,7 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
         });
       } else {
         // When creating a new provider
-        const insertData: UtilityProviderCredentials["Insert"] = {
+        const insertData = {
           provider_name: finalProviderName,
           property_id: data.property_id,
           utility_type: data.utility_type,

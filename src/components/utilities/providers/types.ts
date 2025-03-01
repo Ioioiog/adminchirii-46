@@ -1,4 +1,17 @@
 
+/**
+ * Utility provider types and related definitions
+ * This file contains type definitions and constants for the utility provider functionality
+ */
+
+/**
+ * Represents the different types of utilities that can be managed
+ */
+export type UtilityType = 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
+
+/**
+ * Represents a utility provider with its credentials and related information
+ */
 export interface UtilityProvider {
   id: string;
   provider_name: string;
@@ -9,18 +22,24 @@ export interface UtilityProvider {
     name: string;
     address: string;
   };
-  utility_type?: 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
+  utility_type?: UtilityType;
   start_day?: number;
   end_day?: number;
   location_name?: string;
 }
 
+/**
+ * Represents the status and metadata of a scraping job
+ */
 export interface ScrapingJob {
   status: 'pending' | 'in_progress' | 'completed' | 'failed';
   last_run_at: string | null;
   error_message: string | null;
 }
 
+/**
+ * Available provider options with their display labels and default utility types
+ */
 export const PROVIDER_OPTIONS = [
   { value: 'engie_romania', label: 'ENGIE Romania', default_type: 'gas' },
   { value: 'enel', label: 'ENEL', default_type: 'electricity' },
@@ -30,6 +49,7 @@ export const PROVIDER_OPTIONS = [
   { value: 'custom', label: 'Other (Custom Provider)', default_type: null }
 ] as const;
 
+/**
+ * Type representing valid provider name values
+ */
 export type ProviderName = typeof PROVIDER_OPTIONS[number]['value'];
-
-export type UtilityType = 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';

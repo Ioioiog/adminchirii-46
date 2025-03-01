@@ -2,6 +2,9 @@
 import * as z from "zod";
 import { UtilityType } from "./types";
 
+/**
+ * Form validation schema for utility provider management
+ */
 export const formSchema = z.object({
   provider_name: z.string().min(1, "Provider name is required"),
   custom_provider_name: z.string().optional(),
