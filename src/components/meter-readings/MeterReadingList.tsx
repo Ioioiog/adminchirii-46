@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import {
   Table,
@@ -32,6 +33,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthState } from "@/hooks/useAuthState";
 import { Property, PropertyStatus } from "@/utils/propertyUtils";
+import { UtilityType } from "@/components/settings/utility-provider/types";
 
 const transformProperty = (property: any): Property => ({
   id: property.id,
@@ -51,7 +53,7 @@ const transformProperty = (property: any): Property => ({
 interface MeterReading {
   id: string;
   property_id: string;
-  reading_type: 'electricity' | 'water' | 'gas';
+  reading_type: UtilityType;
   reading_value: number;
   reading_date: string;
   notes: string | null;
@@ -141,7 +143,8 @@ export function MeterReadingList({
         }
 
         console.log("Fetched meter readings:", data);
-        setReadings(data || []);
+        // Cast the data to MeterReading[] type to fix type issues
+        setReadings(data as MeterReading[]);
       } catch (error: any) {
         console.error("Error in fetchReadings:", error);
         toast({

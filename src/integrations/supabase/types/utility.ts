@@ -34,3 +34,5 @@ export interface Utility {
     status?: string;
   };
 }
+
+export type UtilityType = 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';

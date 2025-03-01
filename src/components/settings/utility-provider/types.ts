@@ -31,3 +31,5 @@ export const PROVIDER_OPTIONS = [
 ] as const;
 
 export type ProviderName = typeof PROVIDER_OPTIONS[number]['value'];
+
+export type UtilityType = 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';

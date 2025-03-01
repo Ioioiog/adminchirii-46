@@ -26,13 +26,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProperties } from "@/hooks/useProperties";
 import { useUserRole } from "@/hooks/use-user-role";
 import { useToast } from "@/hooks/use-toast";
-import { PROVIDER_OPTIONS } from "./types";
+import { PROVIDER_OPTIONS, UtilityType } from "./types";
 
 const formSchema = z.object({
   provider_name: z.string().min(1, "Provider name is required"),
   custom_provider_name: z.string().optional(),
   property_id: z.string().min(1, "Property is required"),
-  utility_type: z.enum(["electricity", "water", "gas", "internet", "building maintenance"]),
+  utility_type: z.enum(["electricity", "water", "gas", "internet", "building maintenance"] as const),
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
   location_name: z.string().optional(),
@@ -106,7 +106,7 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
 
     setIsSubmitting(true);
     try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
+      const { user, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
 
       const finalProviderName = data.provider_name === "custom" 
@@ -135,14 +135,14 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
           description: "Utility provider updated successfully",
         });
       } else {
-        // Create new provider
+        // Create new provider - don't include encrypted_password field
         const { error } = await supabase.from("utility_provider_credentials").insert({
           provider_name: finalProviderName,
           property_id: data.property_id,
           utility_type: data.utility_type,
           username: data.username,
           password: data.password,
-          landlord_id: userData.data.user?.id,
+          landlord_id: user?.id,
           location_name: data.location_name,
           start_day: data.start_day,
           end_day: data.end_day,
@@ -155,23 +155,29 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
         });
 
         // Set up scraping job
-        const { error: scrapingError } = await supabase.from("scraping_jobs").insert({
-          utility_provider_id: (await supabase
-            .from("utility_provider_credentials")
-            .select("id")
-            .eq("landlord_id", userData.data.user?.id)
-            .eq("provider_name", finalProviderName)
-            .eq("username", data.username)
-            .limit(1)
-            .single()).data?.id,
-          status: "pending",
-          provider: finalProviderName,
-          type: data.utility_type,
-          location: data.location_name,
-        });
+        const { data: providerData, error: providerError } = await supabase
+          .from("utility_provider_credentials")
+          .select("id")
+          .eq("landlord_id", user?.id)
+          .eq("provider_name", finalProviderName)
+          .eq("username", data.username)
+          .limit(1)
+          .single();
 
-        if (scrapingError) {
-          console.error("Error creating scraping job:", scrapingError);
+        if (providerError) {
+          console.error("Error fetching provider ID:", providerError);
+        } else {
+          const { error: scrapingError } = await supabase.from("scraping_jobs").insert({
+            utility_provider_id: providerData.id,
+            status: "pending",
+            provider: finalProviderName,
+            type: data.utility_type,
+            location: data.location_name,
+          });
+
+          if (scrapingError) {
+            console.error("Error creating scraping job:", scrapingError);
+          }
         }
       }
 
@@ -198,7 +204,7 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
     
     // If not custom and has a default type, set it
     if (value !== "custom" && selectedProvider?.default_type) {
-      form.setValue("utility_type", selectedProvider.default_type as any);
+      form.setValue("utility_type", selectedProvider.default_type as UtilityType);
     }
   };
 

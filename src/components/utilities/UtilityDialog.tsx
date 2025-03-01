@@ -160,11 +160,14 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
     try {
       setIsSubmitting(true);
       
+      // Cast utilityType to the expected utility type for the database
+      const safeUtilityType = utilityType as 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
+      
       const { data: utility, error: utilityError } = await supabase
         .from("utilities")
         .insert([
           {
-            type: utilityType,
+            type: safeUtilityType,
             amount: parseFloat(amount),
             currency: currency,
             property_id: propertyId,
