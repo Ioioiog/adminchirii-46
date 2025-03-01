@@ -87,7 +87,8 @@ export function TenantHandbookTab({ propertyId }: { propertyId: string }) {
       }
       
       if (data && data.handbook_data) {
-        setHandbookData(data.handbook_data);
+        // Convert the JSON data to HandbookData type
+        setHandbookData(data.handbook_data as HandbookData);
       }
     } catch (error) {
       console.error("Error in fetchHandbookData:", error);
@@ -130,7 +131,7 @@ export function TenantHandbookTab({ propertyId }: { propertyId: string }) {
         .from('property_handbook')
         .upsert({
           property_id: propertyId,
-          handbook_data: updatedData,
+          handbook_data: updatedData as any, // Type assertion to resolve JSON compatibility
           updated_at: new Date().toISOString()
         });
 

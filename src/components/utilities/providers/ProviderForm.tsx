@@ -23,12 +23,16 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { UtilityType } from '@/types/utilities';
-import { DatePicker } from '@/components/ui/date-picker';
-import { CalendarIcon } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
 import { Property } from '@/types/tenant';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { CalendarIcon } from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 
 const formSchema = z.object({
   provider_name: z.string().min(2, {
@@ -55,9 +59,12 @@ const formSchema = z.object({
 interface ProviderFormProps {
   landlordId: string;
   onSubmit: () => void;
+  onClose?: () => void;
+  onSuccess?: () => void;
+  provider?: any;
 }
 
-export function ProviderForm({ landlordId, onSubmit }: ProviderFormProps) {
+export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provider }: ProviderFormProps) {
   const [properties, setProperties] = useState<Property[]>([]);
   const { toast } = useToast();
 
@@ -82,50 +89,77 @@ export function ProviderForm({ landlordId, onSubmit }: ProviderFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      provider_name: "",
-      property_id: "",
-      utility_type: UtilityType.Electricity,
-      username: "",
+      provider_name: provider?.provider_name || "",
+      property_id: provider?.property_id || "",
+      utility_type: provider?.utility_type || UtilityType.Electricity,
+      username: provider?.username || "",
       password: "",
       landlord_id: landlordId,
-      location_name: "",
-      start_day: undefined,
-      end_day: undefined,
+      location_name: provider?.location_name || "",
+      start_day: provider?.start_day ? new Date(provider.start_day) : undefined,
+      end_day: provider?.end_day ? new Date(provider.end_day) : undefined,
     },
   })
 
   async function onSubmitForm(values: z.infer<typeof formSchema>) {
     try {
-      const { error } = await supabase
-        .from('utility_provider_credentials')
-        .insert({
-          provider_name: values.provider_name,
-          property_id: values.property_id,
-          utility_type: values.utility_type,
-          username: values.username,
-          password: values.password, // This will be encrypted by the trigger
-          landlord_id: values.landlord_id,
-          location_name: values.location_name,
-          start_day: values.start_day,
-          end_day: values.end_day
-        });
+      const dataToInsert = {
+        provider_name: values.provider_name,
+        property_id: values.property_id,
+        utility_type: values.utility_type,
+        username: values.username,
+        password: values.password,
+        landlord_id: values.landlord_id,
+        location_name: values.location_name,
+        start_day: values.start_day,
+        end_day: values.end_day
+      };
 
-      if (error) {
-        console.error("Error inserting utility provider credentials:", error);
+      // Handle update vs insert
+      if (provider?.id) {
+        const { error } = await supabase
+          .from('utility_provider_credentials')
+          .update(dataToInsert)
+          .eq('id', provider.id);
+
+        if (error) {
+          console.error("Error updating utility provider credentials:", error);
+          toast({
+            title: "Error",
+            description: "Failed to update utility provider. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
         toast({
-          title: "Error",
-          description: "Failed to add utility provider. Please try again.",
-          variant: "destructive",
+          title: "Success",
+          description: "Utility provider updated successfully!",
         });
-        return;
+      } else {
+        const { error } = await supabase
+          .from('utility_provider_credentials')
+          .insert(dataToInsert);
+
+        if (error) {
+          console.error("Error inserting utility provider credentials:", error);
+          toast({
+            title: "Error",
+            description: "Failed to add utility provider. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        toast({
+          title: "Success",
+          description: "Utility provider added successfully!",
+        });
       }
 
-      toast({
-        title: "Success",
-        description: "Utility provider added successfully!",
-      });
-
       form.reset();
+      if (onSuccess) onSuccess();
+      if (onClose) onClose();
       onSubmit();
     } catch (error) {
       console.error("Unexpected error:", error);
