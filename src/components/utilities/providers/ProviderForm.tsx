@@ -149,16 +149,18 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
       } else {
         // For new providers, the password needs to be set
         // The Supabase trigger will handle encryption
+        // Note: We're NOT setting encrypted_password directly, only password
+        // The Supabase trigger will handle the encryption
         const { error } = await supabase.from("utility_provider_credentials").insert({
           provider_name: finalProviderName,
           property_id: data.property_id,
           utility_type: data.utility_type,
           username: data.username,
-          password: data.password, // password will be encrypted by Supabase trigger
+          password: data.password,
           landlord_id: userData.user.id,
-          location_name: data.location_name,
-          start_day: data.start_day,
-          end_day: data.end_day,
+          location_name: data.location_name || null,
+          start_day: data.start_day || 1,
+          end_day: data.end_day || 28,
         });
 
         if (error) throw error;
@@ -185,7 +187,7 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
             status: "pending",
             provider: finalProviderName,
             type: data.utility_type,
-            location: data.location_name,
+            location: data.location_name || null,
           });
 
           if (scrapingError) {
