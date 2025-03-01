@@ -18,8 +18,9 @@ import { useToast } from "@/hooks/use-toast";
 import { UtilityFilters } from "@/components/utilities/UtilityFilters";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { UtilityBillsList } from "@/components/utilities/UtilityBillsList";
 
-type UtilitiesSection = 'bills' | 'readings' | 'providers';
+type UtilitiesSection = 'bills' | 'readings' | 'providers' | 'utility-bills';
 
 type UtilityType = 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
 
@@ -112,6 +113,24 @@ const Utilities = () => {
       console.log("Fetched providers:", data);
       return data;
     }
+  });
+
+  const { data: utilityBills = [], isLoading: utilityBillsLoading } = useQuery({
+    queryKey: ['utility-bills'],
+    queryFn: async () => {
+      console.log('Fetching utility bills...');
+      const { data, error } = await supabase
+        .from('utility_bills')
+        .select('*');
+      
+      if (error) {
+        console.error('Error fetching utility bills:', error);
+        throw error;
+      }
+      console.log('Fetched utility bills:', data);
+      return data || [];
+    },
+    enabled: activeSection === 'utility-bills'
   });
 
   const filteredUtilities = utilities.filter((utility) => {
@@ -302,6 +321,11 @@ const Utilities = () => {
       label: 'Meter Readings',
       icon: Gauge
     },
+    {
+      id: 'utility-bills' as UtilitiesSection,
+      label: 'Provider Bills',
+      icon: FileSpreadsheet
+    },
     ...(userRole === 'landlord' ? [{
       id: 'providers' as UtilitiesSection,
       label: 'Utility Providers',
@@ -462,6 +486,31 @@ const Utilities = () => {
             queryClient.invalidateQueries({ queryKey: ["utility-providers"] });
           }} provider={editingProvider} /> : <ProviderList providers={providers} onDelete={handleDeleteProvider} onEdit={handleEditProvider} isLoading={providersLoading} />}
           </div>;
+      case 'utility-bills':
+        return (
+          <div className="space-y-6">
+            <div className="flex justify-between items-start">
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-600/10 rounded-xl">
+                    <FileSpreadsheet className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-2xl">Provider Utility Bills</CardTitle>
+                    <p className="text-gray-500 mt-1">
+                      View utility bills retrieved from your utility providers.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <UtilityBillsList 
+              bills={utilityBills} 
+              isLoading={utilityBillsLoading} 
+            />
+          </div>
+        );
       default:
         return null;
     }
