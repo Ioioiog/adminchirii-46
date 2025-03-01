@@ -31,24 +31,34 @@ interface PropertyFormProps {
   onSubmit: (data: PropertyFormData) => void;
   initialData?: Property;
   isSubmitting?: boolean;
+  initialValues?: any; // Add this line to match usage in PropertyUpdateDialog
+  onSuccess?: () => void; // Add this line to match usage in PropertyUpdateDialog
+  isEditing?: boolean; // Add this line to match usage in PropertyUpdateDialog
 }
 
-export function PropertyForm({ onSubmit, initialData, isSubmitting }: PropertyFormProps) {
+export function PropertyForm({ onSubmit, initialData, isSubmitting, initialValues, onSuccess, isEditing }: PropertyFormProps) {
   const form = useForm<PropertyFormData>({
     resolver: zodResolver(propertyFormSchema),
     defaultValues: {
-      name: initialData?.name || "",
-      address: initialData?.address || "",
-      monthly_rent: initialData?.monthly_rent || 0,
-      type: initialData?.type || "Apartment",
-      description: initialData?.description || "",
-      available_from: initialData?.tenancy?.end_date || initialData?.available_from || "",
+      name: initialData?.name || initialValues?.name || "",
+      address: initialData?.address || initialValues?.address || "",
+      monthly_rent: initialData?.monthly_rent || initialValues?.monthly_rent || 0,
+      type: initialData?.type || initialValues?.type || "Apartment",
+      description: initialData?.description || initialValues?.description || "",
+      available_from: initialData?.tenancy?.end_date || initialData?.available_from || initialValues?.available_from || "",
     },
   });
 
+  const handleSubmit = (data: PropertyFormData) => {
+    onSubmit(data);
+    if (onSuccess) {
+      onSuccess();
+    }
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="name"
@@ -162,7 +172,7 @@ export function PropertyForm({ onSubmit, initialData, isSubmitting }: PropertyFo
         />
 
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Saving..." : initialData ? "Update Property" : "Add Property"}
+          {isSubmitting ? "Saving..." : initialData || isEditing ? "Update Property" : "Add Property"}
         </Button>
       </form>
     </Form>

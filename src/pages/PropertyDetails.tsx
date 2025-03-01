@@ -15,6 +15,7 @@ import { DocumentList } from "@/components/documents/DocumentList";
 import { UtilityAnalysisChart } from "@/components/properties/UtilityAnalysisChart";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Tenant } from "@/types/tenant"; // Import Tenant type
 
 const PropertyDetails = () => {
   const { propertyId } = useParams<{ propertyId: string }>();
@@ -25,7 +26,7 @@ const PropertyDetails = () => {
     userRole: userRole === "landlord" || userRole === "tenant" ? userRole : "tenant"
   });
 
-  const { data: tenants = [] } = useQuery({
+  const { data: tenanciesData = [] } = useQuery({
     queryKey: ['property-tenants', propertyId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -47,7 +48,30 @@ const PropertyDetails = () => {
     enabled: !!propertyId
   });
 
-  const { data: payments = [] } = useQuery({
+  // Convert tenancy data to proper Tenant type format
+  const tenants: Tenant[] = tenanciesData.map(tenancy => ({
+    id: tenancy.tenant.id,
+    first_name: tenancy.tenant.first_name,
+    last_name: tenancy.tenant.last_name,
+    email: tenancy.tenant.email,
+    phone: tenancy.tenant.phone,
+    role: 'tenant', // Assuming tenants have role 'tenant'
+    created_at: new Date().toISOString(), // Use current date as fallback
+    updated_at: new Date().toISOString(), // Use current date as fallback
+    property: {
+      id: propertyId,
+      name: property?.name || "",
+      address: property?.address || ""
+    },
+    tenancy: {
+      id: tenancy.id,
+      start_date: tenancy.start_date,
+      end_date: tenancy.end_date,
+      status: tenancy.status
+    }
+  }));
+
+  const { data: paymentsData = [] } = useQuery({
     queryKey: ['property-payments', propertyId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -58,6 +82,9 @@ const PropertyDetails = () => {
           status,
           due_date,
           paid_date,
+          created_at,
+          updated_at,
+          tenancy_id,
           tenancy:tenancies(
             id, 
             tenant:profiles(id, first_name, last_name, email),
@@ -103,26 +130,24 @@ const PropertyDetails = () => {
               <PropertyUpdateDialog property={property} />
               <PropertyDeleteDialog property={property} />
               
-              {/* Pass the proper props for TenantList */}
               <Card>
                 <CardHeader>
                   <CardTitle>Tenants</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <TenantList tenants={tenants.map(t => t.tenant)} isLandlord={userRole === "landlord"} />
+                  <TenantList tenants={tenants} isLandlord={userRole === "landlord"} />
                 </CardContent>
               </Card>
               
               <MaintenanceRequestList propertyId={propertyId} />
               
-              {/* Pass the proper props for PaymentList */}
               <Card>
                 <CardHeader>
                   <CardTitle>Payments</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <PaymentList 
-                    payments={payments} 
+                    payments={paymentsData} 
                     isLoading={false} 
                     userRole={userRole as "landlord" | "tenant"} 
                     userId={""} 
@@ -133,18 +158,15 @@ const PropertyDetails = () => {
                 </CardContent>
               </Card>
               
-              {/* Pass the proper props for DocumentList */}
               <Card>
                 <CardHeader>
                   <CardTitle>Documents</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <DocumentList 
-                    filter={{ 
-                      propertyId: propertyId, 
-                      documentType: "", 
-                      searchTerm: "" 
-                    }} 
+                    propertyId={propertyId}
+                    documentType="" 
+                    searchTerm="" 
                   />
                 </CardContent>
               </Card>
