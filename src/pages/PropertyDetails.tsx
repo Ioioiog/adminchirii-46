@@ -22,7 +22,7 @@ const PropertyDetails = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [property, setProperty] = useState(null);
   const { userRole } = useUserRole();
-  const { properties } = useProperties({
+  const { properties, isLoading: propertiesLoading } = useProperties({
     userRole: userRole === "landlord" || userRole === "tenant" ? userRole : "tenant"
   });
 
@@ -101,12 +101,22 @@ const PropertyDetails = () => {
   });
 
   useEffect(() => {
-    if (properties && propertyId) {
+    if (!propertiesLoading && properties && propertyId) {
       const foundProperty = properties.find((p) => p.id === propertyId);
       setProperty(foundProperty);
       setIsLoading(false);
     }
-  }, [properties, propertyId]);
+  }, [properties, propertyId, propertiesLoading]);
+
+  // If we're no longer loading properties but didn't find the property, exit loading state
+  useEffect(() => {
+    if (!propertiesLoading && properties && properties.length > 0 && propertyId) {
+      if (!properties.some(p => p.id === propertyId)) {
+        console.log("Property not found in properties list:", propertyId);
+        setIsLoading(false);
+      }
+    }
+  }, [properties, propertyId, propertiesLoading]);
 
   return (
     <div className="min-h-screen bg-[#F8F9FC]">
@@ -121,6 +131,11 @@ const PropertyDetails = () => {
         {isLoading ? (
           <div className="flex h-screen items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+          </div>
+        ) : !property ? (
+          <div className="flex flex-col items-center justify-center h-64">
+            <h3 className="text-xl font-semibold mb-2">Property Not Found</h3>
+            <p className="text-muted-foreground">The property you're looking for doesn't exist or you don't have access to it.</p>
           </div>
         ) : (
           <div className="space-y-6">
