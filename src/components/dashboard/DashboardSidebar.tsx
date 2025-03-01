@@ -66,15 +66,32 @@ export const DashboardSidebar = () => {
       >
         <nav className="space-y-1.5">
           {filteredMenuItems.map((item) => {
-            // Get notification count for this menu item if it has a notification type
-            const notificationCount = item.notificationType
-              ? notifications?.find(n => n.type === item.notificationType)?.count || 0
+            // Get notification count for this menu item
+            // Note: Since notificationType isn't in the menu items anymore, 
+            // we'll determine it based on the item's name
+            let notificationType: NotificationType | undefined = undefined;
+            
+            if (item.name === "Chat") {
+              notificationType = "messages";
+            } else if (item.name === "Maintenance") {
+              notificationType = "maintenance";
+            } else if (item.name === "Financial" || item.name === "Earnings") {
+              notificationType = "payments";
+            }
+            
+            const notificationCount = notificationType
+              ? notifications?.find(n => n.type === notificationType)?.count || 0
               : 0;
               
             return (
               <SidebarMenuItem
                 key={item.href}
-                item={item}
+                item={{
+                  title: item.name,
+                  icon: item.icon,
+                  href: item.href,
+                  notificationType
+                }}
                 isActive={isActive(item.href)}
                 isExpanded={isExpanded}
                 notifications={notifications}
