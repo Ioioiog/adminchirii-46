@@ -16,19 +16,23 @@ import { UtilityAnalysisChart } from "@/components/properties/UtilityAnalysisCha
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tenant } from "@/types/tenant"; // Import Tenant type
+import { useToast } from "@/hooks/use-toast";
 
 const PropertyDetails = () => {
   const { propertyId } = useParams<{ propertyId: string }>();
   const [isLoading, setIsLoading] = useState(true);
   const [property, setProperty] = useState(null);
   const { userRole } = useUserRole();
+  const { toast } = useToast();
+  
   const { properties, isLoading: propertiesLoading } = useProperties({
     userRole: userRole === "landlord" || userRole === "tenant" ? userRole : "tenant"
   });
 
-  const { data: tenanciesData = [] } = useQuery({
+  const { data: tenanciesData = [], isLoading: tenanciesLoading } = useQuery({
     queryKey: ['property-tenants', propertyId],
     queryFn: async () => {
+      console.log('Fetching tenancies for property:', propertyId);
       const { data, error } = await supabase
         .from('tenancies')
         .select(`
@@ -42,7 +46,12 @@ const PropertyDetails = () => {
         .eq('property_id', propertyId)
         .eq('status', 'active');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching tenancies:', error);
+        throw error;
+      }
+      
+      console.log('Tenancies data:', data);
       return data || [];
     },
     enabled: !!propertyId
@@ -71,9 +80,10 @@ const PropertyDetails = () => {
     }
   }));
 
-  const { data: paymentsData = [] } = useQuery({
+  const { data: paymentsData = [], isLoading: paymentsLoading } = useQuery({
     queryKey: ['property-payments', propertyId],
     queryFn: async () => {
+      console.log('Fetching payments for property:', propertyId);
       const { data, error } = await supabase
         .from('payments')
         .select(`
@@ -94,7 +104,12 @@ const PropertyDetails = () => {
         .eq('tenancy.property_id', propertyId)
         .order('due_date', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching payments:', error);
+        throw error;
+      }
+      
+      console.log('Payments data:', data);
       return data || [];
     },
     enabled: !!propertyId
@@ -102,21 +117,44 @@ const PropertyDetails = () => {
 
   useEffect(() => {
     if (!propertiesLoading && properties && propertyId) {
+      console.log('Properties loaded. Looking for propertyId:', propertyId);
+      console.log('Available properties:', properties);
+      
       const foundProperty = properties.find((p) => p.id === propertyId);
-      setProperty(foundProperty);
+      if (foundProperty) {
+        console.log('Found property:', foundProperty);
+        setProperty(foundProperty);
+      } else {
+        console.log('Property not found in properties list:', propertyId);
+        toast({
+          title: "Property not found",
+          description: "The requested property could not be found in your properties.",
+          variant: "destructive"
+        });
+      }
       setIsLoading(false);
     }
-  }, [properties, propertyId, propertiesLoading]);
+  }, [properties, propertyId, propertiesLoading, toast]);
 
-  // If we're no longer loading properties but didn't find the property, exit loading state
+  // If it's taking too long to load, show an error
   useEffect(() => {
-    if (!propertiesLoading && properties && properties.length > 0 && propertyId) {
-      if (!properties.some(p => p.id === propertyId)) {
-        console.log("Property not found in properties list:", propertyId);
-        setIsLoading(false);
-      }
+    let timeout;
+    if (isLoading) {
+      timeout = setTimeout(() => {
+        if (isLoading) {
+          console.log("Loading timeout reached. Properties:", properties);
+          setIsLoading(false);
+          toast({
+            title: "Loading timeout",
+            description: "There was an issue loading the property details. Please try again.",
+            variant: "destructive"
+          });
+        }
+      }, 10000); // 10 second timeout
     }
-  }, [properties, propertyId, propertiesLoading]);
+    
+    return () => clearTimeout(timeout);
+  }, [isLoading, properties, toast]);
 
   return (
     <div className="min-h-screen bg-[#F8F9FC]">
@@ -150,7 +188,13 @@ const PropertyDetails = () => {
                   <CardTitle>Tenants</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <TenantList tenants={tenants} isLandlord={userRole === "landlord"} />
+                  {tenanciesLoading ? (
+                    <div className="flex justify-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+                    </div>
+                  ) : (
+                    <TenantList tenants={tenants} isLandlord={userRole === "landlord"} />
+                  )}
                 </CardContent>
               </Card>
               
@@ -161,15 +205,21 @@ const PropertyDetails = () => {
                   <CardTitle>Payments</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <PaymentList 
-                    payments={paymentsData} 
-                    isLoading={false} 
-                    userRole={userRole as "landlord" | "tenant"} 
-                    userId={""} 
-                    propertyFilter={""} 
-                    statusFilter={""} 
-                    searchTerm={""}
-                  />
+                  {paymentsLoading ? (
+                    <div className="flex justify-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+                    </div>
+                  ) : (
+                    <PaymentList 
+                      payments={paymentsData} 
+                      isLoading={false} 
+                      userRole={userRole as "landlord" | "tenant"} 
+                      userId={""} 
+                      propertyFilter={""} 
+                      statusFilter={""} 
+                      searchTerm={""}
+                    />
+                  )}
                 </CardContent>
               </Card>
               
