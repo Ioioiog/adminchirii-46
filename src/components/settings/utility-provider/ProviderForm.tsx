@@ -108,6 +108,10 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
+      
+      if (!userData.user) {
+        throw new Error("No authenticated user found");
+      }
 
       const finalProviderName = data.provider_name === "custom" 
         ? data.custom_provider_name 
@@ -115,18 +119,24 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
 
       if (provider) {
         // Update existing provider
+        const updateData: any = {
+          provider_name: finalProviderName,
+          property_id: data.property_id,
+          utility_type: data.utility_type,
+          username: data.username,
+          location_name: data.location_name,
+          start_day: data.start_day,
+          end_day: data.end_day,
+        };
+
+        // Only include password if it was changed
+        if (data.password) {
+          updateData.password = data.password;
+        }
+
         const { error } = await supabase
           .from("utility_provider_credentials")
-          .update({
-            provider_name: finalProviderName,
-            property_id: data.property_id,
-            utility_type: data.utility_type as UtilityType,
-            username: data.username,
-            ...(data.password ? { password: data.password } : {}),
-            location_name: data.location_name,
-            start_day: data.start_day,
-            end_day: data.end_day,
-          })
+          .update(updateData)
           .eq("id", provider.id);
 
         if (error) throw error;
@@ -139,10 +149,10 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
         const { error } = await supabase.from("utility_provider_credentials").insert({
           provider_name: finalProviderName,
           property_id: data.property_id,
-          utility_type: data.utility_type as UtilityType,
+          utility_type: data.utility_type,
           username: data.username,
           password: data.password, // password will be encrypted by Supabase trigger
-          landlord_id: userData.user?.id,
+          landlord_id: userData.user.id,
           location_name: data.location_name,
           start_day: data.start_day,
           end_day: data.end_day,
@@ -158,7 +168,7 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
         const { data: providerData, error: providerError } = await supabase
           .from("utility_provider_credentials")
           .select("id")
-          .eq("landlord_id", userData.user?.id)
+          .eq("landlord_id", userData.user.id)
           .eq("provider_name", finalProviderName)
           .eq("username", data.username)
           .limit(1)
