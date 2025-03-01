@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PropertyForm } from "@/components/properties/PropertyForm";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface PropertyUpdateDialogProps {
   property: any;
@@ -11,8 +13,42 @@ interface PropertyUpdateDialogProps {
 
 export function PropertyUpdateDialog({ property }: PropertyUpdateDialogProps) {
   const [open, setOpen] = React.useState(false);
+  const { toast } = useToast();
 
   if (!property) return null;
+
+  const handleSubmit = async (data: any) => {
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .update({
+          name: data.name,
+          address: data.address,
+          monthly_rent: data.monthly_rent,
+          type: data.type,
+          description: data.description,
+          available_from: data.available_from
+        })
+        .eq('id', property.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Property updated successfully",
+      });
+
+      return true;
+    } catch (error) {
+      console.error("Error updating property:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update property",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
 
   return (
     <Card>
@@ -40,6 +76,7 @@ export function PropertyUpdateDialog({ property }: PropertyUpdateDialogProps) {
             <PropertyForm
               initialValues={property}
               onSuccess={() => setOpen(false)}
+              onSubmit={handleSubmit}
               isEditing
             />
           </DialogContent>

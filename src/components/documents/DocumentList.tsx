@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,13 +16,23 @@ interface DocumentListProps {
     documentType?: string;
     searchTerm?: string;
   };
+  userId?: string;
+  userRole?: "landlord" | "tenant";
+  propertyFilter?: string;
+  typeFilter?: string;
+  viewMode?: "list" | "grid";
 }
 
 export function DocumentList({ 
   propertyId, 
   documentType = "", 
   searchTerm = "",
-  filter 
+  filter,
+  userId,
+  userRole,
+  propertyFilter,
+  typeFilter,
+  viewMode
 }: DocumentListProps) {
   // If filter prop is provided, use its values
   const effectivePropertyId = filter?.propertyId || propertyId;
