@@ -1,3 +1,4 @@
+
 import { MonthlyRevenue } from "../types/revenue";
 import {
   LineChart,
@@ -17,6 +18,29 @@ interface RevenueLineChartProps {
 }
 
 export function RevenueLineChart({ data, gradientId, isPrediction = false }: RevenueLineChartProps) {
+  // Custom axis properties to avoid defaultProps warnings
+  const xAxisProps = {
+    dataKey: "month",
+    scale: "auto", 
+    type: "category" as const,
+    allowDuplicatedCategory: true,
+    className: "text-xs font-medium",
+    tick: { fill: "hsl(var(--muted-foreground))" },
+    axisLine: { stroke: "hsl(var(--border))" },
+    tickLine: { stroke: "hsl(var(--border))" }
+  };
+
+  const yAxisProps = {
+    scale: "auto",
+    type: "number" as const,
+    allowDecimals: true,
+    className: "text-xs font-medium",
+    tick: { fill: "hsl(var(--muted-foreground))" },
+    tickFormatter: (value: number) => `$${value.toLocaleString()}`,
+    axisLine: { stroke: "hsl(var(--border))" },
+    tickLine: { stroke: "hsl(var(--border))" }
+  };
+
   return (
     <ResponsiveContainer width="100%" height="100%">
       <LineChart
@@ -40,20 +64,8 @@ export function RevenueLineChart({ data, gradientId, isPrediction = false }: Rev
           horizontal={true}
           vertical={false}
         />
-        <XAxis
-          dataKey="month"
-          className="text-xs font-medium"
-          tick={{ fill: "hsl(var(--muted-foreground))" }}
-          axisLine={{ stroke: "hsl(var(--border))" }}
-          tickLine={{ stroke: "hsl(var(--border))" }}
-        />
-        <YAxis
-          className="text-xs font-medium"
-          tick={{ fill: "hsl(var(--muted-foreground))" }}
-          tickFormatter={(value) => `$${value.toLocaleString()}`}
-          axisLine={{ stroke: "hsl(var(--border))" }}
-          tickLine={{ stroke: "hsl(var(--border))" }}
-        />
+        <XAxis {...xAxisProps} />
+        <YAxis {...yAxisProps} />
         <Tooltip content={(props) => <ChartTooltip {...props} isPrediction={isPrediction} />} />
         <Line
           type="monotone"

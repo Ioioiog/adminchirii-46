@@ -213,6 +213,21 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
     total: utilityData.reduce((sum, month) => sum + month.total, 0) / utilityData.length || 0
   };
 
+  // Custom axis properties to avoid defaultProps warnings
+  const xAxisProps = {
+    dataKey: "month",
+    scale: "auto", 
+    type: "category",
+    allowDuplicatedCategory: true
+  };
+
+  const yAxisProps = {
+    scale: "auto",
+    type: "number",
+    allowDecimals: true,
+    tickFormatter: (value: number) => formatAmount(value, 'RON')
+  };
+
   return (
     <Card className="mt-6">
       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
@@ -288,8 +303,8 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
                   margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
+                  <XAxis {...xAxisProps} />
+                  <YAxis {...yAxisProps} />
                   <Tooltip formatter={(value) => formatAmount(Number(value), 'RON')} />
                   <Legend />
                   <Bar dataKey="electricity" name="Electricity" fill="#3b82f6" />
