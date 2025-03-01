@@ -1,4 +1,5 @@
 
+
 export interface Utility {
   Row: {
     id: string;
@@ -36,3 +37,4 @@ export interface Utility {
 }
 
 export type UtilityType = 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
+

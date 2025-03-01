@@ -141,7 +141,7 @@ export const ProviderForm = ({ onClose, onSuccess, provider }: ProviderFormProps
           property_id: data.property_id,
           utility_type: data.utility_type as UtilityType,
           username: data.username,
-          password: data.password,
+          password: data.password, // password will be encrypted by Supabase trigger
           landlord_id: userData.user?.id,
           location_name: data.location_name,
           start_day: data.start_day,
