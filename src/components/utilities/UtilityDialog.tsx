@@ -13,6 +13,9 @@ interface UtilityDialogProps {
   properties: any[];
 }
 
+// Define the allowed utility types
+type UtilityType = "electricity" | "water" | "gas" | "internet" | "building maintenance";
+
 export function UtilityDialog({
   isDialogOpen,
   setIsDialogOpen,
@@ -21,7 +24,7 @@ export function UtilityDialog({
 }: UtilityDialogProps) {
   const { toast } = useToast();
   const [propertyId, setPropertyId] = useState("");
-  const [utilityType, setUtilityType] = useState("");
+  const [utilityType, setUtilityType] = useState<UtilityType>("electricity");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("RON");
   const [dueDate, setDueDate] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -61,22 +64,20 @@ export function UtilityDialog({
 
       if (propertyError) throw propertyError;
 
-      // Insert new utility bill
+      // Insert new utility bill with properly typed data
       const { data, error } = await supabase
         .from("utilities")
-        .insert([
-          {
-            property_id: propertyId,
-            type: utilityType,
-            amount: parseFloat(amount),
-            currency,
-            due_date: dueDate,
-            issued_date: issuedDate,
-            invoice_number: invoiceNumber || null,
-            status: "pending",
-            created_by: propertyData.landlord_id
-          }
-        ]);
+        .insert({
+          property_id: propertyId,
+          type: utilityType, // This is now properly typed
+          amount: parseFloat(amount),
+          currency,
+          due_date: dueDate,
+          issued_date: issuedDate,
+          invoice_number: invoiceNumber || null,
+          status: "pending",
+          created_by: propertyData.landlord_id
+        });
 
       if (error) throw error;
       
@@ -112,7 +113,7 @@ export function UtilityDialog({
             propertyId={propertyId}
             setPropertyId={setPropertyId}
             utilityType={utilityType}
-            setUtilityType={setUtilityType}
+            setUtilityType={(value) => setUtilityType(value as UtilityType)}
             amount={amount}
             setAmount={setAmount}
             currency={currency}

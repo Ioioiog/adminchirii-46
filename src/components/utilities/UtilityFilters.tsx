@@ -6,7 +6,7 @@ import { DateRange } from "react-day-picker";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 
 // Define utility types as a union type
-export type UtilityType = "all" | "electricity" | "gas" | "water" | "internet" | "building maintenance";
+export type UtilityType = "all" | "electricity" | "water" | "gas" | "internet" | "building maintenance";
 export type StatusType = "all" | "pending" | "paid" | "overdue";
 
 interface UtilityFiltersProps {

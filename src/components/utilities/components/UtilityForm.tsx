@@ -5,13 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Define utility type
-type UtilityType = 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
+export type UtilityType = 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
 
 interface UtilityFormProps {
   properties: Property[];
   propertyId: string;
   setPropertyId: (value: string) => void;
-  utilityType: string;
+  utilityType: UtilityType;
   setUtilityType: (value: string) => void;
   amount: string;
   setAmount: (value: string) => void;

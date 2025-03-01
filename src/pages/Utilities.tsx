@@ -31,6 +31,15 @@ export default function Utilities() {
   const { toast } = useToast();
   const { currentUserId, isAuthenticated, userRole } = useAuthState();
 
+  // Handlers for type-safe state updates
+  const handleUtilityTypeChange = (value: UtilityType) => {
+    setUtilityType(value);
+  };
+
+  const handleStatusChange = (value: StatusType) => {
+    setStatus(value);
+  };
+
   useEffect(() => {
     if (currentUserId) {
       fetchUtilities();
@@ -190,14 +199,6 @@ export default function Utilities() {
 
   const handleStatusUpdate = () => {
     fetchUtilities();
-  };
-
-  const handleUtilityTypeChange = (value: UtilityType) => {
-    setUtilityType(value);
-  };
-
-  const handleStatusChange = (value: StatusType) => {
-    setStatus(value);
   };
 
   return (
