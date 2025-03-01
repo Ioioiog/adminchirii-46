@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Edit2, Trash2 } from "lucide-react";
 import { ScrapingStatus } from "../ScrapingStatus";

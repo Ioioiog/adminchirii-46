@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { UtilityType } from "@/integrations/supabase/types/utility";
 
 interface MeterReading {
   id: string;
@@ -28,9 +29,6 @@ interface MeterReading {
     address: string;
   } | null;
 }
-
-// Update the reading type definition to include all utility types
-type ReadingType = "electricity" | "water" | "gas" | "internet" | "building maintenance";
 
 interface MeterReadingListProps {
   readings: MeterReading[];
