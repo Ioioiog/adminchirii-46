@@ -1566,6 +1566,45 @@ export type Database = {
         }
         Relationships: []
       }
+      property_handbook: {
+        Row: {
+          created_at: string | null
+          handbook_data: Json
+          id: string
+          property_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          handbook_data?: Json
+          id?: string
+          property_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          handbook_data?: Json
+          id?: string
+          property_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_handbook_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_handbook_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_details"
+            referencedColumns: ["property_id"]
+          },
+        ]
+      }
       scraping_jobs: {
         Row: {
           completed_at: string | null

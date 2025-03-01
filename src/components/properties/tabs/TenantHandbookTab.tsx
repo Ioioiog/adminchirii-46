@@ -79,7 +79,7 @@ export function TenantHandbookTab({ propertyId }: { propertyId: string }) {
         .from('property_handbook')
         .select('handbook_data')
         .eq('property_id', propertyId)
-        .single();
+        .maybeSingle();
       
       if (error) {
         console.error("Error fetching handbook data:", error);
