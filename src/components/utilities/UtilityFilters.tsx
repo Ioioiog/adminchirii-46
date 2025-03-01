@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DateRange } from "react-day-picker";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 
 interface UtilityFiltersProps {
   utilityType: string;
@@ -76,10 +76,9 @@ export function UtilityFilters({
       
       <div className="space-y-2">
         <Label>Date Range</Label>
-        <DateRangePicker
-          value={dateRange}
-          onChange={onDateRangeChange}
-          placeholder="Select date range"
+        <DatePickerWithRange
+          date={dateRange}
+          setDate={onDateRangeChange}
         />
       </div>
     </div>

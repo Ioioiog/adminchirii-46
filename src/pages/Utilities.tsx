@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/card";
 
 type UtilityType = "all" | "electricity" | "water" | "gas" | "internet" | "building maintenance";
@@ -32,29 +31,13 @@ export default function Utilities() {
   const [utilities, setUtilities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { currentUserId, isAuthenticated } = useAuthState();
-  // We need to get userRole from a different way since it's not in useAuthState
-  const [userRole, setUserRole] = useState<string>("tenant");
+  const { currentUserId, isAuthenticated, userRole } = useAuthState();
 
   useEffect(() => {
     if (currentUserId) {
-      // Fetch user role
-      const fetchUserRole = async () => {
-        const { data: profileData, error } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", currentUserId)
-          .single();
-          
-        if (!error && profileData) {
-          setUserRole(profileData.role);
-        }
-      };
-      
-      fetchUserRole();
       fetchUtilities();
     }
-  }, [currentUserId, utilityType, status, dateRange, activeTab]);
+  }, [currentUserId, utilityType, status, dateRange, activeTab, userRole]);
 
   const fetchUtilities = async () => {
     try {
@@ -174,20 +157,21 @@ export default function Utilities() {
 
   return (
     <div className="container mx-auto py-8">
-      <PageHeader
-        heading="Utility Bills"
-        subheading="Manage and track all your utility bills"
-      >
-        {userRole === "landlord" && (
-          <Button
-            className="ml-auto flex items-center gap-2"
-            onClick={handleAddUtility}
-          >
-            <PlusCircle className="h-4 w-4" />
-            Add Utility Bill
-          </Button>
-        )}
-      </PageHeader>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">Utility Bills</h1>
+        <p className="text-muted-foreground">Manage and track all your utility bills</p>
+        <div className="mt-4 flex justify-end">
+          {userRole === "landlord" && (
+            <Button
+              className="ml-auto flex items-center gap-2"
+              onClick={handleAddUtility}
+            >
+              <PlusCircle className="h-4 w-4" />
+              Add Utility Bill
+            </Button>
+          )}
+        </div>
+      </div>
 
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
         <div className="flex justify-between items-center mb-6">
@@ -305,10 +289,12 @@ export default function Utilities() {
         </TabsContent>
       </Tabs>
 
-      <UtilityDialog
-        properties={[]} // This needs to be filled with property data
-        onUtilityCreated={onDialogClose}
-      />
+      {isDialogOpen && (
+        <UtilityDialog
+          properties={[]} // This needs to be filled with property data
+          onUtilityCreated={onDialogClose}
+        />
+      )}
     </div>
   );
 }
