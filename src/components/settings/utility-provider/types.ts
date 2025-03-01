@@ -4,6 +4,7 @@ export interface UtilityProvider {
   provider_name: string;
   username: string;
   encrypted_password?: string;
+  password?: string;
   property_id?: string;
   property?: {
     name: string;
@@ -13,6 +14,9 @@ export interface UtilityProvider {
   start_day?: number;
   end_day?: number;
   location_name?: string;
+  landlord_id?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ScrapingJob {

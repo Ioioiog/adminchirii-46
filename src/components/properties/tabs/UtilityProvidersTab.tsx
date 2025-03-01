@@ -38,6 +38,7 @@ export function UtilityProvidersTab({ propertyId, userId }: UtilityProvidersTabP
   const fetchProviders = async () => {
     try {
       setLoading(true);
+      // Use the correct table name based on your schema
       const { data, error } = await supabase
         .from("utility_providers")
         .select("*")
@@ -93,6 +94,9 @@ export function UtilityProvidersTab({ propertyId, userId }: UtilityProvidersTabP
       const newProvider = {
         ...formData,
         property_id: propertyId,
+        landlord_id: userId,
+        start_day: formData.start_day ? parseInt(formData.start_day.toString()) : 1,
+        end_day: formData.end_day ? parseInt(formData.end_day.toString()) : 28
       };
 
       const { data, error } = await supabase
@@ -256,6 +260,38 @@ export function UtilityProvidersTab({ propertyId, userId }: UtilityProvidersTabP
                   placeholder="Optional location name"
                 />
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-4 items-center gap-2">
+                  <Label htmlFor="start_day" className="text-right col-span-2">
+                    Start Day
+                  </Label>
+                  <Input
+                    id="start_day"
+                    name="start_day"
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={formData.start_day || "1"}
+                    onChange={handleInputChange}
+                    className="col-span-2"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-2">
+                  <Label htmlFor="end_day" className="text-right col-span-2">
+                    End Day
+                  </Label>
+                  <Input
+                    id="end_day"
+                    name="end_day"
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={formData.end_day || "28"}
+                    onChange={handleInputChange}
+                    className="col-span-2"
+                  />
+                </div>
+              </div>
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsAddingProvider(false)}>
@@ -297,7 +333,10 @@ export function UtilityProvidersTab({ propertyId, userId }: UtilityProvidersTabP
               <Card key={provider.id} className="shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="flex justify-between items-center">
-                    <span>{provider.provider_name}</span>
+                    <span>
+                      {PROVIDER_OPTIONS.find(p => p.value === provider.provider_name)?.label || 
+                       provider.provider_name}
+                    </span>
                     <span className="text-sm px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
                       {provider.utility_type}
                     </span>
@@ -308,6 +347,7 @@ export function UtilityProvidersTab({ propertyId, userId }: UtilityProvidersTabP
                   {provider.location_name && (
                     <p className="text-sm text-gray-500">Location: {provider.location_name}</p>
                   )}
+                  <p className="text-sm text-gray-500">Reading Period: Day {provider.start_day || 1} - {provider.end_day || 28}</p>
                 </CardContent>
                 <CardFooter className="pt-2 flex justify-end">
                   <Button
