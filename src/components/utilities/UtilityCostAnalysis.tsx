@@ -111,7 +111,8 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
           monthlyData.push(monthData);
         }
 
-        setUtilityData(monthlyData);
+        // Sort data with newest months first
+        setUtilityData(monthlyData.reverse());
       } catch (err: any) {
         console.error("Error fetching utility data:", err);
         setError("Failed to load utility data. Please try again later.");
@@ -226,7 +227,7 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
             <div className="h-80 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={[...utilityData].reverse()}
+                  data={utilityData}
                   margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" />
@@ -259,7 +260,7 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {[...utilityData].reverse().map((month, index) => (
+                    {utilityData.map((month, index) => (
                       <tr key={index} className="border-b border-gray-200">
                         <td className="px-4 py-2">{month.month}</td>
                         <td className="px-4 py-2 text-right">{formatAmount(month.electricity, 'RON')}</td>
