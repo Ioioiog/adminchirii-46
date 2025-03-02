@@ -49,9 +49,13 @@ export function ScrapingStatus({
       return 'The scraping service returned invalid data. This is often due to provider website changes.';
     }
     
+    if (errorMessage.includes('Waiting for login navigation')) {
+      return 'The system timed out while waiting for the login page to respond after CAPTCHA. Please try again later.';
+    }
+
     if (errorMessage.includes('CAPTCHA')) {
       if (errorMessage.includes('submitted')) {
-        return 'CAPTCHA was submitted but the process was interrupted. Please try again.';
+        return 'CAPTCHA was submitted but the login process timed out. Please try again.';
       }
       return 'The provider website has CAPTCHA protection which could not be solved automatically.';
     }
@@ -61,7 +65,7 @@ export function ScrapingStatus({
     }
     
     if (errorMessage.includes('function is shutdown')) {
-      return 'The scraping process was interrupted. This may be due to a timeout or resource limitation.';
+      return 'The scraping process was interrupted. This may be due to the provider website taking too long to respond.';
     }
     
     if (errorMessage.includes('Change consumption location') || errorMessage.includes('Schimbă locul de consum')) {
@@ -69,7 +73,7 @@ export function ScrapingStatus({
     }
     
     if (errorMessage.includes('cookie') || errorMessage.includes('session')) {
-      return 'Session management issue detected. Provider website may have expired your session. Please try again later.';
+      return 'Session management issue detected. Provider website may have expired your session. Please try clearing cookies and try again.';
     }
     
     return errorMessage;

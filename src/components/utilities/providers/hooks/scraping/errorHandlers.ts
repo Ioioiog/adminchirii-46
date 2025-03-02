@@ -48,14 +48,16 @@ export function formatErrorMessage(error: unknown): string {
       errorMessage = "Required module is missing. Please contact support to fix the scraper implementation.";
     } else if (error.message.includes("CAPTCHA submitted")) {
       errorMessage = "The CAPTCHA was successfully submitted, but the process was interrupted afterward. Please try again.";
+    } else if (error.message.includes("Waiting for login navigation") || error.message.includes("navigation timeout")) {
+      errorMessage = "The system timed out while waiting for the login page to respond after CAPTCHA. The provider website may be slow to respond. Please try again later.";
     } else if (error.message.includes("reCAPTCHA") || error.message.includes("captcha")) {
       errorMessage = "The provider's website requires CAPTCHA verification which cannot be automated. Please log in to the provider's website directly.";
     } else if (error.message.includes("SyntaxError: Unexpected end of JSON")) {
       errorMessage = "The provider website returned incomplete data. This is often due to a timeout or interrupted connection. Please try again.";
     } else if (error.message.includes("cookie") || error.message.includes("session")) {
-      errorMessage = "Session management issue with the provider website. This might be due to expired cookies or session timeout. Please try again later.";
+      errorMessage = "Session management issue with the provider website. This might be due to expired cookies or session timeout. Please try clearing your browser cookies and try again later.";
     } else if (error.message.includes("Change consumption location") || error.message.includes("Schimbă locul de consum")) {
-      errorMessage = "Failed while selecting consumption location. This may be due to session or cookie issues. Please try again later.";
+      errorMessage = "Failed while selecting consumption location. This is a common issue with the ENGIE Romania website. Please try again later or log in directly to the provider website.";
     }
   }
   
@@ -111,8 +113,12 @@ export function formatEdgeFunctionError(errorMessage: string | undefined): strin
     return "The scraping process was interrupted. This is often due to reaching the function's maximum execution time or session cookies. Please try again.";
   }
   
+  if (errorMessage.includes("Waiting for login navigation") || errorMessage.includes("navigation timeout")) {
+    return "The system timed out while waiting for the login page to respond after CAPTCHA. The provider website may be slow or experiencing high traffic. Please try again later.";
+  }
+  
   if (errorMessage.includes("CAPTCHA submitted")) {
-    return "The CAPTCHA was successfully submitted, but the process was interrupted. Please try again.";
+    return "The CAPTCHA was successfully submitted, but the process was interrupted. This often happens when the provider website is slow to respond. Please try again.";
   }
   
   if (errorMessage.includes("Unsupported provider")) {
@@ -140,11 +146,11 @@ export function formatEdgeFunctionError(errorMessage: string | undefined): strin
   }
   
   if (errorMessage.includes("cookie") || errorMessage.includes("session")) {
-    return "Session management issue with the provider website. This might be due to expired cookies or session timeout. Please try again later.";
+    return "Session management issue with the provider website. This might be due to expired cookies or session timeout. Please try clearing your browser cookies and try again later.";
   }
   
   if (errorMessage.includes("Change consumption location") || errorMessage.includes("Schimbă locul de consum")) {
-    return "Failed while selecting consumption location. This may be due to session or cookie issues. Please try again later.";
+    return "The scraping process failed during consumption location selection. This is a common issue with the ENGIE Romania website. Please try again later or log in manually to the provider website.";
   }
   
   return errorMessage;
@@ -170,9 +176,13 @@ export function isEdgeFunctionError(error: unknown): boolean {
            error.message.includes("function is shutdown") ||
            error.message.includes("interrupted") ||
            error.message.includes("CAPTCHA submitted") ||
+           error.message.includes("Waiting for login navigation") ||
+           error.message.includes("navigation timeout") ||
            error.message.includes("SyntaxError: Unexpected end of JSON") ||
            error.message.includes("cookie") ||
-           error.message.includes("session");
+           error.message.includes("session") ||
+           error.message.includes("Change consumption location") ||
+           error.message.includes("Schimbă locul de consum");
   }
   return false;
 }

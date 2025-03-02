@@ -35,17 +35,29 @@ export function useJobStatusManager() {
       console.log('Job status:', job.status);
       console.log('Job error message:', job.error_message || 'None');
       
-      // Check if the job shows signs of being interrupted after CAPTCHA
+      // Check for navigation timeout after CAPTCHA
       if (job.status === 'failed' && 
+          job.error_message && 
+          (job.error_message.includes('Waiting for login navigation') || 
+           job.error_message.includes('navigation timeout'))) {
+        console.log('Job failed due to navigation timeout after CAPTCHA, special handling');
+        
+        updateJobStatus(providerId, {
+          status: 'failed',
+          last_run_at: job.created_at,
+          error_message: 'Login navigation timed out after CAPTCHA submission. The provider website may be slow or experiencing high traffic. Please try again later.'
+        });
+      } 
+      // Check if the job shows signs of being interrupted after CAPTCHA
+      else if (job.status === 'failed' && 
           job.error_message && 
           job.error_message.includes('CAPTCHA submitted')) {
         console.log('Job failed after CAPTCHA submission, special handling');
         
-        // Update with a more specific error message
         updateJobStatus(providerId, {
           status: 'failed',
           last_run_at: job.created_at,
-          error_message: 'CAPTCHA was submitted but the process was interrupted. Please try again.'
+          error_message: 'CAPTCHA was submitted but the process was interrupted afterward. This often happens when the provider website is slow to respond after login. Please try again.'
         });
       } 
       // Check for cookie or session issues
@@ -57,7 +69,20 @@ export function useJobStatusManager() {
         updateJobStatus(providerId, {
           status: 'failed',
           last_run_at: job.created_at,
-          error_message: 'Session management issue with the provider website. Please try again later.'
+          error_message: 'Session management issue with the provider website. This might be due to expired cookies or provider session restrictions. Try clearing your browser cookies and try again later.'
+        });
+      }
+      // Check for "Change consumption location" dialog issues
+      else if (job.status === 'failed' && 
+          job.error_message && 
+          (job.error_message.includes('Change consumption location') || 
+           job.error_message.includes('Schimbă locul de consum'))) {
+        console.log('Job failed due to consumption location selection, special handling');
+        
+        updateJobStatus(providerId, {
+          status: 'failed',
+          last_run_at: job.created_at,
+          error_message: 'The scraping process failed during consumption location selection. This is a common issue with the ENGIE Romania website and often requires manual login. Please try again later or log in directly to the provider website.'
         });
       }
       else {
@@ -107,12 +132,23 @@ export function useJobStatusManager() {
           if (job?.error_message) {
             console.error('Scraping job failed with error:', job.error_message);
             
+            // Handle navigation timeout after CAPTCHA
+            if (job.error_message.includes('Waiting for login navigation') || 
+                job.error_message.includes('navigation timeout')) {
+              errorDescription = "The system timed out while waiting for the login page to respond after CAPTCHA submission. The provider website may be slow or experiencing high traffic. Please try again later.";
+            }
             // Handle CAPTCHA specific errors
-            if (job.error_message.includes('CAPTCHA submitted')) {
-              errorDescription = "The CAPTCHA was successfully submitted, but the process was interrupted afterward. This could be due to a timeout. Please try again.";
-            } else if (job.error_message.includes('cookie') || job.error_message.includes('session')) {
-              errorDescription = "Session management issue with the provider website. This might be due to expired cookies or session timeout. Please try again later.";
-            } else {
+            else if (job.error_message.includes('CAPTCHA submitted')) {
+              errorDescription = "The CAPTCHA was successfully submitted, but the process was interrupted afterward. This could be due to the provider's website being slow to respond. Please try again.";
+            } 
+            else if (job.error_message.includes('cookie') || job.error_message.includes('session')) {
+              errorDescription = "Session management issue with the provider website. This might be due to expired cookies or session timeout. Please try clearing your browser cookies and try again later.";
+            }
+            else if (job.error_message.includes('Change consumption location') || 
+                     job.error_message.includes('Schimbă locul de consum')) {
+              errorDescription = "The process failed during consumption location selection. This is a common issue with the ENGIE Romania website. Please try again later or log in manually to the provider website.";
+            }
+            else {
               errorDescription = formatEdgeFunctionError(job.error_message);
             }
             
@@ -129,8 +165,6 @@ export function useJobStatusManager() {
               errorDescription = "The request to the provider website timed out. This could be due to slow internet or the website being temporarily down.";
             } else if (job.error_message.includes("function is shutdown") || job.error_message.includes("interrupted")) {
               errorDescription = "The scraping process was interrupted. This may be due to exceeding the function execution time limit. Please try again.";
-            } else if (job.error_message.includes("Change consumption location") || job.error_message.includes("Schimbă locul de consum")) {
-              errorDescription = "Failed while selecting consumption location. This may be due to session or cookie issues. Please try again later.";
             }
           }
           
