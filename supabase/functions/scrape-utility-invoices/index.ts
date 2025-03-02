@@ -1,133 +1,147 @@
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
-import { scrapeEngieRomania } from './scrapers/engie-romania.ts';
+import { serve } from "std/server";
+import { createClient } from "@supabase/supabase-js";
+import { SELECTORS, JOB_STATUS } from "./scrapers/constants";
+import { scrapeEngieRomania } from "./scrapers/engie-romania";
 
+// Set up CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface RequestBody {
-  username: string;
-  password: string;
-  utilityId: string;
-  provider: string;
-  type: string;
-  location: string;
-}
+// Create a Supabase client
+const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, {
+      headers: corsHeaders,
+      status: 204,
+    });
+  }
+  
+  // Get the Browserless API key from environment variables
+  const browserlessApiKey = Deno.env.get("BROWSERLESS_API_KEY");
+  if (!browserlessApiKey) {
+    console.error("BROWSERLESS_API_KEY environment variable is not set");
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "BROWSERLESS_API_KEY is not configured"
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      }
+    );
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const browserlessApiKey = Deno.env.get('BROWSERLESS_API_KEY');
-
-    if (!browserlessApiKey) {
-      console.error('BROWSERLESS_API_KEY is not set in environment variables');
+    // Parse the request body
+    const { username, password, utilityId, provider, type, location } = await req.json();
+    
+    if (!username || !password || !utilityId) {
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'BROWSERLESS_API_KEY is not configured. Please set this in your environment variables.' 
+        JSON.stringify({
+          success: false,
+          error: "Missing required parameters: username, password, or utilityId"
         }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
         }
       );
     }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
     
-    const requestData: RequestBody = await req.json();
-    console.log('Received request for provider:', requestData.provider);
-    
-    // Create a scraping job record
-    const { data: jobData, error: jobError } = await supabase
+    // Create a job record
+    const { data: job, error: jobError } = await supabase
       .from('scraping_jobs')
       .insert({
-        utility_provider_id: requestData.utilityId,
-        status: 'in_progress',
-        provider: requestData.provider,
-        type: requestData.type,
-        location: requestData.location
+        utility_provider_id: utilityId,
+        status: JOB_STATUS.IN_PROGRESS,
+        provider,
+        type,
+        location
       })
       .select('id')
       .single();
     
     if (jobError) {
-      console.error('Error creating scraping job record:', jobError);
+      console.error('Error creating job record:', jobError);
       return new Response(
-        JSON.stringify({ success: false, error: 'Failed to create scraping job record' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500
+        JSON.stringify({
+          success: false,
+          error: "Could not create job record"
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500,
         }
       );
     }
     
-    const jobId = jobData.id;
-    console.log('Created scraping job:', jobId);
-    
-    // Run the scraping in the background to avoid timeout
+    // Start the scraping process asynchronously
     (async () => {
       try {
-        // Handle different providers
-        let invoices = [];
-        
-        if (requestData.provider.toLowerCase().includes('engie')) {
-          console.log('Scraping ENGIE Romania...');
-          invoices = await scrapeEngieRomania(
-            { 
-              username: requestData.username, 
-              password: requestData.password 
-            },
+        // Determine which scraper to use based on provider
+        if (provider === 'ENGIE Romania' || provider.toLowerCase().includes('engie')) {
+          console.log('Starting ENGIE Romania scraper...');
+          const invoices = await scrapeEngieRomania(
+            { username, password },
             browserlessApiKey
           );
+          
+          // Update job with success status
+          await supabase
+            .from('scraping_jobs')
+            .update({
+              status: JOB_STATUS.COMPLETED,
+              result: { invoices },
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', job.id);
+            
+          console.log('Scraping completed successfully for job:', job.id);
         } else {
-          throw new Error(`Unsupported provider: ${requestData.provider}`);
+          // Update job with error for unsupported provider
+          await supabase
+            .from('scraping_jobs')
+            .update({
+              status: JOB_STATUS.FAILED,
+              error_message: "Unsupported provider: " + provider,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', job.id);
+            
+          console.error('Unsupported provider:', provider);
         }
-        
-        console.log(`Successfully scraped ${invoices.length} invoices`);
-        
-        // Update the job record with the results
-        await supabase
-          .from('scraping_jobs')
-          .update({ 
-            status: 'completed',
-            result: { invoices },
-            completed_at: new Date().toISOString()
-          })
-          .eq('id', jobId);
-          
-        console.log('Updated job status to completed');
       } catch (error) {
-        console.error('Error processing job', jobId, ':', error);
+        console.error('Error processing job', job.id + ':', error);
         
-        // Update the job record with the error
+        // Update job with error status
         await supabase
           .from('scraping_jobs')
-          .update({ 
-            status: 'failed',
-            error_message: error.message,
-            completed_at: new Date().toISOString()
+          .update({
+            status: JOB_STATUS.FAILED,
+            error_message: error instanceof Error ? error.message : 'Unknown error',
+            updated_at: new Date().toISOString()
           })
-          .eq('id', jobId);
-          
-        console.error('Updated job status to failed:', error.message);
+          .eq('id', job.id);
       }
     })();
     
-    // Return immediate success response with the job ID
+    // Immediately return the job ID to the client
     return new Response(
-      JSON.stringify({ success: true, jobId }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      JSON.stringify({
+        success: true,
+        jobId: job.id
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200
       }
     );
@@ -135,9 +149,12 @@ serve(async (req) => {
     console.error('Unhandled error:', error);
     
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : 'An unexpected error occurred'
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500
       }
     );

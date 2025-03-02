@@ -1,6 +1,9 @@
 
-# Supabase Edge Function configuration
+# The project_id should be the first entry in this file
 project_id = "wecmvyohaxizmnhuvjly"
-# Add necessary secrets
-[secrets]
-BROWSERLESS_API_KEY = "your_browserless_api_key"
+
+# All inbound traffic will be reject
+block_all_inbound = false
+
+# You'll need these secrets to invoke Browserless
+allowed_external_http_hosts = ["chrome.browserless.io"]

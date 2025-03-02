@@ -1,5 +1,5 @@
 
-import { SELECTORS } from './constants';
+import { SELECTORS, DEFAULT_TIMEOUT, DEFAULT_WAIT_TIME } from './constants';
 
 interface EngieCredentials {
   username: string;
@@ -37,39 +37,15 @@ export async function scrapeEngieRomania(
     // Define the Browserless API endpoint
     const browserlessEndpoint = 'https://chrome.browserless.io/content';
     
-    // We'll separate the stealth and delay settings from the main options
+    // We'll extract selectors for easier access
+    const selectors = SELECTORS.ENGIE_ROMANIA;
+    
+    // Define the browser automation script that will be executed
     const content = `
       const { username, password } = ${JSON.stringify({ username, password })};
       
       // Selectors for the ENGIE Romania website
-      const selectors = ${JSON.stringify(SELECTORS.ENGIE_ROMANIA || {
-        // Login selectors
-        loginForm: 'form[action*="login"]',
-        usernameField: '#username',
-        passwordField: '#password',
-        loginButton: 'button.nj-btn.nj-btn--primary',
-        errorMessage: '.error-message, .alert-danger',
-        
-        // Cookie consent selectors
-        cookieConsentModal: '#responsive-cookies-consent-modal___BV_modal_outer_',
-        acceptCookiesButton: 'button#cookieConsentBtnRight',
-        alternativeAcceptButton: 'button[class*="cookie"][class*="accept"], button:contains("Acceptă toate")',
-        
-        // Invoice table selectors
-        invoiceTable: 'table.nj-table.nj-table--cards',
-        tableRows: 'table.nj-table.nj-table--cards tbody tr',
-        tableCells: 'td',
-        pdfDownloadLink: 'a[href*="facturi"][href*=".pdf"], a[href*="invoice"][href*=".pdf"]',
-        specificInvoiceLink: 'a[title="Descarcă factura ${invoiceNumber}"]',
-        
-        // Popup handling selectors
-        popupCloseButtons: 'button.close, .myengie-popup-close, button.myengie-close',
-        
-        // CAPTCHA elements
-        recaptchaIframe: 'iframe[title="reCAPTCHA"]',
-        recaptchaResponse: 'textarea[name="g-recaptcha-response"]',
-        defaultCaptchaSiteKey: '6LeqYkkgAAAAAGa5Jl5qmTHK_Nl4_40-YfU4NN71'
-      })};
+      const selectors = ${JSON.stringify(selectors)};
       
       console.log('Starting browser automation for ENGIE Romania');
       
@@ -273,10 +249,10 @@ export async function scrapeEngieRomania(
       url: 'https://client.engie.ro/login',
       gotoOptions: {
         waitUntil: 'networkidle0',
-        timeout: 60000
+        timeout: DEFAULT_TIMEOUT
       },
       html: content,
-      waitFor: 30000,
+      waitFor: DEFAULT_WAIT_TIME,
     };
     
     console.log('Sending request to Browserless...');
