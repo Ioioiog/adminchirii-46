@@ -99,6 +99,8 @@ export function useJobStatusManager() {
               errorDescription = "The request to the provider website timed out. This could be due to slow internet or the website being temporarily down.";
             } else if (job.error_message.includes("Authentication failed")) {
               errorDescription = "The provider login credentials were rejected. Please check your username and password.";
+            } else if (job.error_message.includes("elements is not allowed")) {
+              errorDescription = "There is a configuration issue with the Browserless API. Please contact your administrator to update the scraper.";
             }
           }
           

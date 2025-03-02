@@ -147,6 +147,11 @@ export async function invokeScrapingFunction(
       }
     }
     
+    if (error instanceof Error && error.message.includes("elements is not allowed")) {
+      console.error('Browserless API configuration error detected:', error);
+      throw new Error('There is a configuration issue with the scraping service. The Browserless API needs to be updated. Please contact support.');
+    }
+    
     // Rethrow the original error if it's not an edge function error
     throw error;
   }

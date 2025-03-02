@@ -1,3 +1,4 @@
+
 import { useToast } from "@/hooks/use-toast";
 
 /**
@@ -9,6 +10,8 @@ export function formatErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     if (error.message.includes("400 Bad Request")) {
       errorMessage = "The request to the utility provider's website was invalid. Please check your Browserless API key.";
+    } else if (error.message.includes("elements is not allowed")) {
+      errorMessage = "The scraping service needs to be updated. Please contact your administrator to update the Browserless configuration.";
     } else if (error.message.includes("status code 500") || error.message.includes("non-2xx status")) {
       errorMessage = "The utility provider service is currently unavailable. Please try again later.";
     } else if (error.message.includes("function")) {
@@ -31,6 +34,8 @@ export function formatErrorMessage(error: unknown): string {
       errorMessage = "The login selectors for this provider need to be updated. Please contact support.";
     } else if (error.message.includes("options is not allowed") || error.message.includes("\"options\" is not allowed")) {
       errorMessage = "The Browserless API configuration is invalid. Please contact support to update the scraper.";
+    } else if (error.message.includes("\"elements\" is not allowed")) {
+      errorMessage = "The Browserless API configuration needs to be updated. Please contact support.";
     } else if (error.message.includes("\"url\" is required")) {
       errorMessage = "The scraper configuration is missing a required URL parameter. Please contact support.";
     } else if (error.message.includes("Module not found")) {
@@ -73,6 +78,10 @@ export function formatEdgeFunctionError(errorMessage: string | undefined): strin
   }
   
   if (errorMessage.includes("options is not allowed") || errorMessage.includes("\"options\" is not allowed")) {
+    return "The scraper needs updating. There's an issue with the Browserless API configuration.";
+  }
+  
+  if (errorMessage.includes("\"elements\" is not allowed")) {
     return "The scraper needs updating. There's an issue with the Browserless API configuration.";
   }
   
@@ -119,6 +128,7 @@ export function isEdgeFunctionError(error: unknown): boolean {
            error.message.includes("400 Bad Request") ||
            error.message.includes("options is not allowed") ||
            error.message.includes("\"options\" is not allowed") ||
+           error.message.includes("\"elements\" is not allowed") ||
            error.message.includes("\"url\" is required") ||
            error.message.includes("usernameSelector is not defined") ||
            error.message.includes("Module not found");
