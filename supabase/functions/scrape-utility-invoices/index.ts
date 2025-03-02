@@ -35,10 +35,10 @@ serve(async (req) => {
     
     // Parse request body
     const requestData = await req.json();
-    const { username, password, provider_id, provider, type, location } = requestData;
+    const { username, password, utilityId, provider, type, location } = requestData;
 
-    if (!username || !password || !provider_id) {
-      throw new Error('Username, password, and provider_id are required');
+    if (!username || !password || !utilityId) {
+      throw new Error('Username, password, and utilityId are required');
     }
     
     console.log(`Starting scraping for provider: ${provider}`);
@@ -47,7 +47,7 @@ serve(async (req) => {
     const { data: jobData, error: jobError } = await supabase
       .from('scraping_jobs')
       .insert({
-        utility_provider_id: provider_id,
+        utility_provider_id: utilityId,
         status: 'in_progress',
         provider: provider,
         type: type,
@@ -69,7 +69,7 @@ serve(async (req) => {
         let invoices = [];
         
         // Select the appropriate scraper based on the provider
-        if (provider.toUpperCase().includes('ENGIE')) {
+        if (provider && provider.toUpperCase().includes('ENGIE')) {
           invoices = await scrapeEngieRomania(
             { username, password },
             browserlessApiKey,
@@ -84,7 +84,7 @@ serve(async (req) => {
         // Process and store the invoices
         if (invoices.length > 0) {
           const processedInvoices = invoices.map(invoice => ({
-            property_id: provider_id,
+            property_id: utilityId,
             type: type || invoice.type,
             amount: invoice.amount,
             currency: 'RON',

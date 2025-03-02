@@ -1,2 +1,6 @@
 
-export { scrapeEngieRomania } from "./engie-romania.ts";
+import { scrapeEngieRomania } from "./engie-romania.ts";
+
+export {
+  scrapeEngieRomania
+};

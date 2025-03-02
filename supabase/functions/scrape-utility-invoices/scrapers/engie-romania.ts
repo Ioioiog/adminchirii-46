@@ -13,7 +13,7 @@ interface Invoice {
   invoice_number: string;
   type: string;
   status: string;
-  pdf_url: string;
+  pdf_url?: string;
 }
 
 /**
