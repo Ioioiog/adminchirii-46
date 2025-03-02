@@ -1,50 +1,50 @@
 
 /**
- * Status constants for scraping jobs
+ * Constants for the scraping operations
  */
+
+// Job status constants
 export const JOB_STATUS = {
   PENDING: 'pending',
   IN_PROGRESS: 'in_progress',
   COMPLETED: 'completed',
-  FAILED: 'failed'
+  FAILED: 'failed',
 };
 
-/**
- * Selectors for various website elements used in scrapers
- */
+// ENGIE Romania website selectors
 export const SELECTORS = {
   ENGIE_ROMANIA: {
-    // Login selectors
-    loginForm: 'form[action*="login"]',
-    usernameField: '#username',
-    passwordField: '#password',
-    loginButton: 'button.nj-btn.nj-btn--primary',
-    errorMessage: '.error-message, .alert-danger',
-    
-    // Cookie consent selectors
-    cookieConsentModal: '#responsive-cookies-consent-modal___BV_modal_outer_',
-    acceptCookiesButton: 'button#cookieConsentBtnRight',
-    alternativeAcceptButton: 'button[class*="cookie"][class*="accept"], button:contains("Acceptă toate")',
-    
-    // Invoice table selectors
-    invoiceTable: 'table.nj-table.nj-table--cards',
-    tableRows: 'table.nj-table.nj-table--cards tbody tr',
-    tableCells: 'td',
-    pdfDownloadLink: 'a[href*="facturi"][href*=".pdf"], a[href*="invoice"][href*=".pdf"]',
-    specificInvoiceLink: 'a[title="Descarcă factura ${invoiceNumber}"]',
-    
-    // Popup handling selectors
-    popupCloseButtons: 'button.close, .myengie-popup-close, button.myengie-close',
-    
-    // CAPTCHA elements
-    recaptchaIframe: 'iframe[title="reCAPTCHA"]',
-    recaptchaResponse: 'textarea[name="g-recaptcha-response"]',
-    defaultCaptchaSiteKey: '6LeqYkkgAAAAAGa5Jl5qmTHK_Nl4_40-YfU4NN71'
-  }
+    LOGIN_PAGE: 'https://agentiaonline.engie.ro/Account/Login',
+    USERNAME_SELECTOR: '#Email',
+    PASSWORD_SELECTOR: '#Password',
+    LOGIN_BUTTON: 'button[type="submit"]',
+    INVOICES_PAGE: 'https://agentiaonline.engie.ro/InformatiiFacturi/Facturi',
+    INVOICE_TABLE: 'table.table',
+    INVOICE_ROW: 'tbody tr',
+    INVOICE_NUMBER: 'td:nth-child(1)',
+    INVOICE_DATE: 'td:nth-child(2)',
+    INVOICE_AMOUNT: 'td:nth-child(3)',
+    INVOICE_DUE_DATE: 'td:nth-child(4)',
+    INVOICE_STATUS: 'td:nth-child(5)',
+    COOKIE_CONSENT: '#CookieScriptDeclineButton',
+    ERROR_MESSAGE: '.validation-summary-errors',
+  },
+  // Add other utility providers here as needed
 };
 
-// Default timeout for browser operations
-export const DEFAULT_TIMEOUT = 60000; // 60 seconds
+// Browserless API constants
+export const BROWSERLESS = {
+  API_URL: 'https://chrome.browserless.io',
+  TIMEOUT: 60000, // 60 seconds
+  VIEWPORT: {
+    width: 1366,
+    height: 768,
+  },
+};
 
-// Default wait time for page loading
-export const DEFAULT_WAIT_TIME = 5000; // 5 seconds
+// General scraping constants
+export const SCRAPING = {
+  WAIT_TIME: 5000, // 5 seconds
+  RETRY_ATTEMPTS: 3,
+  RETRY_DELAY: 2000, // 2 seconds
+};

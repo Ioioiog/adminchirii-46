@@ -34,6 +34,8 @@ export function formatErrorMessage(error: unknown): string {
       errorMessage = "The Browserless API configuration is invalid. Please contact support to update the scraper.";
     } else if (error.message.includes("\"url\" is required")) {
       errorMessage = "The scraper configuration is missing a required URL parameter. Please contact support.";
+    } else if (error.message.includes("\"options\" is not allowed")) {
+      errorMessage = "The Browserless API configuration has invalid options. Please contact support to update the scraper.";
     }
   }
   
@@ -69,7 +71,7 @@ export function formatEdgeFunctionError(errorMessage: string | undefined): strin
     return "The request to Browserless was invalid. Please check your Browserless API key.";
   }
   
-  if (errorMessage.includes("options is not allowed")) {
+  if (errorMessage.includes("options is not allowed") || errorMessage.includes("\"options\" is not allowed")) {
     return "The scraper needs updating. There's an issue with the Browserless API configuration.";
   }
   
@@ -107,6 +109,7 @@ export function isEdgeFunctionError(error: unknown): boolean {
            error.message.includes("provider's website") ||
            error.message.includes("400 Bad Request") ||
            error.message.includes("options is not allowed") ||
+           error.message.includes("\"options\" is not allowed") ||
            error.message.includes("\"url\" is required") ||
            error.message.includes("usernameSelector is not defined");
   }

@@ -1,211 +1,157 @@
 
-import { SELECTORS, DEFAULT_TIMEOUT, DEFAULT_WAIT_TIME } from "./constants";
+import { SELECTORS, BROWSERLESS, SCRAPING } from "./constants";
 
-/**
- * Interface for credentials
- */
 interface Credentials {
   username: string;
   password: string;
 }
 
-/**
- * Interface for invoice data
- */
 interface Invoice {
-  number: string;
-  date: string;
+  invoice_number: string;
+  issued_date: string;
   amount: number;
-  currency: string;
-  pdf_url?: string;
+  due_date: string;
+  status: string;
 }
 
 /**
- * Scrapes ENGIE Romania website for invoice data
- * 
- * @param credentials User credentials
- * @param browserlessApiKey API key for browserless.io
- * @returns Array of invoice objects
+ * Scraper for ENGIE Romania utility bills
  */
 export async function scrapeEngieRomania(
-  credentials: Credentials,
+  credentials: Credentials, 
   browserlessApiKey: string
 ): Promise<Invoice[]> {
-  console.log('Starting ENGIE Romania scraper...');
+  console.log('Starting ENGIE Romania scraper');
   
-  // Validate input
-  if (!credentials.username || !credentials.password) {
-    throw new Error('Username and password are required');
-  }
+  // Define the selectors for ENGIE Romania
+  const selectors = SELECTORS.ENGIE_ROMANIA;
   
-  if (!browserlessApiKey) {
-    throw new Error('Browserless API key is required');
-  }
-  
-  try {
-    // Construct the API URL for browserless
-    const browserlessUrl = `https://chrome.browserless.io/content?token=${browserlessApiKey}`;
-    
-    // Prepare the request
-    const browser_script = `
-      const selectors = ${JSON.stringify(SELECTORS.ENGIE_ROMANIA)};
-      
-      async function run() {
-        // Handle cookie consent if it appears
+  // Create the request payload for Browserless
+  const payload = {
+    url: selectors.LOGIN_PAGE,
+    // Remove the options that cause the error
+    // options: {
+    //   delay: 300,
+    //   stealth: true,
+    // },
+    cookies: [],
+    gotoOptions: {
+      waitUntil: 'networkidle2',
+      timeout: BROWSERLESS.TIMEOUT,
+    },
+    viewport: BROWSERLESS.VIEWPORT,
+    code: `
+      async ({page, context}) => {
         try {
-          const cookieConsentModal = document.querySelector(selectors.cookieConsentModal);
-          if (cookieConsentModal) {
-            console.log('Cookie consent modal detected');
-            const acceptButton = document.querySelector(selectors.acceptCookiesButton) || 
-                               document.querySelector(selectors.alternativeAcceptButton);
-            if (acceptButton) {
-              console.log('Clicking accept cookies button');
-              acceptButton.click();
-              await new Promise(r => setTimeout(r, 1000));
-            }
-          }
-        } catch (e) {
-          console.log('Error handling cookie consent:', e);
-        }
-        
-        // Close any popups that might appear
-        try {
-          const popupButtons = document.querySelectorAll(selectors.popupCloseButtons);
-          if (popupButtons.length > 0) {
-            console.log('Found popup(s), closing...');
-            popupButtons.forEach(button => button.click());
-            await new Promise(r => setTimeout(r, 1000));
-          }
-        } catch (e) {
-          console.log('Error closing popups:', e);
-        }
-        
-        // Find login form
-        const loginForm = document.querySelector(selectors.loginForm);
-        if (!loginForm) {
-          throw new Error('Login form not found');
-        }
-        
-        // Fill in credentials
-        console.log('Filling in login credentials');
-        const usernameField = document.querySelector(selectors.usernameField);
-        const passwordField = document.querySelector(selectors.passwordField);
-        
-        if (!usernameField || !passwordField) {
-          throw new Error('Username or password field not found');
-        }
-        
-        usernameField.value = '${credentials.username}';
-        passwordField.value = '${credentials.password}';
-        
-        // Submit login form
-        console.log('Submitting login form');
-        const loginButton = document.querySelector(selectors.loginButton);
-        if (!loginButton) {
-          throw new Error('Login button not found');
-        }
-        
-        loginButton.click();
-        
-        // Wait for navigation to complete (adjust timeout as needed)
-        await new Promise(r => setTimeout(r, 5000));
-        
-        // Check for login errors
-        const errorElement = document.querySelector(selectors.errorMessage);
-        if (errorElement && errorElement.textContent.trim()) {
-          throw new Error('Login failed: ' + errorElement.textContent.trim());
-        }
-        
-        // Wait for invoice table to load
-        console.log('Waiting for invoice table to load');
-        await new Promise(r => setTimeout(r, 3000));
-        
-        // Find invoice table
-        const invoiceTable = document.querySelector(selectors.invoiceTable);
-        if (!invoiceTable) {
-          throw new Error('Invoice table not found');
-        }
-        
-        // Extract invoice data
-        console.log('Extracting invoice data');
-        const invoiceRows = document.querySelectorAll(selectors.tableRows);
-        
-        const invoices = [];
-        
-        for (let i = 0; i < invoiceRows.length; i++) {
-          const row = invoiceRows[i];
-          const cells = row.querySelectorAll(selectors.tableCells);
+          console.log('Page loaded');
           
-          if (cells.length >= 4) {
-            const invoiceNumber = cells[0]?.textContent?.trim() || '';
-            const invoiceDate = cells[1]?.textContent?.trim() || '';
-            const amountText = cells[2]?.textContent?.trim() || '0';
-            
-            // Extract amount and currency
-            const amountMatch = amountText.match(/([0-9.,]+)\\s*([A-Za-z]+)/);
-            let amount = 0;
-            let currency = 'RON';
-            
-            if (amountMatch && amountMatch.length >= 3) {
-              amount = parseFloat(amountMatch[1].replace(',', '.'));
-              currency = amountMatch[2];
+          // Check for and dismiss cookie consent if it exists
+          try {
+            if (await page.$(${JSON.stringify(selectors.COOKIE_CONSENT)})) {
+              await page.click(${JSON.stringify(selectors.COOKIE_CONSENT)});
+              console.log('Cookie consent dismissed');
             }
-            
-            // Get PDF link if available
-            let pdfUrl = '';
-            const pdfLink = row.querySelector(selectors.pdfDownloadLink);
-            if (pdfLink && pdfLink.getAttribute('href')) {
-              pdfUrl = pdfLink.getAttribute('href');
-              if (!pdfUrl.startsWith('http')) {
-                pdfUrl = new URL(pdfUrl, window.location.origin).href;
-              }
-            }
-            
-            invoices.push({
-              number: invoiceNumber,
-              date: invoiceDate,
-              amount: amount,
-              currency: currency,
-              pdf_url: pdfUrl
-            });
+          } catch (e) {
+            console.log('No cookie consent found or error dismissing it', e);
           }
+          
+          // Fill in login credentials
+          await page.type(${JSON.stringify(selectors.USERNAME_SELECTOR)}, ${JSON.stringify(credentials.username)});
+          await page.type(${JSON.stringify(selectors.PASSWORD_SELECTOR)}, ${JSON.stringify(credentials.password)});
+          
+          // Click login button
+          await Promise.all([
+            page.click(${JSON.stringify(selectors.LOGIN_BUTTON)}),
+            page.waitForNavigation({waitUntil: 'networkidle2', timeout: ${BROWSERLESS.TIMEOUT}}),
+          ]);
+          
+          // Check for login errors
+          const errorElement = await page.$(${JSON.stringify(selectors.ERROR_MESSAGE)});
+          if (errorElement) {
+            const errorText = await page.evaluate(el => el.textContent, errorElement);
+            throw new Error('Login failed: ' + errorText);
+          }
+          
+          // Navigate to invoices page
+          await page.goto(${JSON.stringify(selectors.INVOICES_PAGE)}, {
+            waitUntil: 'networkidle2',
+            timeout: ${BROWSERLESS.TIMEOUT}
+          });
+          
+          console.log('Navigated to invoices page');
+          
+          // Wait for the table to be loaded
+          await page.waitForSelector(${JSON.stringify(selectors.INVOICE_TABLE)}, {
+            timeout: ${BROWSERLESS.TIMEOUT}
+          });
+          
+          // Extract invoice data
+          const invoices = await page.evaluate((selectors) => {
+            const rows = document.querySelectorAll(selectors.INVOICE_ROW);
+            return Array.from(rows).map(row => {
+              const invoiceNumber = row.querySelector(selectors.INVOICE_NUMBER)?.textContent?.trim() || '';
+              const issuedDate = row.querySelector(selectors.INVOICE_DATE)?.textContent?.trim() || '';
+              
+              // Extract amount and convert to number
+              const amountText = row.querySelector(selectors.INVOICE_AMOUNT)?.textContent?.trim() || '0';
+              const amountMatch = amountText.match(/[0-9.,]+/);
+              const amount = amountMatch ? parseFloat(amountMatch[0].replace(',', '.')) : 0;
+              
+              const dueDate = row.querySelector(selectors.INVOICE_DUE_DATE)?.textContent?.trim() || '';
+              const status = row.querySelector(selectors.INVOICE_STATUS)?.textContent?.trim() || '';
+              
+              return {
+                invoice_number: invoiceNumber,
+                issued_date: issuedDate,
+                amount: amount,
+                due_date: dueDate,
+                status: status
+              };
+            });
+          }, ${JSON.stringify(selectors)});
+          
+          console.log('Extracted invoices:', invoices);
+          return invoices;
+        } catch (error) {
+          console.error('Error in browser script:', error);
+          throw new Error('ENGIE scraping failed: ' + error.message);
         }
-        
-        return invoices;
       }
-      
-      return await run();
-    `;
+    `
+  };
+
+  try {
+    console.log('Sending request to Browserless API');
     
-    // Make the request to browserless
-    console.log('Sending request to browserless.io');
-    const response = await fetch(browserlessUrl, {
+    // Make the request to Browserless
+    const response = await fetch(`${BROWSERLESS.API_URL}/function?token=${browserlessApiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache',
       },
-      body: JSON.stringify({
-        url: 'https://www.engie.ro/myaccount/login/',
-        gotoOptions: {
-          waitUntil: 'networkidle2',
-        },
-        evaluate: browser_script,
-      }),
+      body: JSON.stringify(payload),
     });
-    
+
+    // Check if the request was successful
     if (!response.ok) {
-      const errorBody = await response.text();
-      console.error('Browserless API error:', response.status, errorBody);
+      const errorText = await response.text();
+      console.error('Browserless API error:', response.status, errorText);
       throw new Error(`Browserless request failed: ${response.status} ${response.statusText}`);
     }
+
+    // Parse the response
+    const result = await response.json();
     
-    const invoices = await response.json() as Invoice[];
-    console.log(`Successfully extracted ${invoices.length} invoices`);
+    if (result.error) {
+      console.error('ENGIE Romania scraper error:', result.error);
+      throw new Error(result.error);
+    }
     
-    return invoices;
+    console.log('ENGIE Romania scraper completed successfully');
+    return result.data || [];
   } catch (error) {
     console.error('ENGIE Romania scraper error:', error);
-    throw new Error(`ENGIE scraping failed: ${error instanceof Error ? error.message : String(error)}`);
+    throw error;
   }
 }

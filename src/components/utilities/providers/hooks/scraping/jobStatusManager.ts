@@ -82,7 +82,7 @@ export function useJobStatusManager() {
               errorDescription = "The login selectors for this provider need to be updated. Please contact support.";
             } else if (job.error_message.includes("400 Bad Request")) {
               errorDescription = "The Browserless API returned a 400 Bad Request error. Please check your API key configuration.";
-            } else if (job.error_message.includes("options is not allowed")) {
+            } else if (job.error_message.includes("options is not allowed") || job.error_message.includes("\"options\" is not allowed")) {
               errorDescription = "The scraper needs updating. There's an issue with the Browserless API configuration.";
             } else if (job.error_message.includes("\"url\" is required")) {
               errorDescription = "The scraper configuration is missing a required URL parameter. Please contact support.";
