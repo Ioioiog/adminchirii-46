@@ -1,17 +1,12 @@
 
-export interface Bill {
-  amount: number;
-  due_date: string;
-  invoice_number: string;
-  url?: string;
-  type?: string;
-  status?: string;
-  issued_date?: string;
-}
+// Scraper constants
+export const SUPPORTED_PROVIDERS = {
+  "ENGIE": "engie-romania"
+};
 
-export interface ScrapingResult {
-  success: boolean;
-  error?: string;
-  message?: string;
-  bills?: Bill[];
-}
+export const JOB_STATUS = {
+  PENDING: "pending",
+  IN_PROGRESS: "in_progress",
+  COMPLETED: "completed",
+  FAILED: "failed"
+};

@@ -1,29 +1,21 @@
 
-import { ScrapingResult } from '../constants.ts';
-import { ExampleProviderScraperImpl } from './example-provider.ts';
-import { EngieRomaniaScraperImpl } from './engie-romania.ts';
+// Import all available scraper modules
+import { scrapeEngieRomania } from "./engie-romania";
+import { SUPPORTED_PROVIDERS } from "../constants";
 
-export interface BillScraper {
-  scrape(username: string, password: string): Promise<ScrapingResult>;
-}
-
-// Factory function to get the appropriate scraper
-export function getScraperForProvider(provider: string): BillScraper | null {
-  console.log(`Getting scraper for provider: ${provider}`);
+// Function to get the appropriate scraper based on provider name
+export function getScraper(provider: string) {
+  const scraperId = SUPPORTED_PROVIDERS[provider.toUpperCase()];
   
-  switch (provider?.toLowerCase()) {
-    case 'engie':
-    case 'engie romania':
-    case 'engie_romania':
-      console.log('Using ENGIE Romania scraper');
-      return new EngieRomaniaScraperImpl();
-      
-    case 'example_provider':
-      console.log('Using example provider scraper');
-      return new ExampleProviderScraperImpl();
-      
+  if (!scraperId) {
+    throw new Error(`Unsupported provider: ${provider}`);
+  }
+  
+  // Return the appropriate scraper function
+  switch (scraperId) {
+    case "engie-romania":
+      return scrapeEngieRomania;
     default:
-      console.log(`No scraper found for provider: ${provider}`);
-      return null;
+      throw new Error(`No scraper implementation for: ${provider}`);
   }
 }

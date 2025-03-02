@@ -1,152 +1,167 @@
 
-import { BillScraper } from './index.ts';
-import { ScrapingResult } from '../constants.ts';
+import { createClient } from "@supabase/supabase-js";
 
-export class EngieRomaniaScraperImpl implements BillScraper {
-  async scrape(username: string, password: string): Promise<ScrapingResult> {
-    console.log('Executing ENGIE Romania scraper with username:', username);
+const BROWSERLESS_API_URL = "https://chrome.browserless.io/content";
+
+// Define the ENGIE Romania scraper
+export async function scrapeEngieRomania(username: string, password: string) {
+  try {
+    console.log("Starting ENGIE Romania scraping with Browserless");
     
-    try {
-      const BROWSERLESS_API_KEY = Deno.env.get('BROWSERLESS_API_KEY');
-      
-      if (!BROWSERLESS_API_KEY) {
-        throw new Error('BROWSERLESS_API_KEY environment variable is not set');
-      }
-      
-      // Browserless.io API endpoint for connecting to a remote browser
-      const browserlessEndpoint = `https://chrome.browserless.io/content?token=${BROWSERLESS_API_KEY}`;
-      
-      // The script that will be executed in the browser
-      const script = `
-        async function run() {
-          try {
-            console.log('Starting ENGIE Romania scraping...');
-            
-            // Navigate to login page
-            await page.goto('https://servicii.engie.ro/pages/autentificare-1.jsf');
-            await page.waitForSelector('#j_username', { timeout: 30000 });
-            console.log('Login page loaded');
-            
-            // Fill in login form
-            await page.type('#j_username', '${username}');
-            await page.type('#j_password', '${password}');
-            console.log('Credentials filled in');
-            
-            // Click login button
-            await page.click('.login-panel input[type="submit"]');
-            console.log('Login button clicked');
-            
-            // Wait for the dashboard to load - check for a common element on the dashboard
-            await page.waitForSelector('.ui-dashboard-column', { timeout: 30000 });
-            console.log('Dashboard loaded');
-            
-            // Navigate to bills page
-            await page.goto('https://servicii.engie.ro/pages/facturi-plati-1.jsf');
-            await page.waitForSelector('.ui-datatable-tablewrapper', { timeout: 30000 });
-            console.log('Bills page loaded');
-            
-            // Extract bills data
-            const bills = await page.evaluate(() => {
-              const rows = Array.from(document.querySelectorAll('.ui-datatable-data tr'));
-              return rows.map(row => {
-                const columns = row.querySelectorAll('td');
-                if (columns.length < 5) return null;
-                
-                const dateText = columns[0]?.textContent?.trim() || '';
-                const invoiceNumberText = columns[1]?.textContent?.trim() || '';
-                const amountText = columns[3]?.textContent?.trim() || '0';
-                
-                // Parse amount - remove currency symbol and convert to number
-                const amountStr = amountText.replace(/[^0-9.,]/g, '').replace(',', '.');
-                const amount = parseFloat(amountStr);
-                
-                // Parse date in format DD.MM.YYYY
-                const dueDateParts = dateText.split('.');
-                let dueDate = '';
-                if (dueDateParts.length === 3) {
-                  dueDate = \`\${dueDateParts[2]}-\${dueDateParts[1]}-\${dueDateParts[0]}\`;
-                }
-                
-                return {
-                  amount: isNaN(amount) ? 0 : amount,
-                  due_date: dueDate || new Date().toISOString().split('T')[0],
-                  invoice_number: invoiceNumberText || \`ENGIE-\${Date.now()}\`,
-                  type: 'gas',
-                  status: 'pending'
-                };
-              }).filter(bill => bill !== null);
-            });
-            
-            console.log('Bills extracted:', JSON.stringify(bills));
-            
-            // Logout
-            await page.goto('https://servicii.engie.ro/pages/j_spring_security_logout');
-            console.log('Logged out');
-            
-            return { success: true, bills };
-          } catch (error) {
-            console.error('Error in browser script:', error);
-            return { 
-              success: false, 
-              error: \`Browser script error: \${error.message}\` 
+    // Get the Browserless API key from environment
+    const browserlessApiKey = Deno.env.get("BROWSERLESS_API_KEY");
+    
+    if (!browserlessApiKey) {
+      throw new Error("BROWSERLESS_API_KEY environment variable is not set");
+    }
+    
+    // Create the script that will run in the browser
+    const script = `
+      (async () => {
+        try {
+          console.log('Starting ENGIE login sequence');
+          
+          // Wait for the login form to load
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          // Fill out the login form
+          console.log('Filling login form');
+          document.querySelector('input[name="username"]').value = '${username}';
+          document.querySelector('input[name="password"]').value = '${password}';
+          
+          // Submit the form
+          console.log('Submitting login form');
+          document.querySelector('form button[type="submit"]').click();
+          
+          // Wait for login process
+          await new Promise(resolve => setTimeout(resolve, 8000));
+          
+          // Check if login was successful
+          const errorElements = document.querySelectorAll('.login-error, .error-message');
+          if (errorElements.length > 0) {
+            return {
+              success: false,
+              error: 'Login failed. Invalid credentials or captcha required.',
             };
           }
-        }
-        
-        return run();
-      `;
-      
-      // Send the script to browserless.io
-      const response = await fetch(browserlessEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-        },
-        body: JSON.stringify({
-          code: script,
-          context: {
-            waitForTimeout: 60000, // 60 second timeout
+          
+          // Navigate to the invoices page
+          console.log('Navigating to invoices page');
+          const invoicesLink = Array.from(document.querySelectorAll('a')).find(el => 
+            el.textContent.includes('Facturi') || el.textContent.includes('Invoices')
+          );
+          
+          if (invoicesLink) {
+            invoicesLink.click();
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          } else {
+            // Try direct navigation to invoice section
+            console.log('Direct navigation to invoice section');
+            // This is an example URL that might need to be adjusted
+            window.location.href = 'https://client.engie.ro/facturi';
+            await new Promise(resolve => setTimeout(resolve, 5000));
           }
-        }),
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Browserless error:', errorText);
-        throw new Error(`Browserless request failed: ${response.status} ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      console.log('Browserless result:', JSON.stringify(result));
-      
-      if (!result.success) {
-        return {
-          success: false,
-          error: result.error || 'Failed to scrape ENGIE website'
-        };
-      }
-      
-      if (!result.bills || result.bills.length === 0) {
-        return {
-          success: true,
-          message: 'No bills found on the ENGIE account',
-          bills: []
-        };
-      }
-      
-      return {
-        success: true,
-        message: `Successfully scraped ${result.bills.length} bills from ENGIE`,
-        bills: result.bills
-      };
-      
-    } catch (error) {
-      console.error('ENGIE scraper error:', error);
-      return {
-        success: false,
-        error: `ENGIE scraping failed: ${error.message}`
-      };
+          
+          // Extract invoice information
+          console.log('Extracting invoice information');
+          const bills = [];
+          
+          const invoiceRows = document.querySelectorAll('table tr.invoice-row, tr.factura-row');
+          if (invoiceRows.length === 0) {
+            return {
+              success: true,
+              bills: [],
+              message: 'No invoices found'
+            };
+          }
+          
+          invoiceRows.forEach(row => {
+            try {
+              const cells = row.querySelectorAll('td');
+              if (cells.length >= 5) {
+                bills.push({
+                  invoice_number: cells[0]?.textContent?.trim() || 'Unknown',
+                  amount: parseFloat(cells[2]?.textContent?.trim().replace(/[^0-9.,]/g, '').replace(',', '.')) || 0,
+                  due_date: cells[1]?.textContent?.trim() || new Date().toISOString().split('T')[0],
+                  type: 'electricity',
+                  status: 'active'
+                });
+              }
+            } catch (e) {
+              console.error('Error parsing invoice row:', e);
+            }
+          });
+          
+          return {
+            success: true,
+            bills
+          };
+        } catch (error) {
+          console.error('Browser script error:', error);
+          return {
+            success: false,
+            error: 'Browser script error: ' + error.message
+          };
+        }
+      })();
+    `;
+    
+    // Construct the request to Browserless
+    const browserlessResponse = await fetch(`${BROWSERLESS_API_URL}?token=${browserlessApiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+      },
+      body: JSON.stringify({
+        url: 'https://client.engie.ro/login',
+        gotoOptions: {
+          waitUntil: 'networkidle2',
+          timeout: 30000,
+        },
+        evaluate: script,
+        waitForFunction: {
+          fn: `async () => {
+            // Wait for login form to be visible
+            return document.querySelector('input[name="username"]') !== null;
+          }`,
+          polling: 'raf',
+          timeout: 10000,
+        },
+        viewport: {
+          width: 1280,
+          height: 720,
+        },
+        stealth: true, // Use stealth mode to avoid detection
+        timeout: 60000, // 60 seconds timeout
+      }),
+    });
+    
+    // Check if the request was successful
+    if (!browserlessResponse.ok) {
+      const errorText = await browserlessResponse.text();
+      console.error(`Browserless error (${browserlessResponse.status}):`, errorText);
+      throw new Error(`Browserless request failed: ${browserlessResponse.status} ${browserlessResponse.statusText}`);
     }
+    
+    // Parse the response
+    const result = await browserlessResponse.json();
+    
+    if (!result || result.error) {
+      throw new Error(`ENGIE scraping error: ${result?.error || 'Unknown error'}`);
+    }
+    
+    if (!result.success) {
+      throw new Error(`ENGIE scraping failed: ${result.error || 'Unknown error'}`);
+    }
+    
+    // Return the bills
+    return {
+      success: true,
+      bills: result.bills || []
+    };
+  } catch (error) {
+    console.error("ENGIE scraping error:", error);
+    throw new Error(`ENGIE scraping failed: ${error.message}`);
   }
 }

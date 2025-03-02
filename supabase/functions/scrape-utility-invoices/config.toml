@@ -1,3 +1,6 @@
 
-# Follow this format to add secrets: https://docs.deno.land/manual/runtime/permission_apis
-# EXAMPLE_SECRET=your_secret_here_without_quotes
+# Supabase Edge Function configuration
+project_id = "wecmvyohaxizmnhuvjly"
+# Add necessary secrets
+[secrets]
+BROWSERLESS_API_KEY = "your_browserless_api_key"

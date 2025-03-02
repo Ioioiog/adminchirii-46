@@ -64,10 +64,27 @@ export function useJobStatusManager() {
             description: "Successfully fetched utility bills",
           });
         } else if (status === 'failed') {
+          // Check if we have a specific error message
+          const { data: job } = await supabase
+            .from('scraping_jobs')
+            .select('error_message')
+            .eq('id', jobId)
+            .single();
+            
+          let errorDescription = "Failed to process utility bills. The provider may have changed their website.";
+          
+          if (job?.error_message) {
+            if (job.error_message.includes("BROWSERLESS_API_KEY")) {
+              errorDescription = "Missing Browserless API key. Contact your administrator to set this up.";
+            } else if (job.error_message.includes("400 Bad Request")) {
+              errorDescription = "Invalid request to Browserless. Please check your API key configuration.";
+            }
+          }
+          
           toast({
             variant: "destructive",
             title: "Error",
-            description: "Failed to process utility bills. The provider may have changed their website.",
+            description: errorDescription,
           });
         }
       }
