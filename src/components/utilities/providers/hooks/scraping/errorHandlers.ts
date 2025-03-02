@@ -63,10 +63,6 @@ export function formatEdgeFunctionError(errorMessage: string | undefined): strin
     return "This utility provider is not yet supported for automated bill fetching.";
   }
   
-  if (errorMessage.includes("ENGIE")) {
-    return "There was an issue connecting to ENGIE. This may be due to website changes or maintenance.";
-  }
-  
   return errorMessage;
 }
 

@@ -55,9 +55,6 @@ export function useJobStatusManager() {
       const status = await checkJobStatus(jobId, providerId, updateJobStatus);
       console.log('Job status check:', status);
       
-      // We no longer assume ENGIE needs special treatment - now it should be properly scraped
-      // This block is removed because we're implementing full auto-scraping for ENGIE
-      
       if (status === 'completed' || status === 'failed') {
         clearInterval(checkJobInterval);
         

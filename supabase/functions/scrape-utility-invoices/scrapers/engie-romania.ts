@@ -1,156 +1,151 @@
 
-import { BillScraperBase } from './base';
-import { ScrapingResult } from '../constants';
+import { BillScraper } from './index.ts';
+import { ScrapingResult } from '../constants.ts';
 
-// Configuration for ENGIE Romania
-const engieConfig = {
-  url: "https://my.engie.ro/autentificare",
-  loginSelector: "#username",
-  passSelector: "#password",
-  submitButton: "button[type=submit]",
-  invoicePage: "https://my.engie.ro/facturi/istoric",
-  invoiceLinkSelector: "a[href$='.pdf']",
-};
-
-export class EngieRomaniaScraperImpl extends BillScraperBase {
+export class EngieRomaniaScraperImpl implements BillScraper {
   async scrape(username: string, password: string): Promise<ScrapingResult> {
-    console.log("Starting ENGIE Romania scraping process");
+    console.log('Executing ENGIE Romania scraper with username:', username);
     
     try {
-      // Setup browser with Browserless.io API key
-      const browser = await this.setupBrowser();
+      const BROWSERLESS_API_KEY = Deno.env.get('BROWSERLESS_API_KEY');
       
-      if (!browser) {
-        return {
-          success: false,
-          error: "Failed to initialize browser for scraping"
-        };
+      if (!BROWSERLESS_API_KEY) {
+        throw new Error('BROWSERLESS_API_KEY environment variable is not set');
       }
       
-      const page = await browser.newPage();
-      console.log("Browser and page initialized");
+      // Browserless.io API endpoint for connecting to a remote browser
+      const browserlessEndpoint = `https://chrome.browserless.io/content?token=${BROWSERLESS_API_KEY}`;
       
-      // Set a reasonable navigation timeout
-      await page.setDefaultNavigationTimeout(60000);
+      // The script that will be executed in the browser
+      const script = `
+        async function run() {
+          try {
+            console.log('Starting ENGIE Romania scraping...');
+            
+            // Navigate to login page
+            await page.goto('https://servicii.engie.ro/pages/autentificare-1.jsf');
+            await page.waitForSelector('#j_username', { timeout: 30000 });
+            console.log('Login page loaded');
+            
+            // Fill in login form
+            await page.type('#j_username', '${username}');
+            await page.type('#j_password', '${password}');
+            console.log('Credentials filled in');
+            
+            // Click login button
+            await page.click('.login-panel input[type="submit"]');
+            console.log('Login button clicked');
+            
+            // Wait for the dashboard to load - check for a common element on the dashboard
+            await page.waitForSelector('.ui-dashboard-column', { timeout: 30000 });
+            console.log('Dashboard loaded');
+            
+            // Navigate to bills page
+            await page.goto('https://servicii.engie.ro/pages/facturi-plati-1.jsf');
+            await page.waitForSelector('.ui-datatable-tablewrapper', { timeout: 30000 });
+            console.log('Bills page loaded');
+            
+            // Extract bills data
+            const bills = await page.evaluate(() => {
+              const rows = Array.from(document.querySelectorAll('.ui-datatable-data tr'));
+              return rows.map(row => {
+                const columns = row.querySelectorAll('td');
+                if (columns.length < 5) return null;
+                
+                const dateText = columns[0]?.textContent?.trim() || '';
+                const invoiceNumberText = columns[1]?.textContent?.trim() || '';
+                const amountText = columns[3]?.textContent?.trim() || '0';
+                
+                // Parse amount - remove currency symbol and convert to number
+                const amountStr = amountText.replace(/[^0-9.,]/g, '').replace(',', '.');
+                const amount = parseFloat(amountStr);
+                
+                // Parse date in format DD.MM.YYYY
+                const dueDateParts = dateText.split('.');
+                let dueDate = '';
+                if (dueDateParts.length === 3) {
+                  dueDate = \`\${dueDateParts[2]}-\${dueDateParts[1]}-\${dueDateParts[0]}\`;
+                }
+                
+                return {
+                  amount: isNaN(amount) ? 0 : amount,
+                  due_date: dueDate || new Date().toISOString().split('T')[0],
+                  invoice_number: invoiceNumberText || \`ENGIE-\${Date.now()}\`,
+                  type: 'gas',
+                  status: 'pending'
+                };
+              }).filter(bill => bill !== null);
+            });
+            
+            console.log('Bills extracted:', JSON.stringify(bills));
+            
+            // Logout
+            await page.goto('https://servicii.engie.ro/pages/j_spring_security_logout');
+            console.log('Logged out');
+            
+            return { success: true, bills };
+          } catch (error) {
+            console.error('Error in browser script:', error);
+            return { 
+              success: false, 
+              error: \`Browser script error: \${error.message}\` 
+            };
+          }
+        }
+        
+        return run();
+      `;
       
-      // Navigate to the login page
-      console.log("Navigating to login page:", engieConfig.url);
-      await page.goto(engieConfig.url, { waitUntil: 'networkidle2' });
-      
-      // Wait for the login form to be loaded
-      await page.waitForSelector(engieConfig.loginSelector);
-      console.log("Login form loaded");
-      
-      // Fill the login form
-      await page.type(engieConfig.loginSelector, username);
-      await page.type(engieConfig.passSelector, password);
-      console.log("Filled login form");
-      
-      // Submit the form
-      await Promise.all([
-        page.waitForNavigation({ waitUntil: 'networkidle2' }),
-        page.click(engieConfig.submitButton)
-      ]);
-      console.log("Submitted login form");
-      
-      // Check if login was successful by looking for elements that should be present on the dashboard
-      // We can modify this based on ENGIE's website structure
-      const isLoggedIn = await page.evaluate(() => {
-        // Check for elements that would indicate successful login
-        return !document.querySelector('.error-message') && 
-               !document.title.includes('Autentificare');
+      // Send the script to browserless.io
+      const response = await fetch(browserlessEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+        },
+        body: JSON.stringify({
+          code: script,
+          context: {
+            waitForTimeout: 60000, // 60 second timeout
+          }
+        }),
       });
       
-      if (!isLoggedIn) {
-        console.log("Login failed for ENGIE Romania");
-        await browser.close();
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Browserless error:', errorText);
+        throw new Error(`Browserless request failed: ${response.status} ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      console.log('Browserless result:', JSON.stringify(result));
+      
+      if (!result.success) {
         return {
           success: false,
-          error: "Login failed. Please check your credentials and try again."
+          error: result.error || 'Failed to scrape ENGIE website'
         };
       }
       
-      console.log("Successfully logged in. Navigating to invoices page");
-      
-      // Navigate to the invoices page
-      await page.goto(engieConfig.invoicePage, { waitUntil: 'networkidle2' });
-      await page.waitForSelector(engieConfig.invoiceLinkSelector, { timeout: 10000 })
-        .catch(() => console.log("Invoice links not found immediately, continuing anyway"));
-      
-      // Extract invoice data
-      const bills = await page.evaluate((selector) => {
-        const invoiceLinks = Array.from(document.querySelectorAll(selector));
-        return invoiceLinks.map((link) => {
-          const element = link as HTMLAnchorElement;
-          // Extract data from the invoice element
-          // We need to adjust this based on ENGIE's actual HTML structure
-          const row = element.closest('tr');
-          
-          let amount = 0;
-          let dueDate = '';
-          let invoiceNumber = '';
-          
-          if (row) {
-            // Get invoice number - this is often in the PDF filename or in a nearby element
-            invoiceNumber = element.href.split('/').pop()?.replace('.pdf', '') || '';
-            
-            // Try to find amount and due date in nearby cells
-            const cells = Array.from(row.querySelectorAll('td'));
-            if (cells.length >= 3) {
-              // This is just an example. The actual structure may be different
-              const amountText = cells[1]?.textContent || '';
-              const dueDateText = cells[2]?.textContent || '';
-              
-              // Extract amount by removing non-numeric characters except decimal point
-              const amountMatch = amountText.match(/[\d,.]+/);
-              if (amountMatch) {
-                amount = parseFloat(amountMatch[0].replace(',', '.'));
-              }
-              
-              // Extract due date by finding date pattern
-              const dateMatch = dueDateText.match(/\d{2}[./-]\d{2}[./-]\d{4}/);
-              if (dateMatch) {
-                dueDate = dateMatch[0];
-              }
-            }
-          }
-          
-          // If we couldn't extract structured data, we can at least get the PDF link
-          return {
-            amount: amount || 0,
-            due_date: dueDate || new Date().toISOString().split('T')[0], // Default to today if not found
-            invoice_number: invoiceNumber || 'Unknown',
-            url: element.href,
-            type: 'gas', // Default type for ENGIE Romania
-            status: 'pending'
-          };
-        });
-      }, engieConfig.invoiceLinkSelector);
-      
-      console.log(`Found ${bills.length} bills`);
-      
-      // Close the browser
-      await browser.close();
-      
-      // Return the results
-      if (bills.length === 0) {
+      if (!result.bills || result.bills.length === 0) {
         return {
           success: true,
-          bills: [],
-          message: "No new bills found"
+          message: 'No bills found on the ENGIE account',
+          bills: []
         };
       }
       
       return {
         success: true,
-        bills
+        message: `Successfully scraped ${result.bills.length} bills from ENGIE`,
+        bills: result.bills
       };
       
     } catch (error) {
-      console.error("Error scraping ENGIE Romania:", error);
+      console.error('ENGIE scraper error:', error);
       return {
         success: false,
-        error: `Failed to scrape ENGIE Romania: ${error.message}`
+        error: `ENGIE scraping failed: ${error.message}`
       };
     }
   }

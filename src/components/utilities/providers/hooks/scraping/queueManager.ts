@@ -51,17 +51,6 @@ export function useScrapingQueue(providers: UtilityProvider[]) {
         throw new Error(errorMessage);
       }
       
-      // Special handling for unsupported providers
-      if (error instanceof Error && error.message.includes("Unsupported provider")) {
-        console.log('Unsupported provider detected, not retrying');
-        
-        // Format user-friendly error message
-        const errorMessage = formatErrorMessage(error);
-        showErrorToast(error);
-        
-        throw new Error(errorMessage);
-      }
-      
       if (retryCount < MAX_RETRIES) {
         console.log(`Retrying in ${RETRY_DELAY}ms...`);
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
@@ -130,13 +119,12 @@ export function useScrapingQueue(providers: UtilityProvider[]) {
 
   // Add provider to queue
   const addToQueue = useCallback((providerId: string) => {
-    // No special handling for ENGIE providers anymore
     console.log(`Adding provider ${providerId} to scraping queue`);
     setState(prev => ({
       ...prev,
       scrapingQueue: [...prev.scrapingQueue, providerId]
     }));
-  }, [providers]);
+  }, []);
 
   // Process queue
   const processQueue = useCallback(async () => {

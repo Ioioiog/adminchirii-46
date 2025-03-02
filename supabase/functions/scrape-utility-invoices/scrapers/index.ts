@@ -1,7 +1,7 @@
 
-import { ScrapingResult } from '../constants';
-import { ExampleProviderScraperImpl } from './example-provider';
-import { EngieRomaniaScraperImpl } from './engie-romania';
+import { ScrapingResult } from '../constants.ts';
+import { ExampleProviderScraperImpl } from './example-provider.ts';
+import { EngieRomaniaScraperImpl } from './engie-romania.ts';
 
 export interface BillScraper {
   scrape(username: string, password: string): Promise<ScrapingResult>;

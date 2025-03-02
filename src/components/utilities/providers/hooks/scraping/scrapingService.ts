@@ -109,33 +109,6 @@ export async function invokeScrapingFunction(
     if (!scrapeData || !scrapeData.success) {
       console.error('Scraping failed:', scrapeData?.error);
       
-      // Handle the case of unsupported provider - but not for ENGIE anymore
-      if (scrapeData?.error?.includes("Unsupported provider") && 
-          !provider.provider_name?.includes("ENGIE")) {
-        console.log('Unsupported provider detected, creating fallback job...');
-        
-        // Create a job record directly as a fallback
-        try {
-          const jobId = await createScrapingJobDirectly(
-            provider.id, 
-            provider.provider_name, 
-            provider.utility_type, 
-            provider.location_name
-          );
-          
-          console.log('Created fallback job for unsupported provider with ID:', jobId);
-          
-          return {
-            success: true,
-            jobId: jobId,
-            error: 'Using fallback job due to unsupported provider'
-          };
-        } catch (fallbackError) {
-          console.error('Fallback job creation failed:', fallbackError);
-          throw new Error('The utility provider service is temporarily unavailable');
-        }
-      }
-      
       throw new Error(scrapeData?.error || 'Scraping failed');
     }
 
