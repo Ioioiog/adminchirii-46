@@ -222,28 +222,29 @@ const Properties = () => {
                 </ToggleGroup>
               </div>
 
-              {viewMode === "grid" ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+              {viewMode === "grid" ? 
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-fade-in px-1">
                   {filteredProperties?.map(property => {
                 const hasContract = propertyContracts.some(contract => contract.property_id === property.id);
                 const displayStatus = hasContract ? 'occupied' as PropertyStatus : property.status;
-                return <Card key={property.id} className="group bg-white/80 backdrop-blur-sm border border-white/20 shadow-soft-md hover:shadow-soft-lg transition-all duration-300 overflow-hidden">
-                        <CardHeader className="p-6">
+                return <Card key={property.id} className="group bg-white/95 backdrop-blur-sm border border-gray-100 shadow-soft-md hover:shadow-soft-lg transition-all duration-300 overflow-hidden rounded-xl">
+                        <CardHeader className="p-6 border-b border-gray-50">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                              <div className="p-2 bg-blue-50 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                              <div className="p-2.5 bg-blue-50 rounded-lg group-hover:bg-blue-100 group-hover:scale-110 transition-all duration-300">
                                 <Home className="h-5 w-5 text-blue-600" />
                               </div>
                               <div>
                                 <h3 className="font-medium text-lg text-gray-900">{property.name}</h3>
                               </div>
                             </div>
-                            <Badge className={`${getStatusColor(displayStatus)} transition-all duration-300`}>
+                            <Badge className={`${getStatusColor(displayStatus)} transition-all duration-300 font-medium`}>
                               {displayStatus || 'N/A'}
                             </Badge>
                           </div>
                         </CardHeader>
-                        <CardContent className="p-6 pt-0">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <CardContent className="p-6 pt-5 bg-gradient-to-b from-white to-gray-50/50">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
                             <div className="flex items-center gap-3 group-hover:transform group-hover:translate-y-[-2px] transition-all duration-300">
                               <MapPin className="h-5 w-5 text-gray-400" />
                               <div>
@@ -270,8 +271,8 @@ const Properties = () => {
                               </div>
                             </div>
                           </div>
-                          <Separator className="my-4" />
-                          <div className="flex items-center justify-end gap-2 pt-2">
+                          <Separator className="my-4 bg-gray-100" />
+                          <div className="flex items-center justify-end gap-3 pt-2">
                             {userRole === 'landlord' && <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                   <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50">
@@ -295,14 +296,15 @@ const Properties = () => {
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
                               </AlertDialog>}
-                            <Button variant="outline" onClick={() => handlePropertyDetails(property.id)} className="hover:bg-blue-50 transition-colors duration-300">
+                            <Button variant="outline" onClick={() => handlePropertyDetails(property.id)} className="hover:bg-blue-50 transition-colors duration-300 border-blue-100">
                               View Details
                             </Button>
                           </div>
                         </CardContent>
                       </Card>;
               })}
-                  {filteredProperties?.length === 0 && <div className="col-span-full text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl shadow-soft-md border border-white/20">
+                  {filteredProperties?.length === 0 && 
+                    <div className="col-span-full text-center py-12 bg-white/95 backdrop-blur-sm rounded-xl shadow-soft-md border border-gray-100">
                       <Building2 className="mx-auto h-12 w-12 text-gray-400" />
                       <h3 className="mt-2 text-sm font-medium text-gray-900">No properties found</h3>
                       <div className="mt-1 text-sm">
@@ -318,7 +320,8 @@ const Properties = () => {
                           </Button>}
                       </div>
                     </div>}
-                </div> : <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-soft-md border border-white/20 overflow-hidden animate-fade-in">
+                </div> : 
+                <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-soft-md border border-gray-100 overflow-hidden animate-fade-in">
                   <Table>
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">

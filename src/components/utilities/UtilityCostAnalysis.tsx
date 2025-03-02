@@ -1,355 +1,340 @@
-
-import React, { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useCurrency } from "@/hooks/useCurrency";
-import { startOfMonth, endOfMonth, format, subMonths } from "date-fns";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import html2canvas from "html2canvas";
+import { Download, Info } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format, subMonths } from "date-fns";
+
+interface UtilityCost {
+  id: string;
+  property_id: string;
+  utility_type: string;
+  amount: number;
+  date: string;
+  created_at: string;
+}
+
+interface ChartData {
+  month: string;
+  electricity?: number;
+  water?: number;
+  gas?: number;
+  internet?: number;
+  total: number;
+}
 
 interface UtilityCostAnalysisProps {
   propertyId: string;
 }
 
-interface UtilityData {
-  month: string;
-  electricity: number;
-  water: number;
-  gas: number;
-  internet: number;
-  building_maintenance: number;
-  total: number;
-}
-
-type PeriodOption = "last_month" | "last_3_months" | "last_6_months" | "last_12_months";
-
 export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
-  const [utilityData, setUtilityData] = useState<UtilityData[]>([]);
+  const [utilityData, setUtilityData] = useState<UtilityCost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { formatAmount } = useCurrency();
-  const [error, setError] = useState<string | null>(null);
-  const [selectedPeriod, setSelectedPeriod] = useState<PeriodOption>("last_6_months");
-  const analysisRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
-  const [isExporting, setIsExporting] = useState(false);
+  const [chartData, setChartData] = useState<ChartData[]>([]);
+  const [timeRange, setTimeRange] = useState<"6months" | "12months" | "all">("12months");
+  const [chartType, setChartType] = useState<"bar" | "line">("bar");
 
   useEffect(() => {
-    async function fetchUtilityData() {
+    const fetchUtilityData = async () => {
       setIsLoading(true);
-      setError(null);
-      
       try {
-        // Determine how many months to fetch based on the selected period
-        let monthsToFetch = 6; // default
-        
-        switch (selectedPeriod) {
-          case "last_month":
-            monthsToFetch = 1;
-            break;
-          case "last_3_months":
-            monthsToFetch = 3;
-            break;
-          case "last_6_months":
-            monthsToFetch = 6;
-            break;
-          case "last_12_months":
-            monthsToFetch = 12;
-            break;
-        }
-        
-        // Get data for the selected period
-        const lastMonths = Array.from({ length: monthsToFetch }, (_, i) => {
-          const date = subMonths(new Date(), i);
-          return {
-            startDate: format(startOfMonth(date), 'yyyy-MM-dd'),
-            endDate: format(endOfMonth(date), 'yyyy-MM-dd'),
-            month: format(date, 'MMM yyyy')
-          };
-        });
+        let query = supabase
+          .from('utility_costs')
+          .select('*')
+          .eq('property_id', propertyId)
+          .order('date', { ascending: true });
 
-        const monthlyData: UtilityData[] = [];
-        
-        for (const { startDate, endDate, month } of lastMonths) {
-          // Fetch utilities for this month
-          const { data: utilities, error } = await supabase
-            .from('utilities')
-            .select('type, amount')
-            .eq('property_id', propertyId)
-            .gte('issued_date', startDate)
-            .lte('issued_date', endDate);
+        const { data, error } = await query;
 
-          if (error) throw error;
-
-          // Initialize monthly data
-          const monthData: UtilityData = {
-            month,
-            electricity: 0,
-            water: 0,
-            gas: 0,
-            internet: 0,
-            building_maintenance: 0,
-            total: 0
-          };
-
-          // Sum up utilities by type
-          utilities?.forEach(utility => {
-            const amount = Number(utility.amount);
-            if (utility.type === 'electricity') monthData.electricity += amount;
-            if (utility.type === 'water') monthData.water += amount;
-            if (utility.type === 'gas') monthData.gas += amount;
-            if (utility.type === 'internet') monthData.internet += amount;
-            if (utility.type === 'building maintenance') monthData.building_maintenance += amount;
-            monthData.total += amount;
-          });
-
-          monthlyData.push(monthData);
+        if (error) {
+          throw error;
         }
 
-        // Sort data with newest months first
-        setUtilityData(monthlyData.reverse());
-      } catch (err: any) {
-        console.error("Error fetching utility data:", err);
-        setError("Failed to load utility data. Please try again later.");
+        setUtilityData(data || []);
+      } catch (error) {
+        console.error('Error fetching utility data:', error);
       } finally {
         setIsLoading(false);
       }
-    }
+    };
 
     if (propertyId) {
       fetchUtilityData();
     }
-  }, [propertyId, selectedPeriod]);
+  }, [propertyId]);
 
-  const handleExportAnalysis = async () => {
-    if (!analysisRef.current) return;
-    
-    try {
-      setIsExporting(true);
-      toast({
-        title: "Exporting...",
-        description: "Preparing your utility analysis export",
-      });
-      
-      const element = analysisRef.current;
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        logging: false,
-        useCORS: true,
-        backgroundColor: "#FFFFFF"
-      });
-      
-      const image = canvas.toDataURL("image/png");
-      const link = document.createElement("a");
-      link.href = image;
-      link.download = `utility-analysis-${format(new Date(), 'yyyy-MM-dd')}.png`;
-      link.click();
-      
-      toast({
-        title: "Export complete",
-        description: "Your utility analysis has been exported successfully",
-      });
-    } catch (err) {
-      console.error("Error exporting analysis:", err);
-      toast({
-        title: "Export failed",
-        description: "There was an error exporting your analysis",
-        variant: "destructive",
-      });
-    } finally {
-      setIsExporting(false);
+  useEffect(() => {
+    if (utilityData.length > 0) {
+      const processedData = processUtilityData(utilityData, timeRange);
+      setChartData(processedData);
     }
+  }, [utilityData, timeRange]);
+
+  const processUtilityData = (data: UtilityCost[], range: "6months" | "12months" | "all"): ChartData[] => {
+    // Filter data based on time range
+    let filteredData = [...data];
+    const now = new Date();
+    
+    if (range === "6months") {
+      const sixMonthsAgo = subMonths(now, 6);
+      filteredData = data.filter(item => new Date(item.date) >= sixMonthsAgo);
+    } else if (range === "12months") {
+      const twelveMonthsAgo = subMonths(now, 12);
+      filteredData = data.filter(item => new Date(item.date) >= twelveMonthsAgo);
+    }
+
+    // Group by month and utility type
+    const monthlyData: Record<string, Record<string, number>> = {};
+
+    filteredData.forEach(item => {
+      const date = new Date(item.date);
+      const monthYear = format(date, 'MMM yyyy');
+      
+      if (!monthlyData[monthYear]) {
+        monthlyData[monthYear] = {
+          electricity: 0,
+          water: 0,
+          gas: 0,
+          internet: 0,
+          total: 0
+        };
+      }
+      
+      const utilityType = item.utility_type.toLowerCase();
+      if (monthlyData[monthYear][utilityType] !== undefined) {
+        monthlyData[monthYear][utilityType] += item.amount;
+        monthlyData[monthYear].total += item.amount;
+      }
+    });
+
+    // Convert to chart data format
+    const chartData: ChartData[] = Object.keys(monthlyData).map(month => ({
+      month,
+      electricity: monthlyData[month].electricity || 0,
+      water: monthlyData[month].water || 0,
+      gas: monthlyData[month].gas || 0,
+      internet: monthlyData[month].internet || 0,
+      total: monthlyData[month].total || 0
+    }));
+
+    // Sort by date
+    chartData.sort((a, b) => {
+      const dateA = new Date(a.month);
+      const dateB = new Date(b.month);
+      return dateA.getTime() - dateB.getTime();
+    });
+
+    return chartData;
   };
+
+  const downloadCSV = () => {
+    if (chartData.length === 0) return;
+
+    // Create CSV content
+    const headers = ['Month', 'Electricity', 'Water', 'Gas', 'Internet', 'Total'];
+    const csvRows = [headers.join(',')];
+
+    chartData.forEach(row => {
+      const values = [
+        row.month,
+        row.electricity?.toFixed(2) || '0.00',
+        row.water?.toFixed(2) || '0.00',
+        row.gas?.toFixed(2) || '0.00',
+        row.internet?.toFixed(2) || '0.00',
+        row.total.toFixed(2)
+      ];
+      csvRows.push(values.join(','));
+    });
+
+    const csvContent = csvRows.join('\n');
+    
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `utility_costs_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const calculateTotals = () => {
+    if (chartData.length === 0) return { electricity: 0, water: 0, gas: 0, internet: 0, total: 0 };
+
+    return chartData.reduce((acc, curr) => {
+      return {
+        electricity: acc.electricity + (curr.electricity || 0),
+        water: acc.water + (curr.water || 0),
+        gas: acc.gas + (curr.gas || 0),
+        internet: acc.internet + (curr.internet || 0),
+        total: acc.total + curr.total
+      };
+    }, { electricity: 0, water: 0, gas: 0, internet: 0, total: 0 });
+  };
+
+  const totals = calculateTotals();
+  const averageMonthly = chartData.length > 0 ? totals.total / chartData.length : 0;
 
   if (isLoading) {
     return (
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Monthly Utility Costs</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center p-6">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-[300px] w-full" />
+      </div>
     );
   }
 
-  if (error) {
+  if (utilityData.length === 0) {
     return (
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Monthly Utility Costs</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="p-4 bg-red-50 text-red-800 rounded-md">
-            {error}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+        <p className="text-gray-500">No utility cost data available for this property.</p>
+        <p className="text-sm text-gray-400 mt-1">
+          Utility costs will appear here once they are recorded.
+        </p>
+      </div>
     );
   }
-
-  // Calculate averages
-  const averages = {
-    electricity: utilityData.reduce((sum, month) => sum + month.electricity, 0) / utilityData.length || 0,
-    water: utilityData.reduce((sum, month) => sum + month.water, 0) / utilityData.length || 0,
-    gas: utilityData.reduce((sum, month) => sum + month.gas, 0) / utilityData.length || 0,
-    internet: utilityData.reduce((sum, month) => sum + month.internet, 0) / utilityData.length || 0,
-    building_maintenance: utilityData.reduce((sum, month) => sum + month.building_maintenance, 0) / utilityData.length || 0,
-    total: utilityData.reduce((sum, month) => sum + month.total, 0) / utilityData.length || 0
-  };
-
-  // Custom axis properties to avoid defaultProps warnings
-  const xAxisProps = {
-    dataKey: "month",
-    scale: "auto", 
-    type: "category",
-    allowDuplicatedCategory: true
-  };
-
-  const yAxisProps = {
-    scale: "auto",
-    type: "number",
-    allowDecimals: true,
-    tickFormatter: (value: number) => formatAmount(value, 'RON')
-  };
 
   return (
-    <Card className="mt-6">
-      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
-        <CardTitle>Monthly Utility Costs</CardTitle>
-        <div className="mt-2 sm:mt-0 flex flex-col sm:flex-row gap-2 items-end sm:items-center">
-          <Select 
-            value={selectedPeriod} 
-            onValueChange={(value) => setSelectedPeriod(value as PeriodOption)}
-          >
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <Select value={timeRange} onValueChange={(value) => setTimeRange(value as any)}>
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select period" />
+              <SelectValue placeholder="Select time range" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="last_month">Last Month</SelectItem>
-              <SelectItem value="last_3_months">Last 3 Months</SelectItem>
-              <SelectItem value="last_6_months">Last 6 Months</SelectItem>
-              <SelectItem value="last_12_months">Last 12 Months</SelectItem>
+              <SelectItem value="6months">Last 6 Months</SelectItem>
+              <SelectItem value="12months">Last 12 Months</SelectItem>
+              <SelectItem value="all">All Time</SelectItem>
             </SelectContent>
           </Select>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleExportAnalysis} 
-            disabled={isExporting || utilityData.length === 0}
-            className="whitespace-nowrap"
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Export Analysis
-          </Button>
+          
+          <Select value={chartType} onValueChange={(value) => setChartType(value as any)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select chart type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="bar">Bar Chart</SelectItem>
+              <SelectItem value="line">Line Chart</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      </CardHeader>
-      <CardContent>
-        {utilityData.length === 0 ? (
-          <div className="p-4 bg-gray-50 text-gray-600 rounded-md text-center">
-            No utility data available for this property.
-          </div>
-        ) : (
-          <div ref={analysisRef}>
-            <div className="mb-6">
-              <h3 className="text-lg font-medium mb-3">Monthly Average Costs</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-                <div className="p-3 bg-blue-50 rounded-md">
-                  <div className="text-sm text-gray-500">Electricity</div>
-                  <div className="font-medium">{formatAmount(averages.electricity, 'RON')}</div>
-                </div>
-                <div className="p-3 bg-blue-50 rounded-md">
-                  <div className="text-sm text-gray-500">Water</div>
-                  <div className="font-medium">{formatAmount(averages.water, 'RON')}</div>
-                </div>
-                <div className="p-3 bg-blue-50 rounded-md">
-                  <div className="text-sm text-gray-500">Gas</div>
-                  <div className="font-medium">{formatAmount(averages.gas, 'RON')}</div>
-                </div>
-                <div className="p-3 bg-blue-50 rounded-md">
-                  <div className="text-sm text-gray-500">Internet</div>
-                  <div className="font-medium">{formatAmount(averages.internet, 'RON')}</div>
-                </div>
-                <div className="p-3 bg-blue-50 rounded-md">
-                  <div className="text-sm text-gray-500">Building</div>
-                  <div className="font-medium">{formatAmount(averages.building_maintenance, 'RON')}</div>
-                </div>
-                <div className="p-3 bg-indigo-100 rounded-md">
-                  <div className="text-sm text-gray-700">Total Monthly</div>
-                  <div className="font-bold">{formatAmount(averages.total, 'RON')}</div>
-                </div>
+        
+        <Button variant="outline" size="sm" onClick={downloadCSV} className="gap-2">
+          <Download className="h-4 w-4" />
+          Export CSV
+        </Button>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">Average Monthly</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${averageMonthly.toFixed(2)}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">Electricity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${totals.electricity.toFixed(2)}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">Water</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${totals.water.toFixed(2)}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">Gas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${totals.gas.toFixed(2)}</div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Utility Costs Over Time</CardTitle>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Info className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="space-y-2">
+                <h4 className="font-medium">About this chart</h4>
+                <p className="text-sm text-gray-500">
+                  This chart shows the breakdown of utility costs over time. You can switch between
+                  bar and line charts, and export the data as a CSV file.
+                </p>
               </div>
-            </div>
-
-            <div className="h-80 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={utilityData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                >
+            </PopoverContent>
+          </Popover>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[400px]">
+            <ResponsiveContainer width="100%" height="100%">
+              {chartType === "bar" ? (
+                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis {...xAxisProps} />
-                  <YAxis {...yAxisProps} />
-                  <Tooltip formatter={(value) => formatAmount(Number(value), 'RON')} />
-                  <Legend />
+                  <XAxis 
+                    dataKey="month" 
+                    scale="auto"
+                    type="category" 
+                    allowDuplicatedCategory={false} 
+                  />
+                  <YAxis 
+                    scale="auto"
+                    type="number" 
+                    allowDecimals={true} 
+                    tickFormatter={(value) => `$${value}`}
+                  />
+                  <Tooltip formatter={(value) => [`$${Number(value).toFixed(2)}`, undefined]} />
+                  <Legend verticalAlign="top" height={36} />
                   <Bar dataKey="electricity" name="Electricity" fill="#3b82f6" />
                   <Bar dataKey="water" name="Water" fill="#06b6d4" />
-                  <Bar dataKey="gas" name="Gas" fill="#f59e0b" />
+                  <Bar dataKey="gas" name="Gas" fill="#f97316" />
                   <Bar dataKey="internet" name="Internet" fill="#8b5cf6" />
-                  <Bar dataKey="building_maintenance" name="Building" fill="#10b981" />
                 </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="mt-6">
-              <h3 className="text-lg font-medium mb-3">Monthly Breakdown</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="px-4 py-2 text-left">Month</th>
-                      <th className="px-4 py-2 text-right">Electricity</th>
-                      <th className="px-4 py-2 text-right">Water</th>
-                      <th className="px-4 py-2 text-right">Gas</th>
-                      <th className="px-4 py-2 text-right">Internet</th>
-                      <th className="px-4 py-2 text-right">Building</th>
-                      <th className="px-4 py-2 text-right font-medium">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {utilityData.map((month, index) => (
-                      <tr key={index} className="border-b border-gray-200">
-                        <td className="px-4 py-2">{month.month}</td>
-                        <td className="px-4 py-2 text-right">{formatAmount(month.electricity, 'RON')}</td>
-                        <td className="px-4 py-2 text-right">{formatAmount(month.water, 'RON')}</td>
-                        <td className="px-4 py-2 text-right">{formatAmount(month.gas, 'RON')}</td>
-                        <td className="px-4 py-2 text-right">{formatAmount(month.internet, 'RON')}</td>
-                        <td className="px-4 py-2 text-right">{formatAmount(month.building_maintenance, 'RON')}</td>
-                        <td className="px-4 py-2 text-right font-medium">{formatAmount(month.total, 'RON')}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+              ) : (
+                <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis tickFormatter={(value) => `$${value}`} />
+                  <Tooltip formatter={(value) => [`$${Number(value).toFixed(2)}`, undefined]} />
+                  <Legend verticalAlign="top" height={36} />
+                  <Line type="monotone" dataKey="electricity" name="Electricity" stroke="#3b82f6" activeDot={{ r: 8 }} />
+                  <Line type="monotone" dataKey="water" name="Water" stroke="#06b6d4" />
+                  <Line type="monotone" dataKey="gas" name="Gas" stroke="#f97316" />
+                  <Line type="monotone" dataKey="internet" name="Internet" stroke="#8b5cf6" />
+                  <Line type="monotone" dataKey="total" name="Total" stroke="#10b981" strokeWidth={2} />
+                </LineChart>
+              )}
+            </ResponsiveContainer>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
