@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -175,10 +174,17 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
     document.body.removeChild(link);
   };
 
-  const calculateTotals = () => {
-    if (chartData.length === 0) return { electricity: 0, water: 0, gas: 0, internet: 0, building_maintenance: 0, total: 0 };
+  const calculateAverages = () => {
+    if (chartData.length === 0) return { 
+      electricity: 0, 
+      water: 0, 
+      gas: 0, 
+      internet: 0, 
+      building_maintenance: 0, 
+      total: 0 
+    };
 
-    return chartData.reduce((acc, curr) => {
+    const totals = chartData.reduce((acc, curr) => {
       return {
         electricity: acc.electricity + (curr.electricity || 0),
         water: acc.water + (curr.water || 0),
@@ -188,14 +194,25 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
         total: acc.total + curr.total
       };
     }, { electricity: 0, water: 0, gas: 0, internet: 0, building_maintenance: 0, total: 0 });
+    
+    const monthCount = chartData.length;
+    
+    return {
+      electricity: totals.electricity / monthCount,
+      water: totals.water / monthCount,
+      gas: totals.gas / monthCount,
+      internet: totals.internet / monthCount,
+      building_maintenance: totals.building_maintenance / monthCount,
+      total: totals.total / monthCount
+    };
   };
 
   const formatCurrency = (value: number) => {
     return `RON ${value.toFixed(2)}`;
   };
 
-  const totals = calculateTotals();
-  const averageMonthly = chartData.length > 0 ? totals.total / chartData.length : 0;
+  const averages = calculateAverages();
+  const averageMonthly = chartData.length > 0 ? averages.total : 0;
 
   if (isLoading) {
     return (
@@ -264,7 +281,7 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
             <CardTitle className="text-sm font-medium text-gray-500">Average Monthly</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(averageMonthly)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(averages.total)}</div>
           </CardContent>
         </Card>
         
@@ -273,7 +290,7 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
             <CardTitle className="text-sm font-medium text-gray-500">Electricity</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totals.electricity)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(averages.electricity)}</div>
           </CardContent>
         </Card>
         
@@ -282,7 +299,7 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
             <CardTitle className="text-sm font-medium text-gray-500">Water</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totals.water)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(averages.water)}</div>
           </CardContent>
         </Card>
         
@@ -291,7 +308,7 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
             <CardTitle className="text-sm font-medium text-gray-500">Gas</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totals.gas)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(averages.gas)}</div>
           </CardContent>
         </Card>
         
@@ -300,7 +317,7 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
             <CardTitle className="text-sm font-medium text-gray-500">Internet</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totals.internet)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(averages.internet)}</div>
           </CardContent>
         </Card>
         
@@ -309,7 +326,7 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
             <CardTitle className="text-sm font-medium text-gray-500">Building</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totals.building_maintenance)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(averages.building_maintenance)}</div>
           </CardContent>
         </Card>
       </div>
