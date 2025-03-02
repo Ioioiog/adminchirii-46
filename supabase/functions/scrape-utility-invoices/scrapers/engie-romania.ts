@@ -98,22 +98,13 @@ export async function scrapeEngieRomania(
 
   let browser;
   try {
+    // Connect to Browserless using proper configuration
     browser = await puppeteer.connect(createBrowserlessRequest(browserlessApiKey));
     const page = await browser.newPage();
     
     // Set user agent to avoid detection
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36');
     
-    // Enable request interception for better logging
-    await page.setRequestInterception(true);
-    page.on('request', request => {
-      if (['image', 'stylesheet', 'font'].includes(request.resourceType())) {
-        request.abort();
-      } else {
-        request.continue();
-      }
-    });
-
     // Navigate to the login page
     console.log("Navigating to ENGIE Romania login page...");
     await page.goto("https://my.engie.ro/autentificare", { 
