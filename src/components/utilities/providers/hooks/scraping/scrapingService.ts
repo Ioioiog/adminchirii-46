@@ -78,17 +78,7 @@ function prepareScrapingRequestBody(provider: UtilityProvider, credentials: Cred
     type: provider.utility_type,
     location: provider.location_name,
     // Set API compatibility flag to ensure scraper uses supported parameters
-    apiCompatMode: true,
-    // Disable cookie handling to avoid "Refused to get unsafe header" errors
-    disableCookieHandling: true,
-    // Set secure WebSocket protocol to avoid NoApplicationProtocol errors
-    secureWebSocket: true,
-    // Set timeout to avoid hanging connections
-    timeout: 120000,
-    // Add more robust error handling flag
-    enhancedErrorHandling: true,
-    // Add retry strategy for intermittent issues
-    retryOnFailure: true
+    apiCompatMode: true
   };
 }
 
@@ -110,14 +100,10 @@ export async function invokeScrapingFunction(
   }));
 
   try {
-    // Configure function invocation with longer timeout for WebSocket connections
     const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke<ScrapingResponse>(
       'scrape-utility-invoices',
       {
-        body: JSON.stringify(requestBody),
-        headers: {
-          'Content-Type': 'application/json',
-        }
+        body: JSON.stringify(requestBody)
       }
     );
 
@@ -150,44 +136,6 @@ export async function invokeScrapingFunction(
     if (isEdgeFunctionError(error)) {
       console.log('Edge function error detected, creating fallback job...');
       
-      // Check if it's a WebSocket connection error
-      if (error instanceof Error && 
-          (error.message.includes("NoApplicationProtocol") ||
-           error.message.includes("WebSocket") ||
-           error.message.includes("connection failed"))) {
-        console.error('WebSocket connection error detected:', error);
-        throw new Error('Failed to connect to the utility provider service due to network protocol issues. Please try again later.');
-      }
-      
-      // Handle 500 Internal Server Error specifically
-      if (error instanceof Error && 
-          (error.message.includes("500") || 
-           error.message.includes("Internal Server Error"))) {
-        console.error('500 Internal Server Error detected from edge function:', error);
-        
-        // Create a job record directly in the database as a fallback
-        try {
-          const jobId = await createScrapingJobDirectly(
-            provider.id,
-            provider.provider_name,
-            provider.utility_type,
-            provider.location_name
-          );
-          
-          console.log('Created fallback job with ID:', jobId);
-          
-          // Return a successful response with the fallback job ID
-          return {
-            success: true,
-            jobId: jobId,
-            error: 'Using fallback job due to edge function failure'
-          };
-        } catch (fallbackError) {
-          console.error('Fallback job creation failed:', fallbackError);
-          throw new Error('The utility provider service is temporarily unavailable. Our team has been notified of this issue.');
-        }
-      }
-      
       // Create a job record directly in the database as a fallback
       try {
         const jobId = await createScrapingJobDirectly(
@@ -213,13 +161,6 @@ export async function invokeScrapingFunction(
     
     // Handle specific Browserless API configuration errors
     if (error instanceof Error) {
-      // Check for Set-Cookie header errors
-      if (error.message.includes("Refused to get unsafe header") ||
-          error.message.includes("Set-Cookie")) {
-        console.error('Browser security restriction on Set-Cookie headers:', error);
-        throw new Error('The scraping service is experiencing issues with cookies. Please try again later.');
-      }
-      
       // Check for Browserless API configuration errors
       if (error.message.includes("elements is not allowed") || 
           error.message.includes("options is not allowed") || 

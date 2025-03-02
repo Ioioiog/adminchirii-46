@@ -21,7 +21,7 @@ export function useScrapingQueue(providers: UtilityProvider[]) {
   const { showErrorToast } = useErrorNotification();
   const { setupJobStatusMonitoring } = useJobStatusManager();
 
-  // Helper function to update scraping job
+  // Helper function to update scraping jobs
   const updateScrapingJob = useCallback((providerId: string, job: ScrapingJob) => {
     setState(prev => ({
       ...prev,
@@ -48,13 +48,6 @@ export function useScrapingQueue(providers: UtilityProvider[]) {
         const errorMessage = formatErrorMessage(error);
         showErrorToast(error);
         
-        // Create a failed job to show in the UI
-        updateScrapingJob(providerId, {
-          status: 'failed',
-          last_run_at: new Date().toISOString(),
-          error_message: errorMessage
-        });
-        
         throw new Error(errorMessage);
       }
       
@@ -69,16 +62,9 @@ export function useScrapingQueue(providers: UtilityProvider[]) {
       
       showErrorToast(error);
       
-      // Create a failed job to show in the UI
-      updateScrapingJob(providerId, {
-        status: 'failed',
-        last_run_at: new Date().toISOString(),
-        error_message: errorMessage
-      });
-      
       throw new Error(errorMessage);
     }
-  }, [showErrorToast, updateScrapingJob]);
+  }, [showErrorToast]);
 
   // Main scraping handler
   const handleScrape = useCallback(async (providerId: string) => {
@@ -154,6 +140,15 @@ export function useScrapingQueue(providers: UtilityProvider[]) {
       await handleScrapeWithRetry(providerId);
     } catch (error) {
       console.error('Error processing queue:', error);
+      
+      // Update job status to failed when we've exhausted retries
+      updateScrapingJob(providerId, {
+        status: 'failed',
+        last_run_at: new Date().toISOString(),
+        error_message: error instanceof Error 
+          ? error.message 
+          : 'Failed to connect to utility provider. Please try again later.'
+      });
     } finally {
       setState(prev => ({
         ...prev,
@@ -161,7 +156,7 @@ export function useScrapingQueue(providers: UtilityProvider[]) {
         isProcessingQueue: false
       }));
     }
-  }, [state.isProcessingQueue, state.scrapingQueue, handleScrapeWithRetry]);
+  }, [state.isProcessingQueue, state.scrapingQueue, handleScrapeWithRetry, updateScrapingJob]);
 
   // Start queue processing when needed
   useEffect(() => {

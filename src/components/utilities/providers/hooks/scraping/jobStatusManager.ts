@@ -78,38 +78,34 @@ export function useJobStatusManager() {
           
           if (job?.error_message) {
             console.error('Scraping job failed with error:', job.error_message);
+            errorDescription = formatEdgeFunctionError(job.error_message);
             
-            // Handle different types of errors with specific messages
-            if (job.error_message.includes('500') || job.error_message.includes('Internal Server Error')) {
-              errorDescription = "The utility provider service encountered an internal error. Please try again later.";
-            } else if (job.error_message.includes("WebSocket") || 
-                       job.error_message.includes("NoApplicationProtocol") || 
-                       job.error_message.includes("connection failed")) {
-              errorDescription = "Could not establish a secure connection to the utility provider. Please try again later.";
-            } else if (job.error_message.includes("BROWSERLESS_API_KEY")) {
-              errorDescription = "Missing API key required for web scraping. Please contact support.";
+            // Add specific error handling for missing API key, CAPTCHA issues, and other common errors
+            if (job.error_message.includes("BROWSERLESS_API_KEY")) {
+              errorDescription = "The system is missing the Browserless API key required for web scraping. Please contact your administrator.";
             } else if (job.error_message.includes("reCAPTCHA") || job.error_message.includes("captcha")) {
-              errorDescription = "The provider's website requires CAPTCHA verification which cannot be automated. Please log in directly.";
+              errorDescription = "The provider's website requires CAPTCHA verification which cannot be automated. Please log in to the provider's website directly to download your bills.";
             } else if (job.error_message.includes("Module not found")) {
               errorDescription = "There's a configuration issue with the scraper. Please contact support.";
             } else if (job.error_message.includes("usernameSelector is not defined")) {
               errorDescription = "The login selectors for this provider need to be updated. Please contact support.";
             } else if (job.error_message.includes("400 Bad Request")) {
-              errorDescription = "The request to the provider was invalid. Please check your configuration.";
+              errorDescription = "The Browserless API returned a 400 Bad Request error. Please check your API key configuration.";
             } else if (job.error_message.includes("429 Too Many Requests")) {
               errorDescription = "The scraping service has reached its rate limit. Please try again later.";
             } else if (job.error_message.includes("403 Forbidden")) {
-              errorDescription = "Access to the provider website was denied. Please check your credentials.";
+              errorDescription = "The API key for scraping service may be invalid or exceeded its usage limits.";
             } else if (job.error_message.includes("timeout")) {
-              errorDescription = "The request to the provider website timed out. Please try again later.";
+              errorDescription = "The request to the provider website timed out. This could be due to slow internet or the website being temporarily down.";
             } else if (job.error_message.includes("Authentication failed")) {
               errorDescription = "The provider login credentials were rejected. Please check your username and password.";
-            } else if (job.error_message.includes("elements is not allowed") || 
-                       job.error_message.includes("options is not allowed")) {
-              errorDescription = "There is a configuration issue with the scraping service. Please contact support.";
-            } else {
-              // Use the errorFormatter for any other errors
-              errorDescription = formatEdgeFunctionError(job.error_message);
+            } else if (
+              job.error_message.includes("elements is not allowed") || 
+              job.error_message.includes("\"elements\" is not allowed") ||
+              job.error_message.includes("options is not allowed") || 
+              job.error_message.includes("\"options\" is not allowed")
+            ) {
+              errorDescription = "There is a configuration issue with the Browserless API. Please contact your administrator to update the scraper.";
             }
           }
           
