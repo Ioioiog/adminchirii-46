@@ -66,10 +66,10 @@ async function createScrapingJobDirectly(providerId: string, providerName?: stri
 
 /**
  * Prepares request body for the scraping edge function,
- * removing any parameters that might be rejected by the Browserless API
+ * cleaning it to prevent API compatibility issues
  */
 function prepareScrapingRequestBody(provider: UtilityProvider, credentials: Credentials) {
-  // Create a simplified request body without any potentially problematic parameters
+  // Clean request body to ensure compatibility with the Edge Function
   return {
     username: credentials.username,
     password: credentials.password,
@@ -78,7 +78,9 @@ function prepareScrapingRequestBody(provider: UtilityProvider, credentials: Cred
     type: provider.utility_type,
     location: provider.location_name,
     // Set API compatibility flag to ensure scraper uses supported parameters
-    apiCompatMode: true
+    apiCompatMode: true,
+    // Add flag to indicate that this provider requires CAPTCHA handling
+    hasCaptcha: provider.provider_name.toLowerCase().includes('engie')
   };
 }
 
@@ -91,7 +93,7 @@ export async function invokeScrapingFunction(
 ): Promise<ScrapingResponse> {
   console.log('Starting scraping for provider:', provider.provider_name);
 
-  // Use simplified request body to prevent API compatibility issues
+  // Create a clean request body to prevent API compatibility issues
   const requestBody = prepareScrapingRequestBody(provider, credentials);
 
   console.log('Invoking scrape-utility-invoices function with body:', JSON.stringify({
@@ -159,18 +161,33 @@ export async function invokeScrapingFunction(
       }
     }
     
-    // Handle specific Browserless API configuration errors
+    // Handle login and CAPTCHA errors specifically for ENGIE Romania
     if (error instanceof Error) {
-      // Check for Browserless API configuration errors
+      if (provider.provider_name.toLowerCase().includes('engie')) {
+        if (error.message.includes('Login failed')) {
+          throw new Error('Login to the ENGIE Romania website failed. Please check your credentials and try again.');
+        }
+        
+        if (error.message.includes('CAPTCHA') || error.message.includes('captcha')) {
+          throw new Error('The ENGIE Romania website requires CAPTCHA verification which could not be solved automatically. Please try again later.');
+        }
+      }
+      
+      // Handle Browserless API configuration errors
       if (error.message.includes("elements is not allowed") || 
           error.message.includes("options is not allowed") || 
           error.message.includes("\"options\" is not allowed")) {
         console.error('Browserless API configuration error detected:', error);
         throw new Error('There is a configuration issue with the scraping service. The Browserless API needs to be updated. Please contact support.');
       }
+      
+      // Handle JSON parsing errors
+      if (error.message.includes("SyntaxError: Unexpected end of JSON")) {
+        throw new Error('The provider website returned invalid data. This is often due to recent website changes. Please try again later or contact support.');
+      }
     }
     
-    // Rethrow the original error if it's not an edge function error or specific Browserless API error
+    // Rethrow the original error if it's not a specific case we handle
     throw error;
   }
 }

@@ -45,6 +45,18 @@ export function ScrapingStatus({
       return 'The utility provider service is currently unavailable. Please try again later.';
     }
     
+    if (errorMessage.includes('SyntaxError: Unexpected end of JSON input')) {
+      return 'The scraping service returned invalid data. This is often due to provider website changes.';
+    }
+    
+    if (errorMessage.includes('CAPTCHA')) {
+      return 'The provider website has CAPTCHA protection which could not be solved automatically.';
+    }
+    
+    if (errorMessage.includes('Login failed')) {
+      return 'Login to the provider website failed. Please check your credentials.';
+    }
+    
     return errorMessage;
   };
 

@@ -78,14 +78,41 @@ export async function scrapeEngieRomania(
           console.error("Error executing callback:", e);
         }
       `);
+      
+      // Wait for CAPTCHA to be applied
+      await page.waitForTimeout(2000);
     }
     
-    // Click login and wait for navigation
-    await page.click(SELECTORS.ENGIE_ROMANIA.loginButtonSelector);
-    await page.waitForNavigation({ 
-      waitUntil: "networkidle2",
-      timeout: 60000
-    });
+    // Explicitly click the login button
+    console.log("Clicking login button...");
+    try {
+      // First try to click using the selector
+      await Promise.race([
+        page.click(SELECTORS.ENGIE_ROMANIA.loginButtonSelector),
+        page.waitForTimeout(5000) // Give it 5 seconds to click
+      ]);
+    } catch (clickError) {
+      console.log("Regular click failed, trying with evaluate:", clickError);
+      // If that fails, try using page.evaluate for a more direct approach
+      await page.evaluate((selector) => {
+        const button = document.querySelector(selector);
+        if (button) {
+          (button as HTMLElement).click();
+        } else {
+          console.error("Login button not found");
+        }
+      }, SELECTORS.ENGIE_ROMANIA.loginButtonSelector);
+    }
+    
+    // Wait for navigation to complete after login
+    console.log("Waiting for login navigation...");
+    await Promise.race([
+      page.waitForNavigation({ 
+        waitUntil: "networkidle2",
+        timeout: 60000
+      }),
+      page.waitForSelector('div.nj-sidebar', { timeout: 60000 })
+    ]);
     
     // Check if we're logged in by looking for a dashboard element
     const isLoggedIn = await page.evaluate(() => {
