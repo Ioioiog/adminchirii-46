@@ -4,6 +4,7 @@ import { ScrapingJob } from "../../types";
 import { useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { JOB_CHECK_INTERVAL, JOB_CHECK_MAX_TIME } from "./constants";
+import { formatEdgeFunctionError } from "./errorHandlers";
 
 /**
  * Hook for checking and managing job status
@@ -74,10 +75,13 @@ export function useJobStatusManager() {
           let errorDescription = "Failed to process utility bills. The provider may have changed their website.";
           
           if (job?.error_message) {
-            if (job.error_message.includes("BROWSERLESS_API_KEY")) {
-              errorDescription = "Missing Browserless API key. Contact your administrator to set this up.";
+            errorDescription = formatEdgeFunctionError(job.error_message);
+            
+            // Add specific error handling for login selectors issue
+            if (job.error_message.includes("usernameSelector is not defined")) {
+              errorDescription = "The login selectors for this provider need to be updated. Please contact support.";
             } else if (job.error_message.includes("400 Bad Request")) {
-              errorDescription = "Invalid request to Browserless. Please check your API key configuration.";
+              errorDescription = "The Browserless API returned a 400 Bad Request error. Please check your API key configuration.";
             }
           }
           
