@@ -87,12 +87,13 @@ const Utilities = () => {
     queryFn: async () => {
       console.log("Fetching utility providers");
       try {
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        if (userError) {
-          console.error("Error fetching user:", userError);
-          throw userError;
+        const userResponse = await supabase.auth.getUser();
+        if (userResponse.error) {
+          console.error("Error fetching user:", userResponse.error);
+          throw userResponse.error;
         }
         
+        const userData = userResponse.data;
         if (!userData.user) {
           console.error("No authenticated user found");
           return [];

@@ -36,6 +36,9 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { DatePicker } from '@/components/ui/date-picker';
 
+// Define the utility type string literals directly for zod
+const utilityTypeEnum = z.enum(['electricity', 'water', 'gas', 'internet', 'building maintenance']);
+
 const formSchema = z.object({
   provider_name: z.string().min(2, {
     message: "Provider Name must be at least 2 characters.",
@@ -43,9 +46,7 @@ const formSchema = z.object({
   property_id: z.string().uuid({
     message: "Please select a valid property.",
   }),
-  utility_type: z.nativeEnum(z.enum(['electricity', 'water', 'gas', 'internet', 'building maintenance']), {
-    message: "Please select a utility type.",
-  }),
+  utility_type: utilityTypeEnum,
   username: z.string().min(2, {
     message: "Username must be at least 2 characters.",
   }),
@@ -112,20 +113,16 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
         utility_type: values.utility_type,
         username: values.username,
         landlord_id: landlordId,
-        location_name: values.location_name,
-        start_day: values.start_day ? values.start_day.getDate() : null,
-        end_day: values.end_day ? values.end_day.getDate() : null,
+        location_name: values.location_name || null,
+        // Convert date objects to day of month numbers if they exist
+        start_day: values.start_day instanceof Date ? values.start_day.getDate() : null,
+        end_day: values.end_day instanceof Date ? values.end_day.getDate() : null,
       };
 
       // Add password only if provided (for updates)
       if (values.password) {
-        // Handle the encrypted password properly
-        if (provider?.id) {
-          dataToInsert.password = values.password;
-        } else {
-          // For new providers, set both password and encrypted_password
-          dataToInsert.password = values.password;
-        }
+        // For handling password - set directly
+        dataToInsert.password = values.password;
       } else if (!provider?.id) {
         // For new records and no password
         toast({
@@ -158,9 +155,10 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
           description: "Utility provider updated successfully!",
         });
       } else {
+        // For insertion, we need to provide a single object, not an array
         const { error } = await supabase
           .from('utility_provider_credentials')
-          .insert([dataToInsert]); // Make sure to pass an array here
+          .insert(dataToInsert);
 
         if (error) {
           console.error("Error inserting utility provider credentials:", error);

@@ -39,7 +39,7 @@ export function DatePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
-        {/* Render the appropriate Calendar based on mode */}
+        {/* Render different Calendar components based on mode */}
         {mode === "single" && (
           <Calendar
             mode="single"

@@ -8,7 +8,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ScaleType,
 } from "recharts";
 import { ChartTooltip } from "./ChartTooltip";
 
@@ -22,7 +21,7 @@ export function RevenueLineChart({ data, gradientId, isPrediction = false }: Rev
   // Define axis properties that are type-safe
   const xAxisProps = {
     dataKey: "month",
-    scale: "auto" as ScaleType, // Correct typing
+    scale: "auto" as const, // Type assertion to handle scale
     type: "category" as const,
     allowDuplicatedCategory: true,
     className: "text-xs font-medium",
@@ -32,7 +31,7 @@ export function RevenueLineChart({ data, gradientId, isPrediction = false }: Rev
   };
 
   const yAxisProps = {
-    scale: "auto" as ScaleType, // Correct typing
+    scale: "auto" as const, // Type assertion to handle scale
     type: "number" as const,
     allowDecimals: true,
     className: "text-xs font-medium",
