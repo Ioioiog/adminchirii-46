@@ -1,11 +1,11 @@
 
 import React from 'react';
-import { AlertCircle, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export function PgCryptoNote() {
   return (
-    <Alert variant="warning" className="mb-4 border-amber-300 bg-amber-50">
+    <Alert variant="destructive" className="mb-4 border-amber-300 bg-amber-50">
       <Info className="h-5 w-5 text-amber-600" />
       <AlertTitle className="text-amber-800">Database Extension Required</AlertTitle>
       <AlertDescription className="text-amber-700">

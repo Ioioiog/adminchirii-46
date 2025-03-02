@@ -131,14 +131,16 @@ export function useScraping(providers: UtilityProvider[]) {
       let errorMessage = "Failed to connect to utility provider.";
       
       if (error instanceof Error) {
-        if (error.message.includes("status code 500")) {
-          errorMessage = "The utility provider website is unavailable or has changed its structure.";
+        if (error.message.includes("status code 500") || error.message.includes("non-2xx status")) {
+          errorMessage = "The utility provider service is currently unavailable. Please try again later.";
         } else if (error.message.includes("function")) {
           errorMessage = "There was an issue with the database function. Contact support.";
         } else if (error.message.includes("timeout")) {
           errorMessage = "Connection to the utility provider timed out. Try again later.";
         } else if (error.message.includes("credential")) {
           errorMessage = "Invalid credentials. Please check your username and password.";
+        } else if (error.message.includes("pgcrypto")) {
+          errorMessage = "The pgcrypto extension is not enabled in the database. Please contact your administrator.";
         }
       }
       
@@ -178,9 +180,18 @@ export function useScraping(providers: UtilityProvider[]) {
         { property_id_input: provider.property_id }
       );
 
-      if (credentialsError || !credentialsData) {
+      if (credentialsError) {
         console.error('Failed to fetch credentials:', credentialsError);
+        
+        if (credentialsError.message.includes('pgcrypto')) {
+          throw new Error('pgcrypto extension is not enabled in the database');
+        }
+        
         throw new Error('Failed to fetch credentials');
+      }
+
+      if (!credentialsData) {
+        throw new Error('No credentials found for this provider');
       }
 
       const credentials = credentialsData as unknown as Credentials;
@@ -214,7 +225,7 @@ export function useScraping(providers: UtilityProvider[]) {
         
         // Parse edge function error for a more helpful message
         let errorMessage = "Failed to fetch utility bills.";
-        if (scrapeError.message.includes("500")) {
+        if (scrapeError.message && scrapeError.message.includes("non-2xx status")) {
           errorMessage = "The utility provider's website may be down or has changed. Please try again later.";
         }
         
@@ -224,6 +235,10 @@ export function useScraping(providers: UtilityProvider[]) {
       if (!scrapeData || !scrapeData.success) {
         console.error('Scraping failed:', scrapeData?.error);
         throw new Error(scrapeData?.error || 'Scraping failed');
+      }
+
+      if (!scrapeData.jobId) {
+        throw new Error('No job ID returned from scraping service');
       }
 
       console.log('Scraping succeeded. Job ID:', scrapeData.jobId);
