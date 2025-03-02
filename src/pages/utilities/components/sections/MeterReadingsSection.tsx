@@ -11,7 +11,7 @@ interface MeterReadingsSectionProps {
 }
 
 export function MeterReadingsSection({ userRole }: MeterReadingsSectionProps) {
-  // Convert string userRole to proper type for useProperties
+  // Ensure userRole is one of the valid types for useProperties
   const role = (userRole === "landlord" || userRole === "tenant") 
     ? userRole 
     : "tenant" as const;
@@ -38,7 +38,7 @@ export function MeterReadingsSection({ userRole }: MeterReadingsSectionProps) {
         </div>
         <MeterReadingDialog properties={properties} onReadingCreated={() => {}} userRole={userRole} userId={null} />
       </div>
-      <MeterReadingList readings={[]} userRole={userRole} onUpdate={() => {}} />
+      <MeterReadingList readings={[]} userRole={role} onUpdate={() => {}} />
     </div>
   );
 }

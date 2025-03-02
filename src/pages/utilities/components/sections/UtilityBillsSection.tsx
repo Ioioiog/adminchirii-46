@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { CardTitle } from "@/components/ui/card";
 import { Plug, FileSpreadsheet } from "lucide-react";
@@ -35,6 +36,7 @@ export function UtilityBillsSection({
   utilities,
   setShowCsvImporter
 }: UtilityBillsSectionProps) {
+  // Ensure userRole is one of the valid types for useProperties
   const role = (userRole === "landlord" || userRole === "tenant") 
     ? userRole 
     : "tenant" as const;
@@ -90,7 +92,7 @@ export function UtilityBillsSection({
 
       <UtilityList 
         utilities={utilities}
-        userRole={userRole}
+        userRole={role}
         onStatusUpdate={() => {}}
       />
     </div>

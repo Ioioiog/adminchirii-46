@@ -4,12 +4,13 @@ import { MeterReadingsSection } from "./sections/MeterReadingsSection";
 import { UtilityProvidersSection } from "./sections/UtilityProvidersSection";
 import { UtilityWithProperty } from "../Utilities";
 import { UtilityProvider } from "@/components/utilities/providers/types";
+import { UserRole } from "@/hooks/use-user-role";
 
 type UtilitiesSection = 'bills' | 'readings' | 'providers';
 
 interface UtilitiesContentProps {
   activeSection: UtilitiesSection;
-  userRole: string;
+  userRole: UserRole;
   searchTerm: string;
   setSearchTerm: (value: string) => void;
   statusFilter: string;
@@ -69,7 +70,7 @@ export function UtilitiesContent({
           setTypeFilter={setTypeFilter}
           propertyFilter={propertyFilter}
           setPropertyFilter={setPropertyFilter}
-          filteredUtilities={filteredUtilities}
+          utilities={filteredUtilities}
           setShowCsvImporter={setShowCsvImporter}
         />
       );
