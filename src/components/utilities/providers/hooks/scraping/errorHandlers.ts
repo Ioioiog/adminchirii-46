@@ -1,4 +1,3 @@
-
 import { useToast } from "@/hooks/use-toast";
 
 /**
@@ -36,6 +35,8 @@ export function formatErrorMessage(error: unknown): string {
       errorMessage = "The scraper configuration is missing a required URL parameter. Please contact support.";
     } else if (error.message.includes("Module not found")) {
       errorMessage = "Required module is missing. Please contact support to fix the scraper implementation.";
+    } else if (error.message.includes("reCAPTCHA") || error.message.includes("captcha")) {
+      errorMessage = "The provider's website requires CAPTCHA verification which cannot be automated. Please log in to the provider's website directly.";
     }
   }
   
@@ -97,6 +98,10 @@ export function formatEdgeFunctionError(errorMessage: string | undefined): strin
 
   if (errorMessage.includes("Module not found")) {
     return "There's a configuration issue with the scraper. Please contact support.";
+  }
+  
+  if (errorMessage.includes("reCAPTCHA") || errorMessage.includes("captcha")) {
+    return "The provider's website requires CAPTCHA verification which cannot be automated. Please log in to the provider's website directly.";
   }
   
   return errorMessage;

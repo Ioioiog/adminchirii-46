@@ -1,46 +1,66 @@
 
-// Constants for the scraping process
+/**
+ * Constants for scraping utility providers
+ */
 
-// Available provider types
-export enum PROVIDER {
-  ENGIE_ROMANIA = 'ENGIE Romania',
-  // Add other providers here as needed
-}
-
-// Job status values
-export enum JOB_STATUS {
-  PENDING = 'pending',
-  IN_PROGRESS = 'in_progress',
-  COMPLETED = 'completed',
-  FAILED = 'failed'
-}
-
-// DOM selectors for different provider websites
+// Selectors for different provider websites
 export const SELECTORS = {
-  // ENGIE Romania selectors
   ENGIE_ROMANIA: {
-    loginPage: 'https://www.engie.ro/myaccount/login/',
+    loginPage: 'https://my.engie.ro/autentificare',
     usernameSelector: '#username',
     passwordSelector: '#password',
-    loginButtonSelector: '#kc-login',
-    invoicesSelector: '.table-contracts tr',
-    invoiceAmountSelector: 'td:nth-child(3)',
-    invoiceDateSelector: 'td:nth-child(4)',
-    invoiceNumberSelector: 'td:nth-child(2)',
-    invoiceDownloadSelector: 'td:nth-child(7) a'
+    loginButtonSelector: '#login-form button',
+    recaptchaSelector: 'iframe[title="reCAPTCHA"]',
+    billsPageUrl: 'https://my.engie.ro/facturi/istoric',
+    billsTableSelector: '#istoric-facturi table tbody tr',
+    billDownloadSelector: 'td:nth-of-type(16) > a:nth-of-type(1) > span',
+    locationSelectorModal: '#lc-select___BV_modal_body_',
+    locationRows: 'div.col > div',
+    changeLocationButton: 'div.nj-modal__footer > button',
+    billsMenuSelector: '#nav-link-facturi',
+    // Additional selectors from the flow
+    consumptionPageUrl: 'https://my.engie.ro/index-electricitate',
+    consumptionDataSelector: 'div.container-fluid > div > div:nth-of-type(2) div.t-deci'
   }
 };
 
-// Configuration for Browserless API
+// Safe browserless configuration
 export const BROWSERLESS_CONFIG = {
-  // Function to create a request to browserless API that avoids the "options is not allowed" error
-  createRequest: (url: string, blocks?: string[], cookies?: any[]) => {
+  createRequest: (url: string, waitForSelectors: string[] = []) => {
     return {
       url,
-      // Only include these basic parameters to avoid errors
-      waitForSelector: blocks?.join(',') || 'body',
-      elements: blocks || [],
-      cookies
+      gotoOptions: {
+        waitUntil: 'networkidle2',
+        timeout: 60000
+      },
+      elements: waitForSelectors,
+      timeout: 60000,
+      stealth: true,
+      // Avoid options parameter which causes errors
+      cookies: [],
+      viewport: {
+        width: 1280,
+        height: 800
+      }
     };
   }
+};
+
+// Browserless request helper for Deno
+export const createBrowserlessRequest = async (
+  url: string, 
+  browserlessApiKey: string, 
+  waitForSelectors: string[] = []
+) => {
+  const browserlessUrl = `https://chrome.browserless.io/content?token=${browserlessApiKey}`;
+  const requestBody = BROWSERLESS_CONFIG.createRequest(url, waitForSelectors);
+  
+  return fetch(browserlessUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache'
+    },
+    body: JSON.stringify(requestBody)
+  });
 };

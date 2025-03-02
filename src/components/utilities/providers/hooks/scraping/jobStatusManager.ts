@@ -80,9 +80,11 @@ export function useJobStatusManager() {
             console.error('Scraping job failed with error:', job.error_message);
             errorDescription = formatEdgeFunctionError(job.error_message);
             
-            // Add specific error handling for missing API key and other common errors
+            // Add specific error handling for missing API key, CAPTCHA issues, and other common errors
             if (job.error_message.includes("BROWSERLESS_API_KEY")) {
               errorDescription = "The system is missing the Browserless API key required for web scraping. Please contact your administrator.";
+            } else if (job.error_message.includes("reCAPTCHA") || job.error_message.includes("captcha")) {
+              errorDescription = "The provider's website requires CAPTCHA verification which cannot be automated. Please log in to the provider's website directly to download your bills.";
             } else if (job.error_message.includes("Module not found")) {
               errorDescription = "There's a configuration issue with the scraper. Please contact support.";
             } else if (job.error_message.includes("usernameSelector is not defined")) {
