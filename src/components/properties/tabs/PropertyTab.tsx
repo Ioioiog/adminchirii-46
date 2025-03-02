@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Edit, Save, X } from "lucide-react";
@@ -83,7 +82,6 @@ export function PropertyTab({
     return new Date(date).toLocaleDateString();
   };
 
-  // Calculate total estimated monthly utilities
   const estimatedUtilities = 
     (property.monthly_electricity_cost || 0) + 
     (property.monthly_water_cost || 0) + 
@@ -162,14 +160,6 @@ export function PropertyTab({
                   </h4>
                   <p className="text-base text-gray-900 mt-1">
                     €{property.monthly_rent?.toLocaleString() || 0}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500">
-                    Estimated Monthly Utilities
-                  </h4>
-                  <p className="text-base text-gray-900 mt-1">
-                    €{estimatedUtilities.toLocaleString()}
                   </p>
                 </div>
                 <div>
