@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -81,6 +82,18 @@ export function useScraping(providers: UtilityProvider[]) {
       await handleScrapeWithRetry(providerId);
     } catch (error) {
       console.error('Error processing queue:', error);
+      
+      // Update job status to failed when we've exhausted retries
+      setScrapingJobs(prev => ({
+        ...prev,
+        [providerId]: {
+          status: 'failed',
+          last_run_at: new Date().toISOString(),
+          error_message: error instanceof Error 
+            ? error.message 
+            : 'Failed to connect to utility provider. Please try again later.'
+        }
+      }));
     } finally {
       setScrapingQueue(prev => prev.slice(1));
       setIsProcessingQueue(false);
@@ -113,7 +126,29 @@ export function useScraping(providers: UtilityProvider[]) {
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
         return handleScrapeWithRetry(providerId, retryCount + 1);
       }
-      throw error;
+      
+      // Format user-friendly error message
+      let errorMessage = "Failed to connect to utility provider.";
+      
+      if (error instanceof Error) {
+        if (error.message.includes("status code 500")) {
+          errorMessage = "The utility provider website is unavailable or has changed its structure.";
+        } else if (error.message.includes("function")) {
+          errorMessage = "There was an issue with the database function. Contact support.";
+        } else if (error.message.includes("timeout")) {
+          errorMessage = "Connection to the utility provider timed out. Try again later.";
+        } else if (error.message.includes("credential")) {
+          errorMessage = "Invalid credentials. Please check your username and password.";
+        }
+      }
+      
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: errorMessage,
+      });
+      
+      throw new Error(errorMessage);
     }
   };
 
@@ -176,7 +211,14 @@ export function useScraping(providers: UtilityProvider[]) {
 
       if (scrapeError) {
         console.error('Scraping error:', scrapeError);
-        throw scrapeError;
+        
+        // Parse edge function error for a more helpful message
+        let errorMessage = "Failed to fetch utility bills.";
+        if (scrapeError.message.includes("500")) {
+          errorMessage = "The utility provider's website may be down or has changed. Please try again later.";
+        }
+        
+        throw new Error(errorMessage);
       }
 
       if (!scrapeData || !scrapeData.success) {
@@ -197,6 +239,12 @@ export function useScraping(providers: UtilityProvider[]) {
             toast({
               title: "Success",
               description: "Successfully fetched utility bills",
+            });
+          } else if (status === 'failed') {
+            toast({
+              variant: "destructive",
+              title: "Error",
+              description: "Failed to process utility bills. The provider may have changed their website.",
             });
           }
         }
@@ -220,7 +268,7 @@ export function useScraping(providers: UtilityProvider[]) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to fetch utility bills. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to fetch utility bills. Please try again.",
       });
 
       throw error;
