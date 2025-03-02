@@ -52,6 +52,10 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
       return "The request timed out. The provider website may be slow or temporarily down.";
     }
     
+    if (errorMessage.includes('Change consumption location') || errorMessage.includes('Schimbă locul de consum')) {
+      return "The process failed while trying to select the utility consumption location. Please try again later.";
+    }
+    
     return "There was an error fetching your utility bills. Please try again later.";
   };
   

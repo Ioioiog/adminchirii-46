@@ -64,6 +64,10 @@ export function ScrapingStatus({
       return 'The scraping process was interrupted. This may be due to a timeout or resource limitation.';
     }
     
+    if (errorMessage.includes('Change consumption location') || errorMessage.includes('Schimbă locul de consum')) {
+      return 'Failed while selecting consumption location. Please try again later.';
+    }
+    
     return errorMessage;
   };
 

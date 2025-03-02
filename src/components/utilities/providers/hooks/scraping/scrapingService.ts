@@ -84,7 +84,9 @@ function prepareScrapingRequestBody(provider: UtilityProvider, credentials: Cred
     // Add a longer timeout for providers with CAPTCHA
     timeout: provider.provider_name.toLowerCase().includes('engie') ? 120000 : 60000,
     // Add navigation wait time extended for ENGIE Romania
-    navigationWaitTime: provider.provider_name.toLowerCase().includes('engie') ? 30000 : 10000
+    navigationWaitTime: provider.provider_name.toLowerCase().includes('engie') ? 30000 : 10000,
+    // Set flag to handle post-login location change dialog
+    handleLocationChange: provider.provider_name.toLowerCase().includes('engie')
   };
 }
 
@@ -217,6 +219,11 @@ export async function invokeScrapingFunction(
         if (error.message.includes('Waiting for login navigation') || 
             error.message.includes('navigation timeout')) {
           throw new Error('The scraping process timed out while waiting for the login page to load. The ENGIE Romania website may be slow or temporarily down. Please try again later.');
+        }
+        
+        if (error.message.includes('Change consumption location') || 
+            error.message.includes('Schimbă locul de consum')) {
+          throw new Error('The scraping process failed while trying to select the consumption location. Please try again later.');
         }
       }
       
