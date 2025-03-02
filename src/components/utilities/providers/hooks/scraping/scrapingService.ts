@@ -65,6 +65,24 @@ async function createScrapingJobDirectly(providerId: string, providerName?: stri
 }
 
 /**
+ * Prepares request body for the scraping edge function,
+ * removing any parameters that might be rejected by the Browserless API
+ */
+function prepareScrapingRequestBody(provider: UtilityProvider, credentials: Credentials) {
+  // Create a simplified request body without any potentially problematic parameters
+  return {
+    username: credentials.username,
+    password: credentials.password,
+    utilityId: provider.id,
+    provider: provider.provider_name,
+    type: provider.utility_type,
+    location: provider.location_name,
+    // Set API compatibility flag to ensure scraper uses supported parameters
+    apiCompatMode: true
+  };
+}
+
+/**
  * Invokes the scraping edge function for a utility provider
  */
 export async function invokeScrapingFunction(
@@ -73,14 +91,8 @@ export async function invokeScrapingFunction(
 ): Promise<ScrapingResponse> {
   console.log('Starting scraping for provider:', provider.provider_name);
 
-  const requestBody = {
-    username: credentials.username,
-    password: credentials.password,
-    utilityId: provider.id,
-    provider: provider.provider_name,
-    type: provider.utility_type,
-    location: provider.location_name
-  };
+  // Use simplified request body to prevent API compatibility issues
+  const requestBody = prepareScrapingRequestBody(provider, credentials);
 
   console.log('Invoking scrape-utility-invoices function with body:', JSON.stringify({
     ...requestBody,
@@ -147,12 +159,18 @@ export async function invokeScrapingFunction(
       }
     }
     
-    if (error instanceof Error && error.message.includes("elements is not allowed")) {
-      console.error('Browserless API configuration error detected:', error);
-      throw new Error('There is a configuration issue with the scraping service. The Browserless API needs to be updated. Please contact support.');
+    // Handle specific Browserless API configuration errors
+    if (error instanceof Error) {
+      // Check for Browserless API configuration errors
+      if (error.message.includes("elements is not allowed") || 
+          error.message.includes("options is not allowed") || 
+          error.message.includes("\"options\" is not allowed")) {
+        console.error('Browserless API configuration error detected:', error);
+        throw new Error('There is a configuration issue with the scraping service. The Browserless API needs to be updated. Please contact support.');
+      }
     }
     
-    // Rethrow the original error if it's not an edge function error
+    // Rethrow the original error if it's not an edge function error or specific Browserless API error
     throw error;
   }
 }
