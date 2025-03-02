@@ -258,8 +258,8 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
         </Button>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <Card className="md:col-span-1">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">Average Monthly</CardTitle>
           </CardHeader>
@@ -268,7 +268,7 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="md:col-span-1">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">Electricity</CardTitle>
           </CardHeader>
@@ -277,7 +277,7 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="md:col-span-1">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">Water</CardTitle>
           </CardHeader>
@@ -286,12 +286,30 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="md:col-span-1">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">Gas</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(totals.gas)}</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="md:col-span-1">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">Internet</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(totals.internet)}</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="md:col-span-1">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">Building</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(totals.building_maintenance)}</div>
           </CardContent>
         </Card>
       </div>
