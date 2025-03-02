@@ -1,41 +1,46 @@
 
-/**
- * Constants for web scraping
- */
+// Constants for the scraping process
 
-// Status constants for scraping jobs
-export const JOB_STATUS = {
-  PENDING: 'pending',
-  IN_PROGRESS: 'in_progress',
-  COMPLETED: 'completed',
-  FAILED: 'failed'
-};
+// Available provider types
+export enum PROVIDER {
+  ENGIE_ROMANIA = 'ENGIE Romania',
+  // Add other providers here as needed
+}
 
-// Selectors for ENGIE Romania website
+// Job status values
+export enum JOB_STATUS {
+  PENDING = 'pending',
+  IN_PROGRESS = 'in_progress',
+  COMPLETED = 'completed',
+  FAILED = 'failed'
+}
+
+// DOM selectors for different provider websites
 export const SELECTORS = {
+  // ENGIE Romania selectors
   ENGIE_ROMANIA: {
-    // Login page selectors
-    LOGIN_PAGE: 'https://www.engie.ro/myaccount/login/',
-    USERNAME_SELECTOR: '#username',
-    PASSWORD_SELECTOR: '#password',
-    LOGIN_BUTTON: 'button[type="submit"]',
-    
-    // Invoice page selectors
-    INVOICES_PAGE: 'https://www.engie.ro/myaccount/facturi-plati/facturi/',
-    INVOICE_TABLE: '.factTable',
-    INVOICE_ROWS: '.factTable tr:not(:first-child)',
-    INVOICE_NUMBER_SELECTOR: 'td:nth-child(1)',
-    INVOICE_DATE_SELECTOR: 'td:nth-child(2)',
-    INVOICE_AMOUNT_SELECTOR: 'td:nth-child(3)',
-    INVOICE_DUE_DATE_SELECTOR: 'td:nth-child(4)',
-    INVOICE_STATUS_SELECTOR: 'td:nth-child(5)',
-    INVOICE_DOWNLOAD_SELECTOR: 'td:nth-child(6) a'
+    loginPage: 'https://www.engie.ro/myaccount/login/',
+    usernameSelector: '#username',
+    passwordSelector: '#password',
+    loginButtonSelector: '#kc-login',
+    invoicesSelector: '.table-contracts tr',
+    invoiceAmountSelector: 'td:nth-child(3)',
+    invoiceDateSelector: 'td:nth-child(4)',
+    invoiceNumberSelector: 'td:nth-child(2)',
+    invoiceDownloadSelector: 'td:nth-child(7) a'
   }
 };
 
-// Browserless API configuration
+// Configuration for Browserless API
 export const BROWSERLESS_CONFIG = {
-  endpoint: 'https://chrome.browserless.io/content',
-  defaultTimeout: 60000,
-  waitingTimeout: 30000
+  // Function to create a request to browserless API that avoids the "options is not allowed" error
+  createRequest: (url: string, blocks?: string[], cookies?: any[]) => {
+    return {
+      url,
+      // Only include these basic parameters to avoid errors
+      waitForSelector: blocks?.join(',') || 'body',
+      elements: blocks || [],
+      cookies
+    };
+  }
 };

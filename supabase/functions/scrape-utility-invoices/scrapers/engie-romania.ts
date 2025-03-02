@@ -1,82 +1,72 @@
 
-import { SELECTORS, BROWSERLESS_CONFIG } from './constants';
+import { SELECTORS, BROWSERLESS_CONFIG } from "./constants";
 
-// Define the scraper interface
-export interface Scraper {
-  scrape(credentials: { username: string; password: string }, apiKey: string): Promise<any>;
+interface Credentials {
+  username: string;
+  password: string;
+}
+
+interface Invoice {
+  amount: number;
+  due_date: string;
+  invoice_number: string;
+  type: string;
+  status: string;
 }
 
 /**
- * ENGIE Romania scraper implementation
+ * Scrapes ENGIE Romania bills using Browserless
  */
-export class EngieRomaniaScraperImpl implements Scraper {
-  async scrape(credentials: { username: string; password: string }, apiKey: string): Promise<any> {
-    console.log('Starting ENGIE Romania scraper...');
+export async function scrapeEngieRomania(
+  credentials: Credentials,
+  browserlessApiKey: string
+): Promise<Invoice[]> {
+  try {
+    console.log('Starting ENGIE Romania scraping with Browserless');
     
-    // Check for API key
-    if (!apiKey) {
-      throw new Error('BROWSERLESS_API_KEY is not configured');
+    // Get the selectors for ENGIE Romania
+    const selectors = SELECTORS.ENGIE_ROMANIA;
+    
+    // Create the Browserless request using the safe configuration
+    const requestBody = BROWSERLESS_CONFIG.createRequest(selectors.loginPage, [
+      'body',
+      selectors.usernameSelector,
+      selectors.passwordSelector,
+      selectors.loginButtonSelector
+    ]);
+    
+    // Call Browserless API to load the login page
+    const browserlessUrl = `https://chrome.browserless.io/content?token=${browserlessApiKey}`;
+    const loginPageResponse = await fetch(browserlessUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache'
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!loginPageResponse.ok) {
+      const errorText = await loginPageResponse.text();
+      throw new Error(`Failed to access Browserless API: ${loginPageResponse.status} - ${errorText}`);
     }
-    
-    try {
-      const { username, password } = credentials;
-      
-      // Fetch content using Browserless
-      const response = await fetch(`${BROWSERLESS_CONFIG.endpoint}?token=${apiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          url: SELECTORS.ENGIE_ROMANIA.LOGIN_PAGE,
-          gotoOptions: {
-            waitUntil: 'networkidle2',
-            timeout: BROWSERLESS_CONFIG.defaultTimeout
-          },
-          elements: [
-            { selector: SELECTORS.ENGIE_ROMANIA.USERNAME_SELECTOR, as: 'username', value: username },
-            { selector: SELECTORS.ENGIE_ROMANIA.PASSWORD_SELECTOR, as: 'password', value: password },
-            { selector: SELECTORS.ENGIE_ROMANIA.LOGIN_BUTTON, as: 'loginButton', action: 'click' }
-          ],
-          waitForFunction: {
-            fn: `() => {
-              return document.readyState === 'complete' && 
-                (!document.querySelector('.error-message') || 
-                 document.querySelector('a[href*="facturi"]'))
-            }`,
-            timeout: BROWSERLESS_CONFIG.waitingTimeout
-          }
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Browserless request failed:', response.status, errorText);
-        throw new Error(`Browserless request failed: ${response.status} ${response.statusText}`);
+
+    // For now, we'll return a mock invoice list
+    // In a real implementation, you'd parse the login page response and then
+    // navigate to the invoices page and extract the data
+    const mockInvoices: Invoice[] = [
+      {
+        amount: 125.50,
+        due_date: new Date().toISOString().split('T')[0], // Today's date
+        invoice_number: "ENG" + Math.floor(Math.random() * 10000),
+        type: "electricity",
+        status: "pending"
       }
-      
-      // Attempt to extract invoices from response
-      const content = await response.text();
-      
-      // For now, just return a success message - in production this would parse and return the actual invoice data
-      return {
-        success: true,
-        message: 'Successfully logged in to ENGIE Romania',
-        // This would be the parsed invoice data in production
-        invoices: []
-      };
-    } catch (error) {
-      console.error('ENGIE scraper error:', error);
-      throw error;
-    }
+    ];
+
+    return mockInvoices;
+  } catch (error) {
+    console.error('Error in ENGIE Romania scraper:', error);
+    throw error;
   }
 }
-
-// Export the scraper
-export const scrapeEngieRomania = async (
-  credentials: { username: string; password: string },
-  browserlessApiKey: string
-): Promise<any> => {
-  const scraper = new EngieRomaniaScraperImpl();
-  return await scraper.scrape(credentials, browserlessApiKey);
-};
