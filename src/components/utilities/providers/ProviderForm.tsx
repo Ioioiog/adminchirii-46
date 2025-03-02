@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { UtilityType, UTILITY_TYPES } from '@/components/utilities/providers/types';
+import { UTILITY_TYPES } from '@/components/utilities/providers/types';
 import { Property } from '@/types/tenant';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -107,7 +107,7 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
   async function onSubmitForm(values: z.infer<typeof formSchema>) {
     try {
       // Prepare the data - convert Date objects to proper format
-      const dataToInsert = {
+      const dataToInsert: Record<string, any> = {
         provider_name: values.provider_name,
         property_id: values.property_id,
         utility_type: values.utility_type,
@@ -155,13 +155,10 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
           description: "Utility provider updated successfully!",
         });
       } else {
-        // For insertion, we need to provide a single object
-        // When doing an insert, TypeScript requires that all required fields are present
-        // Using 'as any' here as a temporary workaround since the RLS policy and trigger
-        // will handle the encrypted_password field server-side
+        // For insertion, specify as the expected type to satisfy TypeScript
         const { error } = await supabase
           .from('utility_provider_credentials')
-          .insert(dataToInsert as any);
+          .insert(dataToInsert);
 
         if (error) {
           console.error("Error inserting utility provider credentials:", error);
