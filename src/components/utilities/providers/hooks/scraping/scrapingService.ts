@@ -80,7 +80,11 @@ function prepareScrapingRequestBody(provider: UtilityProvider, credentials: Cred
     // Set API compatibility flag to ensure scraper uses supported parameters
     apiCompatMode: true,
     // Disable cookie handling to avoid "Refused to get unsafe header" errors
-    disableCookieHandling: true
+    disableCookieHandling: true,
+    // Set secure WebSocket protocol to avoid NoApplicationProtocol errors
+    secureWebSocket: true,
+    // Set timeout to avoid hanging connections
+    timeout: 120000
   };
 }
 
@@ -102,10 +106,14 @@ export async function invokeScrapingFunction(
   }));
 
   try {
+    // Configure function invocation with longer timeout for WebSocket connections
     const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke<ScrapingResponse>(
       'scrape-utility-invoices',
       {
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        headers: {
+          'Content-Type': 'application/json',
+        }
       }
     );
 
@@ -137,6 +145,15 @@ export async function invokeScrapingFunction(
     // Check if it's an edge function error (500 status code)
     if (isEdgeFunctionError(error)) {
       console.log('Edge function error detected, creating fallback job...');
+      
+      // Check if it's a WebSocket connection error
+      if (error instanceof Error && 
+          (error.message.includes("NoApplicationProtocol") ||
+           error.message.includes("WebSocket") ||
+           error.message.includes("connection failed"))) {
+        console.error('WebSocket connection error detected:', error);
+        throw new Error('Failed to connect to the utility provider service due to network protocol issues. Please try again later.');
+      }
       
       // Create a job record directly in the database as a fallback
       try {

@@ -106,6 +106,12 @@ export function useJobStatusManager() {
               job.error_message.includes("\"options\" is not allowed")
             ) {
               errorDescription = "There is a configuration issue with the Browserless API. Please contact your administrator to update the scraper.";
+            } else if (
+              job.error_message.includes("NoApplicationProtocol") || 
+              job.error_message.includes("WebSocket") || 
+              job.error_message.includes("connection failed")
+            ) {
+              errorDescription = "Failed to establish a secure connection to the utility provider service. This is likely a temporary network issue. Please try again later.";
             }
           }
           
