@@ -18,6 +18,8 @@ export function formatErrorMessage(error: unknown): string {
       errorMessage = "Invalid credentials. Please check your username and password.";
     } else if (error.message.includes("pgcrypto")) {
       errorMessage = "The pgcrypto extension is not enabled in the database. Please contact your administrator.";
+    } else if (error.message.includes("Edge Function")) {
+      errorMessage = "The utility provider service is temporarily unavailable. We're working on fixing this issue.";
     }
   }
   
@@ -49,9 +51,21 @@ export function useErrorNotification() {
 export function formatEdgeFunctionError(errorMessage: string | undefined): string {
   if (!errorMessage) return "Failed to fetch utility bills";
   
-  if (errorMessage.includes("non-2xx status")) {
+  if (errorMessage.includes("non-2xx status") || errorMessage.includes("Edge Function")) {
     return "The utility provider's website may be down or has changed. Please try again later.";
   }
   
   return errorMessage;
+}
+
+/**
+ * Check if the error is related to a Supabase Edge Function failure
+ */
+export function isEdgeFunctionError(error: unknown): boolean {
+  if (error instanceof Error) {
+    return error.message.includes("Edge Function") || 
+           error.message.includes("non-2xx status") || 
+           error.message.includes("status code 500");
+  }
+  return false;
 }

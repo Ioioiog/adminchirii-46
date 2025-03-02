@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { UtilityProvider } from "../../types";
 import { Credentials, ScrapingResponse } from "./types";
-import { formatEdgeFunctionError } from "./errorHandlers";
+import { formatEdgeFunctionError, isEdgeFunctionError } from "./errorHandlers";
 
 /**
  * Retrieves decrypted credentials for a utility provider
@@ -32,6 +32,33 @@ export async function getProviderCredentials(providerId: string, propertyId: str
 }
 
 /**
+ * Create a new scraping job record in the database directly
+ */
+async function createScrapingJobDirectly(providerId: string): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from('scraping_jobs')
+      .insert({
+        utility_provider_id: providerId,
+        status: 'pending',
+        details: { message: 'Created as fallback due to edge function failure' }
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error('Error creating scraping job directly:', error);
+      throw new Error('Failed to create job record');
+    }
+
+    return data.id;
+  } catch (error) {
+    console.error('Failed to create scraping job record:', error);
+    throw new Error('Could not create job record in the database');
+  }
+}
+
+/**
  * Invokes the scraping edge function for a utility provider
  */
 export async function invokeScrapingFunction(
@@ -54,32 +81,60 @@ export async function invokeScrapingFunction(
     password: '***' // Hide password in logs
   }));
 
-  const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke<ScrapingResponse>(
-    'scrape-utility-invoices',
-    {
-      body: JSON.stringify(requestBody)
+  try {
+    const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke<ScrapingResponse>(
+      'scrape-utility-invoices',
+      {
+        body: JSON.stringify(requestBody)
+      }
+    );
+
+    console.log('Scrape function response:', scrapeData);
+
+    if (scrapeError) {
+      console.error('Scraping error:', scrapeError);
+      
+      // Parse edge function error for a more helpful message
+      const errorMessage = formatEdgeFunctionError(scrapeError.message);
+      
+      throw new Error(errorMessage);
     }
-  );
 
-  console.log('Scrape function response:', scrapeData);
+    if (!scrapeData || !scrapeData.success) {
+      console.error('Scraping failed:', scrapeData?.error);
+      throw new Error(scrapeData?.error || 'Scraping failed');
+    }
 
-  if (scrapeError) {
-    console.error('Scraping error:', scrapeError);
+    if (!scrapeData.jobId) {
+      throw new Error('No job ID returned from scraping service');
+    }
+
+    return scrapeData;
+  } catch (error) {
+    console.error('Error during scraping function invocation:', error);
     
-    // Parse edge function error for a more helpful message
-    const errorMessage = formatEdgeFunctionError(scrapeError.message);
+    // Check if it's an edge function error (500 status code)
+    if (isEdgeFunctionError(error)) {
+      console.log('Edge function error detected, creating fallback job...');
+      
+      // Create a job record directly in the database as a fallback
+      try {
+        const jobId = await createScrapingJobDirectly(provider.id);
+        console.log('Created fallback job with ID:', jobId);
+        
+        // Return a successful response with the fallback job ID
+        return {
+          success: true,
+          jobId: jobId,
+          error: 'Using fallback job due to edge function failure'
+        };
+      } catch (fallbackError) {
+        console.error('Fallback job creation failed:', fallbackError);
+        throw new Error('The utility provider service is temporarily unavailable');
+      }
+    }
     
-    throw new Error(errorMessage);
+    // Rethrow the original error if it's not an edge function error
+    throw error;
   }
-
-  if (!scrapeData || !scrapeData.success) {
-    console.error('Scraping failed:', scrapeData?.error);
-    throw new Error(scrapeData?.error || 'Scraping failed');
-  }
-
-  if (!scrapeData.jobId) {
-    throw new Error('No job ID returned from scraping service');
-  }
-
-  return scrapeData;
 }

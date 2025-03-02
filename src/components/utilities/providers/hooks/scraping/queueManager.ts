@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { UtilityProvider, ScrapingJob } from "../../types";
 import { ScrapingState } from "./types";
 import { MAX_RETRIES, RETRY_DELAY } from "./constants";
-import { formatErrorMessage, useErrorNotification } from "./errorHandlers";
+import { formatErrorMessage, useErrorNotification, isEdgeFunctionError } from "./errorHandlers";
 import { getProviderCredentials, invokeScrapingFunction } from "./scrapingService";
 import { useJobStatusManager } from "./jobStatusManager";
 
@@ -39,6 +39,17 @@ export function useScrapingQueue(providers: UtilityProvider[]) {
       await handleScrape(providerId);
     } catch (error) {
       console.error(`Error during scraping attempt ${retryCount + 1}:`, error);
+      
+      // If we've hit a fatal edge function error (like 500), don't retry
+      if (isEdgeFunctionError(error) && retryCount >= 1) {
+        console.log('Edge function is consistently failing, not retrying further');
+        
+        // Format user-friendly error message
+        const errorMessage = formatErrorMessage(error);
+        showErrorToast(error);
+        
+        throw new Error(errorMessage);
+      }
       
       if (retryCount < MAX_RETRIES) {
         console.log(`Retrying in ${RETRY_DELAY}ms...`);
