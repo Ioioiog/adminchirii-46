@@ -25,15 +25,6 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { UTILITY_TYPES } from '@/components/utilities/providers/types';
 import { Property } from '@/types/tenant';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { CalendarIcon } from 'lucide-react';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { DatePicker } from '@/components/ui/date-picker';
 
 // Define the utility type string literals directly for zod
@@ -58,6 +49,19 @@ const formSchema = z.object({
   start_day: z.date().optional(),
   end_day: z.date().optional(),
 });
+
+// Define a type for the expected Insert data shape
+type UtilityProviderInsert = {
+  provider_name: string;
+  property_id: string;
+  utility_type: "electricity" | "water" | "gas" | "internet" | "building maintenance";
+  username: string;
+  landlord_id: string;
+  location_name?: string | null;
+  start_day?: number | null;
+  end_day?: number | null;
+  password?: string;
+};
 
 export interface ProviderFormProps {
   landlordId: string;
@@ -106,8 +110,8 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
 
   async function onSubmitForm(values: z.infer<typeof formSchema>) {
     try {
-      // Prepare the data - convert Date objects to proper format
-      const dataToInsert: Record<string, any> = {
+      // Prepare the data as UtilityProviderInsert type
+      const dataToInsert: UtilityProviderInsert = {
         provider_name: values.provider_name,
         property_id: values.property_id,
         utility_type: values.utility_type,
@@ -155,10 +159,10 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
           description: "Utility provider updated successfully!",
         });
       } else {
-        // For insertion, specify as the expected type to satisfy TypeScript
+        // For insertion
         const { error } = await supabase
           .from('utility_provider_credentials')
-          .insert(dataToInsert);
+          .insert([dataToInsert]); // Use array syntax to match the expected type
 
         if (error) {
           console.error("Error inserting utility provider credentials:", error);
