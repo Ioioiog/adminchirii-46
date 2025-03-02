@@ -1,10 +1,11 @@
+
 import React, { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { ProviderForm } from "@/components/utilities/providers/ProviderForm";
 import { ProviderList } from "@/components/utilities/providers/ProviderList";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { UtilityProvider } from "@/types/utilities";
+import { UtilityProvider } from "@/components/utilities/providers/types";
 
 interface PropertyProvidersSettingsProps {
   propertyId: string;
@@ -12,12 +13,14 @@ interface PropertyProvidersSettingsProps {
 
 export function PropertyProvidersSettings({ propertyId }: PropertyProvidersSettingsProps) {
   const [providers, setProviders] = useState<UtilityProvider[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [showProviderForm, setShowProviderForm] = useState(false);
   const [editingProvider, setEditingProvider] = useState<UtilityProvider | null>(null);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchProviders = async () => {
+  const fetchProviders = async () => {
+    setIsLoading(true);
+    try {
       const { data, error } = await supabase
         .from('utility_provider_credentials')
         .select('*')
@@ -33,10 +36,25 @@ export function PropertyProvidersSettings({ propertyId }: PropertyProvidersSetti
         return;
       }
 
-      setProviders(data || []);
-    };
+      // Type assertion to help TypeScript identify that this array matches UtilityProvider
+      // since the query returns the correct fields
+      setProviders(data as unknown as UtilityProvider[]);
+    } catch (error) {
+      console.error('Error in fetchProviders:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchProviders();
+  useEffect(() => {
+    if (propertyId) {
+      fetchProviders();
+    }
   }, [propertyId]);
 
   const handleDeleteProvider = async (id: string) => {
@@ -71,6 +89,18 @@ export function PropertyProvidersSettings({ propertyId }: PropertyProvidersSetti
     setShowProviderForm(true);
   };
 
+  // Get current user ID safely
+  const getCurrentUserId = async () => {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) throw error;
+      return user?.id || '';
+    } catch (error) {
+      console.error("Error getting current user:", error);
+      return '';
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-start">
@@ -85,7 +115,7 @@ export function PropertyProvidersSettings({ propertyId }: PropertyProvidersSetti
 
       {showProviderForm ? (
         <ProviderForm 
-          landlordId={supabase.auth.getUser()?.data?.user?.id || ''} 
+          landlordId={localStorage.getItem('userId') || ''} // Fallback to local storage if available
           onSubmit={() => {
             setShowProviderForm(false);
             setEditingProvider(null);
@@ -106,7 +136,8 @@ export function PropertyProvidersSettings({ propertyId }: PropertyProvidersSetti
         <ProviderList 
           providers={providers} 
           onDelete={handleDeleteProvider} 
-          onEdit={handleEditProvider} 
+          onEdit={handleEditProvider}
+          isLoading={isLoading} 
         />
       )}
     </div>

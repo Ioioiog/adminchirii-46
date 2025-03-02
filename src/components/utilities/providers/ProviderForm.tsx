@@ -8,22 +8,22 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { z } from "zod"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+} from "@/components/ui/form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { UtilityType } from '@/types/utilities';
+import { UtilityType } from '@/components/utilities/providers/types';
 import { Property } from '@/types/tenant';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -56,7 +56,7 @@ const formSchema = z.object({
   location_name: z.string().optional(),
   start_day: z.date().optional(),
   end_day: z.date().optional(),
-})
+});
 
 export interface ProviderFormProps {
   landlordId: string;
@@ -101,12 +101,12 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
       start_day: provider?.start_day ? new Date(provider.start_day) : undefined,
       end_day: provider?.end_day ? new Date(provider.end_day) : undefined,
     },
-  })
+  });
 
   async function onSubmitForm(values: z.infer<typeof formSchema>) {
     try {
       // Prepare the data - convert Date objects to proper format
-      const dataToInsert = {
+      const dataToInsert: Record<string, any> = {
         provider_name: values.provider_name,
         property_id: values.property_id,
         utility_type: values.utility_type,
@@ -114,12 +114,27 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
         landlord_id: landlordId,
         location_name: values.location_name,
         start_day: values.start_day ? values.start_day.getDate() : null,
-        end_day: values.end_day ? values.end_day.getDate() : null
+        end_day: values.end_day ? values.end_day.getDate() : null,
       };
 
       // Add password only if provided (for updates)
       if (values.password) {
-        Object.assign(dataToInsert, { password: values.password });
+        // Handle the encrypted password properly
+        if (provider?.id) {
+          dataToInsert.password = values.password;
+        } else {
+          // For new providers, set both password and encrypted_password
+          dataToInsert.password = values.password;
+          dataToInsert.encrypted_password = values.password; // This is a temporary solution
+        }
+      } else if (!provider?.id) {
+        // For new records and no password
+        toast({
+          title: "Error",
+          description: "Password is required for new utility providers.",
+          variant: "destructive",
+        });
+        return;
       }
 
       // Handle update vs insert
@@ -144,16 +159,6 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
           description: "Utility provider updated successfully!",
         });
       } else {
-        // For new records, password is required
-        if (!values.password) {
-          toast({
-            title: "Error",
-            description: "Password is required for new utility providers.",
-            variant: "destructive",
-          });
-          return;
-        }
-
         const { error } = await supabase
           .from('utility_provider_credentials')
           .insert(dataToInsert);
@@ -317,35 +322,11 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Billing Start Day (Optional)</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        {field.value ? (
-                          format(field.value, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      disabled={false}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <DatePicker 
+                  date={field.value} 
+                  onSelect={field.onChange}
+                  mode="single" 
+                />
                 <FormDescription>
                   The date from which the utility readings should start being recorded.
                 </FormDescription>
@@ -359,35 +340,11 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Billing End Day (Optional)</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        {field.value ? (
-                          format(field.value, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      disabled={false}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <DatePicker 
+                  date={field.value} 
+                  onSelect={field.onChange}
+                  mode="single" 
+                />
                 <FormDescription>
                   The date until which the utility readings should be recorded.
                 </FormDescription>
@@ -400,5 +357,5 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
         <Button type="submit">Submit</Button>
       </form>
     </Form>
-  )
+  );
 }

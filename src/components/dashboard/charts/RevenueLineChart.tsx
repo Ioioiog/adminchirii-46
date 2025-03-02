@@ -21,7 +21,7 @@ export function RevenueLineChart({ data, gradientId, isPrediction = false }: Rev
   // Custom axis properties to avoid defaultProps warnings
   const xAxisProps = {
     dataKey: "month",
-    scale: "auto", 
+    scale: "auto" as const, // Fix: Use 'as const' to properly type this
     type: "category" as const,
     allowDuplicatedCategory: true,
     className: "text-xs font-medium",
@@ -31,7 +31,7 @@ export function RevenueLineChart({ data, gradientId, isPrediction = false }: Rev
   };
 
   const yAxisProps = {
-    scale: "auto",
+    scale: "auto" as const, // Fix: Use 'as const' to properly type this
     type: "number" as const,
     allowDecimals: true,
     className: "text-xs font-medium",

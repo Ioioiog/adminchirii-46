@@ -39,13 +39,42 @@ export function DatePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
-        <Calendar
-          mode={mode}
-          selected={date}
-          onSelect={onSelect}
-          disabled={disabled}
-          initialFocus
-        />
+        {/* Fix: Only pass properties appropriate for the specified mode */}
+        {mode === "single" && (
+          <Calendar
+            mode="single"
+            selected={date}
+            onSelect={onSelect}
+            disabled={disabled}
+            initialFocus
+          />
+        )}
+        {mode === "range" && (
+          <Calendar
+            mode="range"
+            selected={{
+              from: date,
+              to: date
+            }}
+            onSelect={(range) => {
+              if (range?.from) onSelect(range.from);
+            }}
+            disabled={disabled}
+            initialFocus
+          />
+        )}
+        {mode === "multiple" && (
+          <Calendar
+            mode="multiple"
+            selected={date ? [date] : []}
+            onSelect={(dates) => {
+              if (dates?.length) onSelect(dates[0]);
+              else onSelect(undefined);
+            }}
+            disabled={disabled}
+            initialFocus
+          />
+        )}
       </PopoverContent>
     </Popover>
   );

@@ -26,6 +26,10 @@ export interface UtilityProvider {
   start_day?: number;
   end_day?: number;
   location_name?: string;
+  landlord_id?: string;
+  password?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 /**
@@ -53,3 +57,13 @@ export const PROVIDER_OPTIONS = [
  * Type representing valid provider name values
  */
 export type ProviderName = typeof PROVIDER_OPTIONS[number]['value'];
+
+/**
+ * Props interface for the ProviderList component
+ */
+export interface ProviderListProps {
+  providers: UtilityProvider[];
+  onDelete: (id: string) => Promise<void>;
+  onEdit: (provider: UtilityProvider) => void;
+  isLoading: boolean;
+}

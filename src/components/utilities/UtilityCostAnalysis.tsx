@@ -44,10 +44,10 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
       setIsLoading(true);
       try {
         let query = supabase
-          .from('utility_costs')
+          .from('utilities')
           .select('*')
           .eq('property_id', propertyId)
-          .order('date', { ascending: true });
+          .order('due_date', { ascending: true });
 
         const { data, error } = await query;
 
@@ -55,7 +55,16 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
           throw error;
         }
 
-        setUtilityData(data || []);
+        const transformedData: UtilityCost[] = (data || []).map(item => ({
+          id: item.id,
+          property_id: item.property_id,
+          utility_type: item.type,
+          amount: item.amount,
+          date: item.due_date,
+          created_at: item.created_at
+        }));
+
+        setUtilityData(transformedData);
       } catch (error) {
         console.error('Error fetching utility data:', error);
       } finally {
@@ -76,7 +85,6 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
   }, [utilityData, timeRange]);
 
   const processUtilityData = (data: UtilityCost[], range: "6months" | "12months" | "all"): ChartData[] => {
-    // Filter data based on time range
     let filteredData = [...data];
     const now = new Date();
     
@@ -88,7 +96,6 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
       filteredData = data.filter(item => new Date(item.date) >= twelveMonthsAgo);
     }
 
-    // Group by month and utility type
     const monthlyData: Record<string, Record<string, number>> = {};
 
     filteredData.forEach(item => {
@@ -112,7 +119,6 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
       }
     });
 
-    // Convert to chart data format
     const chartData: ChartData[] = Object.keys(monthlyData).map(month => ({
       month,
       electricity: monthlyData[month].electricity || 0,
@@ -122,7 +128,6 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
       total: monthlyData[month].total || 0
     }));
 
-    // Sort by date
     chartData.sort((a, b) => {
       const dateA = new Date(a.month);
       const dateB = new Date(b.month);
@@ -135,7 +140,6 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
   const downloadCSV = () => {
     if (chartData.length === 0) return;
 
-    // Create CSV content
     const headers = ['Month', 'Electricity', 'Water', 'Gas', 'Internet', 'Total'];
     const csvRows = [headers.join(',')];
 
@@ -153,7 +157,6 @@ export function UtilityCostAnalysis({ propertyId }: UtilityCostAnalysisProps) {
 
     const csvContent = csvRows.join('\n');
     
-    // Create and download the file
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
