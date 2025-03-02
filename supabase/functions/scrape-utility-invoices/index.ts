@@ -42,6 +42,8 @@ serve(async (req: Request) => {
       });
     }
 
+    console.log(`Processing scrape request for provider: ${provider}`);
+
     // Create a job record
     const { data: job, error: jobError } = await supabase
       .from('scraping_jobs')
@@ -69,6 +71,7 @@ serve(async (req: Request) => {
         
         // Get the appropriate scraper
         const scraper = getScraper(provider);
+        console.log(`Using ${provider} scraper`);
         
         // Run the scraper
         const result = await scraper(username, password);

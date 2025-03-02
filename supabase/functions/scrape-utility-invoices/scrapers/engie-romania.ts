@@ -1,5 +1,5 @@
 
-import { createClient } from "@supabase/supabase-js";
+import { DEFAULT_TIMEOUT, DEFAULT_WAIT_TIME } from "../constants.ts";
 
 const BROWSERLESS_API_URL = "https://chrome.browserless.io/content";
 
@@ -83,8 +83,8 @@ export async function scrapeEngieRomania(username: string, password: string) {
                   invoice_number: cells[0]?.textContent?.trim() || 'Unknown',
                   amount: parseFloat(cells[2]?.textContent?.trim().replace(/[^0-9.,]/g, '').replace(',', '.')) || 0,
                   due_date: cells[1]?.textContent?.trim() || new Date().toISOString().split('T')[0],
-                  type: 'electricity',
-                  status: 'active'
+                  type: 'gas',
+                  status: 'unpaid'
                 });
               }
             } catch (e) {
@@ -106,6 +106,9 @@ export async function scrapeEngieRomania(username: string, password: string) {
       })();
     `;
     
+    // Log the Browserless request (without showing API key)
+    console.log(`Sending request to Browserless for ENGIE Romania scraping`);
+    
     // Construct the request to Browserless
     const browserlessResponse = await fetch(`${BROWSERLESS_API_URL}?token=${browserlessApiKey}`, {
       method: 'POST',
@@ -117,7 +120,7 @@ export async function scrapeEngieRomania(username: string, password: string) {
         url: 'https://client.engie.ro/login',
         gotoOptions: {
           waitUntil: 'networkidle2',
-          timeout: 30000,
+          timeout: DEFAULT_TIMEOUT,
         },
         evaluate: script,
         waitForFunction: {
@@ -133,7 +136,7 @@ export async function scrapeEngieRomania(username: string, password: string) {
           height: 720,
         },
         stealth: true, // Use stealth mode to avoid detection
-        timeout: 60000, // 60 seconds timeout
+        timeout: DEFAULT_TIMEOUT, // 60 seconds timeout
       }),
     });
     
