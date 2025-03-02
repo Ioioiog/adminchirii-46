@@ -32,6 +32,8 @@ export function formatErrorMessage(error: unknown): string {
       errorMessage = "The login selectors for this provider need to be updated. Please contact support.";
     } else if (error.message.includes("options is not allowed")) {
       errorMessage = "The Browserless API configuration is invalid. Please contact support to update the scraper.";
+    } else if (error.message.includes("\"url\" is required")) {
+      errorMessage = "The scraper configuration is missing a required URL parameter. Please contact support.";
     }
   }
   
@@ -71,6 +73,10 @@ export function formatEdgeFunctionError(errorMessage: string | undefined): strin
     return "The scraper needs updating. There's an issue with the Browserless API configuration.";
   }
   
+  if (errorMessage.includes("\"url\" is required")) {
+    return "The scraper configuration is missing a required URL parameter. Please contact support.";
+  }
+  
   if (errorMessage.includes("non-2xx status") || errorMessage.includes("Edge Function")) {
     return "The utility provider's website may be down or has changed. Please try again later.";
   }
@@ -101,6 +107,7 @@ export function isEdgeFunctionError(error: unknown): boolean {
            error.message.includes("provider's website") ||
            error.message.includes("400 Bad Request") ||
            error.message.includes("options is not allowed") ||
+           error.message.includes("\"url\" is required") ||
            error.message.includes("usernameSelector is not defined");
   }
   return false;

@@ -1,5 +1,15 @@
 
 /**
+ * Status constants for scraping jobs
+ */
+export const JOB_STATUS = {
+  PENDING: 'pending',
+  IN_PROGRESS: 'in_progress',
+  COMPLETED: 'completed',
+  FAILED: 'failed'
+};
+
+/**
  * Selectors for various website elements used in scrapers
  */
 export const SELECTORS = {
@@ -31,14 +41,6 @@ export const SELECTORS = {
     recaptchaResponse: 'textarea[name="g-recaptcha-response"]',
     defaultCaptchaSiteKey: '6LeqYkkgAAAAAGa5Jl5qmTHK_Nl4_40-YfU4NN71'
   }
-};
-
-// Status constants for scraping jobs
-export const JOB_STATUS = {
-  PENDING: 'pending',
-  IN_PROGRESS: 'in_progress',
-  COMPLETED: 'completed',
-  FAILED: 'failed'
 };
 
 // Default timeout for browser operations
