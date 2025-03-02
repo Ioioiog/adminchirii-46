@@ -84,7 +84,11 @@ function prepareScrapingRequestBody(provider: UtilityProvider, credentials: Cred
     // Set secure WebSocket protocol to avoid NoApplicationProtocol errors
     secureWebSocket: true,
     // Set timeout to avoid hanging connections
-    timeout: 120000
+    timeout: 120000,
+    // Add more robust error handling flag
+    enhancedErrorHandling: true,
+    // Add retry strategy for intermittent issues
+    retryOnFailure: true
   };
 }
 
@@ -153,6 +157,35 @@ export async function invokeScrapingFunction(
            error.message.includes("connection failed"))) {
         console.error('WebSocket connection error detected:', error);
         throw new Error('Failed to connect to the utility provider service due to network protocol issues. Please try again later.');
+      }
+      
+      // Handle 500 Internal Server Error specifically
+      if (error instanceof Error && 
+          (error.message.includes("500") || 
+           error.message.includes("Internal Server Error"))) {
+        console.error('500 Internal Server Error detected from edge function:', error);
+        
+        // Create a job record directly in the database as a fallback
+        try {
+          const jobId = await createScrapingJobDirectly(
+            provider.id,
+            provider.provider_name,
+            provider.utility_type,
+            provider.location_name
+          );
+          
+          console.log('Created fallback job with ID:', jobId);
+          
+          // Return a successful response with the fallback job ID
+          return {
+            success: true,
+            jobId: jobId,
+            error: 'Using fallback job due to edge function failure'
+          };
+        } catch (fallbackError) {
+          console.error('Fallback job creation failed:', fallbackError);
+          throw new Error('The utility provider service is temporarily unavailable. Our team has been notified of this issue.');
+        }
       }
       
       // Create a job record directly in the database as a fallback

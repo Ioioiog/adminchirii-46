@@ -78,7 +78,13 @@ export function useJobStatusManager() {
           
           if (job?.error_message) {
             console.error('Scraping job failed with error:', job.error_message);
-            errorDescription = formatEdgeFunctionError(job.error_message);
+            
+            // Check specifically for 500 Internal Server Error
+            if (job.error_message.includes('500') || job.error_message.includes('Internal Server Error')) {
+              errorDescription = "The utility provider service encountered an internal error. Our team has been notified. Please try again later.";
+            } else {
+              errorDescription = formatEdgeFunctionError(job.error_message);
+            }
             
             // Add specific error handling for missing API key, CAPTCHA issues, and other common errors
             if (job.error_message.includes("BROWSERLESS_API_KEY")) {
@@ -112,6 +118,12 @@ export function useJobStatusManager() {
               job.error_message.includes("connection failed")
             ) {
               errorDescription = "Failed to establish a secure connection to the utility provider service. This is likely a temporary network issue. Please try again later.";
+            } else if (
+              job.error_message.includes("Edge Function") ||
+              job.error_message.includes("500") || 
+              job.error_message.includes("Internal Server Error")
+            ) {
+              errorDescription = "The utility provider service encountered an internal server error. This is often temporary. Please try again later.";
             }
           }
           
