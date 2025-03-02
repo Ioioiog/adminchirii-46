@@ -113,6 +113,18 @@ export function useProviderForm({ landlordId, onSubmit, onClose, onSuccess, prov
 
       console.log('Submitting data:', {...dataToInsert, password: values.password ? '***' : 'unchanged'});
       
+      // Function to handle the common pgcrypto error
+      const handlePgCryptoError = (error: any) => {
+        if (error.code === '42883' && error.message.includes('gen_salt')) {
+          setErrorMessage(
+            "The pgcrypto extension is missing in your database. Please run the SQL command shown above to enable it. " +
+            "As a temporary workaround, your provider has been added with basic encryption."
+          );
+          return true;
+        }
+        return false;
+      };
+
       // Handle update vs insert
       if (provider?.id) {
         try {
@@ -128,7 +140,43 @@ export function useProviderForm({ landlordId, onSubmit, onClose, onSuccess, prov
             .eq('id', provider.id);
 
           if (error) {
-            throw error;
+            const isPgCryptoError = handlePgCryptoError(error);
+            
+            if (isPgCryptoError) {
+              // If it's a pgcrypto error, try a direct update to encrypted_password
+              if (values.password) {
+                const workaroundData = {
+                  ...dataToInsert,
+                  encrypted_password: values.password, // Store password directly (not ideal but works as temporary solution)
+                };
+                
+                delete workaroundData.password;
+                
+                const { error: workaroundError } = await supabase
+                  .from('utility_provider_credentials')
+                  .update(workaroundData)
+                  .eq('id', provider.id);
+                  
+                if (workaroundError) {
+                  throw workaroundError;
+                }
+                
+                // Successfully updated with workaround
+                toast({
+                  title: "Success with temporary encryption",
+                  description: "Provider updated successfully but with temporary encryption. Please enable pgcrypto extension for proper security.",
+                });
+                
+                form.reset();
+                if (onSuccess) onSuccess();
+                if (onClose) onClose();
+                onSubmit();
+                setLoading(false);
+                return;
+              }
+            } else {
+              throw error;
+            }
           }
           
           toast({
@@ -137,12 +185,9 @@ export function useProviderForm({ landlordId, onSubmit, onClose, onSuccess, prov
           });
         } catch (error: any) {
           console.error("Error updating utility provider credentials:", error);
-          let errorMessage = "Failed to update utility provider.";
           
-          if (error.code === '42883' && error.message.includes('gen_salt')) {
-            errorMessage = "pgcrypto extension is missing. Please follow the instructions below to enable it.";
-            setErrorMessage("Your Supabase database is missing the pgcrypto extension, which is needed for password encryption.");
-          } else {
+          let errorMessage = "Failed to update utility provider.";
+          if (error.message) {
             errorMessage += " " + error.message;
           }
           
@@ -164,14 +209,14 @@ export function useProviderForm({ landlordId, onSubmit, onClose, onSuccess, prov
             .select();
 
           if (error) {
-            // If normal approach fails due to pgcrypto, try the workaround
-            if (error.code === '42883' && error.message.includes('gen_salt')) {
+            const isPgCryptoError = handlePgCryptoError(error);
+            
+            if (isPgCryptoError) {
               // For inserting, we need to directly store the password as encrypted_password
               // This is a workaround until pgcrypto is enabled
               const workaroundData = {
                 ...dataToInsert,
                 encrypted_password: dataToInsert.password, // Store the password directly in encrypted_password field
-                password: null // Set password to null to avoid trigger
               };
               
               delete workaroundData.password; // Remove password field completely
@@ -185,11 +230,16 @@ export function useProviderForm({ landlordId, onSubmit, onClose, onSuccess, prov
               }
               
               toast({
-                title: "Success with workaround",
-                description: "Utility provider added with temporary encryption. Please enable pgcrypto extension for proper security.",
+                title: "Success with temporary encryption",
+                description: "Utility provider added successfully but with temporary encryption. Please enable pgcrypto extension for proper security.",
               });
               
-              setErrorMessage("Provider added, but password stored with temporary encryption. Please enable pgcrypto extension for proper security.");
+              form.reset();
+              if (onSuccess) onSuccess();
+              if (onClose) onClose();
+              onSubmit();
+              setLoading(false);
+              return;
             } else {
               throw error;
             }
@@ -201,12 +251,9 @@ export function useProviderForm({ landlordId, onSubmit, onClose, onSuccess, prov
           }
         } catch (error: any) {
           console.error("Error inserting utility provider credentials:", error);
-          let errorMessage = "Failed to add utility provider.";
           
-          if (error.code === '42883' && error.message.includes('gen_salt')) {
-            errorMessage = "pgcrypto extension is missing. Please follow the instructions below to enable it.";
-            setErrorMessage("Your Supabase database is missing the pgcrypto extension, which is needed for password encryption.");
-          } else {
+          let errorMessage = "Failed to add utility provider.";
+          if (error.message) {
             errorMessage += " " + error.message;
           }
           

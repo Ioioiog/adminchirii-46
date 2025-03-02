@@ -26,18 +26,24 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
     onSubmitForm
   } = useProviderForm({ landlordId, onSubmit, onClose, onSuccess, provider });
 
+  // Show the PgCryptoNote immediately if there's a pgcrypto-related error
+  const showPgCryptoNote = errorMessage?.includes('pgcrypto') || false;
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmitForm)} className="space-y-8">
         <ErrorNotification errorMessage={errorMessage} />
+        
+        {/* Show PgCryptoNote prominently if we have a pgcrypto error */}
+        {showPgCryptoNote && <PgCryptoNote />}
         
         <GeneralInfoSection form={form} properties={properties} />
         <CredentialsSection form={form} isUpdate={!!provider?.id} />
         <AdditionalDetailsSection form={form} />
 
         <div className="pt-4">
-          {/* Display important note about the pgcrypto extension */}
-          <PgCryptoNote />
+          {/* Always display the note about pgcrypto extension at the bottom */}
+          {!showPgCryptoNote && <PgCryptoNote />}
           
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? "Submitting..." : "Submit"}
