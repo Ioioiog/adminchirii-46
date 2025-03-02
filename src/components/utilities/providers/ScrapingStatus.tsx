@@ -75,6 +75,10 @@ export function ScrapingStatus({
     if (errorMessage.includes('cookie') || errorMessage.includes('session')) {
       return 'Session management issue detected. Provider website may have expired your session. Please try clearing cookies and try again.';
     }
+
+    if (errorMessage.includes('MyENGIE app popup') || errorMessage.includes('Mai târziu')) {
+      return 'The process was interrupted by a promotional popup on the ENGIE website. We\'ll improve handling of this in future updates.';
+    }
     
     return errorMessage;
   };

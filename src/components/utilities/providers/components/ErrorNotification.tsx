@@ -59,6 +59,10 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
     if (errorMessage.includes('cookie') || errorMessage.includes('session')) {
       return "There was an issue with the session management. The provider website may have expired your session or blocked automated access. Please try clearing browser cookies and try again.";
     }
+
+    if (errorMessage.includes('MyENGIE app popup') || errorMessage.includes('Mai târziu')) {
+      return "The process was interrupted by a promotional popup on the ENGIE website. We'll improve our handling of this popup in future updates. Please try again.";
+    }
     
     return "There was an error fetching your utility bills. Please try again later.";
   };

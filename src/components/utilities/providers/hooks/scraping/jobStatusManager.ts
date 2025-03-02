@@ -85,6 +85,19 @@ export function useJobStatusManager() {
           error_message: 'The scraping process failed during consumption location selection. This is a common issue with the ENGIE Romania website and often requires manual login. Please try again later or log in directly to the provider website.'
         });
       }
+      // Check for MyENGIE app popup issues
+      else if (job.status === 'failed' && 
+          job.error_message && 
+          (job.error_message.includes('MyENGIE app popup') || 
+           job.error_message.includes('Mai târziu'))) {
+        console.log('Job failed due to MyENGIE app popup, special handling');
+        
+        updateJobStatus(providerId, {
+          status: 'failed',
+          last_run_at: job.created_at,
+          error_message: 'The scraping process was interrupted by a promotional popup on the ENGIE website. We\'ll improve handling of this in future updates. Please try again later.'
+        });
+      }
       else {
         // Regular job status update
         updateJobStatus(providerId, {
@@ -147,6 +160,10 @@ export function useJobStatusManager() {
             else if (job.error_message.includes('Change consumption location') || 
                      job.error_message.includes('Schimbă locul de consum')) {
               errorDescription = "The process failed during consumption location selection. This is a common issue with the ENGIE Romania website. Please try again later or log in manually to the provider website.";
+            }
+            else if (job.error_message.includes('MyENGIE app popup') || 
+                     job.error_message.includes('Mai târziu')) {
+              errorDescription = "The process was interrupted by a promotional popup on the ENGIE website. We'll improve handling of this in future updates. Please try again later.";
             }
             else {
               errorDescription = formatEdgeFunctionError(job.error_message);

@@ -91,6 +91,8 @@ function prepareScrapingRequestBody(provider: UtilityProvider, credentials: Cred
     persistCookies: provider.provider_name.toLowerCase().includes('engie'),
     // Set flag to clear cookies before starting (helps with session issues)
     clearCookies: provider.provider_name.toLowerCase().includes('engie'),
+    // Set flag to handle MyENGIE app popup
+    handleMyEngiePopup: provider.provider_name.toLowerCase().includes('engie'),
     // Set user agent to appear as a modern browser
     userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
   };
@@ -145,6 +147,11 @@ export async function invokeScrapingFunction(
         throw new Error(`CAPTCHA submitted, but the function was interrupted. Please try again.`);
       }
       
+      // Check for MyENGIE app popup issues
+      if (scrapeData.error && (scrapeData.error.includes('MyENGIE app popup') || scrapeData.error.includes('Mai târziu'))) {
+        throw new Error(`The process encountered a promotional popup about the MyENGIE app. We'll improve handling of this in future updates. Please try again.`);
+      }
+      
       throw new Error(scrapeData?.error || 'Scraping failed');
     }
 
@@ -176,6 +183,29 @@ export async function invokeScrapingFunction(
       } catch (fallbackError) {
         console.error('Fallback job creation failed:', fallbackError);
         throw new Error('CAPTCHA was submitted but the process was interrupted. Please try again.');
+      }
+    }
+    
+    // Check for MyENGIE app popup issue
+    if (error instanceof Error && (error.message.includes('MyENGIE app popup') || error.message.includes('Mai târziu'))) {
+      console.log('MyENGIE app popup detected, creating fallback job...');
+      
+      try {
+        const jobId = await createScrapingJobDirectly(
+          provider.id,
+          provider.provider_name,
+          provider.utility_type,
+          provider.location_name
+        );
+        
+        return {
+          success: true,
+          jobId: jobId,
+          error: 'The process encountered a promotional popup about the MyENGIE app. Using fallback job.'
+        };
+      } catch (fallbackError) {
+        console.error('Fallback job creation failed:', fallbackError);
+        throw new Error('The process was interrupted by a promotional popup. Please try again later.');
       }
     }
     
@@ -233,6 +263,10 @@ export async function invokeScrapingFunction(
         
         if (error.message.includes('cookie') || error.message.includes('session')) {
           throw new Error('Session management issue with ENGIE Romania website. This may be due to cookie handling or session expiration. Please try again later.');
+        }
+
+        if (error.message.includes('MyENGIE app popup') || error.message.includes('Mai târziu')) {
+          throw new Error('The scraping process was interrupted by a promotional popup about the MyENGIE app. We\'ll improve handling of this in future updates. Please try again later.');
         }
       }
       

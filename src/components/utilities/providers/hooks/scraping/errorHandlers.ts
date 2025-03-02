@@ -58,6 +58,8 @@ export function formatErrorMessage(error: unknown): string {
       errorMessage = "Session management issue with the provider website. This might be due to expired cookies or session timeout. Please try clearing your browser cookies and try again later.";
     } else if (error.message.includes("Change consumption location") || error.message.includes("Schimbă locul de consum")) {
       errorMessage = "Failed while selecting consumption location. This is a common issue with the ENGIE Romania website. Please try again later or log in directly to the provider website.";
+    } else if (error.message.includes("MyENGIE app popup") || error.message.includes("Mai târziu")) {
+      errorMessage = "The process was interrupted by a promotional popup on the ENGIE website. We'll improve handling of this in future updates.";
     }
   }
   
@@ -152,6 +154,10 @@ export function formatEdgeFunctionError(errorMessage: string | undefined): strin
   if (errorMessage.includes("Change consumption location") || errorMessage.includes("Schimbă locul de consum")) {
     return "The scraping process failed during consumption location selection. This is a common issue with the ENGIE Romania website. Please try again later or log in manually to the provider website.";
   }
+
+  if (errorMessage.includes("MyENGIE app popup") || errorMessage.includes("Mai târziu")) {
+    return "The process was interrupted by a promotional popup on the ENGIE website. We'll improve handling of this in future updates.";
+  }
   
   return errorMessage;
 }
@@ -182,7 +188,9 @@ export function isEdgeFunctionError(error: unknown): boolean {
            error.message.includes("cookie") ||
            error.message.includes("session") ||
            error.message.includes("Change consumption location") ||
-           error.message.includes("Schimbă locul de consum");
+           error.message.includes("Schimbă locul de consum") ||
+           error.message.includes("MyENGIE app popup") ||
+           error.message.includes("Mai târziu");
   }
   return false;
 }
