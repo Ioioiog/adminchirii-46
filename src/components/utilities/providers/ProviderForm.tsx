@@ -107,7 +107,7 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
   async function onSubmitForm(values: z.infer<typeof formSchema>) {
     try {
       // Prepare the data - convert Date objects to proper format
-      const dataToInsert: Record<string, any> = {
+      const dataToInsert = {
         provider_name: values.provider_name,
         property_id: values.property_id,
         utility_type: values.utility_type,
@@ -119,9 +119,9 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
         end_day: values.end_day instanceof Date ? values.end_day.getDate() : null,
       };
 
-      // Add password only if provided (for updates)
+      // For handling password - add only if provided
       if (values.password) {
-        // For handling password - set directly
+        // We need to specify the password field for both insert and update
         dataToInsert.password = values.password;
       } else if (!provider?.id) {
         // For new records and no password
@@ -155,10 +155,13 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
           description: "Utility provider updated successfully!",
         });
       } else {
-        // For insertion, we need to provide a single object, not an array
+        // For insertion, we need to provide a single object
+        // When doing an insert, TypeScript requires that all required fields are present
+        // Using 'as any' here as a temporary workaround since the RLS policy and trigger
+        // will handle the encrypted_password field server-side
         const { error } = await supabase
           .from('utility_provider_credentials')
-          .insert(dataToInsert);
+          .insert(dataToInsert as any);
 
         if (error) {
           console.error("Error inserting utility provider credentials:", error);

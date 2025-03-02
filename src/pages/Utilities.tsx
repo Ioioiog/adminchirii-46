@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { Button } from "@/components/ui/button";
@@ -50,10 +50,24 @@ const Utilities = () => {
   const [showCsvImporter, setShowCsvImporter] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [landlordId, setLandlordId] = useState<string>('');
 
   const { userRole } = useUserRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (userRole === 'landlord') {
+      const fetchLandlordId = async () => {
+        const { data } = await supabase.auth.getUser();
+        if (data && data.user) {
+          setLandlordId(data.user.id);
+        }
+      };
+      
+      fetchLandlordId();
+    }
+  }, [userRole]);
 
   const { properties, isLoading: propertiesLoading } = useProperties({
     userRole: userRole === "landlord" || userRole === "tenant" ? userRole : "tenant"
@@ -197,11 +211,9 @@ const Utilities = () => {
           throw new Error("Failed to read CSV file");
         }
 
-        // Parse CSV
         const lines = csv.split('\n');
         const headers = lines[0].split(',').map(h => h.trim());
         
-        // Expected headers: property_id,type,amount,currency,due_date,issued_date,invoice_number
         const requiredHeaders = ['property_id', 'type', 'amount', 'due_date'];
         const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
         
@@ -211,7 +223,6 @@ const Utilities = () => {
 
         const utilityBills = [];
         
-        // Process each line
         for (let i = 1; i < lines.length; i++) {
           if (!lines[i].trim()) continue;
           
@@ -222,15 +233,12 @@ const Utilities = () => {
             bill[header] = values[index] || null;
           });
           
-          // Validate required fields
           if (!bill.property_id || !bill.type || !bill.amount || !bill.due_date) {
-            continue; // Skip incomplete rows
+            continue;
           }
           
-          // Convert amount to number
           bill.amount = parseFloat(bill.amount);
           
-          // Set default status
           bill.status = 'pending';
           
           utilityBills.push(bill);
@@ -240,7 +248,6 @@ const Utilities = () => {
           throw new Error("No valid utility bills found in CSV");
         }
         
-        // Insert bills into database
         const { data, error } = await supabase
           .from('utilities')
           .insert(utilityBills)
@@ -253,10 +260,8 @@ const Utilities = () => {
           description: `Imported ${utilityBills.length} utility bills successfully`
         });
         
-        // Refresh the list
         queryClient.invalidateQueries({ queryKey: ['utilities'] });
         
-        // Close the dialog and reset state
         setShowCsvImporter(false);
         setCsvFile(null);
       };
@@ -357,7 +362,6 @@ const Utilities = () => {
               onStatusUpdate={() => {}}
             />
 
-            {/* CSV Import Dialog */}
             <Dialog open={showCsvImporter} onOpenChange={setShowCsvImporter}>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
@@ -446,7 +450,7 @@ const Utilities = () => {
             </div>
             {showProviderForm ? (
               <ProviderForm 
-                landlordId={userRole === 'landlord' ? (supabase.auth.getUser() || {}).data?.user?.id || '' : ''} 
+                landlordId={landlordId} 
                 onSubmit={() => {
                   queryClient.invalidateQueries({ queryKey: ["utility-providers"] });
                 }}
