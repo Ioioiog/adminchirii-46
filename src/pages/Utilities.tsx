@@ -86,28 +86,37 @@ const Utilities = () => {
     queryKey: ["utility-providers"],
     queryFn: async () => {
       console.log("Fetching utility providers");
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) {
-        console.error("Error fetching user:", userError);
-        throw userError;
-      }
-      if (!user) {
-        console.error("No authenticated user found");
+      try {
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError) {
+          console.error("Error fetching user:", userError);
+          throw userError;
+        }
+        
+        if (!userData.user) {
+          console.error("No authenticated user found");
+          return [];
+        }
+        
+        const { data, error } = await supabase.from("utility_provider_credentials").select(`
+            *,
+            property:properties (
+              name,
+              address
+            )
+          `).eq("landlord_id", userData.user.id);
+          
+        if (error) {
+          console.error("Error fetching providers:", error);
+          throw error;
+        }
+        
+        console.log("Fetched providers:", data);
+        return data;
+      } catch (error) {
+        console.error("Error in utility providers query:", error);
         return [];
       }
-      const { data, error } = await supabase.from("utility_provider_credentials").select(`
-          *,
-          property:properties (
-            name,
-            address
-          )
-        `).eq("landlord_id", user.id);
-      if (error) {
-        console.error("Error fetching providers:", error);
-        throw error;
-      }
-      console.log("Fetched providers:", data);
-      return data;
     }
   });
 

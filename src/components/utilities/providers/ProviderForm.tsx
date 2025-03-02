@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { UtilityType } from '@/components/utilities/providers/types';
+import { UtilityType, UTILITY_TYPES } from '@/components/utilities/providers/types';
 import { Property } from '@/types/tenant';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -43,7 +43,7 @@ const formSchema = z.object({
   property_id: z.string().uuid({
     message: "Please select a valid property.",
   }),
-  utility_type: z.nativeEnum(UtilityType, {
+  utility_type: z.nativeEnum(z.enum(['electricity', 'water', 'gas', 'internet', 'building maintenance']), {
     message: "Please select a utility type.",
   }),
   username: z.string().min(2, {
@@ -93,7 +93,7 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
     defaultValues: {
       provider_name: provider?.provider_name || "",
       property_id: provider?.property_id || "",
-      utility_type: provider?.utility_type || UtilityType.Electricity,
+      utility_type: provider?.utility_type || 'electricity',
       username: provider?.username || "",
       password: "", // Don't prefill password for security reasons
       landlord_id: landlordId,
@@ -125,7 +125,6 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
         } else {
           // For new providers, set both password and encrypted_password
           dataToInsert.password = values.password;
-          dataToInsert.encrypted_password = values.password; // This is a temporary solution
         }
       } else if (!provider?.id) {
         // For new records and no password
@@ -161,7 +160,7 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
       } else {
         const { error } = await supabase
           .from('utility_provider_credentials')
-          .insert(dataToInsert);
+          .insert([dataToInsert]); // Make sure to pass an array here
 
         if (error) {
           console.error("Error inserting utility provider credentials:", error);
@@ -252,10 +251,11 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value={UtilityType.Electricity}>{UtilityType.Electricity}</SelectItem>
-                  <SelectItem value={UtilityType.Gas}>{UtilityType.Gas}</SelectItem>
-                  <SelectItem value={UtilityType.Water}>{UtilityType.Water}</SelectItem>
-                  <SelectItem value={UtilityType.Internet}>{UtilityType.Internet}</SelectItem>
+                  <SelectItem value="electricity">electricity</SelectItem>
+                  <SelectItem value="gas">gas</SelectItem>
+                  <SelectItem value="water">water</SelectItem>
+                  <SelectItem value="internet">internet</SelectItem>
+                  <SelectItem value="building maintenance">building maintenance</SelectItem>
                 </SelectContent>
               </Select>
               <FormDescription>

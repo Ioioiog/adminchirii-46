@@ -10,6 +10,17 @@
 export type UtilityType = 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
 
 /**
+ * Constants for utility types to be used in place of the enum
+ */
+export const UTILITY_TYPES = {
+  ELECTRICITY: 'electricity' as UtilityType,
+  WATER: 'water' as UtilityType,
+  GAS: 'gas' as UtilityType,
+  INTERNET: 'internet' as UtilityType,
+  BUILDING_MAINTENANCE: 'building maintenance' as UtilityType
+};
+
+/**
  * Represents a utility provider with its credentials and related information
  */
 export interface UtilityProvider {

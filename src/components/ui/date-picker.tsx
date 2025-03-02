@@ -39,7 +39,7 @@ export function DatePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
-        {/* Fix: Only pass properties appropriate for the specified mode */}
+        {/* Render the appropriate Calendar based on mode */}
         {mode === "single" && (
           <Calendar
             mode="single"
@@ -52,10 +52,7 @@ export function DatePicker({
         {mode === "range" && (
           <Calendar
             mode="range"
-            selected={{
-              from: date,
-              to: date
-            }}
+            selected={date ? { from: date, to: date } : undefined}
             onSelect={(range) => {
               if (range?.from) onSelect(range.from);
             }}
