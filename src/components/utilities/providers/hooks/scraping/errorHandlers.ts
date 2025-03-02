@@ -1,3 +1,4 @@
+
 import { useToast } from "@/hooks/use-toast";
 
 /**
@@ -21,6 +22,8 @@ export function formatErrorMessage(error: unknown): string {
       errorMessage = "The utility provider service is temporarily unavailable. We're working on fixing this issue.";
     } else if (error.message.includes("provider's website")) {
       errorMessage = error.message;
+    } else if (error.message.includes("Unsupported provider")) {
+      errorMessage = "This utility provider is not yet fully supported. We're working on adding support for it.";
     }
   }
   
@@ -58,6 +61,10 @@ export function formatEdgeFunctionError(errorMessage: string | undefined): strin
   
   if (errorMessage.includes("Unsupported provider")) {
     return "This utility provider is not yet supported for automated bill fetching.";
+  }
+  
+  if (errorMessage.includes("ENGIE")) {
+    return "There was an issue connecting to ENGIE. This may be due to website changes or maintenance.";
   }
   
   return errorMessage;

@@ -40,9 +40,20 @@ export function useScrapingQueue(providers: UtilityProvider[]) {
     } catch (error) {
       console.error(`Error during scraping attempt ${retryCount + 1}:`, error);
       
-      // If we've hit a fatal edge function error (like 500), don't retry
+      // If we've hit a fatal edge function error (like 500), don't retry more than once
       if (isEdgeFunctionError(error) && retryCount >= 1) {
         console.log('Edge function is consistently failing, not retrying further');
+        
+        // Format user-friendly error message
+        const errorMessage = formatErrorMessage(error);
+        showErrorToast(error);
+        
+        throw new Error(errorMessage);
+      }
+      
+      // Special handling for unsupported providers
+      if (error instanceof Error && error.message.includes("Unsupported provider")) {
+        console.log('Unsupported provider detected, not retrying');
         
         // Format user-friendly error message
         const errorMessage = formatErrorMessage(error);
@@ -119,12 +130,15 @@ export function useScrapingQueue(providers: UtilityProvider[]) {
 
   // Add provider to queue
   const addToQueue = useCallback((providerId: string) => {
+    // Get the provider to check what type it is
+    const provider = providers.find(p => p.id === providerId);
+    
     console.log(`Adding provider ${providerId} to scraping queue`);
     setState(prev => ({
       ...prev,
       scrapingQueue: [...prev.scrapingQueue, providerId]
     }));
-  }, []);
+  }, [providers]);
 
   // Process queue
   const processQueue = useCallback(async () => {
