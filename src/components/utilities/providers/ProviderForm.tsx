@@ -131,6 +131,12 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
       
       // Handle update vs insert
       if (provider?.id) {
+        // For updates, we'll omit the password field to avoid triggering the gen_salt function
+        // if we don't need to update the password
+        if (!dataToInsert.password) {
+          delete dataToInsert.password;
+        }
+        
         const { error } = await supabase
           .from('utility_provider_credentials')
           .update(dataToInsert)
@@ -377,7 +383,7 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
           {/* Display important note about the pgcrypto extension */}
           <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
             <p className="text-sm text-amber-700">
-              <strong>Note:</strong> If you are encountering errors when adding providers, your database administrator 
+              <strong>Note:</strong> If you are encountering errors when adding or updating providers, your database administrator 
               needs to enable the pgcrypto extension in Supabase SQL editor with this command:
             </p>
             <pre className="mt-2 text-xs bg-yellow-100 p-2 rounded overflow-x-auto">
