@@ -50,19 +50,6 @@ const formSchema = z.object({
   end_day: z.date().optional(),
 });
 
-// Define a type for the expected Insert data shape
-type UtilityProviderInsert = {
-  provider_name: string;
-  property_id: string;
-  utility_type: "electricity" | "water" | "gas" | "internet" | "building maintenance";
-  username: string;
-  landlord_id: string;
-  location_name?: string | null;
-  start_day?: number | null;
-  end_day?: number | null;
-  password?: string;
-};
-
 export interface ProviderFormProps {
   landlordId: string;
   onSubmit: () => void;
@@ -110,8 +97,8 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
 
   async function onSubmitForm(values: z.infer<typeof formSchema>) {
     try {
-      // Prepare the data as UtilityProviderInsert type
-      const dataToInsert: UtilityProviderInsert = {
+      // Prepare the data
+      const dataToInsert: any = {
         provider_name: values.provider_name,
         property_id: values.property_id,
         utility_type: values.utility_type,
@@ -162,7 +149,7 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
         // For insertion
         const { error } = await supabase
           .from('utility_provider_credentials')
-          .insert([dataToInsert]); // Use array syntax to match the expected type
+          .insert(dataToInsert);
 
         if (error) {
           console.error("Error inserting utility provider credentials:", error);

@@ -90,7 +90,7 @@ export function UtilityForm({
 
         <div className="grid gap-2">
           <Label htmlFor="currency">Currency *</Label>
-          <Select value={currency} onValueChange={setCurrency}>
+          <Select value={currency} onValueChange={setCurrency} defaultValue="RON">
             <SelectTrigger>
               <SelectValue placeholder="Select currency" />
             </SelectTrigger>
