@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { CardTitle } from "@/components/ui/card";
 import { Plug, FileSpreadsheet } from "lucide-react";
@@ -7,9 +6,10 @@ import { UtilityList } from "@/components/utilities/UtilityList";
 import { UtilityFilters } from "@/components/utilities/UtilityFilters";
 import { useProperties } from "@/hooks/useProperties";
 import { UtilityWithProperty } from "../../Utilities";
+import { UserRole } from "@/hooks/use-user-role";
 
 interface UtilityBillsSectionProps {
-  userRole: string;
+  userRole: UserRole;
   searchTerm: string;
   setSearchTerm: (value: string) => void;
   statusFilter: string;
@@ -18,7 +18,7 @@ interface UtilityBillsSectionProps {
   setTypeFilter: (value: string) => void;
   propertyFilter: string;
   setPropertyFilter: (value: string) => void;
-  filteredUtilities: UtilityWithProperty[];
+  utilities: any[];
   setShowCsvImporter: (value: boolean) => void;
 }
 
@@ -32,11 +32,15 @@ export function UtilityBillsSection({
   setTypeFilter,
   propertyFilter,
   setPropertyFilter,
-  filteredUtilities,
+  utilities,
   setShowCsvImporter
 }: UtilityBillsSectionProps) {
+  const role = (userRole === "landlord" || userRole === "tenant") 
+    ? userRole 
+    : "tenant" as const;
+
   const { properties } = useProperties({
-    userRole: userRole === "landlord" || userRole === "tenant" ? userRole : "tenant"
+    userRole: role
   });
 
   return (
@@ -85,7 +89,7 @@ export function UtilityBillsSection({
       />
 
       <UtilityList 
-        utilities={filteredUtilities}
+        utilities={utilities}
         userRole={userRole}
         onStatusUpdate={() => {}}
       />

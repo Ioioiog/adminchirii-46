@@ -4,14 +4,20 @@ import { Gauge } from "lucide-react";
 import { MeterReadingDialog } from "@/components/meter-readings/MeterReadingDialog";
 import { MeterReadingList } from "@/components/meter-readings/MeterReadingList";
 import { useProperties } from "@/hooks/useProperties";
+import { UserRole } from "@/hooks/use-user-role";
 
 interface MeterReadingsSectionProps {
-  userRole: string;
+  userRole: UserRole;
 }
 
 export function MeterReadingsSection({ userRole }: MeterReadingsSectionProps) {
+  // Convert string userRole to proper type for useProperties
+  const role = (userRole === "landlord" || userRole === "tenant") 
+    ? userRole 
+    : "tenant" as const;
+
   const { properties } = useProperties({
-    userRole: userRole === "landlord" || userRole === "tenant" ? userRole : "tenant"
+    userRole: role
   });
 
   return (
