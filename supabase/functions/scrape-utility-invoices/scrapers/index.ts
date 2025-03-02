@@ -1,7 +1,29 @@
 
-import { scrapeEngieRomania } from "./engie-romania.ts";
+import { ScrapingResult } from '../constants';
+import { ExampleProviderScraperImpl } from './example-provider';
+import { EngieRomaniaScraperImpl } from './engie-romania';
 
-// Export all scrapers to be used by the main edge function
-export {
-  scrapeEngieRomania
-};
+export interface BillScraper {
+  scrape(username: string, password: string): Promise<ScrapingResult>;
+}
+
+// Factory function to get the appropriate scraper
+export function getScraperForProvider(provider: string): BillScraper | null {
+  console.log(`Getting scraper for provider: ${provider}`);
+  
+  switch (provider?.toLowerCase()) {
+    case 'engie':
+    case 'engie romania':
+    case 'engie_romania':
+      console.log('Using ENGIE Romania scraper');
+      return new EngieRomaniaScraperImpl();
+      
+    case 'example_provider':
+      console.log('Using example provider scraper');
+      return new ExampleProviderScraperImpl();
+      
+    default:
+      console.log(`No scraper found for provider: ${provider}`);
+      return null;
+  }
+}

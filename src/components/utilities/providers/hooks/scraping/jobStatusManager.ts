@@ -55,41 +55,8 @@ export function useJobStatusManager() {
       const status = await checkJobStatus(jobId, providerId, updateJobStatus);
       console.log('Job status check:', status);
       
-      // For ENGIE providers that were created as a fallback,
-      // we mark them completed with a special message
-      const { data: job } = await supabase
-        .from('scraping_jobs')
-        .select('utility_provider_id, provider')
-        .eq('id', jobId)
-        .single();
-        
-      if (job?.provider === 'ENGIE' && status === 'pending' && 
-          job.utility_provider_id === providerId) {
-        console.log('ENGIE job created as fallback, updating status to completed');
-        
-        await supabase
-          .from('scraping_jobs')
-          .update({
-            status: 'completed',
-            error_message: 'ENGIE bills must be downloaded manually from the provider website',
-            completed_at: new Date().toISOString()
-          })
-          .eq('id', jobId);
-          
-        updateJobStatus(providerId, {
-          status: 'completed',
-          last_run_at: new Date().toISOString(),
-          error_message: 'ENGIE bills must be downloaded manually from the provider website'
-        });
-        
-        toast({
-          title: "Information",
-          description: "ENGIE bills must be downloaded manually from the provider website. Auto-scraping is not yet available.",
-        });
-        
-        clearInterval(checkJobInterval);
-        return;
-      }
+      // We no longer assume ENGIE needs special treatment - now it should be properly scraped
+      // This block is removed because we're implementing full auto-scraping for ENGIE
       
       if (status === 'completed' || status === 'failed') {
         clearInterval(checkJobInterval);

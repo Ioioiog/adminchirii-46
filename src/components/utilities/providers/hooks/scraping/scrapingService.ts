@@ -109,8 +109,9 @@ export async function invokeScrapingFunction(
     if (!scrapeData || !scrapeData.success) {
       console.error('Scraping failed:', scrapeData?.error);
       
-      // Handle the case of unsupported provider like ENGIE
-      if (scrapeData?.error?.includes("Unsupported provider")) {
+      // Handle the case of unsupported provider - but not for ENGIE anymore
+      if (scrapeData?.error?.includes("Unsupported provider") && 
+          !provider.provider_name?.includes("ENGIE")) {
         console.log('Unsupported provider detected, creating fallback job...');
         
         // Create a job record directly as a fallback

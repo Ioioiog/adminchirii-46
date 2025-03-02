@@ -1,22 +1,8 @@
 
-interface ScrapingParams {
-  username: string;
-  password: string;
-  utilityId: string;
-  type: string;
-  location: string;
-  browserlessApiKey?: string;
-}
+import { BillScraperBase } from './base';
+import { ScrapingResult } from '../constants';
 
-interface Bill {
-  amount: number;
-  due_date: string;
-  invoice_number: string;
-  type: string;
-  status: string;
-}
-
-// ENGIE Romania configuration
+// Configuration for ENGIE Romania
 const engieConfig = {
   url: "https://my.engie.ro/autentificare",
   loginSelector: "#username",
@@ -26,138 +12,146 @@ const engieConfig = {
   invoiceLinkSelector: "a[href$='.pdf']",
 };
 
-export async function scrapeEngieRomania({
-  username,
-  password,
-  type,
-  browserlessApiKey
-}: ScrapingParams): Promise<Bill[]> {
-  if (!browserlessApiKey) {
-    throw new Error('Browserless API key is required');
-  }
-
-  console.log('Starting Engie Romania scraping using updated selectors...');
-  
-  try {
-    // Login step
-    console.log('Attempting to login to ENGIE portal...');
-    const loginScript = `
-      // Fill in credentials and submit
-      document.querySelector('${engieConfig.loginSelector}').value = '${username}';
-      document.querySelector('${engieConfig.passSelector}').value = '${password}';
-      document.querySelector('${engieConfig.submitButton}').click();
-      
-      // Wait for navigation to complete
-      await new Promise(resolve => setTimeout(resolve, 5000));
-    `;
-
-    const loginResponse = await fetch('https://chrome.browserless.io/function', {
-      method: 'POST',
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${browserlessApiKey}`,
-      },
-      body: JSON.stringify({
-        code: async ({ page }) => {
-          await page.goto(engieConfig.url, { waitUntil: 'networkidle2' });
-          await page.evaluate(loginScript);
-          return { success: true };
-        }
-      }),
-    });
-
-    if (!loginResponse.ok) {
-      throw new Error(`Login failed: ${loginResponse.statusText}`);
-    }
+export class EngieRomaniaScraperImpl extends BillScraperBase {
+  async scrape(username: string, password: string): Promise<ScrapingResult> {
+    console.log("Starting ENGIE Romania scraping process");
     
-    console.log('Login successful, navigating to invoices page...');
-
-    // Navigate to invoices page and extract data
-    const scrapeResponse = await fetch('https://chrome.browserless.io/function', {
-      method: 'POST',
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${browserlessApiKey}`,
-      },
-      body: JSON.stringify({
-        code: async ({ page }) => {
-          // Navigate to the invoice page
-          await page.goto(engieConfig.invoicePage, { waitUntil: 'networkidle2' });
+    try {
+      // Setup browser with Browserless.io API key
+      const browser = await this.setupBrowser();
+      
+      if (!browser) {
+        return {
+          success: false,
+          error: "Failed to initialize browser for scraping"
+        };
+      }
+      
+      const page = await browser.newPage();
+      console.log("Browser and page initialized");
+      
+      // Set a reasonable navigation timeout
+      await page.setDefaultNavigationTimeout(60000);
+      
+      // Navigate to the login page
+      console.log("Navigating to login page:", engieConfig.url);
+      await page.goto(engieConfig.url, { waitUntil: 'networkidle2' });
+      
+      // Wait for the login form to be loaded
+      await page.waitForSelector(engieConfig.loginSelector);
+      console.log("Login form loaded");
+      
+      // Fill the login form
+      await page.type(engieConfig.loginSelector, username);
+      await page.type(engieConfig.passSelector, password);
+      console.log("Filled login form");
+      
+      // Submit the form
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: 'networkidle2' }),
+        page.click(engieConfig.submitButton)
+      ]);
+      console.log("Submitted login form");
+      
+      // Check if login was successful by looking for elements that should be present on the dashboard
+      // We can modify this based on ENGIE's website structure
+      const isLoggedIn = await page.evaluate(() => {
+        // Check for elements that would indicate successful login
+        return !document.querySelector('.error-message') && 
+               !document.title.includes('Autentificare');
+      });
+      
+      if (!isLoggedIn) {
+        console.log("Login failed for ENGIE Romania");
+        await browser.close();
+        return {
+          success: false,
+          error: "Login failed. Please check your credentials and try again."
+        };
+      }
+      
+      console.log("Successfully logged in. Navigating to invoices page");
+      
+      // Navigate to the invoices page
+      await page.goto(engieConfig.invoicePage, { waitUntil: 'networkidle2' });
+      await page.waitForSelector(engieConfig.invoiceLinkSelector, { timeout: 10000 })
+        .catch(() => console.log("Invoice links not found immediately, continuing anyway"));
+      
+      // Extract invoice data
+      const bills = await page.evaluate((selector) => {
+        const invoiceLinks = Array.from(document.querySelectorAll(selector));
+        return invoiceLinks.map((link) => {
+          const element = link as HTMLAnchorElement;
+          // Extract data from the invoice element
+          // We need to adjust this based on ENGIE's actual HTML structure
+          const row = element.closest('tr');
           
-          // Extract invoice data
-          const invoices = await page.evaluate((selector) => {
-            const invoiceLinks = Array.from(document.querySelectorAll(selector));
+          let amount = 0;
+          let dueDate = '';
+          let invoiceNumber = '';
+          
+          if (row) {
+            // Get invoice number - this is often in the PDF filename or in a nearby element
+            invoiceNumber = element.href.split('/').pop()?.replace('.pdf', '') || '';
             
-            return invoiceLinks.map(link => {
-              // Get the invoice row which is the parent element
-              const row = link.closest('tr');
-              if (!row) return null;
+            // Try to find amount and due date in nearby cells
+            const cells = Array.from(row.querySelectorAll('td'));
+            if (cells.length >= 3) {
+              // This is just an example. The actual structure may be different
+              const amountText = cells[1]?.textContent || '';
+              const dueDateText = cells[2]?.textContent || '';
               
-              // Extract data from the row
-              const columns = Array.from(row.querySelectorAll('td'));
-              
-              // Format might vary based on the actual ENGIE website
-              // Adjust indices based on the actual table structure
-              const invoiceNumber = columns[0]?.textContent?.trim() || 'Unknown';
-              const amountText = columns[2]?.textContent?.trim() || '0';
-              const dueDateText = columns[1]?.textContent?.trim() || new Date().toISOString().split('T')[0];
-              
-              // Clean up and convert amount (remove currency symbol, etc.)
-              const amount = parseFloat(amountText.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
-              
-              // Parse date - format may need adjustment
-              let dueDate;
-              try {
-                // Try to parse date in format DD.MM.YYYY
-                const dateParts = dueDateText.split('.');
-                if (dateParts.length === 3) {
-                  dueDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
-                } else {
-                  dueDate = new Date().toISOString().split('T')[0]; // fallback
-                }
-              } catch (e) {
-                dueDate = new Date().toISOString().split('T')[0]; // fallback
+              // Extract amount by removing non-numeric characters except decimal point
+              const amountMatch = amountText.match(/[\d,.]+/);
+              if (amountMatch) {
+                amount = parseFloat(amountMatch[0].replace(',', '.'));
               }
               
-              return {
-                invoice_number: invoiceNumber,
-                amount: amount,
-                due_date: dueDate
-              };
-            }).filter(Boolean);
-          }, engieConfig.invoiceLinkSelector);
+              // Extract due date by finding date pattern
+              const dateMatch = dueDateText.match(/\d{2}[./-]\d{2}[./-]\d{4}/);
+              if (dateMatch) {
+                dueDate = dateMatch[0];
+              }
+            }
+          }
           
-          return { invoices };
-        }
-      }),
-    });
-
-    if (!scrapeResponse.ok) {
-      throw new Error(`Failed to scrape invoices: ${scrapeResponse.statusText}`);
+          // If we couldn't extract structured data, we can at least get the PDF link
+          return {
+            amount: amount || 0,
+            due_date: dueDate || new Date().toISOString().split('T')[0], // Default to today if not found
+            invoice_number: invoiceNumber || 'Unknown',
+            url: element.href,
+            type: 'gas', // Default type for ENGIE Romania
+            status: 'pending'
+          };
+        });
+      }, engieConfig.invoiceLinkSelector);
+      
+      console.log(`Found ${bills.length} bills`);
+      
+      // Close the browser
+      await browser.close();
+      
+      // Return the results
+      if (bills.length === 0) {
+        return {
+          success: true,
+          bills: [],
+          message: "No new bills found"
+        };
+      }
+      
+      return {
+        success: true,
+        bills
+      };
+      
+    } catch (error) {
+      console.error("Error scraping ENGIE Romania:", error);
+      return {
+        success: false,
+        error: `Failed to scrape ENGIE Romania: ${error.message}`
+      };
     }
-
-    const scrapeData = await scrapeResponse.json();
-    const invoices = scrapeData.data?.invoices || [];
-    
-    console.log(`Successfully scraped ${invoices.length} invoices`);
-
-    if (invoices.length === 0) {
-      console.warn('No invoices found - this could indicate a scraping issue');
-    }
-
-    // Map the scraped data to the expected Bill format
-    return invoices.map((invoice: any) => ({
-      amount: invoice.amount,
-      due_date: invoice.due_date,
-      invoice_number: invoice.invoice_number,
-      type: type,
-      status: 'pending'
-    }));
-
-  } catch (error) {
-    console.error('Engie Romania scraping error:', error);
-    throw new Error(`Failed to scrape Engie Romania: ${error.message}`);
   }
 }

@@ -1,168 +1,211 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { scrapeEngieRomania } from "./scrapers/engie-romania.ts"
-import { createClient } from '@supabase/supabase-js'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.5.0";
+import { corsHeaders } from "../_shared/cors.ts";
+import { getScraperForProvider } from "./scrapers/index.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+console.log("Scrape utility invoices function loaded");
 
-interface ScrapingRequest {
-  username: string;
-  password: string;
-  utilityId: string;
-  provider: string;
-  type: string;
-  location: string;
-}
+// Initialize Supabase client
+const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('Processing scraping request...');
+    // Parse request body
+    const requestData = await req.json();
+    const { username, password, utilityId, provider, type, location } = requestData;
     
-    const { username, password, utilityId, provider, type, location } = await req.json() as ScrapingRequest;
+    if (!username || !password || !utilityId) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Missing required parameters (username, password, utilityId)"
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
     
     console.log(`Starting scraping for provider: ${provider}`);
-
-    // Create new scraping job record first
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    // Create a job record to track the scraping progress
-    const { data: jobData, error: jobError } = await supabaseClient
+    
+    // Get the appropriate scraper for the provider
+    const scraper = getScraperForProvider(provider);
+    
+    if (!scraper) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Unsupported provider: ${provider}`
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+    
+    // Create a scraping job entry
+    const { data: jobData, error: jobError } = await supabase
       .from('scraping_jobs')
       .insert({
         utility_provider_id: utilityId,
-        status: 'in_progress',
+        status: 'pending',
         provider: provider,
         type: type,
         location: location
       })
       .select('id')
       .single();
-      
+    
     if (jobError) {
-      console.error('Error creating job record:', jobError);
-      throw new Error('Failed to create scraping job record');
+      console.error("Error creating scraping job:", jobError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Failed to create scraping job"
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      );
     }
     
     const jobId = jobData.id;
     console.log(`Created scraping job with ID: ${jobId}`);
-
-    let bills = [];
-    const browserlessApiKey = Deno.env.get('BROWSERLESS_API_KEY');
-
-    if (!browserlessApiKey) {
-      throw new Error('Browserless API key not configured');
-    }
-
-    if (provider === 'engie_romania') {
-      console.log('Starting ENGIE Romania scraper...');
-      bills = await scrapeEngieRomania({
-        username,
-        password,
-        utilityId,
-        type,
-        location,
-        browserlessApiKey
-      });
-      console.log(`ENGIE scraper finished. Found ${bills.length} bills.`);
-    } else {
-      throw new Error(`Unsupported provider: ${provider}`);
-    }
-
-    // Only insert bills if we found any
-    if (bills && bills.length > 0) {
-      console.log(`Inserting ${bills.length} bills into database`);
-      const { error: billsError } = await supabaseClient
-        .from('utilities')
-        .insert(bills.map(bill => ({
-          ...bill,
-          property_id: utilityId
-        })));
-
-      if (billsError) {
-        console.error('Error inserting bills:', billsError);
-        // Update job with error
-        await supabaseClient
+    
+    // We'll handle the scraping in the background
+    EdgeRuntime.waitUntil((async () => {
+      try {
+        // Execute the scraping
+        console.log("Starting scraping operation");
+        const result = await scraper.scrape(username, password);
+        
+        if (!result.success) {
+          console.error("Scraping failed:", result.error);
+          
+          // Update job with error
+          await supabase
+            .from('scraping_jobs')
+            .update({
+              status: 'failed',
+              error_message: result.error,
+              completed_at: new Date().toISOString()
+            })
+            .eq('id', jobId);
+          
+          return;
+        }
+        
+        // Scraping succeeded
+        console.log(`Scraping succeeded. Found ${result.bills?.length || 0} bills`);
+        
+        // Process bills
+        if (result.bills && result.bills.length > 0) {
+          // Insert the bills into the utilities table
+          const insertData = result.bills.map(bill => ({
+            property_id: null, // This will be updated in the next step
+            utility_provider_id: utilityId,
+            type: bill.type || type || 'gas',
+            amount: bill.amount,
+            currency: 'RON', // Default for Romanian providers
+            due_date: bill.due_date,
+            invoice_number: bill.invoice_number,
+            status: 'pending',
+            issued_date: bill.issued_date || new Date().toISOString().split('T')[0]
+          }));
+          
+          const { data: insertedBills, error: insertError } = await supabase
+            .from('utilities')
+            .insert(insertData)
+            .select();
+          
+          if (insertError) {
+            console.error("Error inserting bills:", insertError);
+            
+            // Update job with error
+            await supabase
+              .from('scraping_jobs')
+              .update({
+                status: 'failed',
+                error_message: `Failed to insert bills: ${insertError.message}`,
+                completed_at: new Date().toISOString()
+              })
+              .eq('id', jobId);
+            
+            return;
+          }
+          
+          console.log(`Inserted ${insertedBills.length} bills into the utilities table`);
+          
+          // Get the property ID from the utility provider
+          const { data: providerData, error: providerError } = await supabase
+            .from('utility_provider_credentials')
+            .select('property_id')
+            .eq('id', utilityId)
+            .single();
+          
+          if (!providerError && providerData.property_id) {
+            // Update the bills with the property ID
+            const { error: updateError } = await supabase
+              .from('utilities')
+              .update({ property_id: providerData.property_id })
+              .in('id', insertedBills.map(bill => bill.id));
+              
+            if (updateError) {
+              console.error("Error updating property ID for bills:", updateError);
+            } else {
+              console.log("Updated property ID for all bills");
+            }
+          }
+        }
+        
+        // Update job as completed
+        await supabase
           .from('scraping_jobs')
-          .update({ 
+          .update({
+            status: 'completed',
+            completed_at: new Date().toISOString(),
+            bills_fetched: result.bills?.length || 0
+          })
+          .eq('id', jobId);
+          
+        console.log("Scraping job completed successfully");
+        
+      } catch (error) {
+        console.error("Error in background scraping task:", error);
+        
+        // Update job with error
+        await supabase
+          .from('scraping_jobs')
+          .update({
             status: 'failed',
-            error_message: `Failed to insert bills: ${billsError.message}`,
+            error_message: `Background task error: ${error.message}`,
             completed_at: new Date().toISOString()
           })
           .eq('id', jobId);
-        throw billsError;
       }
-    } else {
-      console.log('No bills found to insert');
-    }
-
-    // Update job as completed
-    await supabaseClient
-      .from('scraping_jobs')
-      .update({ 
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-        last_run_at: new Date().toISOString()
-      })
-      .eq('id', jobId);
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        jobId: jobId,
-        billsCount: bills.length,
-        message: `Successfully scraped ${bills.length} bills`
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
-
-  } catch (error) {
-    console.error('Error in scrape-utility-invoices:', error);
+    })());
     
-    // If we have jobId and supabaseClient in this scope, update the job status
-    // For simplicity, we'll create a new client
-    try {
-      const supabaseClient = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-      );
-      
-      // Try to update the most recent job for this utility provider
-      await supabaseClient
-        .from('scraping_jobs')
-        .update({ 
-          status: 'failed',
-          error_message: error instanceof Error ? error.message : 'An unknown error occurred',
-          completed_at: new Date().toISOString()
-        })
-        .eq('status', 'in_progress')
-        .order('created_at', { ascending: false })
-        .limit(1);
-    } catch (updateError) {
-      console.error('Failed to update job status:', updateError);
-    }
+    // Return immediate response with the job ID
+    return new Response(
+      JSON.stringify({
+        success: true,
+        jobId: jobId,
+        message: "Scraping job created and running in background"
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+    
+  } catch (error) {
+    console.error("Unexpected error:", error);
     
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : 'An unknown error occurred'
+        error: `Unexpected error: ${error.message}`
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
-})
+});

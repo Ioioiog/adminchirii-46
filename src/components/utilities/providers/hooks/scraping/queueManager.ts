@@ -130,9 +130,7 @@ export function useScrapingQueue(providers: UtilityProvider[]) {
 
   // Add provider to queue
   const addToQueue = useCallback((providerId: string) => {
-    // Get the provider to check what type it is
-    const provider = providers.find(p => p.id === providerId);
-    
+    // No special handling for ENGIE providers anymore
     console.log(`Adding provider ${providerId} to scraping queue`);
     setState(prev => ({
       ...prev,
