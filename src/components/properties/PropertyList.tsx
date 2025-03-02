@@ -1,3 +1,4 @@
+
 import React from "react";
 import { PropertyCard } from "./PropertyCard";
 import { Card } from "@/components/ui/card";
@@ -12,6 +13,7 @@ interface PropertyListProps {
   userRole: "landlord" | "tenant";
   onEdit?: (property: Property, data: any) => void;
   onDelete?: (property: Property) => void;
+  onView?: (propertyId: string) => void; // This expects a function that takes a string (propertyId)
   viewMode: "grid" | "list";
 }
 
@@ -21,6 +23,7 @@ export function PropertyList({
   userRole, 
   onEdit, 
   onDelete,
+  onView,
   viewMode 
 }: PropertyListProps) {
   const { t } = useTranslation();
@@ -86,6 +89,7 @@ export function PropertyList({
           userRole={userRole}
           onEdit={onEdit}
           onDelete={onDelete}
+          onView={onView ? () => onView(property.id) : undefined} // Fixed: Pass only the property.id to onView
           viewMode={viewMode}
         />
       ))}
