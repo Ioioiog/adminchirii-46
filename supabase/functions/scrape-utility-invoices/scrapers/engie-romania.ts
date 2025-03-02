@@ -1,5 +1,5 @@
 
-import { SELECTORS, solveCaptcha, romanianDateToISO } from "../constants";
+import { SELECTORS, solveCaptcha, romanianDateToISO } from "../constants.ts";
 import puppeteer from "puppeteer";
 
 interface Credentials {
@@ -49,7 +49,7 @@ export async function scrapeEngieRomania(
     
     // Navigate to the login page
     console.log("Navigating to ENGIE Romania login page...");
-    await page.goto("https://my.engie.ro/autentificare", { 
+    await page.goto(SELECTORS.ENGIE_ROMANIA.loginPage, { 
       waitUntil: "networkidle2",
       timeout: 60000 
     });
@@ -64,8 +64,7 @@ export async function scrapeEngieRomania(
     if (captchaExists) {
       console.log("CAPTCHA detected, solving with 2captcha...");
       const solution = await solveCaptcha(
-        page, 
-        SELECTORS.ENGIE_ROMANIA.sitekey, 
+        SELECTORS.ENGIE_ROMANIA.sitekey,
         captchaApiKey,
         page.url()
       );
@@ -73,7 +72,11 @@ export async function scrapeEngieRomania(
       // Execute script to set the CAPTCHA solution
       await page.evaluate(`
         document.querySelector('textarea[name="g-recaptcha-response"]').innerHTML = "${solution}";
-        ___grecaptcha_cfg.clients[0].U.U.callback("${solution}");
+        try {
+          ___grecaptcha_cfg.clients[0].U.U.callback("${solution}");
+        } catch (e) {
+          console.error("Error executing callback:", e);
+        }
       `);
     }
     
@@ -118,7 +121,7 @@ export async function scrapeEngieRomania(
           amount: parseFloat(amount),
           due_date: dueDate,
           invoice_number: invoiceNumber,
-          type: "gas", // Default to gas, can be overridden based on other data
+          type: "electricity", // Default to electricity, can be overridden based on other data
           status: status,
           pdf_url: pdfLink
         };
@@ -133,6 +136,7 @@ export async function scrapeEngieRomania(
       due_date: romanianDateToISO(invoice.due_date)
     }));
 
+    await browser.close();
     return processedInvoices;
   } catch (error) {
     console.error("Error in ENGIE Romania scraper:", error);

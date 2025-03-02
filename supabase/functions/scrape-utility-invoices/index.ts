@@ -1,7 +1,7 @@
 
 import { serve } from "std/server";
 import { createClient } from "@supabase/supabase-js";
-import { scrapeEngieRomania } from "./scrapers/engie-romania.ts";
+import { scrapeEngieRomania } from "./scrapers/index.ts";
 
 // CORS headers for browser requests
 const corsHeaders = {
@@ -69,7 +69,7 @@ serve(async (req) => {
         let invoices = [];
         
         // Select the appropriate scraper based on the provider
-        if (provider === 'ENGIE') {
+        if (provider.toUpperCase().includes('ENGIE')) {
           invoices = await scrapeEngieRomania(
             { username, password },
             browserlessApiKey,
@@ -107,7 +107,10 @@ serve(async (req) => {
           // Update job status to completed
           await supabase
             .from('scraping_jobs')
-            .update({ status: 'completed' })
+            .update({ 
+              status: 'completed',
+              completed_at: new Date().toISOString()
+            })
             .eq('id', jobId);
             
           console.log(`Job ${jobId} completed successfully`);
@@ -117,7 +120,8 @@ serve(async (req) => {
             .from('scraping_jobs')
             .update({ 
               status: 'completed', 
-              error_message: 'No invoices found' 
+              error_message: 'No invoices found',
+              completed_at: new Date().toISOString()
             })
             .eq('id', jobId);
             
@@ -131,7 +135,8 @@ serve(async (req) => {
           .from('scraping_jobs')
           .update({ 
             status: 'failed', 
-            error_message: error.message || 'Unknown error during scraping' 
+            error_message: error.message || 'Unknown error during scraping',
+            completed_at: new Date().toISOString()
           })
           .eq('id', jobId);
           
