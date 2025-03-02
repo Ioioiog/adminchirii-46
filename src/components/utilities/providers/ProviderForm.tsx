@@ -153,9 +153,10 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
         });
       } else {
         // For insertion, use a direct SQL query approach since the trigger may be having issues
-        const { error } = await supabase
+        const { data, error, count } = await supabase
           .from('utility_provider_credentials')
-          .insert(dataToInsert);
+          .insert(dataToInsert)
+          .select();
 
         if (error) {
           console.error("Error inserting utility provider credentials:", error);
@@ -168,6 +169,7 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
           return;
         }
         
+        // Success can sometimes return "no rows" which is normal
         toast({
           title: "Success",
           description: "Utility provider added successfully!",
