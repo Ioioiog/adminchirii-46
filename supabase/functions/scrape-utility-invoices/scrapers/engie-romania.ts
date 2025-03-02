@@ -3,6 +3,13 @@ import { DEFAULT_TIMEOUT, DEFAULT_WAIT_TIME } from "../constants.ts";
 
 const BROWSERLESS_API_URL = "https://chrome.browserless.io/content";
 
+// Define the ENGIE Romania URL constants
+const ENGIE_ROMANIA = {
+  loginUrl: 'https://my.engie.ro/autentificare',
+  invoicesUrl: 'https://my.engie.ro/facturi/istoric',
+  fallbackInvoicesUrl: 'https://my.engie.ro/facturi'
+};
+
 // Define the ENGIE Romania scraper
 export async function scrapeEngieRomania(username: string, password: string) {
   try {
@@ -47,18 +54,17 @@ export async function scrapeEngieRomania(username: string, password: string) {
           
           // Navigate to the invoices page
           console.log('Navigating to invoices page');
-          const invoicesLink = Array.from(document.querySelectorAll('a')).find(el => 
-            el.textContent.includes('Facturi') || el.textContent.includes('Invoices')
-          );
           
-          if (invoicesLink) {
-            invoicesLink.click();
-            await new Promise(resolve => setTimeout(resolve, 5000));
-          } else {
-            // Try direct navigation to invoice section
-            console.log('Direct navigation to invoice section');
-            // This is an example URL that might need to be adjusted
-            window.location.href = 'https://client.engie.ro/facturi';
+          // Try direct navigation to invoice section
+          console.log('Direct navigation to invoice section');
+          // Use the history URL first, if it fails, try the fallback
+          window.location.href = '${ENGIE_ROMANIA.invoicesUrl}';
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          
+          // Check if we're on the correct page
+          if (!document.querySelectorAll('table tr.invoice-row, tr.factura-row').length) {
+            console.log('Invoice list not found, trying fallback URL');
+            window.location.href = '${ENGIE_ROMANIA.fallbackInvoicesUrl}';
             await new Promise(resolve => setTimeout(resolve, 5000));
           }
           
@@ -117,7 +123,7 @@ export async function scrapeEngieRomania(username: string, password: string) {
         'Cache-Control': 'no-cache',
       },
       body: JSON.stringify({
-        url: 'https://client.engie.ro/login',
+        url: ENGIE_ROMANIA.loginUrl,
         gotoOptions: {
           waitUntil: 'networkidle2',
           timeout: DEFAULT_TIMEOUT,
