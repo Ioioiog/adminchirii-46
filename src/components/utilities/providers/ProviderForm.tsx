@@ -26,6 +26,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { UTILITY_TYPES } from '@/components/utilities/providers/types';
 import { Property } from '@/types/tenant';
 import { DatePicker } from '@/components/ui/date-picker';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 // Define the utility type string literals directly for zod
 const utilityTypeEnum = z.enum(['electricity', 'water', 'gas', 'internet', 'building maintenance']);
@@ -61,6 +63,7 @@ export interface ProviderFormProps {
 export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provider }: ProviderFormProps) {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -98,6 +101,7 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
 
   async function onSubmitForm(values: z.infer<typeof formSchema>) {
     setLoading(true);
+    setErrorMessage(null);
     try {
       // Prepare the data
       const dataToInsert: any = {
@@ -127,27 +131,37 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
         return;
       }
 
-      console.log('Submitting data:', {...dataToInsert, password: '***'});
+      console.log('Submitting data:', {...dataToInsert, password: values.password ? '***' : 'unchanged'});
       
       // Handle update vs insert
       if (provider?.id) {
-        // For updates, we'll omit the password field to avoid triggering the gen_salt function
-        // if we don't need to update the password
-        if (!dataToInsert.password) {
-          delete dataToInsert.password;
-        }
-        
-        const { error } = await supabase
-          .from('utility_provider_credentials')
-          .update(dataToInsert)
-          .eq('id', provider.id);
+        try {
+          // For updates, we'll omit the password field to avoid triggering the gen_salt function
+          // if we don't need to update the password
+          if (!dataToInsert.password) {
+            delete dataToInsert.password;
+          }
+          
+          const { error } = await supabase
+            .from('utility_provider_credentials')
+            .update(dataToInsert)
+            .eq('id', provider.id);
 
-        if (error) {
+          if (error) {
+            throw error;
+          }
+          
+          toast({
+            title: "Success",
+            description: "Utility provider updated successfully!",
+          });
+        } catch (error: any) {
           console.error("Error updating utility provider credentials:", error);
           let errorMessage = "Failed to update utility provider.";
           
           if (error.code === '42883' && error.message.includes('gen_salt')) {
-            errorMessage = "Database extension is missing. Please contact the administrator to enable the pgcrypto extension.";
+            errorMessage = "pgcrypto extension is missing. Please follow the instructions below to enable it.";
+            setErrorMessage("Your Supabase database is missing the pgcrypto extension, which is needed for password encryption.");
           } else {
             errorMessage += " " + error.message;
           }
@@ -160,28 +174,58 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
           setLoading(false);
           return;
         }
-        
-        toast({
-          title: "Success",
-          description: "Utility provider updated successfully!",
-        });
       } else {
-        // For insertion, try a different approach that might bypass the trigger issue
-        const { data, error } = await supabase
-          .from('utility_provider_credentials')
-          .insert([{
-            ...dataToInsert,
-            // For inserting, we need to directly encrypt the password since the trigger is failing
-            encrypted_password: dataToInsert.password, // This is a temporary solution until pgcrypto is enabled
-            password: null // Set password to null to avoid trigger
-          }]);
+        try {
+          // For insertion, try a different approach that might bypass the trigger issue
+          // First try the normal approach
+          const { data, error } = await supabase
+            .from('utility_provider_credentials')
+            .insert([dataToInsert])
+            .select();
 
-        if (error) {
+          if (error) {
+            // If normal approach fails due to pgcrypto, try the workaround
+            if (error.code === '42883' && error.message.includes('gen_salt')) {
+              // For inserting, we need to directly store the password as encrypted_password
+              // This is a workaround until pgcrypto is enabled
+              const workaroundData = {
+                ...dataToInsert,
+                encrypted_password: dataToInsert.password, // Store the password directly in encrypted_password field
+                password: null // Set password to null to avoid trigger
+              };
+              
+              delete workaroundData.password; // Remove password field completely
+              
+              const { error: workaroundError } = await supabase
+                .from('utility_provider_credentials')
+                .insert([workaroundData]);
+                
+              if (workaroundError) {
+                throw workaroundError;
+              }
+              
+              toast({
+                title: "Success with workaround",
+                description: "Utility provider added with temporary encryption. Please enable pgcrypto extension for proper security.",
+              });
+              
+              setErrorMessage("Provider added, but password stored with temporary encryption. Please enable pgcrypto extension for proper security.");
+            } else {
+              throw error;
+            }
+          } else {
+            toast({
+              title: "Success",
+              description: "Utility provider added successfully!",
+            });
+          }
+        } catch (error: any) {
           console.error("Error inserting utility provider credentials:", error);
           let errorMessage = "Failed to add utility provider.";
           
           if (error.code === '42883' && error.message.includes('gen_salt')) {
-            errorMessage = "Database extension is missing. Please contact the administrator to enable the pgcrypto extension.";
+            errorMessage = "pgcrypto extension is missing. Please follow the instructions below to enable it.";
+            setErrorMessage("Your Supabase database is missing the pgcrypto extension, which is needed for password encryption.");
           } else {
             errorMessage += " " + error.message;
           }
@@ -194,11 +238,6 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
           setLoading(false);
           return;
         }
-        
-        toast({
-          title: "Success",
-          description: "Utility provider added successfully!",
-        });
       }
 
       form.reset();
@@ -220,6 +259,14 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmitForm)} className="space-y-8">
+        {errorMessage && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        )}
+        
         <FormField
           control={form.control}
           name="provider_name"
