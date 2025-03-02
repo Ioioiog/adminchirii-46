@@ -77,8 +77,10 @@ export function useJobStatusManager() {
           if (job?.error_message) {
             errorDescription = formatEdgeFunctionError(job.error_message);
             
-            // Add specific error handling for login selectors issue and other common errors
-            if (job.error_message.includes("usernameSelector is not defined")) {
+            // Add specific error handling for module not found errors and other common issues
+            if (job.error_message.includes("Module not found")) {
+              errorDescription = "There's a configuration issue with the scraper. Please contact support.";
+            } else if (job.error_message.includes("usernameSelector is not defined")) {
               errorDescription = "The login selectors for this provider need to be updated. Please contact support.";
             } else if (job.error_message.includes("400 Bad Request")) {
               errorDescription = "The Browserless API returned a 400 Bad Request error. Please check your API key configuration.";
@@ -86,6 +88,8 @@ export function useJobStatusManager() {
               errorDescription = "The scraper needs updating. There's an issue with the Browserless API configuration.";
             } else if (job.error_message.includes("\"url\" is required")) {
               errorDescription = "The scraper configuration is missing a required URL parameter. Please contact support.";
+            } else if (job.error_message.includes("BROWSERLESS_API_KEY")) {
+              errorDescription = "The Browserless API key is missing. Please contact your administrator to set this up.";
             }
           }
           

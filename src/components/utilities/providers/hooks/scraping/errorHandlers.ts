@@ -30,12 +30,12 @@ export function formatErrorMessage(error: unknown): string {
       errorMessage = "Missing Browserless API key. Contact your administrator to set this up.";
     } else if (error.message.includes("usernameSelector is not defined")) {
       errorMessage = "The login selectors for this provider need to be updated. Please contact support.";
-    } else if (error.message.includes("options is not allowed")) {
+    } else if (error.message.includes("options is not allowed") || error.message.includes("\"options\" is not allowed")) {
       errorMessage = "The Browserless API configuration is invalid. Please contact support to update the scraper.";
     } else if (error.message.includes("\"url\" is required")) {
       errorMessage = "The scraper configuration is missing a required URL parameter. Please contact support.";
-    } else if (error.message.includes("\"options\" is not allowed")) {
-      errorMessage = "The Browserless API configuration has invalid options. Please contact support to update the scraper.";
+    } else if (error.message.includes("Module not found")) {
+      errorMessage = "Required module is missing. Please contact support to fix the scraper implementation.";
     }
   }
   
@@ -94,6 +94,10 @@ export function formatEdgeFunctionError(errorMessage: string | undefined): strin
   if (errorMessage.includes("usernameSelector is not defined")) {
     return "The scraper needs updating. Please contact support with the error details.";
   }
+
+  if (errorMessage.includes("Module not found")) {
+    return "There's a configuration issue with the scraper. Please contact support.";
+  }
   
   return errorMessage;
 }
@@ -111,7 +115,8 @@ export function isEdgeFunctionError(error: unknown): boolean {
            error.message.includes("options is not allowed") ||
            error.message.includes("\"options\" is not allowed") ||
            error.message.includes("\"url\" is required") ||
-           error.message.includes("usernameSelector is not defined");
+           error.message.includes("usernameSelector is not defined") ||
+           error.message.includes("Module not found");
   }
   return false;
 }

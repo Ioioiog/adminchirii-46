@@ -2,7 +2,7 @@
 # The project_id should be the first entry in this file
 project_id = "wecmvyohaxizmnhuvjly"
 
-# All inbound traffic will be reject
+# All inbound traffic will be allowed
 block_all_inbound = false
 
 # You'll need these secrets to invoke Browserless

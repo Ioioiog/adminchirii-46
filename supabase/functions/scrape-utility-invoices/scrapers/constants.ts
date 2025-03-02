@@ -1,50 +1,41 @@
 
 /**
- * Constants for the scraping operations
+ * Constants for web scraping
  */
 
-// Job status constants
+// Status constants for scraping jobs
 export const JOB_STATUS = {
   PENDING: 'pending',
   IN_PROGRESS: 'in_progress',
   COMPLETED: 'completed',
-  FAILED: 'failed',
+  FAILED: 'failed'
 };
 
-// ENGIE Romania website selectors
+// Selectors for ENGIE Romania website
 export const SELECTORS = {
   ENGIE_ROMANIA: {
-    LOGIN_PAGE: 'https://agentiaonline.engie.ro/Account/Login',
-    USERNAME_SELECTOR: '#Email',
-    PASSWORD_SELECTOR: '#Password',
+    // Login page selectors
+    LOGIN_PAGE: 'https://www.engie.ro/myaccount/login/',
+    USERNAME_SELECTOR: '#username',
+    PASSWORD_SELECTOR: '#password',
     LOGIN_BUTTON: 'button[type="submit"]',
-    INVOICES_PAGE: 'https://agentiaonline.engie.ro/InformatiiFacturi/Facturi',
-    INVOICE_TABLE: 'table.table',
-    INVOICE_ROW: 'tbody tr',
-    INVOICE_NUMBER: 'td:nth-child(1)',
-    INVOICE_DATE: 'td:nth-child(2)',
-    INVOICE_AMOUNT: 'td:nth-child(3)',
-    INVOICE_DUE_DATE: 'td:nth-child(4)',
-    INVOICE_STATUS: 'td:nth-child(5)',
-    COOKIE_CONSENT: '#CookieScriptDeclineButton',
-    ERROR_MESSAGE: '.validation-summary-errors',
-  },
-  // Add other utility providers here as needed
+    
+    // Invoice page selectors
+    INVOICES_PAGE: 'https://www.engie.ro/myaccount/facturi-plati/facturi/',
+    INVOICE_TABLE: '.factTable',
+    INVOICE_ROWS: '.factTable tr:not(:first-child)',
+    INVOICE_NUMBER_SELECTOR: 'td:nth-child(1)',
+    INVOICE_DATE_SELECTOR: 'td:nth-child(2)',
+    INVOICE_AMOUNT_SELECTOR: 'td:nth-child(3)',
+    INVOICE_DUE_DATE_SELECTOR: 'td:nth-child(4)',
+    INVOICE_STATUS_SELECTOR: 'td:nth-child(5)',
+    INVOICE_DOWNLOAD_SELECTOR: 'td:nth-child(6) a'
+  }
 };
 
-// Browserless API constants
-export const BROWSERLESS = {
-  API_URL: 'https://chrome.browserless.io',
-  TIMEOUT: 60000, // 60 seconds
-  VIEWPORT: {
-    width: 1366,
-    height: 768,
-  },
-};
-
-// General scraping constants
-export const SCRAPING = {
-  WAIT_TIME: 5000, // 5 seconds
-  RETRY_ATTEMPTS: 3,
-  RETRY_DELAY: 2000, // 2 seconds
+// Browserless API configuration
+export const BROWSERLESS_CONFIG = {
+  endpoint: 'https://chrome.browserless.io/content',
+  defaultTimeout: 60000,
+  waitingTimeout: 30000
 };
