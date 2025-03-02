@@ -33,6 +33,8 @@ export function useJobStatusManager() {
       }
 
       console.log('Job status:', job.status);
+      console.log('Job error message:', job.error_message || 'None');
+      
       updateJobStatus(providerId, {
         status: job.status,
         last_run_at: job.created_at,
@@ -72,24 +74,29 @@ export function useJobStatusManager() {
             .eq('id', jobId)
             .single();
             
-          let errorDescription = "Failed to process utility bills. The provider may have changed their website.";
+          let errorDescription = "Failed to process utility bills. The provider may have changed their website or there might be a configuration issue.";
           
           if (job?.error_message) {
+            console.error('Scraping job failed with error:', job.error_message);
             errorDescription = formatEdgeFunctionError(job.error_message);
             
-            // Add specific error handling for module not found errors and other common issues
-            if (job.error_message.includes("Module not found")) {
+            // Add specific error handling for missing API key and other common errors
+            if (job.error_message.includes("BROWSERLESS_API_KEY")) {
+              errorDescription = "The system is missing the Browserless API key required for web scraping. Please contact your administrator.";
+            } else if (job.error_message.includes("Module not found")) {
               errorDescription = "There's a configuration issue with the scraper. Please contact support.";
             } else if (job.error_message.includes("usernameSelector is not defined")) {
               errorDescription = "The login selectors for this provider need to be updated. Please contact support.";
             } else if (job.error_message.includes("400 Bad Request")) {
               errorDescription = "The Browserless API returned a 400 Bad Request error. Please check your API key configuration.";
-            } else if (job.error_message.includes("options is not allowed") || job.error_message.includes("\"options\" is not allowed")) {
-              errorDescription = "The scraper needs updating. There's an issue with the Browserless API configuration.";
-            } else if (job.error_message.includes("\"url\" is required")) {
-              errorDescription = "The scraper configuration is missing a required URL parameter. Please contact support.";
-            } else if (job.error_message.includes("BROWSERLESS_API_KEY")) {
-              errorDescription = "The Browserless API key is missing. Please contact your administrator to set this up.";
+            } else if (job.error_message.includes("429 Too Many Requests")) {
+              errorDescription = "The scraping service has reached its rate limit. Please try again later.";
+            } else if (job.error_message.includes("403 Forbidden")) {
+              errorDescription = "The API key for scraping service may be invalid or exceeded its usage limits.";
+            } else if (job.error_message.includes("timeout")) {
+              errorDescription = "The request to the provider website timed out. This could be due to slow internet or the website being temporarily down.";
+            } else if (job.error_message.includes("Authentication failed")) {
+              errorDescription = "The provider login credentials were rejected. Please check your username and password.";
             }
           }
           
