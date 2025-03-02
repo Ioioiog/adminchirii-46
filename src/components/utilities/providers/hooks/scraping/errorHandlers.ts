@@ -44,6 +44,8 @@ export function formatErrorMessage(error: unknown): string {
       errorMessage = "Required module is missing. Please contact support to fix the scraper implementation.";
     } else if (error.message.includes("reCAPTCHA") || error.message.includes("captcha")) {
       errorMessage = "The provider's website requires CAPTCHA verification which cannot be automated. Please log in to the provider's website directly.";
+    } else if (error.message.includes("Refused to get unsafe header") || error.message.includes("Set-Cookie")) {
+      errorMessage = "The browser is blocking access to website cookies. This is a security feature. Please try again later or use a different browser.";
     }
   }
   
@@ -115,6 +117,10 @@ export function formatEdgeFunctionError(errorMessage: string | undefined): strin
     return "The provider's website requires CAPTCHA verification which cannot be automated. Please log in to the provider's website directly.";
   }
   
+  if (errorMessage.includes("Refused to get unsafe header") || errorMessage.includes("Set-Cookie")) {
+    return "The browser blocked access to cookies due to security restrictions. Please try again later.";
+  }
+  
   return errorMessage;
 }
 
@@ -134,7 +140,9 @@ export function isEdgeFunctionError(error: unknown): boolean {
            error.message.includes("\"elements\" is not allowed") ||
            error.message.includes("\"url\" is required") ||
            error.message.includes("usernameSelector is not defined") ||
-           error.message.includes("Module not found");
+           error.message.includes("Module not found") ||
+           error.message.includes("Refused to get unsafe header") ||
+           error.message.includes("Set-Cookie");
   }
   return false;
 }

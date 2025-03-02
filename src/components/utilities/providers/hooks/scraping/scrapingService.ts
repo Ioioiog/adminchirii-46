@@ -78,7 +78,9 @@ function prepareScrapingRequestBody(provider: UtilityProvider, credentials: Cred
     type: provider.utility_type,
     location: provider.location_name,
     // Set API compatibility flag to ensure scraper uses supported parameters
-    apiCompatMode: true
+    apiCompatMode: true,
+    // Disable cookie handling to avoid "Refused to get unsafe header" errors
+    disableCookieHandling: true
   };
 }
 
@@ -161,6 +163,13 @@ export async function invokeScrapingFunction(
     
     // Handle specific Browserless API configuration errors
     if (error instanceof Error) {
+      // Check for Set-Cookie header errors
+      if (error.message.includes("Refused to get unsafe header") ||
+          error.message.includes("Set-Cookie")) {
+        console.error('Browser security restriction on Set-Cookie headers:', error);
+        throw new Error('The scraping service is experiencing issues with cookies. Please try again later.');
+      }
+      
       // Check for Browserless API configuration errors
       if (error.message.includes("elements is not allowed") || 
           error.message.includes("options is not allowed") || 
