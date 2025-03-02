@@ -42,7 +42,7 @@ async function createScrapingJobDirectly(providerId: string): Promise<string> {
       .insert({
         utility_provider_id: providerId,
         status: 'pending',
-        details: { message: 'Created as fallback due to edge function failure' }
+        error_message: 'Created as fallback due to edge function failure'
       })
       .select('id')
       .single();
