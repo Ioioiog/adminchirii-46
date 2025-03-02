@@ -30,6 +30,8 @@ export function formatErrorMessage(error: unknown): string {
       errorMessage = "Missing Browserless API key. Contact your administrator to set this up.";
     } else if (error.message.includes("usernameSelector is not defined")) {
       errorMessage = "The login selectors for this provider need to be updated. Please contact support.";
+    } else if (error.message.includes("options is not allowed")) {
+      errorMessage = "The Browserless API configuration is invalid. Please contact support to update the scraper.";
     }
   }
   
@@ -65,6 +67,10 @@ export function formatEdgeFunctionError(errorMessage: string | undefined): strin
     return "The request to Browserless was invalid. Please check your Browserless API key.";
   }
   
+  if (errorMessage.includes("options is not allowed")) {
+    return "The scraper needs updating. There's an issue with the Browserless API configuration.";
+  }
+  
   if (errorMessage.includes("non-2xx status") || errorMessage.includes("Edge Function")) {
     return "The utility provider's website may be down or has changed. Please try again later.";
   }
@@ -94,6 +100,7 @@ export function isEdgeFunctionError(error: unknown): boolean {
            error.message.includes("status code 500") ||
            error.message.includes("provider's website") ||
            error.message.includes("400 Bad Request") ||
+           error.message.includes("options is not allowed") ||
            error.message.includes("usernameSelector is not defined");
   }
   return false;

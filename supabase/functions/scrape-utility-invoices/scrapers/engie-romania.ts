@@ -1,344 +1,323 @@
 
-// Import necessary dependencies
-import { DEFAULT_TIMEOUT, DEFAULT_WAIT_TIME } from "../constants.ts";
+import { SELECTORS } from './constants';
 
-// Define the ENGIE Romania URL constants
-const ENGIE_ROMANIA = {
-  loginUrl: 'https://my.engie.ro/autentificare',
-  invoicesUrl: 'https://my.engie.ro/facturi/istoric',
-  fallbackInvoicesUrl: 'https://my.engie.ro/facturi'
-};
+interface EngieCredentials {
+  username: string;
+  password: string;
+}
 
-// Define the selectors for various page elements
-const SELECTORS = {
-  LOGIN: {
-    username: '#username',
-    password: '#password',
-    loginButton: 'button.nj-btn.nj-btn--primary',
-    errorMessage: '.error-message, .alert-danger'
-  },
-  COOKIE_CONSENT: {
-    modal: '#responsive-cookies-consent-modal___BV_modal_outer_',
-    acceptButton: 'button#cookieConsentBtnRight',
-    alternativeAcceptButton: 'button[class*="cookie"][class*="accept"], button:contains("Acceptă toate")'
-  },
-  INVOICE_TABLE: {
-    table: 'table.nj-table.nj-table--cards',
-    rows: 'table.nj-table.nj-table--cards tbody tr',
-    cells: 'td',
-    pdfDownloadLink: 'a[href*="facturi"][href*=".pdf"], a[href*="invoice"][href*=".pdf"]',
-    specificInvoiceDownloadLink: (invoiceNumber: string) => `a[title="Descarcă factura ${invoiceNumber}"]`
-  },
-  POPUP: {
-    closeButtons: 'button.close, .myengie-popup-close, button.myengie-close'
-  },
-  CAPTCHA: {
-    iframe: 'iframe[title="reCAPTCHA"]',
-    responseField: 'textarea[name="g-recaptcha-response"]',
-    defaultSiteKey: '6LeqYkkgAAAAAGa5Jl5qmTHK_Nl4_40-YfU4NN71'
-  }
-};
+interface Invoice {
+  number: string;
+  date: string;
+  amount: number;
+  status: string;
+  pdfUrl?: string;
+}
 
 /**
- * Scrapes invoices from the ENGIE Romania website
+ * Scrape ENGIE Romania website for invoices
  */
-export async function scrapeEngieRomania(username: string, password: string) {
-  console.log('Starting ENGIE Romania scraper');
+export async function scrapeEngieRomania(
+  credentials: EngieCredentials,
+  apiKey: string
+): Promise<Invoice[]> {
+  console.log('Starting ENGIE Romania scraping...');
   
-  // Get the Browserless API key from environment
-  const browserlessApiKey = Deno.env.get("BROWSERLESS_API_KEY");
-  if (!browserlessApiKey) {
-    throw new Error("BROWSERLESS_API_KEY environment variable is not set");
+  const { username, password } = credentials;
+  
+  if (!username || !password) {
+    throw new Error('Missing credentials for ENGIE Romania');
   }
   
-  const BROWSERLESS_API_URL = `https://chrome.browserless.io/content?token=${browserlessApiKey}`;
+  if (!apiKey) {
+    throw new Error('BROWSERLESS_API_KEY is not configured');
+  }
   
   try {
-    // Log the scraping attempt (without credentials)
-    console.log(`Attempting to scrape ENGIE Romania for user: ${username.substring(0, 3)}***`);
+    // Define the Browserless API endpoint
+    const browserlessEndpoint = 'https://chrome.browserless.io/content';
     
-    const response = await fetch(BROWSERLESS_API_URL, {
+    // We'll separate the stealth and delay settings from the main options
+    const content = `
+      const { username, password } = ${JSON.stringify({ username, password })};
+      
+      // Selectors for the ENGIE Romania website
+      const selectors = ${JSON.stringify(SELECTORS.ENGIE_ROMANIA || {
+        // Login selectors
+        loginForm: 'form[action*="login"]',
+        usernameField: '#username',
+        passwordField: '#password',
+        loginButton: 'button.nj-btn.nj-btn--primary',
+        errorMessage: '.error-message, .alert-danger',
+        
+        // Cookie consent selectors
+        cookieConsentModal: '#responsive-cookies-consent-modal___BV_modal_outer_',
+        acceptCookiesButton: 'button#cookieConsentBtnRight',
+        alternativeAcceptButton: 'button[class*="cookie"][class*="accept"], button:contains("Acceptă toate")',
+        
+        // Invoice table selectors
+        invoiceTable: 'table.nj-table.nj-table--cards',
+        tableRows: 'table.nj-table.nj-table--cards tbody tr',
+        tableCells: 'td',
+        pdfDownloadLink: 'a[href*="facturi"][href*=".pdf"], a[href*="invoice"][href*=".pdf"]',
+        specificInvoiceLink: 'a[title="Descarcă factura ${invoiceNumber}"]',
+        
+        // Popup handling selectors
+        popupCloseButtons: 'button.close, .myengie-popup-close, button.myengie-close',
+        
+        // CAPTCHA elements
+        recaptchaIframe: 'iframe[title="reCAPTCHA"]',
+        recaptchaResponse: 'textarea[name="g-recaptcha-response"]',
+        defaultCaptchaSiteKey: '6LeqYkkgAAAAAGa5Jl5qmTHK_Nl4_40-YfU4NN71'
+      })};
+      
+      console.log('Starting browser automation for ENGIE Romania');
+      
+      // Wait for an element to be present in the DOM
+      async function waitForElement(selector, timeoutMs = 10000) {
+        console.log('Waiting for element:', selector);
+        const startTime = Date.now();
+        while (Date.now() - startTime < timeoutMs) {
+          const element = document.querySelector(selector);
+          if (element) {
+            console.log('Element found:', selector);
+            return element;
+          }
+          await new Promise(r => setTimeout(r, 100));
+        }
+        console.log('Element not found within timeout:', selector);
+        return null;
+      }
+      
+      // Handle cookie consent popup if present
+      async function handleCookieConsent() {
+        console.log('Checking for cookie consent dialog...');
+        // Wait a bit for any cookie consent to appear
+        await new Promise(r => setTimeout(r, 1000));
+        
+        const consentModal = document.querySelector(selectors.cookieConsentModal);
+        if (consentModal) {
+          console.log('Cookie consent modal found');
+          const acceptButton = document.querySelector(selectors.acceptCookiesButton) || 
+                              document.querySelector(selectors.alternativeAcceptButton);
+          
+          if (acceptButton) {
+            console.log('Clicking accept cookies button');
+            acceptButton.click();
+            await new Promise(r => setTimeout(r, 1000));
+          }
+        } else {
+          console.log('No cookie consent modal found');
+        }
+      }
+      
+      // Close any popups that might appear
+      async function closePopups() {
+        console.log('Checking for popups...');
+        const closeButtons = document.querySelectorAll(selectors.popupCloseButtons);
+        
+        if (closeButtons.length > 0) {
+          console.log('Found', closeButtons.length, 'popup close buttons');
+          for (const button of closeButtons) {
+            console.log('Closing popup');
+            button.click();
+            await new Promise(r => setTimeout(r, 500));
+          }
+        } else {
+          console.log('No popups found');
+        }
+      }
+      
+      // Login to the ENGIE account
+      async function login() {
+        console.log('Starting login process...');
+        
+        // Wait for the username field
+        const usernameField = await waitForElement(selectors.usernameField);
+        if (!usernameField) {
+          throw new Error('Username field not found: ' + selectors.usernameField);
+        }
+        
+        // Fill in the username
+        console.log('Entering username');
+        usernameField.value = username;
+        usernameField.dispatchEvent(new Event('input', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 500));
+        
+        // Wait for the password field
+        const passwordField = await waitForElement(selectors.passwordField);
+        if (!passwordField) {
+          throw new Error('Password field not found: ' + selectors.passwordField);
+        }
+        
+        // Fill in the password
+        console.log('Entering password');
+        passwordField.value = password;
+        passwordField.dispatchEvent(new Event('input', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 500));
+        
+        // Find and click the login button
+        const loginButton = await waitForElement(selectors.loginButton);
+        if (!loginButton) {
+          throw new Error('Login button not found: ' + selectors.loginButton);
+        }
+        
+        console.log('Clicking login button');
+        loginButton.click();
+        
+        // Wait a bit for login to complete
+        await new Promise(r => setTimeout(r, 3000));
+        
+        // Check for error messages
+        const errorMessage = document.querySelector(selectors.errorMessage);
+        if (errorMessage && errorMessage.textContent.trim()) {
+          throw new Error('Login failed: ' + errorMessage.textContent.trim());
+        }
+        
+        console.log('Login completed');
+      }
+      
+      // Navigate to the invoices page
+      async function navigateToInvoicesPage() {
+        console.log('Navigating to invoices page...');
+        
+        // We are already on the invoices page or will be redirected there
+        // after login in most cases, but wait for the invoice table to appear
+        const invoiceTable = await waitForElement(selectors.invoiceTable, 15000);
+        if (!invoiceTable) {
+          throw new Error('Invoice table not found after login. You may need to navigate to the invoices page manually.');
+        }
+        
+        console.log('Invoice table found');
+      }
+      
+      // Extract invoice data from the table
+      function extractInvoiceData() {
+        console.log('Extracting invoice data...');
+        
+        const tableRows = document.querySelectorAll(selectors.tableRows);
+        console.log('Found', tableRows.length, 'invoice rows');
+        
+        if (tableRows.length === 0) {
+          return [];
+        }
+        
+        const invoices = [];
+        
+        for (const row of tableRows) {
+          try {
+            const cells = row.querySelectorAll(selectors.tableCells);
+            
+            if (cells.length < 3) {
+              console.log('Skipping row with insufficient cells:', cells.length);
+              continue;
+            }
+            
+            // Extract data from cells (assuming structure: number, date, amount, status)
+            const invoiceNumber = cells[0]?.textContent.trim() || '';
+            const invoiceDate = cells[1]?.textContent.trim() || '';
+            
+            // Parse amount, removing currency and using dot as decimal separator
+            let amountText = cells[2]?.textContent.trim() || '0';
+            amountText = amountText.replace(/[^0-9,.-]/g, '').replace(',', '.');
+            const amount = parseFloat(amountText) || 0;
+            
+            // Get status (may be in a different cell or require parsing)
+            const status = cells[3]?.textContent.trim() || 'unknown';
+            
+            // Check for PDF download link
+            let pdfUrl = null;
+            const pdfLink = row.querySelector(selectors.pdfDownloadLink) || 
+                          row.querySelector(selectors.specificInvoiceLink.replace('${invoiceNumber}', invoiceNumber));
+            
+            if (pdfLink && pdfLink.href) {
+              pdfUrl = pdfLink.href;
+            }
+            
+            invoices.push({
+              number: invoiceNumber,
+              date: invoiceDate,
+              amount: amount,
+              status: status,
+              pdfUrl: pdfUrl
+            });
+            
+            console.log('Extracted invoice:', { number: invoiceNumber, date: invoiceDate, amount: amount });
+          } catch (error) {
+            console.error('Error extracting data from row:', error);
+          }
+        }
+        
+        return invoices;
+      }
+      
+      try {
+        // Execute the scraping steps
+        await handleCookieConsent();
+        await closePopups();
+        await login();
+        await closePopups(); // Close popups that may appear after login
+        await navigateToInvoicesPage();
+        const invoices = extractInvoiceData();
+        
+        console.log('Scraping completed successfully');
+        return invoices;
+      } catch (error) {
+        console.error('Error during ENGIE Romania scraping:', error);
+        throw new Error(error.message);
+      }
+    `;
+    
+    // Prepare the request payload - without the options property that causes the 400 error
+    const payload = {
+      url: 'https://client.engie.ro/login',
+      gotoOptions: {
+        waitUntil: 'networkidle0',
+        timeout: 60000
+      },
+      html: content,
+      waitFor: 30000,
+    };
+    
+    console.log('Sending request to Browserless...');
+    
+    // Make the request to Browserless
+    const response = await fetch(browserlessEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache',
+        'X-Browserless-API-Key': apiKey
       },
-      body: JSON.stringify({
-        url: ENGIE_ROMANIA.loginUrl,
-        gotoOptions: {
-          waitUntil: 'networkidle2',
-          timeout: DEFAULT_TIMEOUT,
-        },
-        options: {
-          delay: 300,
-          stealth: true,
-        },
-        waitFor: {
-          selector: SELECTORS.LOGIN.username + ', ' + SELECTORS.LOGIN.password + ', form, .login-form',
-          timeout: DEFAULT_TIMEOUT
-        },
-        function: `async ({ page }) => {
-          console.log('Page loaded, waiting for login form');
-          
-          // Function to handle cookie consent if it appears
-          async function handleCookieConsent() {
-            try {
-              // Check if cookie consent is visible
-              const consentVisible = await page.evaluate((consentSelector) => {
-                return !!document.querySelector(consentSelector);
-              }, '${SELECTORS.COOKIE_CONSENT.modal}');
-              
-              if (consentVisible) {
-                console.log('Cookie consent dialog found, trying to accept');
-                await page.evaluate((acceptBtnSelector, altAcceptBtnSelector) => {
-                  const acceptBtn = document.querySelector(acceptBtnSelector);
-                  if (acceptBtn) {
-                    acceptBtn.click();
-                    return;
-                  }
-                  
-                  const altBtn = document.querySelector(altAcceptBtnSelector);
-                  if (altBtn) {
-                    altBtn.click();
-                  }
-                }, '${SELECTORS.COOKIE_CONSENT.acceptButton}', '${SELECTORS.COOKIE_CONSENT.alternativeAcceptButton}');
-                
-                // Wait for cookie consent to disappear
-                await page.waitForTimeout(2000);
-              }
-            } catch (e) {
-              console.log('Error handling cookie consent:', e.message);
-            }
-          }
-          
-          // Function to close any popups that might appear
-          async function closePopups() {
-            try {
-              await page.evaluate((closeButtonsSelector) => {
-                const buttons = document.querySelectorAll(closeButtonsSelector);
-                buttons.forEach(btn => {
-                  if (btn && btn instanceof HTMLElement) btn.click();
-                });
-              }, '${SELECTORS.POPUP.closeButtons}');
-            } catch (e) {
-              console.log('Error closing popups:', e.message);
-            }
-          }
-          
-          // Handle any cookie consent that might appear
-          await handleCookieConsent();
-          
-          // Wait a moment for the page to stabilize
-          await page.waitForTimeout(${DEFAULT_WAIT_TIME});
-          
-          // Close any popups
-          await closePopups();
-          
-          // Attempt to fill in the login form
-          console.log('Filling login credentials');
-          
-          try {
-            await page.evaluate((usernameSelector, passwordSelector, loginBtnSelector, user, pass) => {
-              // Find input fields
-              const usernameField = document.querySelector(usernameSelector);
-              const passwordField = document.querySelector(passwordSelector);
-              
-              if (!usernameField || !passwordField) {
-                throw new Error('Login form fields not found');
-              }
-              
-              // Set field values
-              usernameField.value = user;
-              passwordField.value = pass;
-              
-              // Dispatch events to trigger any listeners
-              usernameField.dispatchEvent(new Event('input', { bubbles: true }));
-              passwordField.dispatchEvent(new Event('input', { bubbles: true }));
-              
-              // Submit the form
-              const loginButton = document.querySelector(loginBtnSelector);
-              
-              if (loginButton) {
-                loginButton.click();
-              } else {
-                // Try submitting the form directly
-                const form = document.querySelector('form');
-                if (form) form.submit();
-              }
-            }, '${SELECTORS.LOGIN.username}', '${SELECTORS.LOGIN.password}', '${SELECTORS.LOGIN.loginButton}', "${username}", "${password}");
-          } catch (error) {
-            console.error('Error filling login form:', error);
-            throw new Error('Failed to fill login form: ' + error.message);
-          }
-          
-          // Wait for login to complete
-          console.log('Waiting for login to complete');
-          try {
-            // Wait for navigation to complete
-            await page.waitForNavigation({ 
-              waitUntil: 'networkidle2', 
-              timeout: ${DEFAULT_TIMEOUT} 
-            });
-          } catch (e) {
-            // Check if we're still on the login page
-            const onLoginPage = await page.evaluate((errorSelector) => {
-              return !!document.querySelector(errorSelector);
-            }, '${SELECTORS.LOGIN.errorMessage}');
-            
-            if (onLoginPage) {
-              const errorMsg = await page.evaluate((errorSelector) => {
-                const errorEl = document.querySelector(errorSelector);
-                return errorEl ? errorEl.textContent.trim() : 'Unknown login error';
-              }, '${SELECTORS.LOGIN.errorMessage}');
-              
-              throw new Error('Login failed: ' + errorMsg);
-            }
-          }
-          
-          // Navigate to the invoices page
-          console.log('Navigating to invoices page');
-          
-          try {
-            // Use the history URL first
-            console.log('Direct navigation to invoice section');
-            await page.goto('${ENGIE_ROMANIA.invoicesUrl}', { 
-              waitUntil: 'networkidle2', 
-              timeout: ${DEFAULT_TIMEOUT} 
-            });
-            
-            // Handle cookie consent if it appears after login
-            await handleCookieConsent();
-            
-            // Close any popups
-            await closePopups();
-            
-            // Check if we're on the correct page
-            const hasInvoiceTable = await page.evaluate((tableSelector) => {
-              return !!document.querySelector(tableSelector);
-            }, '${SELECTORS.INVOICE_TABLE.table}');
-            
-            // If not, try the fallback URL
-            if (!hasInvoiceTable) {
-              console.log('Invoice list not found, trying fallback URL');
-              await page.goto('${ENGIE_ROMANIA.fallbackInvoicesUrl}', { 
-                waitUntil: 'networkidle2', 
-                timeout: ${DEFAULT_TIMEOUT} 
-              });
-              
-              // Handle cookie consent again if needed
-              await handleCookieConsent();
-              
-              // Close any popups
-              await closePopups();
-            }
-          } catch (e) {
-            console.error('Error navigating to invoices page:', e);
-            throw new Error('Failed to navigate to invoices page: ' + e.message);
-          }
-          
-          // Wait for the invoice table to load
-          await page.waitForTimeout(${DEFAULT_WAIT_TIME});
-          
-          // Extract invoice information
-          console.log('Extracting invoice data');
-          try {
-            return await page.evaluate((tableSelector, rowsSelector, cellsSelector) => {
-              // Look for the invoice table
-              const table = document.querySelector(tableSelector);
-              if (!table) {
-                return { 
-                  success: false, 
-                  invoices: [],
-                  message: 'Invoice table not found' 
-                };
-              }
-              
-              // Look for invoice rows
-              const rows = document.querySelectorAll(rowsSelector);
-              if (!rows.length) {
-                return { 
-                  success: false, 
-                  invoices: [],
-                  message: 'No invoice rows found in table' 
-                };
-              }
-              
-              const invoices = [];
-              
-              // Process each row as an invoice
-              rows.forEach((row, index) => {
-                try {
-                  // Extract data from cells
-                  const cells = row.querySelectorAll(cellsSelector);
-                  if (cells.length >= 3) {
-                    // Determine the cell indices based on the structure
-                    // This may need adjustment based on the actual table structure
-                    const invoiceNumber = cells[0]?.textContent?.trim() || '';
-                    const date = cells[1]?.textContent?.trim() || '';
-                    
-                    // Look for amount - it may be in different formats
-                    let amount = '';
-                    for (const cell of cells) {
-                      const text = cell.textContent?.trim() || '';
-                      if (text.includes('RON') || text.includes('LEI') || /\\d+[.,]\\d{2}/.test(text)) {
-                        amount = text;
-                        break;
-                      }
-                    }
-                    
-                    // Look for download link
-                    let downloadUrl = '';
-                    const links = row.querySelectorAll('a[href*="facturi"][href*=".pdf"], a[href*="invoice"][href*=".pdf"]');
-                    if (links.length > 0) {
-                      downloadUrl = links[0].getAttribute('href') || '';
-                    }
-                    
-                    // Add to invoices if we have meaningful data
-                    if (invoiceNumber || date) {
-                      invoices.push({
-                        invoiceNumber,
-                        date,
-                        amount,
-                        downloadUrl,
-                        status: 'processed'
-                      });
-                    }
-                  }
-                } catch (error) {
-                  console.error('Error processing invoice row:', error);
-                }
-              });
-              
-              return { 
-                success: true, 
-                invoices: invoices,
-                message: invoices.length ? 'Successfully extracted invoices' : 'No invoices found'
-              };
-            }, '${SELECTORS.INVOICE_TABLE.table}', '${SELECTORS.INVOICE_TABLE.rows}', '${SELECTORS.INVOICE_TABLE.cells}');
-          } catch (e) {
-            console.error('Error extracting invoice data:', e);
-            throw new Error('Failed to extract invoice data: ' + e.message);
-          }
-        }`
-      })
+      body: JSON.stringify(payload)
     });
     
-    // Handle response
+    // Check if the request was successful
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Browserless API error (${response.status}): ${errorText}`);
-      throw new Error(`Browserless request failed: ${response.status} ${response.statusText}`);
+      console.error('Browserless API error:', response.status, errorText);
+      throw new Error(`Browserless request failed: ${response.status} ${response.statusText}\n${errorText}`);
     }
     
-    // Parse response
-    const result = await response.json();
+    // Parse the response as text
+    const responseText = await response.text();
     
-    if (!result || !result.data || !result.data.success) {
-      const errorMessage = result?.data?.message || 'Unknown error';
-      throw new Error(`Scraping failed: ${errorMessage}`);
+    // Look for JSON data in the response
+    const jsonMatch = responseText.match(/\[\s*{[\s\S]*}\s*\]/);
+    if (!jsonMatch) {
+      console.error('No invoice data found in response');
+      return [];
     }
     
-    return result.data;
+    try {
+      // Parse the matched JSON data
+      const invoices = JSON.parse(jsonMatch[0]);
+      console.log('Successfully extracted', invoices.length, 'invoices');
+      return invoices;
+    } catch (error) {
+      console.error('Error parsing invoice data:', error);
+      throw new Error('Failed to parse invoice data from ENGIE Romania');
+    }
   } catch (error) {
     console.error('ENGIE Romania scraper error:', error);
     throw new Error(`ENGIE scraping failed: ${error.message}`);

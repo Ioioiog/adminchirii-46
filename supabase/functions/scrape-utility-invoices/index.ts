@@ -1,150 +1,145 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "@supabase/supabase-js";
-import { getScraper } from "./scrapers/index.ts";
-import { JOB_STATUS } from "./constants.ts";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { scrapeEngieRomania } from './scrapers/engie-romania.ts';
 
-// CORS headers for cross-origin requests
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Create a Supabase client
-const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const supabase = createClient(supabaseUrl, supabaseKey);
+interface RequestBody {
+  username: string;
+  password: string;
+  utilityId: string;
+  provider: string;
+  type: string;
+  location: string;
+}
 
-serve(async (req: Request) => {
+serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Only accept POST requests
-    if (req.method !== 'POST') {
-      return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-        status: 405,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const browserlessApiKey = Deno.env.get('BROWSERLESS_API_KEY');
+
+    if (!browserlessApiKey) {
+      console.error('BROWSERLESS_API_KEY is not set in environment variables');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'BROWSERLESS_API_KEY is not configured. Please set this in your environment variables.' 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500
+        }
+      );
     }
 
-    // Parse the request body
-    const body = await req.json();
-    const { username, password, utilityId, provider, type, location } = body;
-
-    // Validate required fields
-    if (!username || !password || !provider) {
-      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    console.log(`Processing scrape request for provider: ${provider}`);
-
-    // Create a job record
-    const { data: job, error: jobError } = await supabase
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    const requestData: RequestBody = await req.json();
+    console.log('Received request for provider:', requestData.provider);
+    
+    // Create a scraping job record
+    const { data: jobData, error: jobError } = await supabase
       .from('scraping_jobs')
       .insert({
-        utility_provider_id: utilityId,
-        status: JOB_STATUS.IN_PROGRESS,
-        provider: provider,
-        type: type,
-        location: location
+        utility_provider_id: requestData.utilityId,
+        status: 'in_progress',
+        provider: requestData.provider,
+        type: requestData.type,
+        location: requestData.location
       })
       .select('id')
       .single();
-
+    
     if (jobError) {
-      console.error('Error creating job record:', jobError);
-      throw new Error('Failed to create job record');
+      console.error('Error creating scraping job record:', jobError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Failed to create scraping job record' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500
+        }
+      );
     }
-
-    console.log(`Created job ${job.id} for provider ${provider}`);
-
-    // Process the job in the background
+    
+    const jobId = jobData.id;
+    console.log('Created scraping job:', jobId);
+    
+    // Run the scraping in the background to avoid timeout
     (async () => {
       try {
-        console.log(`Starting scraping for job ${job.id}`);
+        // Handle different providers
+        let invoices = [];
         
-        // Get the appropriate scraper
-        const scraper = getScraper(provider);
-        console.log(`Using ${provider} scraper`);
-        
-        // Run the scraper
-        const result = await scraper(username, password);
-        
-        console.log(`Scraping completed for job ${job.id}`);
-        
-        // Update job status to completed
-        const { error: updateError } = await supabase
-          .from('scraping_jobs')
-          .update({
-            status: JOB_STATUS.COMPLETED,
-            completed_at: new Date().toISOString(),
-            results: result.bills
-          })
-          .eq('id', job.id);
-        
-        if (updateError) {
-          console.error('Error updating job status:', updateError);
+        if (requestData.provider.toLowerCase().includes('engie')) {
+          console.log('Scraping ENGIE Romania...');
+          invoices = await scrapeEngieRomania(
+            { 
+              username: requestData.username, 
+              password: requestData.password 
+            },
+            browserlessApiKey
+          );
+        } else {
+          throw new Error(`Unsupported provider: ${requestData.provider}`);
         }
         
-        // Insert the utility bills if any were found
-        if (result.bills && result.bills.length > 0 && utilityId) {
-          const utilityBills = result.bills.map((bill: any) => ({
-            utility_provider_id: utilityId,
-            amount: bill.amount,
-            due_date: bill.due_date,
-            invoice_number: bill.invoice_number,
-            type: bill.type || type,
-            status: bill.status || 'unpaid',
-            issued_date: new Date().toISOString(),
-            scraping_job_id: job.id
-          }));
-          
-          const { error: billsError } = await supabase
-            .from('utilities')
-            .insert(utilityBills);
-          
-          if (billsError) {
-            console.error('Error inserting utility bills:', billsError);
-          }
-        }
-      } catch (error) {
-        console.error(`Error processing job ${job.id}:`, error);
+        console.log(`Successfully scraped ${invoices.length} invoices`);
         
-        // Update job status to failed
+        // Update the job record with the results
         await supabase
           .from('scraping_jobs')
-          .update({
-            status: JOB_STATUS.FAILED,
-            error_message: error.message
+          .update({ 
+            status: 'completed',
+            result: { invoices },
+            completed_at: new Date().toISOString()
           })
-          .eq('id', job.id);
+          .eq('id', jobId);
+          
+        console.log('Updated job status to completed');
+      } catch (error) {
+        console.error('Error processing job', jobId, ':', error);
+        
+        // Update the job record with the error
+        await supabase
+          .from('scraping_jobs')
+          .update({ 
+            status: 'failed',
+            error_message: error.message,
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', jobId);
+          
+        console.error('Updated job status to failed:', error.message);
       }
     })();
-
-    // Return success with job id (background processing continues)
-    return new Response(JSON.stringify({
-      success: true,
-      jobId: job.id
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-
-  } catch (error) {
-    console.error('Error processing request:', error);
     
-    return new Response(JSON.stringify({
-      success: false,
-      error: error.message || 'An unexpected error occurred'
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    // Return immediate success response with the job ID
+    return new Response(
+      JSON.stringify({ success: true, jobId }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      }
+    );
+  } catch (error) {
+    console.error('Unhandled error:', error);
+    
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500
+      }
+    );
   }
 });
