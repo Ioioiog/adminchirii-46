@@ -107,9 +107,8 @@ export async function invokeScrapingFunction(
     const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke<ScrapingResponse>(
       'scrape-utility-invoices',
       {
-        body: JSON.stringify(requestBody),
-        // Set a longer timeout for the client-side request
-        responseType: 'json'
+        body: JSON.stringify(requestBody)
+        // Removed the responseType property as it's not supported
       }
     );
 
