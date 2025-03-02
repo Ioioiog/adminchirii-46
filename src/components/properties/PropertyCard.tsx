@@ -1,124 +1,122 @@
-import React, { useState } from "react";
+
+import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Property } from "@/utils/propertyUtils";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { UtilityStatsDialog } from "./UtilityStatsDialog";
-import { TenantAssignDialog } from "@/components/tenants/TenantAssignDialog";
-import { PropertyCardHeader } from "./PropertyCardHeader";
-import { PropertyCardTenantSection } from "./PropertyCardTenantSection";
-import { PropertyCardLandlordSection } from "./PropertyCardLandlordSection";
-import { PropertyCardFooter } from "./PropertyCardFooter";
+import { Property, PropertyStatus } from "@/utils/propertyUtils";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { DollarSign, Home, MapPin, User, Eye, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogHeader } from "@/components/ui/alert-dialog";
 
 interface PropertyCardProps {
   property: Property;
   userRole: "landlord" | "tenant";
-  onEdit?: (property: Property, data: any) => void;
-  onDelete?: (property: Property) => void;
-  viewMode?: "grid" | "list";
+  onView: (propertyId: string) => void;
+  onDelete?: (propertyId: string) => void;
+  displayStatus?: PropertyStatus;
 }
 
 export function PropertyCard({ 
   property, 
   userRole, 
-  onEdit, 
+  onView,
   onDelete,
-  viewMode = "grid" 
+  displayStatus = property.status,
 }: PropertyCardProps) {
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [showUtilityStats, setShowUtilityStats] = useState(false);
-  const [showAssignTenant, setShowAssignTenant] = useState(false);
-  const { toast } = useToast();
-
-  const handleDeleteTenancy = async () => {
-    try {
-      setIsDeleting(true);
-      console.log("Deleting tenancy for property:", property.id);
-      
-      const { error } = await supabase
-        .from('tenancies')
-        .update({ status: 'inactive', end_date: new Date().toISOString() })
-        .eq('property_id', property.id)
-        .eq('status', 'active');
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Tenant has been removed from the property",
-      });
-
-      window.location.reload();
-    } catch (error: any) {
-      console.error('Error deleting tenancy:', error);
-      toast({
-        title: "Error",
-        description: "Failed to remove tenant from property",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleting(false);
+  const getStatusColor = (status: PropertyStatus) => {
+    if (!status) return 'bg-gray-100 text-gray-800';
+    switch (status.toLowerCase()) {
+      case 'occupied':
+        return 'bg-green-100 text-green-800';
+      case 'vacant':
+        return 'bg-red-100 text-red-800';
+      case 'maintenance':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const cardClassName = viewMode === "list" 
-    ? "flex flex-row items-start gap-6 hover:shadow-lg transition-all duration-300 animate-fade-in bg-white border-none" 
-    : "hover:shadow-lg transition-all duration-300 animate-fade-in bg-white border-none";
-
-  const contentClassName = viewMode === "list" ? "flex-1" : "";
-
   return (
-    <>
-      <Card className={cardClassName}>
-        <CardContent className={`p-0 ${contentClassName}`}>
-          <div className="overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6">
-              <PropertyCardHeader property={property} />
+    <Card className="group overflow-hidden rounded-xl transition-all duration-300 hover:translate-y-[-4px] border border-gray-100 shadow-soft-md hover:shadow-soft-lg bg-white">
+      <div className="p-5 border-b border-gray-50 bg-gradient-to-r from-blue-50/40 to-indigo-50/40">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-gradient-to-r from-blue-600/10 to-indigo-600/10 rounded-lg text-blue-600 group-hover:scale-110 transition-all duration-300">
+              <Home className="h-5 w-5" />
             </div>
-            
-            <div className="p-6">
-              {userRole === "tenant" ? (
-                <PropertyCardTenantSection 
-                  property={property}
-                  onAssignTenant={() => setShowAssignTenant(true)}
-                />
-              ) : (
-                <PropertyCardLandlordSection 
-                  property={property}
-                  isDeleting={isDeleting}
-                  onDeleteTenancy={handleDeleteTenancy}
-                  onAssignTenant={() => setShowAssignTenant(true)}
-                />
-              )}
+            <div>
+              <h3 className="font-medium text-gray-900">{property.name}</h3>
+              <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[180px]">{property.address}</p>
             </div>
           </div>
-
-          <PropertyCardFooter 
-            property={property}
-            userRole={userRole}
-            viewMode={viewMode}
-            onShowUtilityStats={() => setShowUtilityStats(true)}
-            onEdit={() => onEdit?.(property, {})}
-            onDelete={() => onDelete?.(property)}
-          />
-        </CardContent>
-      </Card>
-
-      <UtilityStatsDialog
-        open={showUtilityStats}
-        onOpenChange={setShowUtilityStats}
-        propertyId={property.id}
-        propertyName={property.name}
-      />
-
-      {showAssignTenant && (
-        <TenantAssignDialog
-          open={showAssignTenant}
-          onOpenChange={setShowAssignTenant}
-          properties={[property]}
-          onClose={() => setShowAssignTenant(false)}
-        />
-      )}
-    </>
+          <Badge className={`${getStatusColor(displayStatus)} transition-all duration-300 font-medium text-xs px-2.5`}>
+            {displayStatus || 'N/A'}
+          </Badge>
+        </div>
+      </div>
+      
+      <CardContent className="p-5 pt-4 space-y-5">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5 group-hover:translate-y-[-2px] transition-all duration-300">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-gray-400" />
+              <p className="text-xs font-medium text-gray-500">Monthly Rent</p>
+            </div>
+            <p className="text-sm text-gray-900 font-medium pl-6">
+              €{property.monthly_rent?.toLocaleString() || 0}
+            </p>
+          </div>
+          <div className="space-y-1.5 group-hover:translate-y-[-2px] transition-all duration-300">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-gray-400" />
+              <p className="text-xs font-medium text-gray-500">Tenants</p>
+            </div>
+            <p className="text-sm text-gray-900 font-medium pl-6">
+              {property.tenant_count || 0} Active
+            </p>
+          </div>
+        </div>
+        
+        <Separator className="my-3 bg-gray-100" />
+        
+        <div className="flex items-center justify-end gap-3">
+          {userRole === 'landlord' && onDelete && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="border-red-100 text-red-600 hover:bg-red-50 h-8 rounded-lg">
+                  <Trash2 className="h-3.5 w-3.5 mr-1" />
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the property
+                    and all associated data.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <Button variant="destructive" onClick={() => onDelete(property.id)}>
+                    Delete
+                  </Button>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => onView(property.id)} 
+            className="border-blue-100 text-blue-600 hover:bg-blue-50 transition-colors duration-300 h-8 rounded-lg"
+          >
+            <Eye className="h-3.5 w-3.5 mr-1" />
+            View Details
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
