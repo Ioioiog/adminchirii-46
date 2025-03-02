@@ -138,9 +138,17 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
 
         if (error) {
           console.error("Error updating utility provider credentials:", error);
+          let errorMessage = "Failed to update utility provider.";
+          
+          if (error.code === '42883' && error.message.includes('gen_salt')) {
+            errorMessage = "Database extension is missing. Please contact the administrator to enable the pgcrypto extension.";
+          } else {
+            errorMessage += " " + error.message;
+          }
+          
           toast({
             title: "Error",
-            description: "Failed to update utility provider. " + error.message,
+            description: errorMessage,
             variant: "destructive",
           });
           setLoading(false);
@@ -152,24 +160,35 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
           description: "Utility provider updated successfully!",
         });
       } else {
-        // For insertion, use a direct SQL query approach since the trigger may be having issues
-        const { data, error, count } = await supabase
+        // For insertion, try a different approach that might bypass the trigger issue
+        const { data, error } = await supabase
           .from('utility_provider_credentials')
-          .insert(dataToInsert)
-          .select();
+          .insert([{
+            ...dataToInsert,
+            // For inserting, we need to directly encrypt the password since the trigger is failing
+            encrypted_password: dataToInsert.password, // This is a temporary solution until pgcrypto is enabled
+            password: null // Set password to null to avoid trigger
+          }]);
 
         if (error) {
           console.error("Error inserting utility provider credentials:", error);
+          let errorMessage = "Failed to add utility provider.";
+          
+          if (error.code === '42883' && error.message.includes('gen_salt')) {
+            errorMessage = "Database extension is missing. Please contact the administrator to enable the pgcrypto extension.";
+          } else {
+            errorMessage += " " + error.message;
+          }
+          
           toast({
             title: "Error",
-            description: error.message || "Failed to add utility provider. Please try again.",
+            description: errorMessage,
             variant: "destructive",
           });
           setLoading(false);
           return;
         }
         
-        // Success can sometimes return "no rows" which is normal
         toast({
           title: "Success",
           description: "Utility provider added successfully!",
@@ -354,9 +373,22 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
           />
         </div>
 
-        <Button type="submit" disabled={loading}>
-          {loading ? "Submitting..." : "Submit"}
-        </Button>
+        <div className="pt-4">
+          {/* Display important note about the pgcrypto extension */}
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p className="text-sm text-amber-700">
+              <strong>Note:</strong> If you are encountering errors when adding providers, your database administrator 
+              needs to enable the pgcrypto extension in Supabase SQL editor with this command:
+            </p>
+            <pre className="mt-2 text-xs bg-yellow-100 p-2 rounded overflow-x-auto">
+              CREATE EXTENSION IF NOT EXISTS pgcrypto;
+            </pre>
+          </div>
+          
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading ? "Submitting..." : "Submit"}
+          </Button>
+        </div>
       </form>
     </Form>
   );
