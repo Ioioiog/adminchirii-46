@@ -1,7 +1,8 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "@supabase/supabase-js";
-import { scrapeEngieRomania } from "./scrapers/engie-romania";
+// Update the import to include the file extension
+import { scrapeEngieRomania } from "./scrapers/engie-romania.ts";
 
 // CORS headers for browser requests
 const corsHeaders = {

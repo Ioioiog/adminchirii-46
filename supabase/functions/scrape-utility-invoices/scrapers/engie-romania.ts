@@ -1,5 +1,5 @@
 
-import { SELECTORS, createBrowserlessRequest } from "./constants";
+import { SELECTORS, createBrowserlessRequest } from "./constants.ts";
 
 interface Credentials {
   username: string;
@@ -29,26 +29,23 @@ export async function scrapeEngieRomania(
   try {
     console.log('Starting ENGIE Romania scraping with Browserless');
     
-    // Get the selectors for ENGIE Romania
+    // Get the selectors for ENGIE Romania from the recorded user flow
     const selectors = SELECTORS.ENGIE_ROMANIA;
-
-    // We need to use puppeteer directly rather than just content API due to reCAPTCHA
-    // However, for now, we'll implement a mock version since direct puppeteer control
-    // requires more complex handling for recaptcha that can't be implemented in this Edge Function
-
-    // For a real implementation, we would:
-    // 1. Open the login page
-    // 2. Enter credentials
-    // 3. Handle reCAPTCHA (requires special handling or a service)
-    // 4. Navigate to the bills page
-    // 5. Extract bill data
-    // 6. Download bills
+    
+    // These selectors are from the recorded flow
+    const loginPageSelectors = {
+      usernameField: "#username",
+      passwordField: "#password",
+      loginButton: "button[type='submit']",
+      // The reCAPTCHA iframe selector might vary
+      captchaFrame: "iframe[src*='google.com/recaptcha']"
+    };
 
     console.log('Capturing login page structure');
     const loginPageResponse = await createBrowserlessRequest(
       selectors.loginPage,
       browserlessApiKey,
-      ['body', selectors.usernameSelector, selectors.passwordSelector, selectors.loginButtonSelector]
+      [loginPageSelectors.usernameField, loginPageSelectors.passwordField, loginPageSelectors.loginButton]
     );
 
     if (!loginPageResponse.ok) {
@@ -57,10 +54,8 @@ export async function scrapeEngieRomania(
     }
 
     console.log('Login page captured successfully');
-
-    // This is where we would implement the actual login flow
-    // However, due to reCAPTCHA limitations, we need to use a more advanced approach
-    // or integrate with a CAPTCHA solving service
+    console.log('Unable to proceed with actual login due to reCAPTCHA protection');
+    console.log('Using mock data instead');
 
     // For demonstration purposes, return mock data based on recorded flow
     const mockInvoices: Invoice[] = [
@@ -81,7 +76,7 @@ export async function scrapeEngieRomania(
     ];
 
     console.log('Generated mock invoice data');
-    console.log('Note: For full implementation, we would need to handle reCAPTCHA in an advanced way');
+    console.log('Note: For full implementation with the recorded user flow, we would need to handle reCAPTCHA');
     
     return mockInvoices;
   } catch (error) {
