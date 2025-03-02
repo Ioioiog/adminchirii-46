@@ -1,4 +1,3 @@
-
 import { useToast } from "@/hooks/use-toast";
 
 /**
@@ -20,6 +19,8 @@ export function formatErrorMessage(error: unknown): string {
       errorMessage = "The pgcrypto extension is not enabled in the database. Please contact your administrator.";
     } else if (error.message.includes("Edge Function")) {
       errorMessage = "The utility provider service is temporarily unavailable. We're working on fixing this issue.";
+    } else if (error.message.includes("provider's website")) {
+      errorMessage = error.message;
     }
   }
   
@@ -55,6 +56,10 @@ export function formatEdgeFunctionError(errorMessage: string | undefined): strin
     return "The utility provider's website may be down or has changed. Please try again later.";
   }
   
+  if (errorMessage.includes("Unsupported provider")) {
+    return "This utility provider is not yet supported for automated bill fetching.";
+  }
+  
   return errorMessage;
 }
 
@@ -65,7 +70,8 @@ export function isEdgeFunctionError(error: unknown): boolean {
   if (error instanceof Error) {
     return error.message.includes("Edge Function") || 
            error.message.includes("non-2xx status") || 
-           error.message.includes("status code 500");
+           error.message.includes("status code 500") ||
+           error.message.includes("provider's website");
   }
   return false;
 }

@@ -33,6 +33,7 @@ export async function getProviderCredentials(providerId: string, propertyId: str
 
 /**
  * Create a new scraping job record in the database directly
+ * This serves as a fallback when the edge function fails
  */
 async function createScrapingJobDirectly(providerId: string): Promise<string> {
   try {
