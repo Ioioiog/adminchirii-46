@@ -47,7 +47,20 @@ export function useJobStatusManager() {
           last_run_at: job.created_at,
           error_message: 'CAPTCHA was submitted but the process was interrupted. Please try again.'
         });
-      } else {
+      } 
+      // Check for cookie or session issues
+      else if (job.status === 'failed' && 
+          job.error_message && 
+          (job.error_message.includes('cookie') || job.error_message.includes('session'))) {
+        console.log('Job failed due to cookie/session issues, special handling');
+        
+        updateJobStatus(providerId, {
+          status: 'failed',
+          last_run_at: job.created_at,
+          error_message: 'Session management issue with the provider website. Please try again later.'
+        });
+      }
+      else {
         // Regular job status update
         updateJobStatus(providerId, {
           status: job.status,
@@ -97,6 +110,8 @@ export function useJobStatusManager() {
             // Handle CAPTCHA specific errors
             if (job.error_message.includes('CAPTCHA submitted')) {
               errorDescription = "The CAPTCHA was successfully submitted, but the process was interrupted afterward. This could be due to a timeout. Please try again.";
+            } else if (job.error_message.includes('cookie') || job.error_message.includes('session')) {
+              errorDescription = "Session management issue with the provider website. This might be due to expired cookies or session timeout. Please try again later.";
             } else {
               errorDescription = formatEdgeFunctionError(job.error_message);
             }
@@ -114,6 +129,8 @@ export function useJobStatusManager() {
               errorDescription = "The request to the provider website timed out. This could be due to slow internet or the website being temporarily down.";
             } else if (job.error_message.includes("function is shutdown") || job.error_message.includes("interrupted")) {
               errorDescription = "The scraping process was interrupted. This may be due to exceeding the function execution time limit. Please try again.";
+            } else if (job.error_message.includes("Change consumption location") || job.error_message.includes("Schimbă locul de consum")) {
+              errorDescription = "Failed while selecting consumption location. This may be due to session or cookie issues. Please try again later.";
             }
           }
           

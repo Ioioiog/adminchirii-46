@@ -82,11 +82,17 @@ function prepareScrapingRequestBody(provider: UtilityProvider, credentials: Cred
     // Add flag to indicate that this provider requires CAPTCHA handling
     hasCaptcha: provider.provider_name.toLowerCase().includes('engie'),
     // Add a longer timeout for providers with CAPTCHA
-    timeout: provider.provider_name.toLowerCase().includes('engie') ? 120000 : 60000,
+    timeout: provider.provider_name.toLowerCase().includes('engie') ? 180000 : 60000,
     // Add navigation wait time extended for ENGIE Romania
-    navigationWaitTime: provider.provider_name.toLowerCase().includes('engie') ? 30000 : 10000,
+    navigationWaitTime: provider.provider_name.toLowerCase().includes('engie') ? 45000 : 10000,
     // Set flag to handle post-login location change dialog
-    handleLocationChange: provider.provider_name.toLowerCase().includes('engie')
+    handleLocationChange: provider.provider_name.toLowerCase().includes('engie'),
+    // Enable persistent cookie storage for maintaining session
+    persistCookies: provider.provider_name.toLowerCase().includes('engie'),
+    // Set flag to clear cookies before starting (helps with session issues)
+    clearCookies: provider.provider_name.toLowerCase().includes('engie'),
+    // Set user agent to appear as a modern browser
+    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
   };
 }
 
@@ -112,7 +118,6 @@ export async function invokeScrapingFunction(
       'scrape-utility-invoices',
       {
         body: JSON.stringify(requestBody)
-        // Removed the responseType property as it's not supported
       }
     );
 
@@ -213,7 +218,7 @@ export async function invokeScrapingFunction(
         }
         
         if (error.message.includes('function is shutdown') || error.message.includes('interrupted')) {
-          throw new Error('The scraping process was interrupted after CAPTCHA submission. This may be due to a timeout. Please try again.');
+          throw new Error('The scraping process was interrupted after CAPTCHA submission. This may be due to session timeout or cookies issue. Please try again.');
         }
 
         if (error.message.includes('Waiting for login navigation') || 
@@ -223,7 +228,11 @@ export async function invokeScrapingFunction(
         
         if (error.message.includes('Change consumption location') || 
             error.message.includes('Schimbă locul de consum')) {
-          throw new Error('The scraping process failed while trying to select the consumption location. Please try again later.');
+          throw new Error('The scraping process failed while trying to select the consumption location. This may be due to cookie or session issues. Please try again later.');
+        }
+        
+        if (error.message.includes('cookie') || error.message.includes('session')) {
+          throw new Error('Session management issue with ENGIE Romania website. This may be due to cookie handling or session expiration. Please try again later.');
         }
       }
       
@@ -255,7 +264,7 @@ export async function invokeScrapingFunction(
           return {
             success: true,
             jobId: jobId,
-            error: 'The scraping service was interrupted due to a timeout. A fallback job has been created and will be processed later.'
+            error: 'The scraping service was interrupted due to a timeout or cookie issue. A fallback job has been created and will be processed later.'
           };
         } catch (fallbackError) {
           console.error('Fallback job creation failed:', fallbackError);

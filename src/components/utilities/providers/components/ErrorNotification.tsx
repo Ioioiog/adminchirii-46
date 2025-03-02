@@ -56,6 +56,10 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
       return "The process failed while trying to select the utility consumption location. Please try again later.";
     }
     
+    if (errorMessage.includes('cookie') || errorMessage.includes('session')) {
+      return "There was an issue with the session management. The provider website may have expired your session or blocked automated access. Please try again later.";
+    }
+    
     return "There was an error fetching your utility bills. Please try again later.";
   };
   

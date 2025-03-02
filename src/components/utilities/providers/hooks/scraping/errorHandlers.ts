@@ -52,6 +52,10 @@ export function formatErrorMessage(error: unknown): string {
       errorMessage = "The provider's website requires CAPTCHA verification which cannot be automated. Please log in to the provider's website directly.";
     } else if (error.message.includes("SyntaxError: Unexpected end of JSON")) {
       errorMessage = "The provider website returned incomplete data. This is often due to a timeout or interrupted connection. Please try again.";
+    } else if (error.message.includes("cookie") || error.message.includes("session")) {
+      errorMessage = "Session management issue with the provider website. This might be due to expired cookies or session timeout. Please try again later.";
+    } else if (error.message.includes("Change consumption location") || error.message.includes("Schimbă locul de consum")) {
+      errorMessage = "Failed while selecting consumption location. This may be due to session or cookie issues. Please try again later.";
     }
   }
   
@@ -104,7 +108,7 @@ export function formatEdgeFunctionError(errorMessage: string | undefined): strin
   }
   
   if (errorMessage.includes("function is shutdown") || errorMessage.includes("interrupted")) {
-    return "The scraping process was interrupted. This is often due to reaching the function's maximum execution time. Please try again.";
+    return "The scraping process was interrupted. This is often due to reaching the function's maximum execution time or session cookies. Please try again.";
   }
   
   if (errorMessage.includes("CAPTCHA submitted")) {
@@ -135,6 +139,14 @@ export function formatEdgeFunctionError(errorMessage: string | undefined): strin
     return "The provider website returned incomplete data. This is often due to a timeout or interrupted connection. Please try again.";
   }
   
+  if (errorMessage.includes("cookie") || errorMessage.includes("session")) {
+    return "Session management issue with the provider website. This might be due to expired cookies or session timeout. Please try again later.";
+  }
+  
+  if (errorMessage.includes("Change consumption location") || errorMessage.includes("Schimbă locul de consum")) {
+    return "Failed while selecting consumption location. This may be due to session or cookie issues. Please try again later.";
+  }
+  
   return errorMessage;
 }
 
@@ -158,7 +170,9 @@ export function isEdgeFunctionError(error: unknown): boolean {
            error.message.includes("function is shutdown") ||
            error.message.includes("interrupted") ||
            error.message.includes("CAPTCHA submitted") ||
-           error.message.includes("SyntaxError: Unexpected end of JSON");
+           error.message.includes("SyntaxError: Unexpected end of JSON") ||
+           error.message.includes("cookie") ||
+           error.message.includes("session");
   }
   return false;
 }

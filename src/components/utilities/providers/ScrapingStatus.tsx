@@ -68,6 +68,10 @@ export function ScrapingStatus({
       return 'Failed while selecting consumption location. Please try again later.';
     }
     
+    if (errorMessage.includes('cookie') || errorMessage.includes('session')) {
+      return 'Session management issue detected. Provider website may have expired your session. Please try again later.';
+    }
+    
     return errorMessage;
   };
 
