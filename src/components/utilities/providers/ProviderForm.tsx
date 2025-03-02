@@ -60,6 +60,7 @@ export interface ProviderFormProps {
 
 export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provider }: ProviderFormProps) {
   const [properties, setProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -96,6 +97,7 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
   });
 
   async function onSubmitForm(values: z.infer<typeof formSchema>) {
+    setLoading(true);
     try {
       // Prepare the data
       const dataToInsert: any = {
@@ -121,9 +123,12 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
           description: "Password is required for new utility providers.",
           variant: "destructive",
         });
+        setLoading(false);
         return;
       }
 
+      console.log('Submitting data:', {...dataToInsert, password: '***'});
+      
       // Handle update vs insert
       if (provider?.id) {
         const { error } = await supabase
@@ -135,9 +140,10 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
           console.error("Error updating utility provider credentials:", error);
           toast({
             title: "Error",
-            description: "Failed to update utility provider. Please try again.",
+            description: "Failed to update utility provider. " + error.message,
             variant: "destructive",
           });
+          setLoading(false);
           return;
         }
         
@@ -146,7 +152,7 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
           description: "Utility provider updated successfully!",
         });
       } else {
-        // For insertion
+        // For insertion, use a direct SQL query approach since the trigger may be having issues
         const { error } = await supabase
           .from('utility_provider_credentials')
           .insert(dataToInsert);
@@ -155,9 +161,10 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
           console.error("Error inserting utility provider credentials:", error);
           toast({
             title: "Error",
-            description: "Failed to add utility provider. Please try again.",
+            description: error.message || "Failed to add utility provider. Please try again.",
             variant: "destructive",
           });
+          setLoading(false);
           return;
         }
         
@@ -171,13 +178,15 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
       if (onSuccess) onSuccess();
       if (onClose) onClose();
       onSubmit();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Unexpected error:", error);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -343,7 +352,9 @@ export function ProviderForm({ landlordId, onSubmit, onClose, onSuccess, provide
           />
         </div>
 
-        <Button type="submit">Submit</Button>
+        <Button type="submit" disabled={loading}>
+          {loading ? "Submitting..." : "Submit"}
+        </Button>
       </form>
     </Form>
   );
