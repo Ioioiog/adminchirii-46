@@ -36,6 +36,10 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
       return "The scraping process was interrupted due to a timeout or resource limitation. Try again with shorter time intervals between requests.";
     }
     
+    if (errorMessage.includes('Waiting for login navigation')) {
+      return "The scraping process timed out while waiting for the login page to load. The provider website may be slow or temporarily down. Please try again later.";
+    }
+    
     if (errorMessage.includes('Login failed')) {
       return "Unable to log in to the provider website. Please check your credentials or try again later.";
     }

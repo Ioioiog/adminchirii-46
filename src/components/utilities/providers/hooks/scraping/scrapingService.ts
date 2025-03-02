@@ -82,7 +82,9 @@ function prepareScrapingRequestBody(provider: UtilityProvider, credentials: Cred
     // Add flag to indicate that this provider requires CAPTCHA handling
     hasCaptcha: provider.provider_name.toLowerCase().includes('engie'),
     // Add a longer timeout for providers with CAPTCHA
-    timeout: provider.provider_name.toLowerCase().includes('engie') ? 120000 : 60000
+    timeout: provider.provider_name.toLowerCase().includes('engie') ? 120000 : 60000,
+    // Add navigation wait time extended for ENGIE Romania
+    navigationWaitTime: provider.provider_name.toLowerCase().includes('engie') ? 30000 : 10000
   };
 }
 
@@ -211,6 +213,11 @@ export async function invokeScrapingFunction(
         if (error.message.includes('function is shutdown') || error.message.includes('interrupted')) {
           throw new Error('The scraping process was interrupted after CAPTCHA submission. This may be due to a timeout. Please try again.');
         }
+
+        if (error.message.includes('Waiting for login navigation') || 
+            error.message.includes('navigation timeout')) {
+          throw new Error('The scraping process timed out while waiting for the login page to load. The ENGIE Romania website may be slow or temporarily down. Please try again later.');
+        }
       }
       
       // Handle Browserless API configuration errors
@@ -224,6 +231,29 @@ export async function invokeScrapingFunction(
       // Handle JSON parsing errors
       if (error.message.includes("SyntaxError: Unexpected end of JSON")) {
         throw new Error('The provider website returned invalid data. This is often due to recent website changes or a timeout. Please try again later or contact support.');
+      }
+
+      // Handle function shutdown errors
+      if (error.message.includes("function is shutdown")) {
+        console.log('Function shutdown detected, creating fallback job...');
+        
+        try {
+          const jobId = await createScrapingJobDirectly(
+            provider.id,
+            provider.provider_name,
+            provider.utility_type,
+            provider.location_name
+          );
+          
+          return {
+            success: true,
+            jobId: jobId,
+            error: 'The scraping service was interrupted due to a timeout. A fallback job has been created and will be processed later.'
+          };
+        } catch (fallbackError) {
+          console.error('Fallback job creation failed:', fallbackError);
+          throw new Error('The scraping process was interrupted due to a timeout. Please try again later with a shorter time interval.');
+        }
       }
     }
     
