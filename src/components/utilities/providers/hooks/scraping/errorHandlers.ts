@@ -21,7 +21,11 @@ export function formatErrorMessage(error: unknown): string {
     } else if (error.message.includes("status code 500") || error.message.includes("non-2xx status")) {
       errorMessage = "The utility provider service is currently unavailable. Please try again later.";
     } else if (error.message.includes("function")) {
-      errorMessage = "There was an issue with the database function. Contact support.";
+      if (error.message.includes("shutdown") || error.message.includes("interrupted")) {
+        errorMessage = "The scraping process was interrupted. This is often due to reaching the maximum execution time. Please try again.";
+      } else {
+        errorMessage = "There was an issue with the database function. Contact support.";
+      }
     } else if (error.message.includes("timeout")) {
       errorMessage = "Connection to the utility provider timed out. Try again later.";
     } else if (error.message.includes("credential")) {
@@ -42,8 +46,12 @@ export function formatErrorMessage(error: unknown): string {
       errorMessage = "The scraper configuration is missing a required URL parameter. Please contact support.";
     } else if (error.message.includes("Module not found")) {
       errorMessage = "Required module is missing. Please contact support to fix the scraper implementation.";
+    } else if (error.message.includes("CAPTCHA submitted")) {
+      errorMessage = "The CAPTCHA was successfully submitted, but the process was interrupted afterward. Please try again.";
     } else if (error.message.includes("reCAPTCHA") || error.message.includes("captcha")) {
       errorMessage = "The provider's website requires CAPTCHA verification which cannot be automated. Please log in to the provider's website directly.";
+    } else if (error.message.includes("SyntaxError: Unexpected end of JSON")) {
+      errorMessage = "The provider website returned incomplete data. This is often due to a timeout or interrupted connection. Please try again.";
     }
   }
   
@@ -95,6 +103,14 @@ export function formatEdgeFunctionError(errorMessage: string | undefined): strin
     return "The utility provider's website may be down or has changed. Please try again later.";
   }
   
+  if (errorMessage.includes("function is shutdown") || errorMessage.includes("interrupted")) {
+    return "The scraping process was interrupted. This is often due to reaching the function's maximum execution time. Please try again.";
+  }
+  
+  if (errorMessage.includes("CAPTCHA submitted")) {
+    return "The CAPTCHA was successfully submitted, but the process was interrupted. Please try again.";
+  }
+  
   if (errorMessage.includes("Unsupported provider")) {
     return "This utility provider is not yet supported for automated bill fetching.";
   }
@@ -113,6 +129,10 @@ export function formatEdgeFunctionError(errorMessage: string | undefined): strin
   
   if (errorMessage.includes("reCAPTCHA") || errorMessage.includes("captcha")) {
     return "The provider's website requires CAPTCHA verification which cannot be automated. Please log in to the provider's website directly.";
+  }
+  
+  if (errorMessage.includes("SyntaxError: Unexpected end of JSON")) {
+    return "The provider website returned incomplete data. This is often due to a timeout or interrupted connection. Please try again.";
   }
   
   return errorMessage;
@@ -134,7 +154,11 @@ export function isEdgeFunctionError(error: unknown): boolean {
            error.message.includes("\"elements\" is not allowed") ||
            error.message.includes("\"url\" is required") ||
            error.message.includes("usernameSelector is not defined") ||
-           error.message.includes("Module not found");
+           error.message.includes("Module not found") ||
+           error.message.includes("function is shutdown") ||
+           error.message.includes("interrupted") ||
+           error.message.includes("CAPTCHA submitted") ||
+           error.message.includes("SyntaxError: Unexpected end of JSON");
   }
   return false;
 }

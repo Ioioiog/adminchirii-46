@@ -35,11 +35,26 @@ export function useJobStatusManager() {
       console.log('Job status:', job.status);
       console.log('Job error message:', job.error_message || 'None');
       
-      updateJobStatus(providerId, {
-        status: job.status,
-        last_run_at: job.created_at,
-        error_message: job.error_message
-      });
+      // Check if the job shows signs of being interrupted after CAPTCHA
+      if (job.status === 'failed' && 
+          job.error_message && 
+          job.error_message.includes('CAPTCHA submitted')) {
+        console.log('Job failed after CAPTCHA submission, special handling');
+        
+        // Update with a more specific error message
+        updateJobStatus(providerId, {
+          status: 'failed',
+          last_run_at: job.created_at,
+          error_message: 'CAPTCHA was submitted but the process was interrupted. Please try again.'
+        });
+      } else {
+        // Regular job status update
+        updateJobStatus(providerId, {
+          status: job.status,
+          last_run_at: job.created_at,
+          error_message: job.error_message
+        });
+      }
 
       return job.status;
     } catch (error) {
@@ -78,7 +93,13 @@ export function useJobStatusManager() {
           
           if (job?.error_message) {
             console.error('Scraping job failed with error:', job.error_message);
-            errorDescription = formatEdgeFunctionError(job.error_message);
+            
+            // Handle CAPTCHA specific errors
+            if (job.error_message.includes('CAPTCHA submitted')) {
+              errorDescription = "The CAPTCHA was successfully submitted, but the process was interrupted afterward. This could be due to a timeout. Please try again.";
+            } else {
+              errorDescription = formatEdgeFunctionError(job.error_message);
+            }
             
             // Add specific error handling for different scenarios
             if (job.error_message.includes("BROWSERLESS_API_KEY")) {
@@ -91,6 +112,8 @@ export function useJobStatusManager() {
               errorDescription = "The provider website returned unexpected data. This often happens when they update their site structure. Please try again later.";
             } else if (job.error_message.includes("timeout")) {
               errorDescription = "The request to the provider website timed out. This could be due to slow internet or the website being temporarily down.";
+            } else if (job.error_message.includes("function is shutdown") || job.error_message.includes("interrupted")) {
+              errorDescription = "The scraping process was interrupted. This may be due to exceeding the function execution time limit. Please try again.";
             }
           }
           

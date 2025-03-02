@@ -80,7 +80,9 @@ function prepareScrapingRequestBody(provider: UtilityProvider, credentials: Cred
     // Set API compatibility flag to ensure scraper uses supported parameters
     apiCompatMode: true,
     // Add flag to indicate that this provider requires CAPTCHA handling
-    hasCaptcha: provider.provider_name.toLowerCase().includes('engie')
+    hasCaptcha: provider.provider_name.toLowerCase().includes('engie'),
+    // Add a longer timeout for providers with CAPTCHA
+    timeout: provider.provider_name.toLowerCase().includes('engie') ? 120000 : 60000
   };
 }
 
@@ -105,7 +107,9 @@ export async function invokeScrapingFunction(
     const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke<ScrapingResponse>(
       'scrape-utility-invoices',
       {
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        // Set a longer timeout for the client-side request
+        responseType: 'json'
       }
     );
 
@@ -120,8 +124,18 @@ export async function invokeScrapingFunction(
       throw new Error(errorMessage);
     }
 
-    if (!scrapeData || !scrapeData.success) {
+    if (!scrapeData) {
+      console.error('No data returned from scraping function');
+      throw new Error('No data returned from the scraping service');
+    }
+
+    if (!scrapeData.success) {
       console.error('Scraping failed:', scrapeData?.error);
+      
+      // Check for CAPTCHA submission but function shutdown
+      if (scrapeData.error && scrapeData.error.includes('CAPTCHA submitted')) {
+        throw new Error(`CAPTCHA submitted, but the function was interrupted. Please try again.`);
+      }
       
       throw new Error(scrapeData?.error || 'Scraping failed');
     }
@@ -133,6 +147,29 @@ export async function invokeScrapingFunction(
     return scrapeData;
   } catch (error) {
     console.error('Error during scraping function invocation:', error);
+    
+    // Check for CAPTCHA submission message
+    if (error instanceof Error && error.message.includes('CAPTCHA submitted')) {
+      console.log('CAPTCHA was submitted but process interrupted, creating fallback job...');
+      
+      try {
+        const jobId = await createScrapingJobDirectly(
+          provider.id,
+          provider.provider_name,
+          provider.utility_type,
+          provider.location_name
+        );
+        
+        return {
+          success: true,
+          jobId: jobId,
+          error: 'CAPTCHA submitted, ID was recorded, but the process was interrupted. Using fallback job.'
+        };
+      } catch (fallbackError) {
+        console.error('Fallback job creation failed:', fallbackError);
+        throw new Error('CAPTCHA was submitted but the process was interrupted. Please try again.');
+      }
+    }
     
     // Check if it's an edge function error (500 status code)
     if (isEdgeFunctionError(error)) {
@@ -171,6 +208,10 @@ export async function invokeScrapingFunction(
         if (error.message.includes('CAPTCHA') || error.message.includes('captcha')) {
           throw new Error('The ENGIE Romania website requires CAPTCHA verification which could not be solved automatically. Please try again later.');
         }
+        
+        if (error.message.includes('function is shutdown') || error.message.includes('interrupted')) {
+          throw new Error('The scraping process was interrupted after CAPTCHA submission. This may be due to a timeout. Please try again.');
+        }
       }
       
       // Handle Browserless API configuration errors
@@ -183,7 +224,7 @@ export async function invokeScrapingFunction(
       
       // Handle JSON parsing errors
       if (error.message.includes("SyntaxError: Unexpected end of JSON")) {
-        throw new Error('The provider website returned invalid data. This is often due to recent website changes. Please try again later or contact support.');
+        throw new Error('The provider website returned invalid data. This is often due to recent website changes or a timeout. Please try again later or contact support.');
       }
     }
     

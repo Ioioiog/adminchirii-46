@@ -50,11 +50,18 @@ export function ScrapingStatus({
     }
     
     if (errorMessage.includes('CAPTCHA')) {
+      if (errorMessage.includes('submitted')) {
+        return 'CAPTCHA was submitted but the process was interrupted. Please try again.';
+      }
       return 'The provider website has CAPTCHA protection which could not be solved automatically.';
     }
     
     if (errorMessage.includes('Login failed')) {
       return 'Login to the provider website failed. Please check your credentials.';
+    }
+    
+    if (errorMessage.includes('function is shutdown')) {
+      return 'The scraping process was interrupted. This may be due to a timeout or resource limitation.';
     }
     
     return errorMessage;

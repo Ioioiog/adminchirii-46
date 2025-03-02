@@ -20,12 +20,20 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
       return "The system is missing the API key required for web scraping. Please contact support.";
     }
     
+    if (errorMessage.includes('CAPTCHA submitted')) {
+      return "The CAPTCHA was successfully submitted, but the process was interrupted afterward. This could be due to a timeout or resource limitation. Please try again.";
+    }
+    
     if (errorMessage.includes('CAPTCHA') || errorMessage.includes('captcha')) {
       return "The provider's website requires CAPTCHA verification which could not be automatically solved. Please try again or log in to the provider's website directly.";
     }
     
     if (errorMessage.includes('Edge Function') || errorMessage.includes('500')) {
       return "The utility provider service is temporarily unavailable. Please try again later.";
+    }
+    
+    if (errorMessage.includes('function is shutdown')) {
+      return "The scraping process was interrupted due to a timeout or resource limitation. Try again with shorter time intervals between requests.";
     }
     
     if (errorMessage.includes('Login failed')) {
