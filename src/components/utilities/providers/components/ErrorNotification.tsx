@@ -41,6 +41,14 @@ export function ErrorNotification({ errorMessage, retryAction }: ErrorNotificati
     displayMessage = "Login credentials were rejected by the utility provider. Please check your username and password.";
   } else if (errorMessage.includes("timeout")) {
     displayMessage = "The connection to the utility provider timed out. The provider's website may be experiencing high traffic or temporary issues.";
+  } else if (errorMessage.includes("SyntaxError") || 
+            errorMessage.includes("Unexpected end of JSON input") ||
+            errorMessage.includes("Invalid request format")) {
+    displayMessage = "There was a communication error with the utility provider service. This is often temporary. Please try again later.";
+    technicalDetails = errorMessage;
+  } else if (errorMessage.includes("Missing required fields")) {
+    displayMessage = "Some required information is missing for the utility provider connection. Please update your provider settings and try again.";
+    technicalDetails = errorMessage;
   }
   
   return (

@@ -38,13 +38,20 @@ export function ScrapingStatus({
     if (status === 'failed') return 'Retry Fetch';
     return 'Fetch Bills';
   };
+  
+  const formatStatus = (status: string): string => {
+    return status
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
 
   return (
     <div className="space-y-2">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between text-sm space-y-2 md:space-y-0">
         <div>
           <span className={getStatusColor()}>
-            Status: {status.charAt(0).toUpperCase() + status.slice(1)}
+            Status: {formatStatus(status)}
           </span>
           {lastRunAt && (
             <span className="text-muted-foreground ml-2">
