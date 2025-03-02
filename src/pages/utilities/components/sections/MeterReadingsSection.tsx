@@ -36,7 +36,7 @@ export function MeterReadingsSection({ userRole }: MeterReadingsSectionProps) {
             </div>
           </div>
         </div>
-        <MeterReadingDialog properties={properties} onReadingCreated={() => {}} userRole={userRole} userId={null} />
+        <MeterReadingDialog properties={properties} onReadingCreated={() => {}} userRole={role} userId={null} />
       </div>
       <MeterReadingList readings={[]} userRole={role} onUpdate={() => {}} />
     </div>
