@@ -1,6 +1,6 @@
 
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.21.0";
+import { serve } from "std/server";
+import { createClient } from "@supabase/supabase-js";
 import { scrapeEngieRomania } from "./scrapers/engie-romania.ts";
 
 // CORS headers for browser requests
@@ -35,10 +35,10 @@ serve(async (req) => {
     
     // Parse request body
     const requestData = await req.json();
-    const { username, password, utilityId, provider, type, location } = requestData;
+    const { username, password, provider_id, provider, type, location } = requestData;
 
-    if (!username || !password || !utilityId) {
-      throw new Error('Username, password, and utilityId are required');
+    if (!username || !password || !provider_id) {
+      throw new Error('Username, password, and provider_id are required');
     }
     
     console.log(`Starting scraping for provider: ${provider}`);
@@ -47,7 +47,7 @@ serve(async (req) => {
     const { data: jobData, error: jobError } = await supabase
       .from('scraping_jobs')
       .insert({
-        utility_provider_id: utilityId,
+        utility_provider_id: provider_id,
         status: 'in_progress',
         provider: provider,
         type: type,
@@ -84,7 +84,7 @@ serve(async (req) => {
         // Process and store the invoices
         if (invoices.length > 0) {
           const processedInvoices = invoices.map(invoice => ({
-            property_id: utilityId,
+            property_id: provider_id,
             type: type || invoice.type,
             amount: invoice.amount,
             currency: 'RON',

@@ -1,5 +1,5 @@
 
-import { SELECTORS, createBrowserlessRequest, romanianDateToISO } from "../constants";
+import { SELECTORS, solveCaptcha, romanianDateToISO } from "../constants";
 import puppeteer from "puppeteer";
 
 interface Credentials {
@@ -14,68 +14,6 @@ interface Invoice {
   type: string;
   status: string;
   pdf_url: string;
-}
-
-/**
- * Solves reCAPTCHA using 2captcha service
- */
-async function solveCaptcha(page: puppeteer.Page, sitekey: string, captchaApiKey: string): Promise<string> {
-  console.log("Solving CAPTCHA with 2captcha...");
-  
-  try {
-    // Get the page URL for the 2captcha request
-    const pageUrl = page.url();
-    
-    // Make request to 2captcha to solve the CAPTCHA
-    const requestUrl = `https://2captcha.com/in.php?key=${captchaApiKey}&method=userrecaptcha&googlekey=${sitekey}&pageurl=${pageUrl}&json=1`;
-    const response = await fetch(requestUrl);
-    const requestData = await response.json();
-    
-    if (!requestData.status) {
-      throw new Error(`Failed to submit CAPTCHA: ${requestData.error_text}`);
-    }
-    
-    const captchaId = requestData.request;
-    console.log(`CAPTCHA submitted, ID: ${captchaId}`);
-    
-    // Poll for the CAPTCHA solution
-    let solved = false;
-    let solution = '';
-    let attempts = 0;
-    
-    while (!solved && attempts < 30) {
-      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds between checks
-      
-      const resultUrl = `https://2captcha.com/res.php?key=${captchaApiKey}&action=get&id=${captchaId}&json=1`;
-      const resultResponse = await fetch(resultUrl);
-      const resultData = await resultResponse.json();
-      
-      if (resultData.status === 1) {
-        solution = resultData.request;
-        solved = true;
-        console.log("CAPTCHA solved successfully");
-      } else if (resultData.request !== "CAPCHA_NOT_READY") {
-        throw new Error(`Failed to solve CAPTCHA: ${resultData.request}`);
-      }
-      
-      attempts++;
-    }
-    
-    if (!solved) {
-      throw new Error("CAPTCHA solving timed out");
-    }
-    
-    // Execute script to set the CAPTCHA solution
-    await page.evaluate(`
-      document.querySelector('textarea[name="g-recaptcha-response"]').innerHTML = "${solution}";
-      ___grecaptcha_cfg.clients[0].U.U.callback("${solution}");
-    `);
-    
-    return solution;
-  } catch (error) {
-    console.error("Error solving CAPTCHA:", error);
-    throw new Error(`CAPTCHA solving failed: ${error.message}`);
-  }
 }
 
 /**
@@ -99,7 +37,11 @@ export async function scrapeEngieRomania(
   let browser;
   try {
     // Connect to Browserless using proper configuration
-    browser = await puppeteer.connect(createBrowserlessRequest(browserlessApiKey));
+    browser = await puppeteer.connect({
+      browserWSEndpoint: `wss://chrome.browserless.io?token=${browserlessApiKey}`,
+      defaultViewport: { width: 1280, height: 800 }
+    });
+    
     const page = await browser.newPage();
     
     // Set user agent to avoid detection
@@ -121,7 +63,18 @@ export async function scrapeEngieRomania(
     const captchaExists = await page.$(SELECTORS.ENGIE_ROMANIA.captchaSelector);
     if (captchaExists) {
       console.log("CAPTCHA detected, solving with 2captcha...");
-      await solveCaptcha(page, SELECTORS.ENGIE_ROMANIA.sitekey, captchaApiKey);
+      const solution = await solveCaptcha(
+        page, 
+        SELECTORS.ENGIE_ROMANIA.sitekey, 
+        captchaApiKey,
+        page.url()
+      );
+      
+      // Execute script to set the CAPTCHA solution
+      await page.evaluate(`
+        document.querySelector('textarea[name="g-recaptcha-response"]').innerHTML = "${solution}";
+        ___grecaptcha_cfg.clients[0].U.U.callback("${solution}");
+      `);
     }
     
     // Click login and wait for navigation
