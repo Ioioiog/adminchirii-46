@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatAmount } from "@/lib/utils";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface InvoiceFormValues {
   property_id: string;
@@ -54,7 +55,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
   const [defaultTenantId, setDefaultTenantId] = useState<string | null>(null);
   const [applyVat, setApplyVat] = useState<boolean>(false);
   const [vatRate, setVatRate] = useState<number>(19);
-  const [invoiceCurrency, setInvoiceCurrency] = useState<string>('EUR');
+  const [invoiceCurrency, setInvoiceCurrency] = useState<string>(calculationData?.currency || 'EUR');
 
   const formSchema = z.object({
     property_id: z.string({ required_error: "Please select a property" }),
@@ -86,12 +87,10 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       setInvoiceCurrency(calculationData.currency);
     }
     
-    // Set default due date to 14 days from today if not provided
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 14);
     form.setValue("due_date", dueDate.toISOString().split('T')[0]);
 
-    // Check if calculationData contains utilities
     if (calculationData?.utilities && Array.isArray(calculationData.utilities)) {
       setUtilities(calculationData.utilities.map(util => ({
         ...util,
@@ -160,7 +159,6 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
 
         setProperties(propertiesData);
         
-        // Auto-select the first property if only one exists and no specific one is already selected
         if (propertiesData.length === 1 && !calculationData?.propertyId && !form.getValues("property_id")) {
           form.setValue("property_id", propertiesData[0].id);
           setSelectedProperty(propertiesData[0]);
@@ -218,7 +216,6 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
 
         setTenants(tenantsData);
         
-        // Auto-select the tenant if only one exists for this property
         if (tenantsData.length === 1 && !form.getValues("tenant_id")) {
           setDefaultTenantId(tenantsData[0].id);
           form.setValue("tenant_id", tenantsData[0].id);
@@ -320,7 +317,6 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     try {
       setIsLoading(true);
       
-      // Prepare metadata with date range and selected utilities
       let metadata: InvoiceMetadata = {};
       
       if (calculationData?.dateRange) {
@@ -330,7 +326,6 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         };
       }
 
-      // Add selected utilities to metadata
       const selectedUtils = getSelectedUtilities();
       if (selectedUtils.length > 0) {
         metadata.utilities_included = selectedUtils;
@@ -406,7 +401,6 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                     field.onChange(value);
                     const prop = properties.find((p) => p.id === value);
                     setSelectedProperty(prop || null);
-                    // Only update currency if not provided in calculationData
                     if (prop && !calculationData?.currency) {
                       setInvoiceCurrency(prop.currency || 'EUR');
                     }
@@ -470,7 +464,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                     type="date" 
                     {...field} 
                     disabled={isLoading}
-                    min={new Date().toISOString().split('T')[0]} // No past dates
+                    min={new Date().toISOString().split('T')[0]}
                   />
                 </FormControl>
                 <FormMessage />
@@ -533,7 +527,6 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                   </div>
                 )}
 
-                {/* Display utilities section only if there are utilities */}
                 {utilities.length > 0 && (
                   <div className="mt-3 pt-2 border-t">
                     <h4 className="text-sm font-medium mb-2">Utilities:</h4>

@@ -319,7 +319,7 @@ const CostCalculator = () => {
       propertyId: selectedPropertyId,
       rentAmount: rentAmount + vatAmount,
       dateRange: dateRangeForInvoice,
-      currency: rentCurrency,
+      currency: grandTotalCurrency,
       grandTotal: calculateGrandTotal(),
       utilities: selectedUtilities
     };
@@ -612,7 +612,7 @@ const CostCalculator = () => {
                 from: selectedDateRange.from,
                 to: selectedDateRange.to
               } : undefined,
-            currency: rentCurrency,
+            currency: grandTotalCurrency,
             grandTotal: calculateGrandTotal(),
             utilities: utilities
               .filter(util => util.selected)
