@@ -92,6 +92,20 @@ export function ScrapingStatus({
       return 'WebSocket connection error occurred. This may be due to network issues or firewall restrictions. Please try again later.';
     }
     
+    // Handle API endpoint errors from ENGIE
+    if (errorMessage.includes('gwss.engie.ro')) {
+      if (errorMessage.includes('myservices/v1/invoices/history')) {
+        return 'Failed to retrieve invoice history from ENGIE. The service might be temporarily unavailable.';
+      }
+      if (errorMessage.includes('myservices/v1/placesofconsumption')) {
+        return 'Failed to retrieve consumption locations from ENGIE. Please try again later.';
+      }
+      if (errorMessage.includes('myservices/v1/invoices/download')) {
+        return 'Failed to download invoice files from ENGIE. Please try again later.';
+      }
+      return 'Failed to communicate with ENGIE services. Please try again later.';
+    }
+    
     return errorMessage;
   };
 

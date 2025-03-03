@@ -76,6 +76,20 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
       return "A WebSocket connection error occurred during the scraping process. This may be due to network issues or firewall restrictions. Please try again later.";
     }
     
+    // Add handling for ENGIE API endpoint errors
+    if (errorMessage.includes('gwss.engie.ro')) {
+      if (errorMessage.includes('myservices/v1/invoices/history')) {
+        return "Failed to retrieve invoice history from ENGIE. The service might be temporarily unavailable or the date range may be too large.";
+      }
+      if (errorMessage.includes('myservices/v1/placesofconsumption')) {
+        return "Failed to retrieve consumption locations from ENGIE. Please try again later or check if your account has any active consumption places.";
+      }
+      if (errorMessage.includes('myservices/v1/invoices/download')) {
+        return "Failed to download invoice files from ENGIE. The files might be temporarily unavailable or there was a network issue.";
+      }
+      return "Failed to communicate with ENGIE services. Please try again later.";
+    }
+    
     return "There was an error fetching your utility bills. Please try again later.";
   };
   
