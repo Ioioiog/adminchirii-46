@@ -28,7 +28,7 @@ export function ScrapingStatus({
       case 'in_progress':
         return 'text-blue-600';
       default:
-        return 'text-gray-600';
+        return 'text-gray-500';
     }
   };
 
@@ -50,7 +50,7 @@ export function ScrapingStatus({
     }
     
     if (errorMessage.includes('Waiting for login navigation') || errorMessage.includes('function is shutdown')) {
-      return 'The system timed out while waiting for the login page to respond after CAPTCHA. Please try again later.';
+      return 'The system timed out while waiting for the login page to respond. Please try again later.';
     }
 
     if (errorMessage.includes('CAPTCHA')) {
@@ -69,7 +69,7 @@ export function ScrapingStatus({
     }
     
     if (errorMessage.includes('Change consumption location') || errorMessage.includes('Schimbă locul de consum')) {
-      return 'Failed while selecting consumption location. Please try again later.';
+      return 'Failed while selecting consumption location. This is a common issue with ENGIE Romania. Please try again later.';
     }
     
     if (errorMessage.includes('cookie') || errorMessage.includes('session')) {
@@ -78,6 +78,10 @@ export function ScrapingStatus({
 
     if (errorMessage.includes('MyENGIE app popup') || errorMessage.includes('Mai târziu')) {
       return 'The process was interrupted by a promotional popup on the ENGIE website. We\'ll improve handling of this in future updates.';
+    }
+
+    if (errorMessage.includes('istoric-facturi') || errorMessage.includes('table/tbody')) {
+      return 'The process timed out while trying to load the invoices table. The ENGIE website may be slow to respond.';
     }
     
     return errorMessage;

@@ -25,7 +25,7 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
     }
 
     if (errorMessage.includes('Waiting for login navigation') || errorMessage.includes('function is shutdown')) {
-      return "The process timed out while waiting for the login page to respond after CAPTCHA submission. The provider's website may be experiencing high traffic or slowness. Please try again later.";
+      return "The process timed out while waiting for the login page to respond after submission. The provider's website may be experiencing high traffic or slowness. Please try again later.";
     }
     
     if (errorMessage.includes('CAPTCHA') || errorMessage.includes('captcha')) {
@@ -49,7 +49,7 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
     }
     
     if (errorMessage.includes('Change consumption location') || errorMessage.includes('Schimbă locul de consum')) {
-      return "The process failed while trying to select the utility consumption location. Please try again later.";
+      return "The process failed while trying to select the utility consumption location. This is a common issue with the ENGIE Romania website. Please try again later.";
     }
     
     if (errorMessage.includes('cookie') || errorMessage.includes('session')) {
@@ -62,6 +62,10 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
     
     if (errorMessage.includes('shutdown') || errorMessage.includes('interrupted')) {
       return "The scraping process was interrupted. This may be due to the provider website taking too long to respond or session timeout. Please try again later.";
+    }
+
+    if (errorMessage.includes('istoric-facturi') || errorMessage.includes('table/tbody')) {
+      return "The process timed out while trying to load the invoices table. This often happens when the ENGIE website is slow to respond. Please try again later.";
     }
     
     return "There was an error fetching your utility bills. Please try again later.";

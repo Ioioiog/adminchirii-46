@@ -54,17 +54,30 @@ export function useScrapingQueue(providers: UtilityProvider[]) {
       // Check if this is a "waiting for login navigation" or function shutdown error
       if (error instanceof Error && 
           (error.message.includes('Waiting for login navigation') || 
-           error.message.includes('function is shutdown'))) {
-        console.log('Login navigation or function shutdown issue detected, updating job status');
+           error.message.includes('function is shutdown') ||
+           error.message.includes('istoric-facturi') ||
+           error.message.includes('table/tbody') ||
+           error.message.includes('Schimbă locul de consum'))) {
+        console.log('Login navigation, invoice table, or consumption location issue detected, updating job status');
         
-        // Update the job status to show that we detected the navigation timeout
+        let customMessage = 'The process was interrupted. Please try again later.';
+        
+        if (error.message.includes('Waiting for login navigation')) {
+          customMessage = 'The process timed out while waiting for the login page to respond after credentials submission. The provider website may be slow or experiencing high traffic. Please try again later.';
+        } else if (error.message.includes('Schimbă locul de consum')) {
+          customMessage = 'The process failed while attempting to select the consumption location. This is a common issue with the ENGIE Romania website. Please try again later.';
+        } else if (error.message.includes('istoric-facturi') || error.message.includes('table/tbody')) {
+          customMessage = 'The process timed out while waiting for the invoices table to load. This often happens when the ENGIE website is slow to respond. Please try again later.';
+        }
+        
+        // Update the job status to show that we detected the specific issue
         updateScrapingJob(providerId, {
           status: 'failed',
           last_run_at: new Date().toISOString(),
-          error_message: 'The process timed out while waiting for the login page to respond after CAPTCHA submission. The provider website may be slow or experiencing high traffic. Please try again later.'
+          error_message: customMessage
         });
         
-        throw new Error('The process timed out while waiting for the login page to respond after CAPTCHA. Please try again later.');
+        throw new Error(customMessage);
       }
       
       if (retryCount < MAX_RETRIES) {
@@ -118,20 +131,39 @@ export function useScrapingQueue(providers: UtilityProvider[]) {
     } catch (error) {
       console.error('Scraping failed:', error);
       
-      // Special handling for navigation timeout errors
-      if (error instanceof Error && 
-          (error.message.includes('Waiting for login navigation') || 
-           error.message.includes('function is shutdown'))) {
-        updateScrapingJob(providerId, {
-          status: 'failed',
-          last_run_at: new Date().toISOString(),
-          error_message: 'The process timed out while waiting for the login page to respond after CAPTCHA submission. The provider website may be slow or experiencing high traffic. Please try again later.'
-        });
+      // Special handling for ENGIE Romania specific errors
+      if (error instanceof Error) {
+        if (error.message.includes('Waiting for login navigation') || 
+            error.message.includes('function is shutdown')) {
+          updateScrapingJob(providerId, {
+            status: 'failed',
+            last_run_at: new Date().toISOString(),
+            error_message: 'The process timed out while waiting for the login page to respond after credentials submission. The provider website may be slow or experiencing high traffic. Please try again later.'
+          });
+        } else if (error.message.includes('Schimbă locul de consum')) {
+          updateScrapingJob(providerId, {
+            status: 'failed',
+            last_run_at: new Date().toISOString(),
+            error_message: 'The process failed while attempting to select the consumption location. This is a common issue with the ENGIE Romania website. Please try again later.'
+          });
+        } else if (error.message.includes('istoric-facturi') || error.message.includes('table/tbody')) {
+          updateScrapingJob(providerId, {
+            status: 'failed',
+            last_run_at: new Date().toISOString(),
+            error_message: 'The process timed out while waiting for the invoices table to load. This often happens when the ENGIE website is slow to respond. Please try again later.'
+          });
+        } else {
+          updateScrapingJob(providerId, {
+            status: 'failed',
+            last_run_at: new Date().toISOString(),
+            error_message: error instanceof Error ? error.message : 'An unexpected error occurred'
+          });
+        }
       } else {
         updateScrapingJob(providerId, {
           status: 'failed',
           last_run_at: new Date().toISOString(),
-          error_message: error instanceof Error ? error.message : 'An unexpected error occurred'
+          error_message: 'An unexpected error occurred during scraping'
         });
       }
 
@@ -169,22 +201,41 @@ export function useScrapingQueue(providers: UtilityProvider[]) {
       console.error('Error processing queue:', error);
       
       // Special handling for specific errors
-      if (error instanceof Error && 
-          (error.message.includes('Waiting for login navigation') || 
-           error.message.includes('function is shutdown'))) {
-        updateScrapingJob(providerId, {
-          status: 'failed', 
-          last_run_at: new Date().toISOString(),
-          error_message: 'The process timed out while waiting for the login page to respond after CAPTCHA submission. The provider website may be slow or experiencing high traffic. Please try again later.'
-        });
+      if (error instanceof Error) {
+        if (error.message.includes('Waiting for login navigation') || 
+            error.message.includes('function is shutdown')) {
+          updateScrapingJob(providerId, {
+            status: 'failed', 
+            last_run_at: new Date().toISOString(),
+            error_message: 'The process timed out while waiting for the login page to respond after credentials submission. The provider website may be slow or experiencing high traffic. Please try again later.'
+          });
+        } else if (error.message.includes('Schimbă locul de consum')) {
+          updateScrapingJob(providerId, {
+            status: 'failed', 
+            last_run_at: new Date().toISOString(),
+            error_message: 'The process failed while attempting to select the consumption location. This is a common issue with the ENGIE Romania website. Please try again later.'
+          });
+        } else if (error.message.includes('istoric-facturi') || error.message.includes('table/tbody')) {
+          updateScrapingJob(providerId, {
+            status: 'failed', 
+            last_run_at: new Date().toISOString(),
+            error_message: 'The process timed out while waiting for the invoices table to load. This often happens when the ENGIE website is slow to respond. Please try again later.'
+          });
+        } else {
+          // Update job status to failed when we've exhausted retries
+          updateScrapingJob(providerId, {
+            status: 'failed',
+            last_run_at: new Date().toISOString(),
+            error_message: error instanceof Error 
+              ? error.message 
+              : 'Failed to connect to utility provider. Please try again later.'
+          });
+        }
       } else {
-        // Update job status to failed when we've exhausted retries
         updateScrapingJob(providerId, {
           status: 'failed',
           last_run_at: new Date().toISOString(),
-          error_message: error instanceof Error 
-            ? error.message 
-            : 'Failed to connect to utility provider. Please try again later.'
+          error_message: 'An unexpected error occurred'
         });
       }
     } finally {
