@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Calendar } from "lucide-react";
 import { DateRange } from "react-day-picker";
@@ -19,6 +20,8 @@ import {
 
 interface CalculationResult {
   rentTotal: number;
+  rentVatRate: number | null;
+  rentVatAmount: number;
   utilitiesTotal: number;
   grandTotal: number;
   period: string;
@@ -33,6 +36,8 @@ interface RentDetail {
   days_calculated: number;
   daily_rate: number;
   is_full_month: boolean;
+  vat_rate: number | null;
+  vat_amount: number;
 }
 
 interface UtilityDetail {
@@ -79,6 +84,8 @@ export function CostCalculator() {
       }
 
       let rentTotal = 0;
+      let rentVatRate: number | null = null;
+      let rentVatAmount = 0;
       let rentDetails: RentDetail | null = null;
       let selectedPropertyName = '';
       
@@ -86,6 +93,21 @@ export function CostCalculator() {
       const selectedProperty = properties.find(p => p.id === selectedPropertyId);
       if (selectedProperty) {
         selectedPropertyName = selectedProperty.name;
+      }
+      
+      // Get VAT settings for the user
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('invoice_info')
+        .eq('id', userId)
+        .single();
+      
+      // Determine if VAT should be applied and at what rate
+      let applyVat = false;
+      let vatRate = 19; // Default VAT rate (percent)
+      
+      if (profileData?.invoice_info) {
+        applyVat = profileData.invoice_info.apply_vat === true;
       }
       
       if (userRole === 'tenant') {
@@ -122,13 +144,21 @@ export function CostCalculator() {
           // Calculate rent based on whether it's a full month or partial period
           rentTotal = isFullMonth ? monthlyRent : dailyRate * days;
           
+          // Apply VAT if enabled
+          if (applyVat) {
+            rentVatRate = vatRate;
+            rentVatAmount = (rentTotal * vatRate) / 100;
+          }
+          
           rentDetails = {
             property_name: tenancy.properties.name || selectedPropertyName,
             monthly_amount: monthlyRent,
             currency: 'EUR',
             days_calculated: days,
             daily_rate: dailyRate,
-            is_full_month: isFullMonth
+            is_full_month: isFullMonth,
+            vat_rate: rentVatRate,
+            vat_amount: rentVatAmount
           };
         }
       } else if (userRole === 'landlord') {
@@ -166,7 +196,15 @@ export function CostCalculator() {
               );
               
               // Calculate rent based on whether it's a full month or partial period
-              rentTotal += isFullMonth ? monthlyRent : dailyRate * days;
+              const propertyRent = isFullMonth ? monthlyRent : dailyRate * days;
+              rentTotal += propertyRent;
+              
+              // Apply VAT if enabled
+              if (applyVat) {
+                rentVatRate = vatRate;
+                const propertyVatAmount = (propertyRent * vatRate) / 100;
+                rentVatAmount += propertyVatAmount;
+              }
               
               // Just use the first property for rent details if there are multiple
               if (!rentDetails) {
@@ -176,7 +214,9 @@ export function CostCalculator() {
                   currency: 'EUR',
                   days_calculated: days,
                   daily_rate: dailyRate,
-                  is_full_month: isFullMonth
+                  is_full_month: isFullMonth,
+                  vat_rate: rentVatRate,
+                  vat_amount: rentVatAmount
                 };
               }
             }
@@ -198,12 +238,15 @@ export function CostCalculator() {
       const { data: exchangeRatesData } = await supabase.functions.invoke('get-exchange-rates');
       const rates = exchangeRatesData?.rates || { EUR: 4.97, RON: 1 }; // Fallback rates
       
-      // Convert rent from EUR to RON for proper summing
+      // Convert rent and VAT from EUR to RON for proper summing
       const rentInRON = rentTotal * rates.EUR;
-      const grandTotal = rentInRON + utilitiesTotal;
+      const vatInRON = rentVatAmount * rates.EUR;
+      const grandTotal = rentInRON + vatInRON + utilitiesTotal;
 
       setResults({
         rentTotal,
+        rentVatRate,
+        rentVatAmount,
         utilitiesTotal,
         grandTotal,
         period: displayPeriod,
@@ -279,6 +322,11 @@ export function CostCalculator() {
                   <div>
                     <p className="text-sm text-muted-foreground">Rent</p>
                     <p className="text-lg font-medium">{formatAmount(results.rentTotal, 'EUR')}</p>
+                    {results.rentVatRate && (
+                      <p className="text-sm text-muted-foreground">
+                        + VAT {results.rentVatRate}%: {formatAmount(results.rentVatAmount, 'EUR')}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Utilities</p>
@@ -291,6 +339,7 @@ export function CostCalculator() {
                       <br />
                       <span className="text-sm font-normal text-gray-500">
                         + rent ({formatAmount(results.rentTotal, 'EUR')})
+                        {results.rentVatAmount > 0 && ` + VAT (${formatAmount(results.rentVatAmount, 'EUR')})`}
                       </span>
                       <br />
                       <span className="text-lg font-semibold text-blue-700">
@@ -327,10 +376,16 @@ export function CostCalculator() {
                         <p className="font-medium">{formatAmount(results.rentDetails.daily_rate, 'EUR')}/day</p>
                       </div>
                     )}
-                    <div className="md:col-span-2">
+                    <div>
                       <p className="text-sm text-gray-500">Total Rent (for selected period)</p>
                       <p className="font-bold text-blue-600">{formatAmount(results.rentTotal, 'EUR')}</p>
                     </div>
+                    {results.rentDetails.vat_rate && (
+                      <div>
+                        <p className="text-sm text-gray-500">VAT ({results.rentDetails.vat_rate}%)</p>
+                        <p className="font-medium text-blue-600">{formatAmount(results.rentDetails.vat_amount, 'EUR')}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
