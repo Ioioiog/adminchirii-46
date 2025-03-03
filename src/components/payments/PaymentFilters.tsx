@@ -51,7 +51,10 @@ export function PaymentFilters({
       </div>
       <div>
         <Label>Date Range</Label>
-        <DatePickerWithRange date={dateRange} setDate={onDateRangeChange} />
+        <DatePickerWithRange 
+          dateRange={dateRange} 
+          onDateRangeChange={onDateRangeChange} 
+        />
       </div>
     </div>
   );

@@ -14,7 +14,7 @@ import { Invoice } from "@/types/invoice";
 
 export interface InvoiceActionsProps {
   invoiceId: string;
-  status: string;
+  status: 'pending' | 'paid' | 'overdue';
   userRole: "landlord" | "tenant";
   onStatusUpdate?: () => void;
   onViewInvoice?: () => void;
@@ -32,7 +32,7 @@ export function InvoiceActions({
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const handleStatusUpdate = async (newStatus: string) => {
+  const handleStatusUpdate = async (newStatus: 'pending' | 'paid' | 'overdue') => {
     try {
       setIsUpdating(true);
       const { error } = await supabase

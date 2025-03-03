@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -234,8 +233,7 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
   useEffect(() => {
     if (!selectedProperty) return;
 
-    // Calculate the daily rate
-    const dailyRent = selectedProperty.monthly_rent / 30; // Simplification - using 30 days per month
+    const dailyRent = selectedProperty.monthly_rent / 30;
     setDailyRate(dailyRent);
     setDaysInMonth(30);
 
@@ -254,8 +252,8 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
     const from = new Date(dateRange.from);
     const to = new Date(dateRange.to);
     const diffTime = Math.abs(to.getTime() - from.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include the end date
-    
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
     form.setValue("days_calculated", diffDays);
     return diffDays;
   };
@@ -274,12 +272,10 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
       }
     }
 
-    // Add utilities if included
     if (includeUtilitiesValue && utilities.length > 0) {
       const utilitiesTotal = utilities.reduce((sum, utility) => sum + utility.amount, 0);
       
       if (isPartial && calculationMethod === "percentage") {
-        // Apply same percentage to utilities
         amount += (utilitiesTotal * (partialPercentage || 0)) / 100;
       } else {
         amount += utilitiesTotal;
@@ -293,10 +289,8 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
     try {
       setIsLoading(true);
 
-      // Calculate days if date range is provided
       const days = calculateDays();
 
-      // Prepare metadata for partial invoices
       const metadata: InvoiceMetadata = {};
       
       if (values.is_partial) {
@@ -318,7 +312,6 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
         }
       }
 
-      // Add utilities to metadata if included
       if (values.include_utilities && utilities.length > 0) {
         const utilityItems: UtilityItem[] = utilities.map(utility => {
           const item: UtilityItem = {
@@ -328,7 +321,6 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
             due_date: utility.due_date
           };
 
-          // If partial percentage is applied, store original amount and percentage
           if (values.is_partial && values.calculation_method === "percentage") {
             item.original_amount = utility.amount;
             item.percentage = values.partial_percentage;
@@ -341,12 +333,11 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
         metadata.utilities_included = utilityItems;
       }
 
-      // Insert invoice with metadata
       const { data, error } = await supabase
         .from("invoices")
         .insert({
           property_id: values.property_id,
-          tenant_id: values.tenant_id || userId, // Use form value for landlords, use current user ID for tenants
+          tenant_id: values.tenant_id || userId,
           landlord_id: userRole === "landlord" ? userId : selectedProperty?.id,
           amount: values.amount,
           due_date: values.due_date,
@@ -362,7 +353,6 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
         description: "Invoice created successfully",
       });
 
-      // Reset form
       form.reset();
       
       if (onSuccess) {
