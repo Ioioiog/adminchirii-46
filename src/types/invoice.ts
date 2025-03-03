@@ -40,6 +40,13 @@ export interface InvoiceMetadata {
     from: string;
     to: string;
   };
+  utilities_included?: Array<{
+    id: string;
+    amount: number;
+    type: string;
+    invoiced_percentage?: number;
+  }>;
+  [key: string]: any; // Add index signature to make it compatible with Json
 }
 
 export interface Invoice {

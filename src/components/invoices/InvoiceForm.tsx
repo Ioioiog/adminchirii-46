@@ -220,7 +220,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       const vatRate = applyVat ? 19 : 0;
       
       // Prepare metadata if we have date range from calculation
-      let metadata: InvoiceMetadata | undefined;
+      let metadata: Record<string, any> | undefined;
       
       if (calculationData?.dateRange) {
         metadata = {
