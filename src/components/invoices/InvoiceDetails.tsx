@@ -1,132 +1,220 @@
 
-import { format } from "date-fns";
-import { Badge } from "@/components/ui/badge";
+import { formatDistanceToNow } from "date-fns";
 import { Invoice } from "@/types/invoice";
 import { useCurrency } from "@/hooks/useCurrency";
+import { CheckCircle2, Clock, Calendar, Building, User, FileText, AlertTriangle, PercentIcon, ArrowLeftRight } from "lucide-react";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { InvoiceActions } from "./InvoiceActions";
 
 interface InvoiceDetailsProps {
   invoice: Invoice;
   userRole: "landlord" | "tenant";
+  onStatusUpdate?: () => Promise<void>;
 }
 
-export function InvoiceDetails({ invoice, userRole }: InvoiceDetailsProps) {
+export function InvoiceDetails({ invoice, userRole, onStatusUpdate }: InvoiceDetailsProps) {
   const { formatAmount } = useCurrency();
-  
-  // Check if this is a partial invoice
-  const isPartialInvoice = invoice.metadata?.is_partial;
-  const calculationMethod = invoice.metadata?.calculation_method || 'percentage';
-  const partialPercentage = invoice.metadata?.partial_percentage;
-  const daysCalculated = invoice.metadata?.days_calculated;
-  const dailyRate = invoice.metadata?.daily_rate;
-  const fullAmount = invoice.metadata?.full_amount;
-  const dateRange = invoice.metadata?.date_range;
-  const utilitiesIncluded = invoice.metadata?.utilities_included || [];
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "paid":
+        return "bg-green-100 text-green-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "overdue":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "paid":
+        return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+      case "pending":
+        return <Clock className="h-4 w-4 text-yellow-600" />;
+      case "overdue":
+        return <AlertTriangle className="h-4 w-4 text-red-600" />;
+      default:
+        return null;
+    }
+  };
+
+  // Format date from ISO to readable format
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  // Check if the invoice is partial
+  const isPartial = invoice.metadata?.is_partial;
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div>
-          <div className="text-sm font-medium text-gray-500">Property</div>
-          <div>{invoice.property?.name}</div>
-          <div className="text-sm text-gray-500">{invoice.property?.address}</div>
-        </div>
-        <div>
-          <div className="text-sm font-medium text-gray-500">Tenant Email</div>
-          <div className="text-sm text-gray-500">{invoice.tenant?.email || 'No email provided'}</div>
-        </div>
-        {userRole === "landlord" && (
+    <Card className="w-full">
+      <CardHeader className="pb-4">
+        <div className="flex justify-between items-start">
           <div>
-            <div className="text-sm font-medium text-gray-500">Tenant</div>
-            <div>
-              {invoice.tenant?.first_name} {invoice.tenant?.last_name}
-            </div>
-            <div className="text-sm text-gray-500">{invoice.tenant?.email}</div>
+            <CardTitle className="text-xl mb-1">Invoice for {invoice.property.name}</CardTitle>
+            <CardDescription className="text-sm text-gray-500">
+              Created {formatDistanceToNow(new Date(invoice.created_at), { addSuffix: true })}
+            </CardDescription>
           </div>
-        )}
-        <div>
-          <div className="text-sm font-medium text-gray-500">Amount</div>
-          <div>{formatAmount(invoice.amount, invoice.currency)}</div>
-          {isPartialInvoice && fullAmount && calculationMethod === 'percentage' && partialPercentage && (
-            <div className="text-xs text-gray-500">
-              {partialPercentage}% of {formatAmount(fullAmount, invoice.currency)}
-            </div>
-          )}
-          {isPartialInvoice && fullAmount && calculationMethod === 'days' && daysCalculated && dailyRate && (
-            <div className="text-xs text-gray-500">
-              {daysCalculated} days at {formatAmount(dailyRate, invoice.currency)}/day from {formatAmount(fullAmount, invoice.currency)}/month
-            </div>
-          )}
-          {invoice.vat_rate && invoice.vat_rate > 0 && (
-            <div className="text-xs text-gray-500">
-              Includes {invoice.vat_rate}% VAT on rent
-            </div>
-          )}
-        </div>
-        <div>
-          <div className="text-sm font-medium text-gray-500">Due Date</div>
-          <div>{format(new Date(invoice.due_date), 'PPP')}</div>
-        </div>
-        <div>
-          <Badge variant={invoice.status === "paid" ? "default" : "secondary"}>
-            {invoice.status}
+          <Badge className={`${getStatusColor(invoice.status)} flex items-center gap-1 px-3 py-1`}>
+            {getStatusIcon(invoice.status)}
+            {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
           </Badge>
-          {isPartialInvoice && (
-            <Badge variant="outline" className="ml-2">
-              {calculationMethod === 'days' ? `Partial (${daysCalculated} days)` : 'Partial'}
-            </Badge>
-          )}
         </div>
-        {dateRange && (
-          <div>
-            <div className="text-sm font-medium text-gray-500">Billing Period</div>
-            <div className="text-sm">
-              {format(new Date(dateRange.from), 'PPP')} to {format(new Date(dateRange.to), 'PPP')}
+      </CardHeader>
+      
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm text-gray-500 flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Due Date
+            </span>
+            <span className="font-medium">{formatDate(invoice.due_date)}</span>
+          </div>
+          
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm text-gray-500 flex items-center gap-2">
+              <Building className="h-4 w-4" />
+              Property
+            </span>
+            <span className="font-medium">{invoice.property.address}</span>
+          </div>
+          
+          {invoice.tenant && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm text-gray-500 flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Tenant
+              </span>
+              <span className="font-medium">
+                {invoice.tenant.first_name} {invoice.tenant.last_name}
+              </span>
+            </div>
+          )}
+          
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm text-gray-500 flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Invoice ID
+            </span>
+            <span className="font-medium text-sm">{invoice.id}</span>
+          </div>
+        </div>
+        
+        <Separator />
+        
+        {/* Partial Invoice Information */}
+        {isPartial && (
+          <div className="bg-blue-50 p-4 rounded-md">
+            <h3 className="text-sm font-medium text-blue-700 flex items-center gap-2 mb-3">
+              <PercentIcon className="h-4 w-4" />
+              Partial Invoice Information
+            </h3>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              {invoice.metadata?.calculation_method === 'percentage' && (
+                <>
+                  <div>
+                    <span className="text-gray-500">Calculation Method:</span>
+                    <span className="font-medium ml-2">By Percentage</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Percentage Applied:</span>
+                    <span className="font-medium ml-2">{invoice.metadata.partial_percentage}%</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Full Amount:</span>
+                    <span className="font-medium ml-2">{formatAmount(invoice.metadata.full_amount || 0)}</span>
+                  </div>
+                </>
+              )}
+              
+              {invoice.metadata?.calculation_method === 'days' && (
+                <>
+                  <div>
+                    <span className="text-gray-500">Calculation Method:</span>
+                    <span className="font-medium ml-2">By Days</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Days Calculated:</span>
+                    <span className="font-medium ml-2">{invoice.metadata.days_calculated} days</span>
+                  </div>
+                  {invoice.metadata.date_range && (
+                    <div className="col-span-2">
+                      <span className="text-gray-500">Period:</span>
+                      <span className="font-medium ml-2">
+                        {formatDate(invoice.metadata.date_range.from)} - {formatDate(invoice.metadata.date_range.to)}
+                      </span>
+                    </div>
+                  )}
+                  {invoice.metadata.daily_rate && (
+                    <div>
+                      <span className="text-gray-500">Daily Rate:</span>
+                      <span className="font-medium ml-2">{formatAmount(invoice.metadata.daily_rate)}</span>
+                    </div>
+                  )}
+                  {invoice.metadata.full_amount && (
+                    <div>
+                      <span className="text-gray-500">Full Monthly Amount:</span>
+                      <span className="font-medium ml-2">{formatAmount(invoice.metadata.full_amount)}</span>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         )}
-      </div>
-      
-      {utilitiesIncluded && utilitiesIncluded.length > 0 && (
-        <div className="mt-4">
-          <h4 className="text-sm font-medium text-gray-500 mb-2">Included Utilities</h4>
-          <div className="border rounded-md overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                  <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-                  <th scope="col" className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                  {userRole === "landlord" && (
-                    <th scope="col" className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {utilitiesIncluded.map((utility, index) => (
-                  <tr key={utility.id || index}>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900 capitalize">{utility.type}</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
-                      {format(new Date(utility.due_date), 'PP')}
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900 text-right">
-                      {formatAmount(utility.amount, invoice.currency)}
-                    </td>
-                    {userRole === "landlord" && (
-                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 text-center">
-                        {utility.percentage && utility.original_amount ? (
-                          <span>{utility.percentage}% of {formatAmount(utility.original_amount, invoice.currency)}</span>
-                        ) : (
-                          <span>Full amount</span>
-                        )}
-                      </td>
+        
+        {/* Utilities Section */}
+        {invoice.metadata?.utilities_included && invoice.metadata.utilities_included.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-gray-700">Included Utilities</h3>
+            <div className="space-y-2">
+              {invoice.metadata.utilities_included.map((utility) => (
+                <div key={utility.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md border">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{utility.type}</span>
+                    {utility.percentage && utility.original_amount && (
+                      <span className="text-xs text-gray-500">
+                        ({utility.percentage}% of {formatAmount(utility.original_amount)})
+                      </span>
                     )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  </div>
+                  <span>{formatAmount(utility.amount)}</span>
+                </div>
+              ))}
+            </div>
           </div>
+        )}
+        
+        <div className="bg-gray-50 p-4 rounded-md flex justify-between items-center">
+          <span className="font-medium">Total Amount</span>
+          <span className="text-xl font-bold">{formatAmount(invoice.amount)}</span>
         </div>
-      )}
-    </div>
+      </CardContent>
+      
+      <CardFooter className="pt-0 justify-end">
+        {onStatusUpdate && (
+          <InvoiceActions 
+            invoice={invoice} 
+            userRole={userRole} 
+            onStatusUpdate={onStatusUpdate} 
+          />
+        )}
+      </CardFooter>
+    </Card>
   );
 }
