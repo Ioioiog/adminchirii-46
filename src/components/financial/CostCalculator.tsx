@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Calendar } from "lucide-react";
 import { DateRange } from "react-day-picker";
@@ -8,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/use-user-role";
 import { useCurrency } from "@/hooks/useCurrency";
 import { supabase } from "@/integrations/supabase/client";
-import { endOfMonth, startOfMonth, format } from "date-fns";
+import { endOfMonth, startOfMonth, format, isSameMonth, differenceInDays, isLastDayOfMonth } from "date-fns";
 import { useProperties } from "@/hooks/useProperties";
 import { 
   Select,
@@ -33,6 +32,7 @@ interface RentDetail {
   currency: string;
   days_calculated: number;
   daily_rate: number;
+  is_full_month: boolean;
 }
 
 interface UtilityDetail {
@@ -104,17 +104,31 @@ export function CostCalculator() {
           .maybeSingle();
 
         if (tenancy?.properties?.monthly_rent) {
-          const days = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+          const days = differenceInDays(dateRange.to, dateRange.from) + 1;
           const monthlyRent = tenancy.properties.monthly_rent;
           const dailyRate = monthlyRent / 30;
-          rentTotal = days <= 31 ? dailyRate * days : monthlyRent;
+          
+          // Check if this is a full month period
+          const isFullMonth = (
+            // Either same day of different months (e.g., 1st to 1st)
+            (dateRange.from.getDate() === dateRange.to.getDate() && 
+             !isSameMonth(dateRange.from, dateRange.to) && 
+             days >= 28) || 
+            // Or start is 1st and end is last day of month
+            (dateRange.from.getDate() === 1 && 
+             isLastDayOfMonth(dateRange.to))
+          );
+          
+          // Calculate rent based on whether it's a full month or partial period
+          rentTotal = isFullMonth ? monthlyRent : dailyRate * days;
           
           rentDetails = {
             property_name: tenancy.properties.name || selectedPropertyName,
             monthly_amount: monthlyRent,
             currency: 'EUR',
             days_calculated: days,
-            daily_rate: dailyRate
+            daily_rate: dailyRate,
+            is_full_month: isFullMonth
           };
         }
       } else if (userRole === 'landlord') {
@@ -136,10 +150,23 @@ export function CostCalculator() {
           for (const property of properties) {
             const activeTenancies = property.tenancies.filter((t: any) => t.status === 'active');
             if (activeTenancies.length > 0) {
-              const days = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+              const days = differenceInDays(dateRange.to, dateRange.from) + 1;
               const monthlyRent = property.monthly_rent;
               const dailyRate = monthlyRent / 30;
-              rentTotal += days <= 31 ? dailyRate * days : monthlyRent;
+              
+              // Check if this is a full month period
+              const isFullMonth = (
+                // Either same day of different months (e.g., 1st to 1st)
+                (dateRange.from.getDate() === dateRange.to.getDate() && 
+                 !isSameMonth(dateRange.from, dateRange.to) && 
+                 days >= 28) || 
+                // Or start is 1st and end is last day of month
+                (dateRange.from.getDate() === 1 && 
+                 isLastDayOfMonth(dateRange.to))
+              );
+              
+              // Calculate rent based on whether it's a full month or partial period
+              rentTotal += isFullMonth ? monthlyRent : dailyRate * days;
               
               // Just use the first property for rent details if there are multiple
               if (!rentDetails) {
@@ -148,7 +175,8 @@ export function CostCalculator() {
                   monthly_amount: monthlyRent,
                   currency: 'EUR',
                   days_calculated: days,
-                  daily_rate: dailyRate
+                  daily_rate: dailyRate,
+                  is_full_month: isFullMonth
                 };
               }
             }
@@ -273,7 +301,6 @@ export function CostCalculator() {
                 </div>
               </div>
 
-              {/* Add Rent Details Section */}
               {results.rentDetails && (
                 <div className="p-4 border rounded-md">
                   <h3 className="font-medium mb-3">Rent Details</h3>
@@ -287,13 +314,19 @@ export function CostCalculator() {
                       <p className="font-medium">{formatAmount(results.rentDetails.monthly_amount, 'EUR')}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Days Calculated</p>
-                      <p className="font-medium">{results.rentDetails.days_calculated} days</p>
+                      <p className="text-sm text-gray-500">Calculation Type</p>
+                      <p className="font-medium">
+                        {results.rentDetails.is_full_month 
+                          ? "Full Month" 
+                          : `${results.rentDetails.days_calculated} days (partial month)`}
+                      </p>
                     </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Daily Rate</p>
-                      <p className="font-medium">{formatAmount(results.rentDetails.daily_rate, 'EUR')}/day</p>
-                    </div>
+                    {!results.rentDetails.is_full_month && (
+                      <div>
+                        <p className="text-sm text-gray-500">Daily Rate</p>
+                        <p className="font-medium">{formatAmount(results.rentDetails.daily_rate, 'EUR')}/day</p>
+                      </div>
+                    )}
                     <div className="md:col-span-2">
                       <p className="text-sm text-gray-500">Total Rent (for selected period)</p>
                       <p className="font-bold text-blue-600">{formatAmount(results.rentTotal, 'EUR')}</p>
