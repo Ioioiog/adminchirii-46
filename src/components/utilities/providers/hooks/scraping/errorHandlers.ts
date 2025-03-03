@@ -43,6 +43,11 @@ export function formatEdgeFunctionError(message: string): string {
     return 'Failed to log in to the provider website. Please check your credentials and try again.';
   }
   
+  // Handle successful login but navigation issues
+  if (message.includes('Waiting for login navigation') || message.includes('/prima-pagina')) {
+    return 'Successfully logged in but the process timed out when navigating to the invoices page. ENGIE\'s website is responding slowly. Please try again during off-peak hours.';
+  }
+  
   // Handle CAPTCHA errors
   if (message.includes('CAPTCHA')) {
     if (message.includes('submitted')) {
