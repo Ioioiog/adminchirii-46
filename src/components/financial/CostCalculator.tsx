@@ -68,6 +68,7 @@ const CostCalculator = () => {
         setRentCurrency(property.currency || 'RON');
         setGrandTotalCurrency(property.currency || 'RON');
         fetchLandlordVatSettings(property.landlord_id);
+        setLandlordId(property.landlord_id);
       }
     }
   }, [selectedPropertyId, properties]);
@@ -166,8 +167,8 @@ const CostCalculator = () => {
       .from('utilities')
       .select('*')
       .eq('property_id', selectedPropertyId)
-      .gte('due_date', selectedDateRange.from.toISOString())
-      .lte('due_date', selectedDateRange.to.toISOString());
+      .gte('issued_date', selectedDateRange.from.toISOString().split('T')[0])
+      .lte('issued_date', selectedDateRange.to.toISOString().split('T')[0]);
 
     if (error) {
       console.error('Error fetching utilities:', error);
