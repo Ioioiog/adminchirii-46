@@ -24,6 +24,9 @@ export interface InvoiceMetadata {
   is_partial?: boolean;
   partial_percentage?: number;
   full_amount?: number;
+  calculation_method?: 'percentage' | 'days';
+  days_calculated?: number;
+  daily_rate?: number;
 }
 
 export interface Invoice {

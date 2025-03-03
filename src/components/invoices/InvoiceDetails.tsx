@@ -14,7 +14,10 @@ export function InvoiceDetails({ invoice, userRole }: InvoiceDetailsProps) {
   
   // Check if this is a partial invoice
   const isPartialInvoice = invoice.metadata?.is_partial;
+  const calculationMethod = invoice.metadata?.calculation_method || 'percentage';
   const partialPercentage = invoice.metadata?.partial_percentage;
+  const daysCalculated = invoice.metadata?.days_calculated;
+  const dailyRate = invoice.metadata?.daily_rate;
   const fullAmount = invoice.metadata?.full_amount;
 
   return (
@@ -40,9 +43,14 @@ export function InvoiceDetails({ invoice, userRole }: InvoiceDetailsProps) {
       <div>
         <div className="text-sm font-medium text-gray-500">Amount</div>
         <div>{formatAmount(invoice.amount)}</div>
-        {isPartialInvoice && fullAmount && (
+        {isPartialInvoice && fullAmount && calculationMethod === 'percentage' && partialPercentage && (
           <div className="text-xs text-gray-500">
             {partialPercentage}% of {formatAmount(fullAmount)}
+          </div>
+        )}
+        {isPartialInvoice && fullAmount && calculationMethod === 'days' && daysCalculated && dailyRate && (
+          <div className="text-xs text-gray-500">
+            {daysCalculated} days at {formatAmount(dailyRate)}/day from {formatAmount(fullAmount)}/month
           </div>
         )}
       </div>
@@ -56,7 +64,7 @@ export function InvoiceDetails({ invoice, userRole }: InvoiceDetailsProps) {
         </Badge>
         {isPartialInvoice && (
           <Badge variant="outline" className="ml-2">
-            Partial
+            {calculationMethod === 'days' ? `Partial (${daysCalculated} days)` : 'Partial'}
           </Badge>
         )}
       </div>

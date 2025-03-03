@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Switch } from "@/components/ui/switch";
+import { differenceInDays, isLastDayOfMonth } from "date-fns";
 
 interface InvoiceFormValues {
   property_id: string;
@@ -20,6 +21,8 @@ interface InvoiceFormValues {
   currency: string;
   is_partial: boolean;
   partial_percentage?: number;
+  calculation_method: 'percentage' | 'days';
+  days_calculated?: number;
 }
 
 interface InvoiceFormProps {
@@ -28,7 +31,7 @@ interface InvoiceFormProps {
 
 export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [properties, setProperties] = useState<Array<{ id: string; name: string }>>([]);
+  const [properties, setProperties] = useState<Array<{ id: string; name: string; monthly_rent: number }>>([]);
   const { toast } = useToast();
   const form = useForm<InvoiceFormValues>();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -38,6 +41,12 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
   const [isPartialInvoice, setIsPartialInvoice] = useState(false);
   const [propertyFullAmount, setPropertyFullAmount] = useState<number | null>(null);
   const [partialPercentage, setPartialPercentage] = useState<number>(50);
+  const [calculationMethod, setCalculationMethod] = useState<'percentage' | 'days'>('percentage');
+  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
+    from: new Date(),
+    to: new Date(),
+  });
+  const [daysCalculated, setDaysCalculated] = useState<number>(0);
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -108,7 +117,7 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
         if (!isPartialInvoice) {
           form.setValue("amount", property.monthly_rent);
         } else {
-          updatePartialAmount(property.monthly_rent, partialPercentage);
+          updatePartialAmount(property.monthly_rent);
         }
       }
     };
@@ -116,9 +125,17 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
     fetchTenantEmail();
   }, [selectedPropertyId, form]);
 
-  const updatePartialAmount = (fullAmount: number, percentage: number) => {
-    const calculatedAmount = (fullAmount * percentage) / 100;
-    form.setValue("amount", calculatedAmount);
+  const updatePartialAmount = (fullAmount: number) => {
+    if (calculationMethod === 'percentage') {
+      const calculatedAmount = (fullAmount * partialPercentage) / 100;
+      form.setValue("amount", calculatedAmount);
+    } else if (calculationMethod === 'days') {
+      // Calculate based on days
+      const days = daysCalculated;
+      const dailyRate = fullAmount / 30;
+      const calculatedAmount = dailyRate * days;
+      form.setValue("amount", calculatedAmount);
+    }
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,11 +151,16 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
     
     if (propertyFullAmount) {
       if (isPartial) {
-        updatePartialAmount(propertyFullAmount, partialPercentage);
-        form.setValue("partial_percentage", partialPercentage);
+        updatePartialAmount(propertyFullAmount);
+        if (calculationMethod === 'percentage') {
+          form.setValue("partial_percentage", partialPercentage);
+        } else {
+          form.setValue("days_calculated", daysCalculated);
+        }
       } else {
         form.setValue("amount", propertyFullAmount);
         form.setValue("partial_percentage", undefined);
+        form.setValue("days_calculated", undefined);
       }
     }
   };
@@ -148,8 +170,27 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
     setPartialPercentage(percentage);
     form.setValue("partial_percentage", percentage);
     
+    if (propertyFullAmount && isPartialInvoice && calculationMethod === 'percentage') {
+      updatePartialAmount(propertyFullAmount);
+    }
+  };
+
+  const handleDaysChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const days = parseInt(e.target.value, 10);
+    setDaysCalculated(days);
+    form.setValue("days_calculated", days);
+    
+    if (propertyFullAmount && isPartialInvoice && calculationMethod === 'days') {
+      updatePartialAmount(propertyFullAmount);
+    }
+  };
+
+  const handleCalculationMethodChange = (method: 'percentage' | 'days') => {
+    setCalculationMethod(method);
+    form.setValue("calculation_method", method);
+    
     if (propertyFullAmount && isPartialInvoice) {
-      updatePartialAmount(propertyFullAmount, percentage);
+      updatePartialAmount(propertyFullAmount);
     }
   };
 
@@ -202,13 +243,27 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       const dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       // Create invoice metadata for partial invoices
-      const metadata = values.is_partial 
-        ? {
-            is_partial: true,
-            partial_percentage: values.partial_percentage,
-            full_amount: propertyFullAmount
-          }
-        : {};
+      let metadata = {};
+      if (values.is_partial) {
+        metadata = {
+          is_partial: true,
+          full_amount: propertyFullAmount,
+          calculation_method: calculationMethod
+        };
+        
+        if (calculationMethod === 'percentage') {
+          metadata = {
+            ...metadata,
+            partial_percentage: values.partial_percentage
+          };
+        } else if (calculationMethod === 'days') {
+          metadata = {
+            ...metadata,
+            days_calculated: values.days_calculated,
+            daily_rate: propertyFullAmount ? propertyFullAmount / 30 : 0
+          };
+        }
+      }
 
       const { data: invoice, error: invoiceError } = await supabase
         .from("invoices")
@@ -228,9 +283,15 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       if (invoiceError) throw invoiceError;
 
       const invoiceItemType = values.is_partial ? "partial_rent" : "utility";
-      const description = values.details || (values.is_partial ? 
-        `Partial rent payment (${values.partial_percentage}%)` : 
-        "Invoice payment");
+      let description = values.details || "Invoice payment";
+      
+      if (values.is_partial) {
+        if (calculationMethod === 'percentage') {
+          description = values.details || `Partial rent payment (${values.partial_percentage}%)`;
+        } else {
+          description = values.details || `Partial rent payment (${values.days_calculated} days)`;
+        }
+      }
 
       const { error: itemError } = await supabase
         .from("invoice_items")
@@ -269,6 +330,8 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       setSelectedPropertyId(null);
       setIsPartialInvoice(false);
       setPartialPercentage(50);
+      setCalculationMethod('percentage');
+      setDaysCalculated(0);
     } catch (error: any) {
       console.error("Error creating invoice:", error);
       toast({
@@ -337,24 +400,78 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       )}
 
       {isPartialInvoice && selectedPropertyId && (
-        <div className="space-y-2">
-          <Label htmlFor="partial_percentage">Percentage of full amount (%)</Label>
-          <div className="flex items-center gap-2">
-            <Input
-              id="partial_percentage"
-              type="number"
-              min="1"
-              max="99"
-              value={partialPercentage}
-              onChange={handlePercentageChange}
-              className="w-24"
-            />
-            <span>%</span>
+        <div className="space-y-4 p-4 border rounded-md">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Input 
+                type="radio" 
+                id="percentage-method" 
+                name="calculation-method" 
+                checked={calculationMethod === 'percentage'} 
+                onChange={() => handleCalculationMethodChange('percentage')}
+                className="w-4 h-4"
+              />
+              <Label htmlFor="percentage-method">Percentage based</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Input 
+                type="radio" 
+                id="days-method" 
+                name="calculation-method" 
+                checked={calculationMethod === 'days'} 
+                onChange={() => handleCalculationMethodChange('days')}
+                className="w-4 h-4"
+              />
+              <Label htmlFor="days-method">Days based</Label>
+            </div>
           </div>
-          {propertyFullAmount && (
-            <p className="text-sm text-muted-foreground">
-              Full amount: {propertyFullAmount} | Partial amount: {(propertyFullAmount * partialPercentage) / 100}
-            </p>
+
+          {calculationMethod === 'percentage' && (
+            <div className="space-y-2">
+              <Label htmlFor="partial_percentage">Percentage of full amount (%)</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="partial_percentage"
+                  type="number"
+                  min="1"
+                  max="99"
+                  value={partialPercentage}
+                  onChange={handlePercentageChange}
+                  className="w-24"
+                />
+                <span>%</span>
+              </div>
+              {propertyFullAmount && (
+                <p className="text-sm text-muted-foreground">
+                  Full amount: {propertyFullAmount} | Partial amount: {(propertyFullAmount * partialPercentage) / 100}
+                </p>
+              )}
+            </div>
+          )}
+
+          {calculationMethod === 'days' && (
+            <div className="space-y-2">
+              <Label htmlFor="days_calculated">Number of days</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="days_calculated"
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={daysCalculated}
+                  onChange={handleDaysChange}
+                  className="w-24"
+                />
+                <span>days</span>
+              </div>
+              {propertyFullAmount && (
+                <div className="text-sm text-muted-foreground">
+                  <p>Full monthly amount: {propertyFullAmount}</p>
+                  <p>Daily rate: {(propertyFullAmount / 30).toFixed(2)}</p>
+                  <p>Partial amount for {daysCalculated} days: {((propertyFullAmount / 30) * daysCalculated).toFixed(2)}</p>
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}
