@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,9 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DateRange } from "react-day-picker";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
-import { CalendarIcon, Percent, BarChart3, FileText, Building, Clock, Upload, CreditCard } from "lucide-react";
+import { CalendarIcon, Percent, BarChart3, FileText, Building, Clock, Upload, CreditCard, Calculator, AlertCircle } from "lucide-react";
 import { UtilityItem, InvoiceFormProps, InvoiceMetadata } from "@/types/invoice";
 import { Json } from "@/integrations/supabase/types/json";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface InvoiceFormValues {
   property_id: string;
@@ -61,6 +63,7 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [daysInMonth, setDaysInMonth] = useState(30);
   const [dailyRate, setDailyRate] = useState(0);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const formSchema = z.object({
     property_id: z.string({ required_error: "Please select a property" }),
@@ -267,6 +270,7 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
 
   const calculateAmount = () => {
     if (!selectedProperty) return;
+    setValidationError(null);
 
     let amount = selectedProperty.monthly_rent;
     const days = form.getValues("days_calculated") || 0;
@@ -274,7 +278,11 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
     if (isPartial) {
       if (calculationMethod === "percentage") {
         amount = (selectedProperty.monthly_rent * (partialPercentage || 0)) / 100;
-      } else if (calculationMethod === "days" && days > 0) {
+      } else if (calculationMethod === "days") {
+        if (!dateRange?.from || !dateRange?.to) {
+          setValidationError("Please select a date range for day calculation");
+          return;
+        }
         amount = dailyRate * days;
       }
     }
@@ -292,9 +300,29 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
     form.setValue("amount", Math.round(amount * 100) / 100);
   };
 
+  const validateForm = (): boolean => {
+    // Extra validations beyond what zod provides
+    if (isPartial && calculationMethod === "days" && (!dateRange?.from || !dateRange?.to)) {
+      setValidationError("Please select a date range for day calculation");
+      return false;
+    }
+
+    if (!form.getValues("due_date")) {
+      setValidationError("Please select a due date");
+      return false;
+    }
+
+    return true;
+  };
+
   const onSubmit = async (values: InvoiceFormValues) => {
+    if (!validateForm()) {
+      return;
+    }
+    
     try {
       setIsLoading(true);
+      setValidationError(null);
 
       const days = calculateDays();
 
@@ -397,6 +425,11 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
           
           if (utilityError) {
             console.error("Error updating utility:", utilityError);
+            toast({
+              variant: "destructive",
+              title: "Warning",
+              description: `Some utilities may not have been properly marked as invoiced. ${utilityError.message}`,
+            });
           }
         }
       }
@@ -426,6 +459,13 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {validationError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{validationError}</AlertDescription>
+          </Alert>
+        )}
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
@@ -494,7 +534,12 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
               <FormItem>
                 <FormLabel>Due Date</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} disabled={isLoading} />
+                  <Input 
+                    type="date" 
+                    {...field} 
+                    disabled={isLoading}
+                    min={new Date().toISOString().split('T')[0]} // No past dates
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -563,7 +608,10 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
                         min={1}
                         max={100}
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        onChange={(e) => {
+                          field.onChange(Number(e.target.value));
+                          calculateAmount();
+                        }}
                         disabled={isLoading}
                       />
                     </FormControl>
@@ -581,6 +629,9 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
                     date={dateRange}
                     onDateChange={(range) => {
                       setDateRange(range);
+                      if (range && range.from && range.to) {
+                        setValidationError(null);
+                      }
                     }}
                   />
                   <p className="text-sm text-slate-500">
@@ -636,7 +687,7 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
                       <span className="font-medium">{utility.type}</span>
                       <span>
                         {isPartial && calculationMethod === "percentage"
-                          ? `${((utility.amount * (partialPercentage || 0)) / 100).toFixed(2)}`
+                          ? `${((utility.amount * (partialPercentage || 0)) / 100).toFixed(2)} (${partialPercentage}%)`
                           : utility.amount.toFixed(2)}
                       </span>
                     </li>
@@ -649,16 +700,36 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
 
         <div className="flex flex-col gap-2">
           <div className="flex justify-between p-4 bg-slate-100 rounded-md">
-            <span className="font-medium">Total Amount</span>
+            <span className="font-medium flex items-center">
+              <Calculator className="h-4 w-4 mr-2" />
+              Total Amount
+            </span>
             <span className="text-lg font-bold">
               {form.getValues("amount") || 0} {selectedProperty?.currency || "EUR"}
             </span>
           </div>
+          {selectedProperty && (
+            <p className="text-xs text-slate-500 italic text-right">
+              Full monthly rent: {selectedProperty.monthly_rent} {selectedProperty.currency}
+              {isPartial && ` (${calculationMethod === "percentage" ? `${partialPercentage}%` : `${form.getValues("days_calculated") || 0} days`})`}
+            </p>
+          )}
         </div>
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Creating..." : "Create Invoice"}
+          <Button 
+            type="submit" 
+            disabled={isLoading || !selectedProperty} 
+            className="flex items-center gap-2"
+          >
+            {isLoading ? (
+              <>Creating...</>
+            ) : (
+              <>
+                <CreditCard className="h-4 w-4" />
+                Create Invoice
+              </>
+            )}
           </Button>
         </div>
       </form>
