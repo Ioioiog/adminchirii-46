@@ -50,7 +50,7 @@ export function ScrapingStatus({
     }
     
     if (errorMessage.includes('function is shutdown')) {
-      return 'The system timed out. Please try again later.';
+      return 'The system timed out. Please try again in a few minutes when the provider website might be less busy.';
     }
 
     if (errorMessage.includes('Waiting for account entry')) {
@@ -110,6 +110,10 @@ export function ScrapingStatus({
       return 'Failed to communicate with ENGIE services. Please try again later.';
     }
     
+    if (errorMessage.includes('timeout')) {
+      return 'The provider website is responding slowly. Please try again later when their service might be less busy.';
+    }
+    
     return errorMessage;
   };
 
@@ -151,7 +155,7 @@ export function ScrapingStatus({
           </TooltipTrigger>
           <TooltipContent>
             {status === 'in_progress' 
-              ? "Bill fetching is in progress" 
+              ? "Bill fetching is in progress. This might take a few minutes when providers are busy." 
               : "Fetch latest bills from utility provider"}
           </TooltipContent>
         </Tooltip>

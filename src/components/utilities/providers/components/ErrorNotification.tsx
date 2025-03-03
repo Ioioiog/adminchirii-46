@@ -29,7 +29,7 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
     }
 
     if (errorMessage.includes('function is shutdown')) {
-      return "The process timed out. The provider's website may be experiencing high traffic or slowness. Please try again later.";
+      return "The process timed out. The provider's website may be experiencing high traffic or slowness. Please try again in a few minutes.";
     }
     
     if (errorMessage.includes('Change consumption location') || errorMessage.includes('Schimbă locul de consum') || errorMessage.includes('alege locul de consum')) {
@@ -53,7 +53,7 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
     }
     
     if (errorMessage.includes('timeout')) {
-      return "The request timed out. The provider website may be slow or temporarily down.";
+      return "The request timed out. The provider website may be experiencing high traffic or server issues. Please wait a few minutes and try again.";
     }
     
     if (errorMessage.includes('cookie') || errorMessage.includes('session')) {
