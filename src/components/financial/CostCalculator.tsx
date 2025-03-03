@@ -5,7 +5,7 @@ import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Calculator, DollarSign, Info, Percent, CheckSquare } from 'lucide-react';
+import { Calendar, Calculator, DollarSign, Info, Percent, CheckSquare, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProperties } from '@/hooks/useProperties';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -13,6 +13,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useCurrency } from '@/hooks/useCurrency';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from '@/hooks/use-toast';
+import { InvoiceDialog } from '@/components/invoices/InvoiceDialog';
 
 interface UtilityItem {
   id: string;
@@ -22,8 +24,8 @@ interface UtilityItem {
   due_date: string;
   amount: number;
   currency: string;
-  percentage?: number; // Individual percentage for each utility
-  selected?: boolean; // Whether the utility is selected
+  percentage?: number;
+  selected?: boolean;
 }
 
 interface LandlordProfile {
@@ -50,10 +52,12 @@ const CostCalculator = () => {
   const [daysInPeriod, setDaysInPeriod] = useState<number>(0);
   const [isFullMonth, setIsFullMonth] = useState<boolean>(false);
   const [applyVat, setApplyVat] = useState<boolean>(false);
-  const [vatRate, setVatRate] = useState<number>(19); // Default VAT rate
+  const [vatRate, setVatRate] = useState<number>(19);
   const [vatAmount, setVatAmount] = useState<number>(0);
   const [grandTotalCurrency, setGrandTotalCurrency] = useState<string>('RON');
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
+  const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
+  const { userId } = useProperties();
 
   useEffect(() => {
     if (selectedPropertyId) {
@@ -177,8 +181,8 @@ const CostCalculator = () => {
       due_date: format(new Date(utility.due_date), 'MM/dd/yyyy'),
       amount: utility.amount,
       currency: utility.currency || rentCurrency,
-      percentage: 100, // Initialize with 100% for each utility
-      selected: true // Default to selected
+      percentage: 100,
+      selected: true
     })) || [];
 
     recalculateUtilityTotals(formattedUtilities);
@@ -280,6 +284,19 @@ const CostCalculator = () => {
     if (!utility.selected) return 0;
     const percentage = utility.percentage || 100;
     return (utility.amount * percentage) / 100;
+  };
+
+  const createInvoiceFromCalculation = () => {
+    if (!selectedPropertyId || !selectedProperty || !userId) {
+      toast({
+        title: "Missing information",
+        description: "Please select a property and calculate costs first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setShowInvoiceDialog(true);
   };
 
   return (
@@ -443,6 +460,15 @@ const CostCalculator = () => {
                   <p className="text-xs text-gray-500">
                     Converted using current exchange rates from BNR (National Bank of Romania)
                   </p>
+                  {userRole === 'landlord' && (
+                    <Button 
+                      onClick={createInvoiceFromCalculation}
+                      className="mt-4 bg-green-600 hover:bg-green-700"
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Create Invoice
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -534,6 +560,22 @@ const CostCalculator = () => {
             </Card>
           )}
         </>
+      )}
+
+      {showInvoiceDialog && userId && userRole && (
+        <InvoiceDialog 
+          open={showInvoiceDialog}
+          onOpenChange={setShowInvoiceDialog}
+          userId={userId}
+          userRole={userRole}
+          onInvoiceCreated={async () => {
+            setShowInvoiceDialog(false);
+            toast({
+              title: "Success",
+              description: "Invoice created successfully.",
+            });
+          }}
+        />
       )}
     </div>
   );
