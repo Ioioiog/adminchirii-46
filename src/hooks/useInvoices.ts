@@ -25,8 +25,11 @@ export const useInvoices = () => {
       setIsLoading(true);
       console.log("Fetching invoices with userRole:", userRole, "userId:", userId);
       
+      // Check if user is authenticated before proceeding
       if (!userId) {
-        throw new Error("No user found");
+        console.log("No user found, skipping invoice fetch");
+        setInvoices([]);
+        return;
       }
 
       let query = supabase
@@ -82,40 +85,50 @@ export const useInvoices = () => {
       setInvoices(invoicesData as Invoice[]);
     } catch (error) {
       console.error("Error fetching invoices:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Could not fetch invoices",
-      });
+      // Only show toast if we actually tried to fetch (user exists)
+      if (userId) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not fetch invoices",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchInvoices();
+    // Only attempt to fetch invoices if userId is available
+    if (userId) {
+      fetchInvoices();
+      
+      // Set up real-time subscription for invoices table
+      const channel = supabase
+        .channel('invoices_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
+            schema: 'public',
+            table: 'invoices'
+          },
+          (payload) => {
+            console.log('Invoice change detected:', payload);
+            fetchInvoices(); // Refresh the data
+          }
+        )
+        .subscribe();
 
-    // Set up real-time subscription for invoices table
-    const channel = supabase
-      .channel('invoices_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
-          schema: 'public',
-          table: 'invoices'
-        },
-        (payload) => {
-          console.log('Invoice change detected:', payload);
-          fetchInvoices(); // Refresh the data
-        }
-      )
-      .subscribe();
-
-    // Cleanup subscription when component unmounts
-    return () => {
-      supabase.removeChannel(channel);
-    };
+      // Cleanup subscription when component unmounts
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    } else {
+      // Reset invoices and loading state if no user
+      setInvoices([]);
+      setIsLoading(false);
+    }
   }, [userId, userRole, statusFilter, searchTerm, dateRange]);
 
   return {
