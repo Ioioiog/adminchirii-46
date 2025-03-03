@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { FileText, Trash2, ArrowUpDown } from "lucide-react";
+import { FileText, Trash2, ArrowUpDown, Percent } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { UtilityPaymentActions } from "./UtilityPaymentActions";
 import {
@@ -20,6 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Utility {
   id: string;
@@ -33,6 +34,8 @@ interface Utility {
   invoice_number?: string | null;
   created_at?: string;
   updated_at?: string;
+  invoiced?: boolean;
+  invoiced_percentage?: number;
   property?: {
     name: string;
     address: string;
@@ -165,20 +168,16 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      // Toggle direction if already sorting by this field
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
-      // Otherwise set new field and default to descending
       setSortField(field);
       setSortDirection("desc");
     }
   };
 
-  // Sort utilities based on current sort settings
   const sortedUtilities = [...utilities].sort((a, b) => {
     let valueA, valueB;
     
-    // Handle different field types
     switch (sortField) {
       case "amount":
         valueA = a.amount;
@@ -205,7 +204,6 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
         valueB = new Date(b.due_date).getTime();
     }
     
-    // Apply sort direction
     const sortFactor = sortDirection === "asc" ? 1 : -1;
     
     if (valueA < valueB) return -1 * sortFactor;
@@ -276,7 +274,24 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
               <TableCell className="capitalize">{utility.type}</TableCell>
               <TableCell>{utility.invoice_number || 'N/A'}</TableCell>
               <TableCell className="font-medium text-blue-600">
-                {formatAmount(utility.amount, utility.currency)}
+                <div className="flex items-center">
+                  {formatAmount(utility.amount, utility.currency)}
+                  {utility.invoiced && utility.invoiced_percentage && utility.invoiced_percentage < 100 && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Badge className="ml-2 bg-amber-100 text-amber-800 hover:bg-amber-200 flex items-center gap-1">
+                            <Percent className="h-3 w-3" />
+                            {utility.invoiced_percentage}%
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Partially invoiced at {utility.invoiced_percentage}%</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
               </TableCell>
               <TableCell>
                 {utility.issued_date ? new Date(utility.issued_date).toLocaleDateString() : 'N/A'}
@@ -285,9 +300,9 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
               <TableCell>
                 <Badge
                   variant={utility.status === "paid" ? "default" : "secondary"}
-                  className="capitalize"
+                  className={`capitalize ${utility.invoiced ? "bg-blue-100 text-blue-800 hover:bg-blue-200" : ""}`}
                 >
-                  {utility.status}
+                  {utility.status} {utility.invoiced ? "(Invoiced)" : ""}
                 </Badge>
               </TableCell>
               <TableCell className="text-right">

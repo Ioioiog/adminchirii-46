@@ -2139,6 +2139,8 @@ export type Database = {
           due_date: string
           id: string
           invoice_number: string | null
+          invoiced: boolean | null
+          invoiced_percentage: number | null
           issued_date: string | null
           property_id: string
           property_name: string | null
@@ -2154,6 +2156,8 @@ export type Database = {
           due_date: string
           id?: string
           invoice_number?: string | null
+          invoiced?: boolean | null
+          invoiced_percentage?: number | null
           issued_date?: string | null
           property_id: string
           property_name?: string | null
@@ -2169,6 +2173,8 @@ export type Database = {
           due_date?: string
           id?: string
           invoice_number?: string | null
+          invoiced?: boolean | null
+          invoiced_percentage?: number | null
           issued_date?: string | null
           property_id?: string
           property_name?: string | null
