@@ -45,6 +45,8 @@ export interface InvoiceMetadata {
     amount: number;
     type: string;
     invoiced_percentage?: number;
+    percentage?: number;    // Added the missing property
+    original_amount?: number;  // Added the missing property
   }>;
   [key: string]: any; // Add index signature to make it compatible with Json
 }
