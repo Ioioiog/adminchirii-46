@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DateRange } from "react-day-picker";
 import { Invoice } from "@/types/invoice";
+import { useUserRole } from "@/hooks/use-user-role";
 
 export const useInvoices = () => {
   const navigate = useNavigate();
@@ -14,17 +15,18 @@ export const useInvoices = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const { userRole, userId } = useUserRole();
 
   const fetchInvoices = async () => {
     try {
-      console.log("Fetching invoices...");
-      const { data: { user } } = await supabase.auth.getUser();
+      setIsLoading(true);
+      console.log("Fetching invoices with userRole:", userRole, "userId:", userId);
       
-      if (!user) {
+      if (!userId) {
         throw new Error("No user found");
       }
 
-      const { data: invoicesData, error: invoicesError } = await supabase
+      let query = supabase
         .from("invoices")
         .select(`
           *,
@@ -37,14 +39,42 @@ export const useInvoices = () => {
             last_name,
             email
           )
-        `)
+        `);
+      
+      // Apply user role filters
+      if (userRole === 'tenant') {
+        query = query.eq('tenant_id', userId);
+      } else if (userRole === 'landlord') {
+        query = query.eq('landlord_id', userId);
+      }
+      
+      // Apply status filter if not "all"
+      if (statusFilter !== "all") {
+        query = query.eq('status', statusFilter);
+      }
+      
+      // Apply date range filter if available
+      if (dateRange?.from && dateRange?.to) {
+        const fromDate = dateRange.from.toISOString().split('T')[0];
+        const toDate = dateRange.to.toISOString().split('T')[0];
+        query = query
+          .gte('due_date', fromDate)
+          .lte('due_date', toDate);
+      }
+      
+      // Apply search term filter if available
+      if (searchTerm) {
+        // This is a simplistic approach - you may need to adjust based on your needs
+        query = query.or(`tenant.first_name.ilike.%${searchTerm}%,tenant.last_name.ilike.%${searchTerm}%,property.name.ilike.%${searchTerm}%`);
+      }
+      
+      const { data: invoicesData, error: invoicesError } = await query
         .order("due_date", { ascending: false });
 
       if (invoicesError) throw invoicesError;
 
       console.log("Fetched invoices:", invoicesData);
       setInvoices(invoicesData as Invoice[]);
-      setIsLoading(false);
     } catch (error) {
       console.error("Error fetching invoices:", error);
       toast({
@@ -52,6 +82,8 @@ export const useInvoices = () => {
         title: "Error",
         description: "Could not fetch invoices",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -79,7 +111,7 @@ export const useInvoices = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [userId, userRole, statusFilter, searchTerm, dateRange]);
 
   return {
     invoices,

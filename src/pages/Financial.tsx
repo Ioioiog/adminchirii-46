@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DollarSign, FileText, CreditCard, BarChart2, Building, Calculator } from "lucide-react";
 import { InvoiceList } from "@/components/invoices/InvoiceList";
 import { PaymentList } from "@/components/payments/PaymentList";
@@ -21,6 +21,7 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useCurrency } from "@/hooks/useCurrency";
 import { startOfMonth, endOfMonth } from "date-fns";
 import { CostCalculator } from "@/components/financial/CostCalculator";
+import { Button } from "@/components/ui/button";
 
 type FinancialSection = 'invoices' | 'payments' | 'overview';
 
@@ -36,6 +37,7 @@ const Financial = () => {
   const { userRole, userId } = useUserRole();
   const { formatAmount } = useCurrency();
   const { properties } = useProperties({ userRole: userRole || 'tenant' });
+  const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
 
   const {
     payments,
@@ -112,6 +114,11 @@ const Financial = () => {
 
   const filteredUserRole = userRole === 'service_provider' ? null : userRole;
   const isLandlordOrTenant = userRole === 'landlord' || userRole === 'tenant';
+
+  useEffect(() => {
+    console.log("Financial component invoices:", invoices);
+    console.log("User role:", userRole, "User ID:", userId);
+  }, [invoices, userRole, userId]);
 
   const renderOverviewSection = () => {
     return (
@@ -233,26 +240,45 @@ const Financial = () => {
               title="Invoices"
               description="Manage and track all your property-related invoices"
             />
-            <SearchAndFilterBar
-              searchPlaceholder="Search invoices..."
-              searchValue={searchTerm}
-              onSearchChange={setSearchTerm}
-              filterContent={
-                <InvoiceFilters
-                  searchTerm={searchTerm}
-                  setSearchTerm={setSearchTerm}
-                  statusFilter={statusFilter}
-                  setStatusFilter={setStatusFilter}
-                  dateRange={dateRange}
-                  setDateRange={setDateRange}
-                />
-              }
-            />
-            {filteredUserRole && (
+            <div className="flex justify-between items-center">
+              <SearchAndFilterBar
+                searchPlaceholder="Search invoices..."
+                searchValue={searchTerm}
+                onSearchChange={setSearchTerm}
+                filterContent={
+                  <InvoiceFilters
+                    searchTerm={searchTerm}
+                    setSearchTerm={setSearchTerm}
+                    statusFilter={statusFilter}
+                    setStatusFilter={setStatusFilter}
+                    dateRange={dateRange}
+                    setDateRange={setDateRange}
+                  />
+                }
+              />
+              {userRole === 'landlord' && (
+                <Button onClick={() => setShowInvoiceDialog(true)}>
+                  Create Invoice
+                </Button>
+              )}
+            </div>
+            {isInvoicesLoading ? (
+              <div className="flex justify-center p-8">
+                <p>Loading invoices...</p>
+              </div>
+            ) : filteredUserRole && (
               <InvoiceList
                 invoices={invoices}
                 userRole={filteredUserRole}
                 onStatusUpdate={fetchInvoices}
+              />
+            )}
+            {showInvoiceDialog && userId && filteredUserRole && (
+              <InvoiceDialog 
+                onOpenChange={setShowInvoiceDialog}
+                userId={userId}
+                userRole={filteredUserRole}
+                onInvoiceCreated={fetchInvoices}
               />
             )}
           </div>
