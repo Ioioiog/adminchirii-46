@@ -378,8 +378,9 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
       if (error) throw error;
 
       if (values.include_utilities && utilities.length > 0) {
-        const utilitiesToUpdate = utilities.map(utility => {
+        for (const utility of utilities) {
           const updateObj: any = {
+            id: utility.id,
             invoiced: true
           };
           
@@ -389,18 +390,14 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
             updateObj.invoiced_percentage = 100; // Full invoice
           }
           
-          return {
-            id: utility.id,
-            ...updateObj
-          };
-        });
-        
-        const { error: utilitiesError } = await supabase
-          .from("utilities")
-          .upsert(utilitiesToUpdate, { returning: 'minimal' });
-        
-        if (utilitiesError) {
-          console.error("Error updating utilities:", utilitiesError);
+          const { error: utilityError } = await supabase
+            .from("utilities")
+            .update(updateObj)
+            .eq("id", utility.id);
+          
+          if (utilityError) {
+            console.error("Error updating utility:", utilityError);
+          }
         }
       }
 
