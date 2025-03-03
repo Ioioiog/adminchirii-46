@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   Dialog,
@@ -160,22 +161,37 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
     try {
       setIsSubmitting(true);
       
+      // Clean and validate the utility type
       const sanitizedUtilityType = utilityType.toLowerCase().replace(/\s+/g, ' ').trim();
+      
+      // Cast to UtilityType if it's a valid type, otherwise fall back to 'other'
+      const validType = (() => {
+        switch(sanitizedUtilityType) {
+          case 'electricity':
+          case 'water':
+          case 'gas':
+          case 'internet':
+          case 'building maintenance':
+          case 'other':
+            return sanitizedUtilityType as UtilityType;
+          default:
+            console.warn(`Unknown utility type: ${sanitizedUtilityType}, defaulting to 'other'`);
+            return 'other' as UtilityType;
+        }
+      })();
       
       const { data: utility, error: utilityError } = await supabase
         .from("utilities")
-        .insert([
-          {
-            type: sanitizedUtilityType,
-            amount: parseFloat(amount),
-            currency: currency,
-            property_id: propertyId,
-            due_date: dueDate,
-            issued_date: issuedDate,
-            status: "pending",
-            invoice_number: invoiceNumber || null,
-          },
-        ])
+        .insert({
+          type: validType,
+          amount: parseFloat(amount),
+          currency: currency,
+          property_id: propertyId,
+          due_date: dueDate,
+          issued_date: issuedDate,
+          status: "pending",
+          invoice_number: invoiceNumber || null,
+        })
         .select()
         .single();
 
