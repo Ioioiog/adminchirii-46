@@ -12,14 +12,14 @@ import { DateRange } from "react-day-picker"
 import { format } from "date-fns"
 
 export interface DatePickerWithRangeProps {
-  dateRange: DateRange | undefined;
-  onDateRangeChange: (range: DateRange | undefined) => void;
+  date: DateRange | undefined;
+  onDateChange: (range: DateRange | undefined) => void;
   className?: string;
 }
 
 export function DatePickerWithRange({
-  dateRange,
-  onDateRangeChange,
+  date,
+  onDateChange,
   className,
 }: DatePickerWithRangeProps) {
   return (
@@ -31,18 +31,18 @@ export function DatePickerWithRange({
             variant={"outline"}
             className={cn(
               "w-full justify-start text-left font-normal",
-              !dateRange && "text-muted-foreground"
+              !date && "text-muted-foreground"
             )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
-            {dateRange?.from ? (
-              dateRange.to ? (
+            {date?.from ? (
+              date.to ? (
                 <>
-                  {format(dateRange.from, "LLL dd, y")} -{" "}
-                  {format(dateRange.to, "LLL dd, y")}
+                  {format(date.from, "LLL dd, y")} -{" "}
+                  {format(date.to, "LLL dd, y")}
                 </>
               ) : (
-                format(dateRange.from, "LLL dd, y")
+                format(date.from, "LLL dd, y")
               )
             ) : (
               <span>Pick a date range</span>
@@ -53,9 +53,9 @@ export function DatePickerWithRange({
           <Calendar
             initialFocus
             mode="range"
-            defaultMonth={dateRange?.from}
-            selected={dateRange}
-            onSelect={onDateRangeChange}
+            defaultMonth={date?.from}
+            selected={date}
+            onSelect={onDateChange}
             numberOfMonths={2}
           />
         </PopoverContent>
