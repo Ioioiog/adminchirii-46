@@ -95,10 +95,6 @@ function prepareScrapingRequestBody(provider: UtilityProvider, credentials: Cred
     handleMyEngiePopup: provider.provider_name.toLowerCase().includes('engie'),
     // Set flag to skip waiting for navigation after selecting consumption location
     skipWaitAfterLocationSelection: provider.provider_name.toLowerCase().includes('engie'),
-    // Set flag to wait for redirection to main page after CAPTCHA
-    waitForRedirectAfterCaptcha: provider.provider_name.toLowerCase().includes('engie'),
-    // URL to check for redirection after CAPTCHA
-    redirectURL: '/prima-pagina',
     // Resolve popups after logging in and before changing consumption location
     resolvePopupsAfterLogin: provider.provider_name.toLowerCase().includes('engie'),
     // Set flag to wait for login completion before proceeding
@@ -154,26 +150,26 @@ export async function invokeScrapingFunction(
     if (!scrapeData.success) {
       console.error('Scraping failed:', scrapeData?.error);
       
-      // Check for CAPTCHA submission but waiting for redirect to main page
+      // Check for CAPTCHA submission but waiting for the account to load
       if (scrapeData.error && scrapeData.error.includes('CAPTCHA submitted')) {
-        throw new Error(`CAPTCHA submitted, waiting for redirect to ${requestBody.redirectURL} before changing consumption location.`);
+        throw new Error('CAPTCHA submitted, waiting for account entry to complete before changing consumption location.');
       }
       
       // Check for waiting for account entry after CAPTCHA
       if (scrapeData.error && scrapeData.error.includes('Waiting for account entry')) {
-        throw new Error(`CAPTCHA submitted, waiting for account entry before proceeding to change consumption location.`);
+        throw new Error('CAPTCHA submitted, waiting for account entry before proceeding to change consumption location.');
       }
       
       // Check for MyENGIE app popup issues
       if (scrapeData.error && (scrapeData.error.includes('MyENGIE app popup') || scrapeData.error.includes('Mai târziu'))) {
-        throw new Error(`The process encountered a promotional popup about the MyENGIE app. We'll improve handling of this in future updates. Please try again.`);
+        throw new Error('The process encountered a promotional popup about the MyENGIE app. We\'ll improve handling of this in future updates. Please try again.');
       }
       
       // Check for consumption location selection issues
       if (scrapeData.error && (scrapeData.error.includes('Change consumption location') || 
                               scrapeData.error.includes('Schimbă locul de consum') || 
                               scrapeData.error.includes('alege locul de consum'))) {
-        throw new Error(`The process encountered an issue while selecting the consumption location. The system will try to proceed without waiting for navigation.`);
+        throw new Error('The process encountered an issue while selecting the consumption location. The system will try to proceed without waiting for navigation.');
       }
       
       throw new Error(scrapeData?.error || 'Scraping failed');
@@ -212,7 +208,7 @@ export async function invokeScrapingFunction(
     
     // Check for CAPTCHA submission message
     if (error instanceof Error && error.message.includes('CAPTCHA submitted')) {
-      console.log('CAPTCHA was submitted, waiting for redirect to main page before changing consumption location...');
+      console.log('CAPTCHA was submitted, proceeding directly to change consumption location...');
       
       try {
         const jobId = await createScrapingJobDirectly(
@@ -225,11 +221,11 @@ export async function invokeScrapingFunction(
         return {
           success: true,
           jobId: jobId,
-          error: 'CAPTCHA submitted, waiting for redirect to main page before changing consumption location. Using fallback job.'
+          error: 'CAPTCHA submitted, proceeding to changing consumption location. Using fallback job.'
         };
       } catch (fallbackError) {
         console.error('Fallback job creation failed:', fallbackError);
-        throw new Error('CAPTCHA was submitted but the process needs to wait for redirection. Please try again.');
+        throw new Error('CAPTCHA was submitted. Please try again if the process fails.');
       }
     }
     
@@ -259,30 +255,7 @@ export async function invokeScrapingFunction(
       }
     }
 
-    // Handle redirection related errors after CAPTCHA
-    if (error instanceof Error && error.message.includes('/prima-pagina')) {
-      console.log('Waiting for redirection after CAPTCHA, creating fallback job...');
-      
-      try {
-        const jobId = await createScrapingJobDirectly(
-          provider.id,
-          provider.provider_name,
-          provider.utility_type,
-          provider.location_name
-        );
-        
-        return {
-          success: true,
-          jobId: jobId,
-          error: 'The system is waiting for redirection to the main page after CAPTCHA before selecting consumption location. A fallback job has been created.'
-        };
-      } catch (fallbackError) {
-        console.error('Fallback job creation failed:', fallbackError);
-        throw new Error('Waiting for redirection after CAPTCHA. Please try again later.');
-      }
-    }
-    
-    // Check for MyENGIE app popup issue
+    // Handle MyENGIE app popup issue
     if (error instanceof Error && (error.message.includes('MyENGIE app popup') || error.message.includes('Mai târziu'))) {
       console.log('MyENGIE app popup detected, creating fallback job...');
       

@@ -21,11 +21,7 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
     }
     
     if (errorMessage.includes('CAPTCHA submitted')) {
-      return "The CAPTCHA was successfully submitted. The system is now waiting for the page to redirect before proceeding with location selection.";
-    }
-
-    if (errorMessage.includes('prima-pagina') && errorMessage.includes('redirect')) {
-      return "The system is waiting for redirection to the main page after CAPTCHA verification before selecting the consumption location.";
+      return "The CAPTCHA was successfully submitted. The system is now proceeding with location selection.";
     }
 
     if (errorMessage.includes('Waiting for account entry')) {
