@@ -1,3 +1,4 @@
+
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Invoice } from "@/types/invoice";
@@ -10,6 +11,11 @@ interface InvoiceDetailsProps {
 
 export function InvoiceDetails({ invoice, userRole }: InvoiceDetailsProps) {
   const { formatAmount } = useCurrency();
+  
+  // Check if this is a partial invoice
+  const isPartialInvoice = invoice.metadata?.is_partial;
+  const partialPercentage = invoice.metadata?.partial_percentage;
+  const fullAmount = invoice.metadata?.full_amount;
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -34,6 +40,11 @@ export function InvoiceDetails({ invoice, userRole }: InvoiceDetailsProps) {
       <div>
         <div className="text-sm font-medium text-gray-500">Amount</div>
         <div>{formatAmount(invoice.amount)}</div>
+        {isPartialInvoice && fullAmount && (
+          <div className="text-xs text-gray-500">
+            {partialPercentage}% of {formatAmount(fullAmount)}
+          </div>
+        )}
       </div>
       <div>
         <div className="text-sm font-medium text-gray-500">Due Date</div>
@@ -43,6 +54,11 @@ export function InvoiceDetails({ invoice, userRole }: InvoiceDetailsProps) {
         <Badge variant={invoice.status === "paid" ? "default" : "secondary"}>
           {invoice.status}
         </Badge>
+        {isPartialInvoice && (
+          <Badge variant="outline" className="ml-2">
+            Partial
+          </Badge>
+        )}
       </div>
     </div>
   );

@@ -20,6 +20,12 @@ export interface ProfileInvoiceInfo {
   invoice_info: InvoiceSettings;
 }
 
+export interface InvoiceMetadata {
+  is_partial?: boolean;
+  partial_percentage?: number;
+  full_amount?: number;
+}
+
 export interface Invoice {
   id: string;
   amount: number;
@@ -33,6 +39,7 @@ export interface Invoice {
   vat_rate?: number;
   paid_at?: string | null;
   updated_at: string;
+  metadata?: InvoiceMetadata;
   property: {
     name: string;
     address: string;
