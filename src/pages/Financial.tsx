@@ -20,8 +20,6 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useCurrency } from "@/hooks/useCurrency";
 import { startOfMonth, endOfMonth } from "date-fns";
 import CostCalculator from "@/components/financial/CostCalculator";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 
 type FinancialSection = 'invoices' | 'payments' | 'overview';
 
@@ -261,15 +259,6 @@ const Financial = () => {
                   />
                 }
               />
-              {userRole === 'landlord' && (
-                <Button 
-                  onClick={() => setShowInvoiceDialog(true)}
-                  className="flex items-center gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Create Invoice
-                </Button>
-              )}
             </div>
             {isInvoicesLoading ? (
               <div className="flex justify-center p-8">
