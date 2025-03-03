@@ -1,4 +1,3 @@
-
 import { DateRange } from "react-day-picker";
 
 export interface InvoiceSettings {
@@ -78,6 +77,7 @@ export interface InvoiceFiltersProps {
 }
 
 export interface InvoiceDialogProps {
+  open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
   userRole: "landlord" | "tenant";
