@@ -1,4 +1,3 @@
-
 import { Property } from "@/utils/propertyUtils";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -66,12 +65,12 @@ export function UtilityForm({
             <SelectValue placeholder="Select type" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="Building Maintenance">Building Maintenance</SelectItem>
-            <SelectItem value="Electricity">Electricity</SelectItem>
-            <SelectItem value="Water">Water</SelectItem>
-            <SelectItem value="Gas">Gas</SelectItem>
-            <SelectItem value="Internet">Internet</SelectItem>
-            <SelectItem value="Other">Other</SelectItem>
+            <SelectItem value="electricity">Electricity</SelectItem>
+            <SelectItem value="water">Water</SelectItem>
+            <SelectItem value="gas">Gas</SelectItem>
+            <SelectItem value="internet">Internet</SelectItem>
+            <SelectItem value="building maintenance">Building Maintenance</SelectItem>
+            <SelectItem value="other">Other</SelectItem>
           </SelectContent>
         </Select>
       </div>

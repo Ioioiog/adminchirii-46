@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Property } from "@/types/tenant";
 
 // Define the utility type string literals directly for zod
-const utilityTypeEnum = z.enum(['electricity', 'water', 'gas', 'internet', 'building maintenance']);
+const utilityTypeEnum = z.enum(['electricity', 'water', 'gas', 'internet', 'building maintenance', 'other']);
 
 export const formSchema = z.object({
   provider_name: z.string().min(2, {

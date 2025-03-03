@@ -7,7 +7,7 @@
 /**
  * Represents the different types of utilities that can be managed
  */
-export type UtilityType = 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
+export type UtilityType = 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance' | 'other';
 
 /**
  * Constants for utility types to be used in place of the enum
@@ -17,7 +17,8 @@ export const UTILITY_TYPES = {
   WATER: 'water' as UtilityType,
   GAS: 'gas' as UtilityType,
   INTERNET: 'internet' as UtilityType,
-  BUILDING_MAINTENANCE: 'building maintenance' as UtilityType
+  BUILDING_MAINTENANCE: 'building maintenance' as UtilityType,
+  OTHER: 'other' as UtilityType
 };
 
 /**

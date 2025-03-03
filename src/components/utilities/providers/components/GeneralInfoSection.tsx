@@ -89,6 +89,7 @@ export function GeneralInfoSection({ form, properties }: GeneralInfoSectionProps
                 <SelectItem value="water">water</SelectItem>
                 <SelectItem value="internet">internet</SelectItem>
                 <SelectItem value="building maintenance">building maintenance</SelectItem>
+                <SelectItem value="other">other</SelectItem>
               </SelectContent>
             </Select>
             <FormDescription>

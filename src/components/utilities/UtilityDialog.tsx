@@ -160,13 +160,13 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
     try {
       setIsSubmitting(true);
       
-      const safeUtilityType = utilityType as UtilityType;
+      const sanitizedUtilityType = utilityType.toLowerCase().replace(/\s+/g, ' ').trim();
       
       const { data: utility, error: utilityError } = await supabase
         .from("utilities")
         .insert([
           {
-            type: safeUtilityType,
+            type: sanitizedUtilityType,
             amount: parseFloat(amount),
             currency: currency,
             property_id: propertyId,

@@ -35,7 +35,7 @@ export interface Utility {
   };
 }
 
-export type UtilityType = 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance';
+export type UtilityType = 'electricity' | 'water' | 'gas' | 'internet' | 'building maintenance' | 'other';
 
 export interface UtilityProviderCredentials {
   Row: {
