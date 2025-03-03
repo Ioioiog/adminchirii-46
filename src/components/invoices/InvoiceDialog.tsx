@@ -16,7 +16,8 @@ export function InvoiceDialog({
   onOpenChange, 
   userId, 
   userRole, 
-  onInvoiceCreated 
+  onInvoiceCreated,
+  calculationData
 }: InvoiceDialogProps) {
   const handleInvoiceCreated = async () => {
     if (onInvoiceCreated) {
@@ -43,7 +44,12 @@ export function InvoiceDialog({
           </DialogHeader>
           
           <div className="p-6 overflow-y-auto max-h-[80vh]">
-            <InvoiceForm onSuccess={handleInvoiceCreated} userId={userId} userRole={userRole} />
+            <InvoiceForm 
+              onSuccess={handleInvoiceCreated} 
+              userId={userId} 
+              userRole={userRole} 
+              calculationData={calculationData}
+            />
           </div>
         </div>
       </DialogContent>

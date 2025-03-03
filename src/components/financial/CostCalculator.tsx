@@ -298,6 +298,23 @@ const CostCalculator = () => {
       return;
     }
 
+    const calculationData = {
+      propertyId: selectedPropertyId,
+      rentAmount: rentAmount + vatAmount,
+      dateRange: selectedDateRange,
+      utilities: utilities
+        .filter(utility => utility.selected)
+        .map(utility => ({
+          id: utility.id,
+          type: utility.type,
+          amount: getAdjustedUtilityAmount(utility),
+          percentage: utility.percentage,
+          selected: utility.selected
+        })),
+      currency: rentCurrency,
+      grandTotal: calculateGrandTotal()
+    };
+
     setShowInvoiceDialog(true);
   };
 
@@ -576,6 +593,22 @@ const CostCalculator = () => {
               title: "Success",
               description: "Invoice created successfully.",
             });
+          }}
+          calculationData={{
+            propertyId: selectedPropertyId,
+            rentAmount: rentAmount + vatAmount,
+            dateRange: selectedDateRange,
+            utilities: utilities
+              .filter(utility => utility.selected)
+              .map(utility => ({
+                id: utility.id,
+                type: utility.type,
+                amount: getAdjustedUtilityAmount(utility),
+                percentage: utility.percentage,
+                selected: utility.selected
+              })),
+            currency: rentCurrency,
+            grandTotal: calculateGrandTotal()
           }}
         />
       )}

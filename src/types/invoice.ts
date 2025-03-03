@@ -1,4 +1,3 @@
-
 import { DateRange } from "react-day-picker";
 
 export interface InvoiceSettings {
@@ -83,10 +82,30 @@ export interface InvoiceDialogProps {
   userId: string;
   userRole: "landlord" | "tenant";
   onInvoiceCreated?: () => Promise<void>;
+  calculationData?: CalculationData;
 }
 
 export interface InvoiceFormProps {
-  onSuccess: () => void;
+  onSuccess?: () => void;
   userId: string;
-  userRole: "tenant" | "landlord" | "service_provider";
+  userRole: "landlord" | "tenant";
+  calculationData?: CalculationData;
+}
+
+export interface CalculationData {
+  propertyId?: string;
+  rentAmount?: number;
+  dateRange?: {
+    from: Date;
+    to: Date;
+  };
+  utilities?: Array<{
+    id: string;
+    type: string;
+    amount: number;
+    percentage?: number;
+    selected?: boolean;
+  }>;
+  currency?: string;
+  grandTotal?: number;
 }

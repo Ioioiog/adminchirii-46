@@ -52,7 +52,7 @@ interface InvoiceSettings {
   [key: string]: any;
 }
 
-export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
+export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: InvoiceFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [properties, setProperties] = useState<Array<PropertyOption>>([]);
   const { toast } = useToast();
@@ -60,7 +60,7 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
   const [selectedProperty, setSelectedProperty] = useState<PropertyOption | null>(null);
   const [utilities, setUtilities] = useState<Utility[]>([]);
   const [includeUtilities, setIncludeUtilities] = useState(false);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(calculationData?.dateRange || undefined);
   const [daysInMonth, setDaysInMonth] = useState(30);
   const [dailyRate, setDailyRate] = useState(0);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -83,7 +83,8 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
       is_partial: false,
       calculation_method: "percentage",
       partial_percentage: 100,
-      include_utilities: false,
+      include_utilities: calculationData?.utilities && calculationData.utilities.length > 0 ? true : false,
+      amount: calculationData?.rentAmount || 0,
     },
   });
 
@@ -92,6 +93,24 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
   const partialPercentage = form.watch("partial_percentage");
   const propertyId = form.watch("property_id");
   const includeUtilitiesValue = form.watch("include_utilities");
+
+  useEffect(() => {
+    if (calculationData?.propertyId) {
+      form.setValue("property_id", calculationData.propertyId);
+      
+      if (calculationData.dateRange) {
+        setDateRange(calculationData.dateRange);
+        if (calculationData.dateRange.from && calculationData.dateRange.to) {
+          calculateDays();
+        }
+      }
+      
+      if (calculationData.utilities && calculationData.utilities.length > 0) {
+        form.setValue("include_utilities", true);
+        setIncludeUtilities(true);
+      }
+    }
+  }, [calculationData]);
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -214,6 +233,19 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
     const fetchUtilities = async () => {
       if (!propertyId) return;
 
+      if (calculationData?.utilities && calculationData.utilities.length > 0) {
+        const formattedUtilities = calculationData.utilities.map(utility => ({
+          id: utility.id,
+          type: utility.type,
+          amount: utility.amount,
+          due_date: new Date().toISOString(),
+          property_id: propertyId,
+          status: "pending"
+        }));
+        setUtilities(formattedUtilities);
+        return;
+      }
+
       try {
         setIsLoading(true);
         const { data, error } = await supabase
@@ -238,7 +270,7 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
     };
 
     fetchUtilities();
-  }, [propertyId, toast]);
+  }, [propertyId, calculationData, toast]);
 
   useEffect(() => {
     if (!selectedProperty) return;
@@ -479,7 +511,7 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
                     setSelectedProperty(prop || null);
                   }}
                   value={field.value}
-                  disabled={isLoading}
+                  disabled={isLoading || !!calculationData?.propertyId}
                 >
                   <FormControl>
                     <SelectTrigger>
