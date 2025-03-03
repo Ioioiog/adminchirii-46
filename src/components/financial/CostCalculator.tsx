@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Calendar } from "lucide-react";
 import { DateRange } from "react-day-picker";
@@ -247,8 +248,8 @@ export function CostCalculator() {
       const { data: utilities = [] } = await supabase
         .from('utilities')
         .select('id, type, amount, due_date, currency, invoice_number, issued_date')
-        .or(`issued_date.gte.${startDate},due_date.gte.${startDate}`)
-        .or(`issued_date.lte.${endDate},due_date.lte.${endDate}`)
+        .gte('issued_date', startDate)
+        .lte('issued_date', endDate)
         .eq('property_id', selectedPropertyId);
 
       console.log('Utilities fetched for period:', startDate, 'to', endDate);
