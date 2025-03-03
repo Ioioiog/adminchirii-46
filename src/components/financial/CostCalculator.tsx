@@ -6,13 +6,14 @@ import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Calculator, DollarSign, Info, Percent } from 'lucide-react';
+import { Calendar, Calculator, DollarSign, Info, Percent, CheckSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProperties } from '@/hooks/useProperties';
 import { useUserRole } from '@/hooks/use-user-role';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCurrency } from '@/hooks/useCurrency';
 import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface UtilityItem {
   id: string;
@@ -23,6 +24,7 @@ interface UtilityItem {
   amount: number;
   currency: string;
   percentage?: number; // Individual percentage for each utility
+  selected?: boolean; // Whether the utility is selected
 }
 
 interface LandlordProfile {
@@ -176,19 +178,30 @@ const CostCalculator = () => {
       due_date: format(new Date(utility.due_date), 'MM/dd/yyyy'),
       amount: utility.amount,
       currency: utility.currency || rentCurrency,
-      percentage: 100 // Initialize with 100% for each utility
+      percentage: 100, // Initialize with 100% for each utility
+      selected: true // Default to selected
     })) || [];
 
+    recalculateUtilityTotals(formattedUtilities);
+    setUtilities(formattedUtilities);
+    setHasCalculated(true);
+  };
+
+  const recalculateUtilityTotals = (updatedUtilities: UtilityItem[]) => {
     const utilitiesByCurrency: Record<string, number> = {};
-    formattedUtilities.forEach(utility => {
-      const currency = utility.currency;
-      const percentage = utility.percentage || 100;
-      const adjustedAmount = (utility.amount * percentage) / 100;
-      
-      if (!utilitiesByCurrency[currency]) {
-        utilitiesByCurrency[currency] = 0;
+    
+    updatedUtilities.forEach(utility => {
+      // Only include selected utilities
+      if (utility.selected) {
+        const currency = utility.currency;
+        const percentage = utility.percentage || 100;
+        const adjustedAmount = (utility.amount * percentage) / 100;
+        
+        if (!utilitiesByCurrency[currency]) {
+          utilitiesByCurrency[currency] = 0;
+        }
+        utilitiesByCurrency[currency] += adjustedAmount;
       }
-      utilitiesByCurrency[currency] += adjustedAmount;
     });
 
     Object.keys(utilitiesByCurrency).forEach(currency => {
@@ -196,8 +209,6 @@ const CostCalculator = () => {
     });
 
     setTotalUtilitiesByCurrency(utilitiesByCurrency);
-    setUtilities(formattedUtilities);
-    setHasCalculated(true);
   };
 
   const handleUtilityPercentageChange = (id: string, newPercentage: number) => {
@@ -209,25 +220,19 @@ const CostCalculator = () => {
     });
     
     setUtilities(updatedUtilities);
-    
-    // Recalculate totals
-    const utilitiesByCurrency: Record<string, number> = {};
-    updatedUtilities.forEach(utility => {
-      const currency = utility.currency;
-      const percentage = utility.percentage || 100;
-      const adjustedAmount = (utility.amount * percentage) / 100;
-      
-      if (!utilitiesByCurrency[currency]) {
-        utilitiesByCurrency[currency] = 0;
+    recalculateUtilityTotals(updatedUtilities);
+  };
+
+  const handleUtilitySelectionChange = (id: string, isSelected: boolean) => {
+    const updatedUtilities = utilities.map(utility => {
+      if (utility.id === id) {
+        return { ...utility, selected: isSelected };
       }
-      utilitiesByCurrency[currency] += adjustedAmount;
+      return utility;
     });
-
-    Object.keys(utilitiesByCurrency).forEach(currency => {
-      utilitiesByCurrency[currency] = Math.round(utilitiesByCurrency[currency] * 100) / 100;
-    });
-
-    setTotalUtilitiesByCurrency(utilitiesByCurrency);
+    
+    setUtilities(updatedUtilities);
+    recalculateUtilityTotals(updatedUtilities);
   };
 
   const formatCurrency = (amount: number, currency: string) => {
@@ -274,6 +279,7 @@ const CostCalculator = () => {
   };
 
   const getAdjustedUtilityAmount = (utility: UtilityItem): number => {
+    if (!utility.selected) return 0;
     const percentage = utility.percentage || 100;
     return (utility.amount * percentage) / 100;
   };
@@ -329,41 +335,50 @@ const CostCalculator = () => {
               <CardContent className="p-6">
                 <div className="flex items-center space-x-2 mb-4">
                   <Percent className="h-5 w-5 text-blue-600" />
-                  <h4 className="text-lg font-semibold">Utility Percentages</h4>
+                  <h4 className="text-lg font-semibold">Utility Selection & Percentages</h4>
                 </div>
                 
                 <div className="space-y-6">
                   {utilities.map((utility) => (
                     <div key={utility.id} className="space-y-2">
                       <div className="flex justify-between items-center">
-                        <span className="font-medium">{utility.type}</span>
+                        <div className="flex items-center gap-2">
+                          <Checkbox 
+                            id={`select-${utility.id}`}
+                            checked={utility.selected}
+                            onCheckedChange={(checked) => handleUtilitySelectionChange(utility.id, !!checked)}
+                          />
+                          <span className="font-medium">{utility.type}</span>
+                        </div>
                         <span className="text-sm text-gray-600">{formatCurrency(utility.amount, utility.currency)}</span>
                       </div>
                       
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center text-xs text-gray-600">
-                          <span>0%</span>
-                          <span>50%</span>
-                          <span>100%</span>
+                      {utility.selected && (
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center text-xs text-gray-600">
+                            <span>0%</span>
+                            <span>50%</span>
+                            <span>100%</span>
+                          </div>
+                          
+                          <Slider
+                            value={[utility.percentage || 100]}
+                            onValueChange={(values) => handleUtilityPercentageChange(utility.id, values[0])}
+                            max={100}
+                            step={1}
+                            className="mt-1"
+                          />
+                          
+                          <div className="flex justify-between items-center">
+                            <span className="px-2 py-0.5 bg-blue-50 rounded-full text-xs font-medium text-blue-700">
+                              {utility.percentage || 100}%
+                            </span>
+                            <span className="text-sm font-medium">
+                              {formatCurrency(getAdjustedUtilityAmount(utility), utility.currency)}
+                            </span>
+                          </div>
                         </div>
-                        
-                        <Slider
-                          value={[utility.percentage || 100]}
-                          onValueChange={(values) => handleUtilityPercentageChange(utility.id, values[0])}
-                          max={100}
-                          step={1}
-                          className="mt-1"
-                        />
-                        
-                        <div className="flex justify-between items-center">
-                          <span className="px-2 py-0.5 bg-blue-50 rounded-full text-xs font-medium text-blue-700">
-                            {utility.percentage || 100}%
-                          </span>
-                          <span className="text-sm font-medium">
-                            {formatCurrency(getAdjustedUtilityAmount(utility), utility.currency)}
-                          </span>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -503,6 +518,7 @@ const CostCalculator = () => {
                         <th className="text-left p-3 text-gray-600">INVOICE #</th>
                         <th className="text-left p-3 text-gray-600">ISSUED DATE</th>
                         <th className="text-left p-3 text-gray-600">DUE DATE</th>
+                        <th className="text-center p-3 text-gray-600">INCLUDED</th>
                         <th className="text-right p-3 text-gray-600">ORIGINAL AMOUNT</th>
                         <th className="text-right p-3 text-gray-600">PERCENTAGE</th>
                         <th className="text-right p-3 text-gray-600">APPLIED AMOUNT</th>
@@ -510,19 +526,30 @@ const CostCalculator = () => {
                     </thead>
                     <tbody>
                       {utilities.map((utility) => (
-                        <tr key={utility.id} className="border-t">
+                        <tr key={utility.id} className={`border-t ${!utility.selected ? 'bg-gray-50 text-gray-400' : ''}`}>
                           <td className="p-3">{utility.type}</td>
                           <td className="p-3">{utility.invoice_number}</td>
                           <td className="p-3">{utility.issued_date}</td>
                           <td className="p-3">{utility.due_date}</td>
+                          <td className="p-3 text-center">
+                            <Checkbox 
+                              checked={utility.selected}
+                              onCheckedChange={(checked) => handleUtilitySelectionChange(utility.id, !!checked)}
+                              className="mx-auto"
+                            />
+                          </td>
                           <td className="p-3 text-right font-medium">{formatCurrency(utility.amount, utility.currency)}</td>
-                          <td className="p-3 text-right font-medium">{utility.percentage || 100}%</td>
-                          <td className="p-3 text-right font-medium">{formatCurrency(getAdjustedUtilityAmount(utility), utility.currency)}</td>
+                          <td className="p-3 text-right font-medium">
+                            {utility.selected ? `${utility.percentage || 100}%` : '-'}
+                          </td>
+                          <td className="p-3 text-right font-medium">
+                            {utility.selected ? formatCurrency(getAdjustedUtilityAmount(utility), utility.currency) : '-'}
+                          </td>
                         </tr>
                       ))}
                       {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
                         <tr key={currency} className="border-t font-bold">
-                          <td colSpan={5} className="p-3 text-right">
+                          <td colSpan={6} className="p-3 text-right">
                             Total Utilities ({currency}):
                           </td>
                           <td colSpan={2} className="p-3 text-right">{formatCurrency(amount, currency)}</td>
