@@ -333,6 +333,19 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
         metadata.utilities_included = utilityItems;
       }
 
+      const { data: landlordProfile, error: profileError } = await supabase
+        .from("profiles")
+        .select("invoice_info")
+        .eq("id", userRole === "landlord" ? userId : selectedProperty?.id)
+        .single();
+
+      if (profileError) {
+        console.error("Error fetching landlord profile:", profileError);
+      }
+
+      const applyVat = landlordProfile?.invoice_info?.apply_vat || false;
+      const vatRate = applyVat ? 19 : 0;
+
       const { data, error } = await supabase
         .from("invoices")
         .insert({
@@ -343,7 +356,8 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
           due_date: values.due_date,
           status: "pending",
           currency: selectedProperty?.currency || "EUR",
-          metadata: metadata
+          metadata: metadata,
+          vat_rate: vatRate
         });
 
       if (error) throw error;

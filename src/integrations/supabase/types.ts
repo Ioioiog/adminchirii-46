@@ -443,6 +443,7 @@ export type Database = {
           status: Database["public"]["Enums"]["invoice_status"] | null
           tenant_id: string
           updated_at: string
+          vat_rate: number | null
         }
         Insert: {
           amount: number
@@ -457,6 +458,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["invoice_status"] | null
           tenant_id: string
           updated_at?: string
+          vat_rate?: number | null
         }
         Update: {
           amount?: number
@@ -471,6 +473,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["invoice_status"] | null
           tenant_id?: string
           updated_at?: string
+          vat_rate?: number | null
         }
         Relationships: [
           {

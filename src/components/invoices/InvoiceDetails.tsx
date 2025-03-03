@@ -1,4 +1,3 @@
-
 import { formatDistanceToNow } from "date-fns";
 import { Invoice } from "@/types/invoice";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -50,12 +49,10 @@ export function InvoiceDetails({ invoice, userRole, onStatusUpdate }: InvoiceDet
     }
   };
 
-  // Format date from ISO to readable format
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
   };
 
-  // Check if the invoice is partial
   const isPartial = invoice.metadata?.is_partial;
 
   return (
@@ -116,7 +113,6 @@ export function InvoiceDetails({ invoice, userRole, onStatusUpdate }: InvoiceDet
         
         <Separator />
         
-        {/* Partial Invoice Information */}
         {isPartial && (
           <div className="bg-blue-50 p-4 rounded-md">
             <h3 className="text-sm font-medium text-blue-700 flex items-center gap-2 mb-3">
@@ -178,7 +174,6 @@ export function InvoiceDetails({ invoice, userRole, onStatusUpdate }: InvoiceDet
           </div>
         )}
         
-        {/* Utilities Section */}
         {invoice.metadata?.utilities_included && invoice.metadata.utilities_included.length > 0 && (
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-gray-700">Included Utilities</h3>
@@ -196,6 +191,15 @@ export function InvoiceDetails({ invoice, userRole, onStatusUpdate }: InvoiceDet
                   <span>{formatAmount(utility.amount)}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+        
+        {invoice.vat_rate > 0 && (
+          <div className="bg-gray-50 p-4 rounded-md">
+            <h3 className="text-sm font-medium text-gray-700">VAT Information</h3>
+            <div className="mt-2">
+              <span className="text-sm text-gray-500">VAT Rate: {invoice.vat_rate}%</span>
             </div>
           </div>
         )}
