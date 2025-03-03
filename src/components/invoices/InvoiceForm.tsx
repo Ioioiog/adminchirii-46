@@ -241,13 +241,7 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       return amountInRON / rates[toCurrency];
     };
     
-    const { data: property } = await supabase
-      .from("properties")
-      .select("currency")
-      .eq("id", selectedPropertyId)
-      .maybeSingle();
-    
-    const propertyCurrency = property?.currency || "EUR";
+    const propertyCurrency = "EUR";
     
     const convertedRentPortion = convertAmount(rentPortion, propertyCurrency, selectedCurrency);
     
