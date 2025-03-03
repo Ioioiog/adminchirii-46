@@ -37,9 +37,10 @@ interface LandlordProfile {
 }
 
 const CostCalculator = () => {
-  const { userRole } = useUserRole();
+  const { userRole, userId } = useUserRole();
   const { properties } = useProperties({ userRole: userRole || 'tenant' });
   const { availableCurrencies } = useCurrency();
+  
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
   const [selectedProperty, setSelectedProperty] = useState<any>(null);
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
@@ -57,7 +58,6 @@ const CostCalculator = () => {
   const [grandTotalCurrency, setGrandTotalCurrency] = useState<string>('RON');
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
-  const { userId } = useProperties();
 
   useEffect(() => {
     if (selectedPropertyId) {
@@ -562,12 +562,12 @@ const CostCalculator = () => {
         </>
       )}
 
-      {showInvoiceDialog && userId && userRole && (
+      {showInvoiceDialog && userId && userRole && userRole !== 'service_provider' && (
         <InvoiceDialog 
           open={showInvoiceDialog}
           onOpenChange={setShowInvoiceDialog}
           userId={userId}
-          userRole={userRole}
+          userRole={userRole as "landlord" | "tenant"}
           onInvoiceCreated={async () => {
             setShowInvoiceDialog(false);
             toast({
