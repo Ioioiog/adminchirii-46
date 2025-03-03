@@ -55,7 +55,7 @@ export function ScrapingStatus({
 
     if (errorMessage.includes('CAPTCHA')) {
       if (errorMessage.includes('submitted')) {
-        return 'CAPTCHA was submitted but the login process timed out. Please try again.';
+        return 'CAPTCHA was submitted but the process needs to wait for redirection to continue. Please try again if it fails.';
       }
       return 'The provider website has CAPTCHA protection which could not be solved automatically.';
     }
@@ -69,7 +69,11 @@ export function ScrapingStatus({
     }
     
     if (errorMessage.includes('Change consumption location') || errorMessage.includes('Schimbă locul de consum') || errorMessage.includes('alege locul de consum')) {
-      return 'Failed while selecting consumption location. This is a common issue with ENGIE Romania. The system will now try to proceed without waiting for navigation.';
+      return 'The system is handling consumption location selection. This is a common step with ENGIE Romania.';
+    }
+    
+    if (errorMessage.includes('prima-pagina') && errorMessage.includes('redirect')) {
+      return 'Waiting for redirection after CAPTCHA verification before changing consumption location.';
     }
     
     if (errorMessage.includes('cookie') || errorMessage.includes('session')) {

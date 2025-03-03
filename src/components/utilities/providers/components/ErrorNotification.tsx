@@ -21,7 +21,11 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
     }
     
     if (errorMessage.includes('CAPTCHA submitted')) {
-      return "The CAPTCHA was successfully submitted, but the process was interrupted afterward. This could be due to a timeout or resource limitation. Please try again.";
+      return "The CAPTCHA was successfully submitted. The system is now waiting for the page to redirect before proceeding with location selection.";
+    }
+
+    if (errorMessage.includes('prima-pagina') && errorMessage.includes('redirect')) {
+      return "The system is waiting for redirection to the main page after CAPTCHA verification before selecting the consumption location.";
     }
 
     if (errorMessage.includes('Waiting for login navigation') || errorMessage.includes('function is shutdown')) {
@@ -29,7 +33,7 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
     }
     
     if (errorMessage.includes('Change consumption location') || errorMessage.includes('Schimbă locul de consum') || errorMessage.includes('alege locul de consum')) {
-      return "The process encountered an issue while trying to select your consumption location. This is a common issue with the ENGIE Romania website. The system will now try to proceed without waiting for navigation.";
+      return "The process encountered an issue while trying to select your consumption location. This is a common step when using the ENGIE Romania website.";
     }
     
     if (errorMessage.includes('CAPTCHA') || errorMessage.includes('captcha')) {

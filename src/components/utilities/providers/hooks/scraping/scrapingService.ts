@@ -95,6 +95,10 @@ function prepareScrapingRequestBody(provider: UtilityProvider, credentials: Cred
     handleMyEngiePopup: provider.provider_name.toLowerCase().includes('engie'),
     // Set flag to skip waiting for navigation after selecting consumption location
     skipWaitAfterLocationSelection: provider.provider_name.toLowerCase().includes('engie'),
+    // Set flag to wait for redirection to main page after CAPTCHA
+    waitForRedirectAfterCaptcha: provider.provider_name.toLowerCase().includes('engie'),
+    // URL to check for redirection after CAPTCHA
+    redirectURL: '/prima-pagina',
     // Set user agent to appear as a modern browser
     userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
   };
@@ -146,7 +150,7 @@ export async function invokeScrapingFunction(
       
       // Check for CAPTCHA submission but function shutdown
       if (scrapeData.error && scrapeData.error.includes('CAPTCHA submitted')) {
-        throw new Error(`CAPTCHA submitted, but the function was interrupted. Please try again.`);
+        throw new Error(`CAPTCHA submitted, waiting for redirect to ${requestBody.redirectURL} before changing consumption location.`);
       }
       
       // Check for MyENGIE app popup issues
@@ -174,7 +178,7 @@ export async function invokeScrapingFunction(
     
     // Check for CAPTCHA submission message
     if (error instanceof Error && error.message.includes('CAPTCHA submitted')) {
-      console.log('CAPTCHA was submitted but process interrupted, creating fallback job...');
+      console.log('CAPTCHA was submitted, waiting for redirect to main page before changing consumption location...');
       
       try {
         const jobId = await createScrapingJobDirectly(
@@ -187,11 +191,11 @@ export async function invokeScrapingFunction(
         return {
           success: true,
           jobId: jobId,
-          error: 'CAPTCHA submitted, ID was recorded, but the process was interrupted. Using fallback job.'
+          error: 'CAPTCHA submitted, waiting for redirect to main page before changing consumption location. Using fallback job.'
         };
       } catch (fallbackError) {
         console.error('Fallback job creation failed:', fallbackError);
-        throw new Error('CAPTCHA was submitted but the process was interrupted. Please try again.');
+        throw new Error('CAPTCHA was submitted but the process needs to wait for redirection. Please try again.');
       }
     }
     
@@ -218,6 +222,29 @@ export async function invokeScrapingFunction(
       } catch (fallbackError) {
         console.error('Fallback job creation failed:', fallbackError);
         throw new Error('The process encountered an issue while selecting the consumption location. Please try again later.');
+      }
+    }
+
+    // Handle redirection related errors after CAPTCHA
+    if (error instanceof Error && error.message.includes('/prima-pagina')) {
+      console.log('Waiting for redirection after CAPTCHA, creating fallback job...');
+      
+      try {
+        const jobId = await createScrapingJobDirectly(
+          provider.id,
+          provider.provider_name,
+          provider.utility_type,
+          provider.location_name
+        );
+        
+        return {
+          success: true,
+          jobId: jobId,
+          error: 'The system is waiting for redirection to the main page after CAPTCHA before selecting consumption location. A fallback job has been created.'
+        };
+      } catch (fallbackError) {
+        console.error('Fallback job creation failed:', fallbackError);
+        throw new Error('Waiting for redirection after CAPTCHA. Please try again later.');
       }
     }
     
