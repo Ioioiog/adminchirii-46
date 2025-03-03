@@ -54,6 +54,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
   const [defaultTenantId, setDefaultTenantId] = useState<string | null>(null);
   const [applyVat, setApplyVat] = useState<boolean>(false);
   const [vatRate, setVatRate] = useState<number>(19);
+  const [invoiceCurrency, setInvoiceCurrency] = useState<string>('EUR');
 
   const formSchema = z.object({
     property_id: z.string({ required_error: "Please select a property" }),
@@ -79,6 +80,10 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     
     if (calculationData?.rentAmount) {
       form.setValue("amount", calculationData.rentAmount);
+    }
+    
+    if (calculationData?.currency) {
+      setInvoiceCurrency(calculationData.currency);
     }
     
     // Set default due date to 14 days from today if not provided
@@ -159,10 +164,14 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         if (propertiesData.length === 1 && !calculationData?.propertyId && !form.getValues("property_id")) {
           form.setValue("property_id", propertiesData[0].id);
           setSelectedProperty(propertiesData[0]);
+          setInvoiceCurrency(propertiesData[0].currency || 'EUR');
         } else if (calculationData?.propertyId) {
           const matchingProperty = propertiesData.find(p => p.id === calculationData.propertyId);
           if (matchingProperty) {
             setSelectedProperty(matchingProperty);
+            if (!calculationData.currency) {
+              setInvoiceCurrency(matchingProperty.currency || 'EUR');
+            }
           }
         }
       } catch (error: any) {
@@ -178,7 +187,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     };
 
     fetchProperties();
-  }, [userId, userRole, toast, form, calculationData?.propertyId]);
+  }, [userId, userRole, toast, form, calculationData?.propertyId, calculationData?.currency]);
 
   useEffect(() => {
     const fetchTenants = async () => {
@@ -232,8 +241,11 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
   useEffect(() => {
     if (selectedProperty) {
       form.setValue("amount", selectedProperty.monthly_rent);
+      if (!calculationData?.currency) {
+        setInvoiceCurrency(selectedProperty.currency || 'EUR');
+      }
     }
-  }, [selectedProperty, form]);
+  }, [selectedProperty, form, calculationData?.currency]);
 
   // Set default tenant when defaultTenantId changes
   useEffect(() => {
@@ -335,7 +347,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
           amount: values.amount,
           due_date: values.due_date,
           status: "pending",
-          currency: selectedProperty?.currency || calculationData?.currency || "EUR",
+          currency: invoiceCurrency,
           vat_rate: applyVat ? vatRate : 0,
           metadata: metadata
         });
@@ -392,6 +404,10 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                     field.onChange(value);
                     const prop = properties.find((p) => p.id === value);
                     setSelectedProperty(prop || null);
+                    // Only update currency if not provided in calculationData
+                    if (prop && !calculationData?.currency) {
+                      setInvoiceCurrency(prop.currency || 'EUR');
+                    }
                   }}
                   value={field.value}
                   disabled={isLoading || !!calculationData?.propertyId}
@@ -502,7 +518,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                 <div className="flex justify-between items-center py-1">
                   <span className="text-sm">Rent Amount:</span>
                   <span className="text-sm font-medium">
-                    {form.getValues("amount")} {selectedProperty?.currency || calculationData?.currency || "EUR"}
+                    {form.getValues("amount")} {invoiceCurrency}
                   </span>
                 </div>
 
@@ -510,7 +526,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                   <div className="flex justify-between items-center py-1">
                     <span className="text-sm">VAT ({vatRate}%):</span>
                     <span className="text-sm font-medium">
-                      {(form.getValues("amount") * vatRate / 100).toFixed(2)} {selectedProperty?.currency || calculationData?.currency || "EUR"}
+                      {(form.getValues("amount") * vatRate / 100).toFixed(2)} {invoiceCurrency}
                     </span>
                   </div>
                 )}
@@ -538,7 +554,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                           <span className="text-sm font-medium">
                             {utility.percentage !== undefined && utility.percentage !== 100
                               ? (utility.amount * utility.percentage / 100).toFixed(2)
-                              : utility.amount.toFixed(2)} {selectedProperty?.currency || calculationData?.currency || "EUR"}
+                              : utility.amount.toFixed(2)} {invoiceCurrency}
                           </span>
                         </div>
                       ))}
@@ -549,7 +565,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                 <div className="flex justify-between items-center pt-2 mt-2 border-t border-slate-200">
                   <span className="font-bold">Total Amount:</span>
                   <span className="text-lg font-bold">
-                    {calculateTotal().toFixed(2)} {selectedProperty?.currency || calculationData?.currency || "EUR"}
+                    {calculateTotal().toFixed(2)} {invoiceCurrency}
                   </span>
                 </div>
               </div>
