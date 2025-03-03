@@ -83,3 +83,9 @@ export interface InvoiceDialogProps {
   userRole: "landlord" | "tenant";
   onInvoiceCreated?: () => Promise<void>;
 }
+
+export interface InvoiceFormProps {
+  onSuccess: () => void;
+  userId?: string;
+  userRole?: "tenant" | "landlord" | "service_provider";
+}

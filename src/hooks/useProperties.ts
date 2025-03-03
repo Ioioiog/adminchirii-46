@@ -37,6 +37,7 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
               name,
               address,
               monthly_rent,
+              currency,
               type,
               created_at,
               updated_at,
@@ -57,7 +58,8 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
           const propertiesWithStatus = (data || []).map(property => ({
             ...property,
             status: property.tenancies?.some(t => t.status === 'active') ? 'occupied' : 'vacant',
-            tenant_count: property.tenancies?.filter(t => t.status === 'active').length || 0
+            tenant_count: property.tenancies?.filter(t => t.status === 'active').length || 0,
+            currency: property.currency || 'EUR' // Ensure currency has a default value
           })) as Property[];
 
           setProperties(propertiesWithStatus);
@@ -70,6 +72,7 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
               name,
               address,
               monthly_rent,
+              currency,
               type,
               created_at,
               updated_at,
@@ -87,7 +90,8 @@ export const useProperties = ({ userRole }: UsePropertiesProps) => {
           const propertiesWithStatus = (data || []).map(property => ({
             ...property,
             status: property.tenancies?.some(t => t.status === 'active') ? 'occupied' : 'vacant',
-            tenant_count: property.tenancies?.filter(t => t.status === 'active').length || 0
+            tenant_count: property.tenancies?.filter(t => t.status === 'active').length || 0,
+            currency: property.currency || 'EUR' // Ensure currency has a default value
           })) as Property[];
 
           setProperties(propertiesWithStatus);

@@ -59,6 +59,7 @@ const PropertyTenantInvite = () => {
           address: propertyData.address,
           type: propertyData.type,
           monthly_rent: propertyData.monthly_rent,
+          currency: propertyData.currency || 'EUR', // Add currency with default value
           status: "vacant", // Default value, might need to be updated
           tenant_count: 0, // Default value, might need to be updated
           created_at: propertyData.created_at,
