@@ -1,15 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { DateRange } from 'react-day-picker';
-import { format, addDays } from 'date-fns';
+import { format, addDays, differenceInDays, isSameDay, addMonths } from 'date-fns';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Calculator } from 'lucide-react';
+import { Calendar, Calculator, DollarSign, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProperties } from '@/hooks/useProperties';
 import { useUserRole } from '@/hooks/use-user-role';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface UtilityItem {
   type: string;
@@ -17,6 +18,7 @@ interface UtilityItem {
   issued_date: string;
   due_date: string;
   amount: number;
+  currency: string;
 }
 
 const CostCalculator = () => {
@@ -26,22 +28,40 @@ const CostCalculator = () => {
   const [selectedProperty, setSelectedProperty] = useState<any>(null);
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
   const [rentAmount, setRentAmount] = useState<number>(0);
+  const [rentCalculationType, setRentCalculationType] = useState<'full' | 'daily'>('daily');
   const [utilities, setUtilities] = useState<UtilityItem[]>([]);
   const [hasCalculated, setHasCalculated] = useState<boolean>(false);
-  const [currency, setCurrency] = useState<string>('RON');
-  const [totalUtilities, setTotalUtilities] = useState<number>(0);
-  const [totalAmount, setTotalAmount] = useState<number>(0);
+  const [rentCurrency, setRentCurrency] = useState<string>('RON');
+  const [totalUtilitiesByCurrency, setTotalUtilitiesByCurrency] = useState<Record<string, number>>({});
+  const [daysInPeriod, setDaysInPeriod] = useState<number>(0);
+  const [isFullMonth, setIsFullMonth] = useState<boolean>(false);
 
   useEffect(() => {
     if (selectedPropertyId) {
       const property = properties.find(p => p.id === selectedPropertyId);
       setSelectedProperty(property);
       if (property) {
-        setRentAmount(property.monthly_rent);
-        setCurrency(property.currency || 'RON');
+        setRentCurrency(property.currency || 'RON');
       }
     }
   }, [selectedPropertyId, properties]);
+
+  useEffect(() => {
+    if (selectedDateRange?.from && selectedDateRange?.to) {
+      const days = differenceInDays(selectedDateRange.to, selectedDateRange.from) + 1;
+      setDaysInPeriod(days);
+      
+      // Check if it's a full month (e.g., from the 2nd of one month to the 2nd of the next month)
+      const fromDate = selectedDateRange.from;
+      const nextMonth = addMonths(fromDate, 1);
+      const isOneMonthApart = isSameDay(nextMonth, selectedDateRange.to) || 
+                             (fromDate.getDate() === selectedDateRange.to.getDate() && 
+                              nextMonth.getMonth() === selectedDateRange.to.getMonth());
+      
+      setIsFullMonth(isOneMonthApart);
+      setRentCalculationType(isOneMonthApart ? 'full' : 'daily');
+    }
+  }, [selectedDateRange]);
 
   const calculateCosts = async () => {
     if (!selectedPropertyId || !selectedDateRange?.from || !selectedDateRange?.to) {
@@ -49,10 +69,19 @@ const CostCalculator = () => {
     }
 
     // Calculate rent for the period
-    const days = (selectedDateRange.to.getTime() - selectedDateRange.from.getTime()) / (1000 * 3600 * 24) + 1;
+    const days = daysInPeriod;
     const monthlyRent = selectedProperty?.monthly_rent || 0;
-    const dailyRent = monthlyRent / 30;
-    const periodRent = dailyRent * days;
+    
+    let periodRent;
+    if (rentCalculationType === 'full') {
+      // If it's a full month, use the monthly rent directly
+      periodRent = monthlyRent;
+    } else {
+      // Calculate daily rent based on 30 days per month
+      const dailyRent = monthlyRent / 30;
+      periodRent = dailyRent * days;
+    }
+    
     setRentAmount(Math.round(periodRent * 100) / 100);
 
     // Fetch utilities for the selected property and date range
@@ -74,15 +103,33 @@ const CostCalculator = () => {
       invoice_number: utility.invoice_number || '-',
       issued_date: utility.issued_date ? format(new Date(utility.issued_date), 'MM/dd/yyyy') : '-',
       due_date: format(new Date(utility.due_date), 'MM/dd/yyyy'),
-      amount: utility.amount
+      amount: utility.amount,
+      currency: utility.currency || rentCurrency // Use the utility's currency or default to property currency
     })) || [];
 
-    // Calculate total utilities cost
-    const utilitiesTotal = formattedUtilities.reduce((sum, utility) => sum + utility.amount, 0);
-    setTotalUtilities(Math.round(utilitiesTotal * 100) / 100);
+    // Group utilities by currency and calculate totals
+    const utilitiesByCurrency: Record<string, number> = {};
+    formattedUtilities.forEach(utility => {
+      const currency = utility.currency;
+      if (!utilitiesByCurrency[currency]) {
+        utilitiesByCurrency[currency] = 0;
+      }
+      utilitiesByCurrency[currency] += utility.amount;
+    });
+
+    // Round values for display
+    Object.keys(utilitiesByCurrency).forEach(currency => {
+      utilitiesByCurrency[currency] = Math.round(utilitiesByCurrency[currency] * 100) / 100;
+    });
+
+    setTotalUtilitiesByCurrency(utilitiesByCurrency);
     setUtilities(formattedUtilities);
-    setTotalAmount(Math.round((periodRent + utilitiesTotal) * 100) / 100);
     setHasCalculated(true);
+  };
+
+  // Format currency for display
+  const formatCurrency = (amount: number, currency: string) => {
+    return `${currency} ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   return (
@@ -137,20 +184,71 @@ const CostCalculator = () => {
                 Cost Summary for {format(selectedDateRange?.from || new Date(), "MMM d, yyyy")} to {format(selectedDateRange?.to || addDays(new Date(), 1), "MMM d, yyyy")}
               </h4>
               
-              <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div className="text-center">
-                  <p className="text-gray-600">Rent</p>
-                  <p className="text-xl font-bold">{currency} {rentAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  <div className="flex items-center justify-center gap-1">
+                    <p className="text-gray-600">Rent</p>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-4 w-4 text-gray-400" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="p-2 max-w-xs">
+                            <p className="font-semibold">Rent Calculation:</p>
+                            <p className="text-sm">
+                              {rentCalculationType === 'full' 
+                                ? 'Full month rent applied (same day of consecutive months)' 
+                                : `Daily rate (monthly rent ÷ 30) × ${daysInPeriod} days`}
+                            </p>
+                            {rentCalculationType === 'daily' && (
+                              <p className="text-xs mt-1">
+                                {formatCurrency(selectedProperty?.monthly_rent / 30, rentCurrency)} × {daysInPeriod} days
+                              </p>
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <p className="text-xl font-bold">{formatCurrency(rentAmount, rentCurrency)}</p>
+                  <p className="text-xs text-gray-500">
+                    {rentCalculationType === 'full' 
+                      ? 'Full monthly rent' 
+                      : `${daysInPeriod} days period`}
+                  </p>
                 </div>
+                
                 <div className="text-center">
                   <p className="text-gray-600">Utilities</p>
-                  <p className="text-xl font-bold">{currency} {totalUtilities.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  <div>
+                    {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
+                      <p key={currency} className="text-xl font-bold">{formatCurrency(amount, currency)}</p>
+                    ))}
+                    {Object.keys(totalUtilitiesByCurrency).length === 0 && (
+                      <p className="text-xl font-bold">{formatCurrency(0, rentCurrency)}</p>
+                    )}
+                  </div>
                 </div>
+                
                 <div className="text-center">
                   <p className="text-gray-600">Total</p>
-                  <p className="text-xl font-bold text-blue-600">{currency} {totalUtilities.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                  <p className="text-sm text-gray-500">+ rent ({currency} {rentAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</p>
-                  <p className="text-lg font-bold text-blue-600">= {currency} {totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  <div>
+                    <p className="text-xl font-bold text-blue-600">{formatCurrency(rentAmount, rentCurrency)}</p>
+                    {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
+                      <React.Fragment key={currency}>
+                        {currency === rentCurrency ? (
+                          <p className="text-lg font-bold text-blue-600">
+                            = {formatCurrency(rentAmount + amount, currency)}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-gray-500">
+                            + {formatCurrency(amount, currency)} <span className="text-xs">(different currency)</span>
+                          </p>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -178,13 +276,15 @@ const CostCalculator = () => {
                           <td className="p-3">{utility.invoice_number}</td>
                           <td className="p-3">{utility.issued_date}</td>
                           <td className="p-3">{utility.due_date}</td>
-                          <td className="p-3 text-right font-medium">{currency} {utility.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                          <td className="p-3 text-right font-medium">{formatCurrency(utility.amount, utility.currency)}</td>
                         </tr>
                       ))}
-                      <tr className="border-t font-bold">
-                        <td colSpan={4} className="p-3 text-right">Total Utilities:</td>
-                        <td className="p-3 text-right">{currency} {totalUtilities.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                      </tr>
+                      {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
+                        <tr key={currency} className="border-t font-bold">
+                          <td colSpan={4} className="p-3 text-right">Total Utilities ({currency}):</td>
+                          <td className="p-3 text-right">{formatCurrency(amount, currency)}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
