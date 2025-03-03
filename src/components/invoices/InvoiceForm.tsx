@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,6 +13,7 @@ import { InvoiceFormProps, InvoiceMetadata } from "@/types/invoice";
 import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
+import { formatAmount } from "@/lib/utils";
 
 interface InvoiceFormValues {
   property_id: string;
@@ -247,14 +247,12 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     }
   }, [selectedProperty, form, calculationData?.currency]);
 
-  // Set default tenant when defaultTenantId changes
   useEffect(() => {
     if (defaultTenantId && userRole === "landlord") {
       form.setValue("tenant_id", defaultTenantId);
     }
   }, [defaultTenantId, form, userRole]);
 
-  // Fetch VAT settings when property is selected
   useEffect(() => {
     const fetchLandlordVatSettings = async () => {
       if (!selectedProperty || !propertyId) return;
@@ -376,7 +374,6 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     }
   };
 
-  // Calculate total including selected utilities
   const calculateTotal = () => {
     const baseAmount = form.getValues("amount") || 0;
     const selectedUtilsTotal = utilities
@@ -387,6 +384,11 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       }, 0);
     
     return baseAmount + selectedUtilsTotal;
+  };
+
+  const calculateVatAmount = () => {
+    const baseAmount = form.getValues("amount") || 0;
+    return baseAmount * vatRate / 100;
   };
 
   return (
@@ -518,7 +520,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                 <div className="flex justify-between items-center py-1">
                   <span className="text-sm">Rent Amount:</span>
                   <span className="text-sm font-medium">
-                    {form.getValues("amount")} {invoiceCurrency}
+                    {formatAmount(form.getValues("amount"), invoiceCurrency)}
                   </span>
                 </div>
 
@@ -526,7 +528,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                   <div className="flex justify-between items-center py-1">
                     <span className="text-sm">VAT ({vatRate}%):</span>
                     <span className="text-sm font-medium">
-                      {(form.getValues("amount") * vatRate / 100).toFixed(2)} {invoiceCurrency}
+                      {formatAmount(calculateVatAmount(), invoiceCurrency)}
                     </span>
                   </div>
                 )}
@@ -552,9 +554,12 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                             </label>
                           </div>
                           <span className="text-sm font-medium">
-                            {utility.percentage !== undefined && utility.percentage !== 100
-                              ? (utility.amount * utility.percentage / 100).toFixed(2)
-                              : utility.amount.toFixed(2)} {invoiceCurrency}
+                            {formatAmount(
+                              utility.percentage !== undefined && utility.percentage !== 100
+                                ? (utility.amount * utility.percentage / 100)
+                                : utility.amount,
+                              invoiceCurrency
+                            )}
                           </span>
                         </div>
                       ))}
@@ -565,7 +570,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                 <div className="flex justify-between items-center pt-2 mt-2 border-t border-slate-200">
                   <span className="font-bold">Total Amount:</span>
                   <span className="text-lg font-bold">
-                    {calculateTotal().toFixed(2)} {invoiceCurrency}
+                    {formatAmount(calculateTotal() + (applyVat ? calculateVatAmount() : 0), invoiceCurrency)}
                   </span>
                 </div>
               </div>
