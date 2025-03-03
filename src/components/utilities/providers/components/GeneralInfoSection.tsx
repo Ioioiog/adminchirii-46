@@ -84,12 +84,12 @@ export function GeneralInfoSection({ form, properties }: GeneralInfoSectionProps
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                <SelectItem value="electricity">electricity</SelectItem>
-                <SelectItem value="gas">gas</SelectItem>
-                <SelectItem value="water">water</SelectItem>
-                <SelectItem value="internet">internet</SelectItem>
-                <SelectItem value="building maintenance">building maintenance</SelectItem>
-                <SelectItem value="other">other</SelectItem>
+                <SelectItem value="electricity">Electricity</SelectItem>
+                <SelectItem value="water">Water</SelectItem>
+                <SelectItem value="gas">Gas</SelectItem>
+                <SelectItem value="internet">Internet</SelectItem>
+                <SelectItem value="building maintenance">Building Maintenance</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>
             <FormDescription>
