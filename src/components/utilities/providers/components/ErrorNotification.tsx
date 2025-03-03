@@ -28,6 +28,10 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
       return "The system is waiting for redirection to the main page after CAPTCHA verification before selecting the consumption location.";
     }
 
+    if (errorMessage.includes('Waiting for account entry')) {
+      return "After CAPTCHA verification, the system is waiting for the account to fully load before changing the consumption location.";
+    }
+
     if (errorMessage.includes('Waiting for login navigation') || errorMessage.includes('function is shutdown')) {
       return "The process timed out while waiting for the login page to respond after submission. The provider's website may be experiencing high traffic or slowness. Please try again later.";
     }

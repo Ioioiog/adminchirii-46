@@ -53,6 +53,10 @@ export function ScrapingStatus({
       return 'The system timed out while waiting for the login page to respond. Please try again later.';
     }
 
+    if (errorMessage.includes('Waiting for account entry')) {
+      return 'After CAPTCHA verification, waiting for account entry to complete before changing consumption location.';
+    }
+
     if (errorMessage.includes('CAPTCHA')) {
       if (errorMessage.includes('submitted')) {
         return 'CAPTCHA was submitted but the process needs to wait for redirection to continue. Please try again if it fails.';

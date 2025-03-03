@@ -99,6 +99,12 @@ function prepareScrapingRequestBody(provider: UtilityProvider, credentials: Cred
     waitForRedirectAfterCaptcha: provider.provider_name.toLowerCase().includes('engie'),
     // URL to check for redirection after CAPTCHA
     redirectURL: '/prima-pagina',
+    // Resolve popups after logging in and before changing consumption location
+    resolvePopupsAfterLogin: provider.provider_name.toLowerCase().includes('engie'),
+    // Set flag to wait for login completion before proceeding
+    waitForLoginCompletion: provider.provider_name.toLowerCase().includes('engie'),
+    // Wait for account entry after CAPTCHA
+    waitForAccountEntry: provider.provider_name.toLowerCase().includes('engie'),
     // Set user agent to appear as a modern browser
     userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
   };
@@ -148,9 +154,14 @@ export async function invokeScrapingFunction(
     if (!scrapeData.success) {
       console.error('Scraping failed:', scrapeData?.error);
       
-      // Check for CAPTCHA submission but function shutdown
+      // Check for CAPTCHA submission but waiting for redirect to main page
       if (scrapeData.error && scrapeData.error.includes('CAPTCHA submitted')) {
         throw new Error(`CAPTCHA submitted, waiting for redirect to ${requestBody.redirectURL} before changing consumption location.`);
+      }
+      
+      // Check for waiting for account entry after CAPTCHA
+      if (scrapeData.error && scrapeData.error.includes('Waiting for account entry')) {
+        throw new Error(`CAPTCHA submitted, waiting for account entry before proceeding to change consumption location.`);
       }
       
       // Check for MyENGIE app popup issues
@@ -175,6 +186,29 @@ export async function invokeScrapingFunction(
     return scrapeData;
   } catch (error) {
     console.error('Error during scraping function invocation:', error);
+    
+    // Check for waiting for account entry after CAPTCHA
+    if (error instanceof Error && error.message.includes('Waiting for account entry')) {
+      console.log('Waiting for account entry after CAPTCHA, creating fallback job...');
+      
+      try {
+        const jobId = await createScrapingJobDirectly(
+          provider.id,
+          provider.provider_name,
+          provider.utility_type,
+          provider.location_name
+        );
+        
+        return {
+          success: true,
+          jobId: jobId,
+          error: 'After CAPTCHA submission, the system is waiting for account entry. A fallback job has been created.'
+        };
+      } catch (fallbackError) {
+        console.error('Fallback job creation failed:', fallbackError);
+        throw new Error('Waiting for account entry after CAPTCHA. Please try again later.');
+      }
+    }
     
     // Check for CAPTCHA submission message
     if (error instanceof Error && error.message.includes('CAPTCHA submitted')) {
