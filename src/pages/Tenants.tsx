@@ -44,10 +44,8 @@ const Tenants = () => {
             updated_at,
             description,
             available_from,
-            status,
-            tenant_count,
-            landlord_id,
             currency,
+            landlord_id,
             tenancies (
               id,
               status
@@ -64,7 +62,7 @@ const Tenants = () => {
             ...property,
             status: property.tenancies?.some(t => t.status === 'active') ? 'occupied' : 'vacant',
             tenant_count: property.tenancies?.filter(t => t.status === 'active').length || 0,
-            currency: property.currency || 'EUR' // Add this line to ensure currency is included
+            currency: property.currency || 'EUR' // Ensure currency has a default value
           }));
           setProperties(propertiesWithStatus as Property[]);
         }

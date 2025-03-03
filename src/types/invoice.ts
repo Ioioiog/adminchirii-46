@@ -86,6 +86,6 @@ export interface InvoiceDialogProps {
 
 export interface InvoiceFormProps {
   onSuccess: () => void;
-  userId?: string;
-  userRole?: "tenant" | "landlord" | "service_provider";
+  userId: string;
+  userRole: "tenant" | "landlord" | "service_provider";
 }
