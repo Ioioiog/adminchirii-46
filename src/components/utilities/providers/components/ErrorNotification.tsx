@@ -28,8 +28,8 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
       return "After CAPTCHA verification, the system is waiting for the account to fully load before changing the consumption location.";
     }
 
-    if (errorMessage.includes('Waiting for login navigation') || errorMessage.includes('function is shutdown')) {
-      return "The process timed out while waiting for the login page to respond after submission. The provider's website may be experiencing high traffic or slowness. Please try again later.";
+    if (errorMessage.includes('function is shutdown')) {
+      return "The process timed out. The provider's website may be experiencing high traffic or slowness. Please try again later.";
     }
     
     if (errorMessage.includes('Change consumption location') || errorMessage.includes('Schimbă locul de consum') || errorMessage.includes('alege locul de consum')) {

@@ -49,8 +49,8 @@ export function ScrapingStatus({
       return 'The scraping service returned invalid data. This is often due to provider website changes.';
     }
     
-    if (errorMessage.includes('Waiting for login navigation') || errorMessage.includes('function is shutdown')) {
-      return 'The system timed out while waiting for the login page to respond. Please try again later.';
+    if (errorMessage.includes('function is shutdown')) {
+      return 'The system timed out. Please try again later.';
     }
 
     if (errorMessage.includes('Waiting for account entry')) {

@@ -59,29 +59,6 @@ export function useJobStatusManager() {
         return 'failed';
       }
       
-      // Check if the job was interrupted during "Waiting for login navigation"
-      if (job.status === 'in_progress' && job.error_message && job.error_message.includes('Waiting for login navigation')) {
-        console.log('Job appears to be stuck in login navigation, marking as failed');
-        
-        // Update the job status directly in the database
-        await supabase
-          .from('scraping_jobs')
-          .update({
-            status: 'failed',
-            error_message: 'The process timed out while waiting for the login page to respond after CAPTCHA. This often happens when the provider website is experiencing high traffic.'
-          })
-          .eq('id', jobId);
-          
-        // Update the local state
-        updateJobStatus(providerId, {
-          status: 'failed',
-          last_run_at: job.created_at,
-          error_message: 'The process timed out while waiting for the login page to respond after CAPTCHA. This often happens when the provider website is experiencing high traffic.'
-        });
-        
-        return 'failed';
-      }
-      
       // Check for WebSocket connection issues
       if (job.status === 'in_progress' && job.error_message && 
           (job.error_message.includes('WebSocket') || job.error_message.includes('NoApplicationProtocol'))) {
@@ -113,16 +90,13 @@ export function useJobStatusManager() {
       }
       
       // Continue with regular error handling
-      if (job.status === 'failed' && 
-          job.error_message && 
-          (job.error_message.includes('Waiting for login navigation') || 
-           job.error_message.includes('navigation timeout'))) {
-        console.log('Job failed due to navigation timeout after CAPTCHA, special handling');
+      if (job.status === 'failed' && job.error_message && job.error_message.includes('navigation timeout')) {
+        console.log('Job failed due to navigation timeout, special handling');
         
         updateJobStatus(providerId, {
           status: 'failed',
           last_run_at: job.created_at,
-          error_message: 'Login navigation timed out after CAPTCHA submission. The provider website may be slow or experiencing high traffic. Please try again later.'
+          error_message: 'Navigation timed out. The provider website may be slow or experiencing high traffic. Please try again later.'
         });
       } 
       // Check if the job shows signs of being interrupted after CAPTCHA
@@ -227,11 +201,10 @@ export function useJobStatusManager() {
           if (job?.error_message) {
             console.error('Scraping job failed with error:', job.error_message);
             
-            // Handle navigation timeout after CAPTCHA
-            if (job.error_message.includes('Waiting for login navigation') || 
-                job.error_message.includes('navigation timeout') ||
+            // Handle navigation timeout
+            if (job.error_message.includes('navigation timeout') ||
                 job.error_message.includes('function is shutdown')) {
-              errorDescription = "The system timed out while waiting for the login page to respond after CAPTCHA submission. The provider website may be slow or experiencing high traffic. Please try again later.";
+              errorDescription = "The system timed out. The provider website may be slow or experiencing high traffic. Please try again later.";
             }
             // Handle CAPTCHA specific errors
             else if (job.error_message.includes('CAPTCHA submitted')) {

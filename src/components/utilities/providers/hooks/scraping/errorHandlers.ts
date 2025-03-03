@@ -48,8 +48,8 @@ export function formatErrorMessage(error: unknown): string {
       errorMessage = "Required module is missing. Please contact support to fix the scraper implementation.";
     } else if (error.message.includes("CAPTCHA submitted")) {
       errorMessage = "The CAPTCHA was successfully submitted, but the process was interrupted afterward. Please try again.";
-    } else if (error.message.includes("Waiting for login navigation") || error.message.includes("navigation timeout")) {
-      errorMessage = "The system timed out while waiting for the login page to respond after CAPTCHA. The provider website may be slow to respond. Please try again later.";
+    } else if (error.message.includes("navigation timeout")) {
+      errorMessage = "The system timed out waiting for the provider website to respond. Please try again later.";
     } else if (error.message.includes("reCAPTCHA") || error.message.includes("captcha")) {
       errorMessage = "The provider's website requires CAPTCHA verification which cannot be automated. Please log in to the provider's website directly.";
     } else if (error.message.includes("SyntaxError: Unexpected end of JSON")) {
@@ -115,8 +115,8 @@ export function formatEdgeFunctionError(errorMessage: string | undefined): strin
     return "The scraping process was interrupted. This is often due to reaching the function's maximum execution time or session cookies. Please try again.";
   }
   
-  if (errorMessage.includes("Waiting for login navigation") || errorMessage.includes("navigation timeout")) {
-    return "The system timed out while waiting for the login page to respond after CAPTCHA. The provider website may be slow or experiencing high traffic. Please try again later.";
+  if (errorMessage.includes("navigation timeout")) {
+    return "The system timed out waiting for the provider website to respond. Please try again later.";
   }
   
   if (errorMessage.includes("CAPTCHA submitted")) {
@@ -182,7 +182,6 @@ export function isEdgeFunctionError(error: unknown): boolean {
            error.message.includes("function is shutdown") ||
            error.message.includes("interrupted") ||
            error.message.includes("CAPTCHA submitted") ||
-           error.message.includes("Waiting for login navigation") ||
            error.message.includes("navigation timeout") ||
            error.message.includes("SyntaxError: Unexpected end of JSON") ||
            error.message.includes("cookie") ||
