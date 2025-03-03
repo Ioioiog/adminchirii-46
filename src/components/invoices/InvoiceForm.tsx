@@ -13,6 +13,7 @@ import { FileText, Building, CreditCard, Calculator } from "lucide-react";
 import { InvoiceFormProps, InvoiceMetadata } from "@/types/invoice";
 import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface InvoiceFormValues {
   property_id: string;
@@ -33,12 +34,22 @@ interface InvoiceSettings {
   [key: string]: any;
 }
 
+interface UtilityForInvoice {
+  id: string;
+  type: string;
+  amount: number;
+  percentage?: number;
+  original_amount?: number;
+  selected?: boolean;
+}
+
 export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: InvoiceFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [properties, setProperties] = useState<Array<PropertyOption>>([]);
   const { toast } = useToast();
   const [tenants, setTenants] = useState<Array<{ id: string; first_name: string; last_name: string }>>([]);
   const [selectedProperty, setSelectedProperty] = useState<PropertyOption | null>(null);
+  const [utilities, setUtilities] = useState<UtilityForInvoice[]>([]);
 
   const formSchema = z.object({
     property_id: z.string({ required_error: "Please select a property" }),
@@ -69,6 +80,14 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 14);
     form.setValue("due_date", dueDate.toISOString().split('T')[0]);
+
+    // Check if calculationData contains utilities
+    if (calculationData?.utilities && Array.isArray(calculationData.utilities)) {
+      setUtilities(calculationData.utilities.map(util => ({
+        ...util,
+        selected: true
+      })));
+    }
   }, [calculationData, form]);
 
   useEffect(() => {
@@ -194,6 +213,24 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     }
   }, [selectedProperty, form]);
 
+  const handleUtilitySelection = (id: string, selected: boolean) => {
+    setUtilities(prevUtilities => 
+      prevUtilities.map(util => 
+        util.id === id ? { ...util, selected } : util
+      )
+    );
+  };
+
+  const getSelectedUtilities = () => {
+    return utilities.filter(util => util.selected).map(util => ({
+      id: util.id,
+      amount: util.amount,
+      type: util.type,
+      percentage: util.percentage,
+      original_amount: util.original_amount,
+    }));
+  };
+
   const onSubmit = async (values: InvoiceFormValues) => {
     try {
       setIsLoading(true);
@@ -219,16 +256,20 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       
       const vatRate = applyVat ? 19 : 0;
       
-      // Prepare metadata if we have date range from calculation
-      let metadata: Record<string, any> | undefined;
+      // Prepare metadata with date range and selected utilities
+      let metadata: InvoiceMetadata = {};
       
       if (calculationData?.dateRange) {
-        metadata = {
-          date_range: {
-            from: format(calculationData.dateRange.from, 'yyyy-MM-dd'),
-            to: format(calculationData.dateRange.to, 'yyyy-MM-dd')
-          }
+        metadata.date_range = {
+          from: format(calculationData.dateRange.from, 'yyyy-MM-dd'),
+          to: format(calculationData.dateRange.to, 'yyyy-MM-dd')
         };
+      }
+
+      // Add selected utilities to metadata
+      const selectedUtils = getSelectedUtilities();
+      if (selectedUtils.length > 0) {
+        metadata.utilities_included = selectedUtils;
       }
 
       const { data, error } = await supabase
@@ -267,6 +308,16 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Calculate total including selected utilities
+  const calculateTotal = () => {
+    const baseAmount = form.getValues("amount") || 0;
+    const selectedUtilsTotal = utilities
+      .filter(util => util.selected)
+      .reduce((sum, util) => sum + util.amount, 0);
+    
+    return baseAmount + selectedUtilsTotal;
   };
 
   return (
@@ -392,16 +443,43 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                 )}
                 
                 <div className="flex justify-between items-center py-1">
-                  <span className="text-sm">Invoice Amount:</span>
+                  <span className="text-sm">Rent Amount:</span>
                   <span className="text-sm font-medium">
                     {form.getValues("amount")} {calculationData?.currency || selectedProperty?.currency || "EUR"}
                   </span>
                 </div>
 
+                {/* Display utilities section only if there are utilities */}
+                {utilities.length > 0 && (
+                  <div className="mt-3 pt-2 border-t">
+                    <h4 className="text-sm font-medium mb-2">Utilities:</h4>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {utilities.map((utility) => (
+                        <div key={utility.id} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Checkbox 
+                              id={`utility-${utility.id}`}
+                              checked={utility.selected}
+                              onCheckedChange={(checked) => handleUtilitySelection(utility.id, !!checked)}
+                            />
+                            <label htmlFor={`utility-${utility.id}`} className="text-sm cursor-pointer">
+                              {utility.type} 
+                              {utility.percentage && <span className="text-xs text-gray-500 ml-1">({utility.percentage}%)</span>}
+                            </label>
+                          </div>
+                          <span className="text-sm font-medium">
+                            {utility.amount} {calculationData?.currency || selectedProperty?.currency || "EUR"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex justify-between items-center pt-2 mt-2 border-t border-slate-200">
                   <span className="font-bold">Total Amount:</span>
                   <span className="text-lg font-bold">
-                    {form.getValues("amount")} {calculationData?.currency || selectedProperty?.currency || "EUR"}
+                    {calculateTotal()} {calculationData?.currency || selectedProperty?.currency || "EUR"}
                   </span>
                 </div>
               </div>

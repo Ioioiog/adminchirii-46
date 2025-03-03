@@ -110,4 +110,11 @@ export interface CalculationData {
   };
   currency?: string;
   grandTotal?: number;
+  utilities?: Array<{
+    id: string;
+    type: string;
+    amount: number;
+    percentage?: number;
+    original_amount?: number;
+  }>;
 }

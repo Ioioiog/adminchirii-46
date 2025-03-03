@@ -298,6 +298,16 @@ const CostCalculator = () => {
       return;
     }
 
+    const selectedUtilities = utilities
+      .filter(utility => utility.selected)
+      .map(utility => ({
+        id: utility.id,
+        type: utility.type,
+        amount: getAdjustedUtilityAmount(utility),
+        percentage: utility.percentage,
+        original_amount: utility.amount
+      }));
+
     const dateRangeForInvoice = selectedDateRange && 
       selectedDateRange.from && 
       selectedDateRange.to ? {
@@ -310,7 +320,8 @@ const CostCalculator = () => {
       rentAmount: rentAmount + vatAmount,
       dateRange: dateRangeForInvoice,
       currency: rentCurrency,
-      grandTotal: calculateGrandTotal()
+      grandTotal: calculateGrandTotal(),
+      utilities: selectedUtilities
     };
 
     setShowInvoiceDialog(true);
@@ -602,7 +613,8 @@ const CostCalculator = () => {
                 to: selectedDateRange.to
               } : undefined,
             currency: rentCurrency,
-            grandTotal: calculateGrandTotal()
+            grandTotal: calculateGrandTotal(),
+            utilities: utilities
           }}
         />
       )}
