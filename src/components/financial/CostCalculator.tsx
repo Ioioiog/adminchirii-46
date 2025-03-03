@@ -301,12 +301,15 @@ export function CostCalculator() {
         };
       }
       
-      const utilityType = item.utility_type.replace(' ', '_').toLowerCase();
+      // Normalize utility_type by removing spaces and converting to lowercase
+      let utilityType = item.utility_type.replace(/ /g, '_').toLowerCase();
+      
+      // Check if the utility type is one of our predefined types
       if (monthlyData[monthYear][utilityType] !== undefined) {
         monthlyData[monthYear][utilityType] += item.amount;
         monthlyData[monthYear].total += item.amount;
       } else {
-        // Handle any utility types not directly mapped, adding to total
+        // For any other utility types not directly mapped, just add to total
         console.log(`Unmapped utility type: ${utilityType}`);
         monthlyData[monthYear].total += item.amount;
       }
