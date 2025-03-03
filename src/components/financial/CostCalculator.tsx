@@ -301,7 +301,10 @@ const CostCalculator = () => {
     const calculationData = {
       propertyId: selectedPropertyId,
       rentAmount: rentAmount + vatAmount,
-      dateRange: selectedDateRange,
+      dateRange: selectedDateRange && selectedDateRange.from && selectedDateRange.to ? {
+        from: selectedDateRange.from,
+        to: selectedDateRange.to
+      } : undefined,
       utilities: utilities
         .filter(utility => utility.selected)
         .map(utility => ({
@@ -597,7 +600,10 @@ const CostCalculator = () => {
           calculationData={{
             propertyId: selectedPropertyId,
             rentAmount: rentAmount + vatAmount,
-            dateRange: selectedDateRange,
+            dateRange: selectedDateRange && selectedDateRange.from && selectedDateRange.to ? {
+              from: selectedDateRange.from,
+              to: selectedDateRange.to
+            } : undefined,
             utilities: utilities
               .filter(utility => utility.selected)
               .map(utility => ({
