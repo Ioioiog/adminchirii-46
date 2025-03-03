@@ -13,7 +13,7 @@ import { differenceInDays, isLastDayOfMonth, format } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { CalendarIcon, Percent, BarChart3, FileText, Building, Clock, Upload, CreditCard } from "lucide-react";
-import { UtilityItem } from "@/types/invoice";
+import { UtilityItem, InvoiceFormProps } from "@/types/invoice";
 
 interface InvoiceFormValues {
   property_id: string;
@@ -26,10 +26,6 @@ interface InvoiceFormValues {
   partial_percentage?: number;
   calculation_method: 'percentage' | 'days';
   days_calculated?: number;
-}
-
-interface InvoiceFormProps {
-  onSuccess?: () => void;
 }
 
 interface Utility {
@@ -45,7 +41,7 @@ interface Utility {
   is_partial?: boolean;
 }
 
-export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
+export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [properties, setProperties] = useState<Array<{ id: string; name: string; monthly_rent: number }>>([]);
   const { toast } = useToast();
