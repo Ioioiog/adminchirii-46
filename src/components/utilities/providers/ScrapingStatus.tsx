@@ -84,6 +84,11 @@ export function ScrapingStatus({
       return 'The process timed out while trying to load the invoices table. The ENGIE website may be slow to respond.';
     }
     
+    // Handle WebSocket and SSL protocol errors
+    if (errorMessage.includes('WebSocket') || errorMessage.includes('NoApplicationProtocol')) {
+      return 'Network connection issue occurred. This may be due to SSL/TLS protocol mismatch or firewall restrictions. Please try again later.';
+    }
+    
     return errorMessage;
   };
 

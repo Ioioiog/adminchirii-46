@@ -68,6 +68,14 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
       return "The process timed out while trying to load the invoices table. This often happens when the ENGIE website is slow to respond. Please try again later.";
     }
     
+    // Add handling for WebSocket and SSL protocol errors
+    if (errorMessage.includes('WebSocket')) {
+      if (errorMessage.includes('NoApplicationProtocol')) {
+        return "There was a network connection issue due to an SSL/TLS protocol mismatch. This often happens when the provider website has updated their security settings. Please try again later.";
+      }
+      return "A WebSocket connection error occurred during the scraping process. This may be due to network issues or firewall restrictions. Please try again later.";
+    }
+    
     return "There was an error fetching your utility bills. Please try again later.";
   };
   
