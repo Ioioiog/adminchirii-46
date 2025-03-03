@@ -41,6 +41,7 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       }
       if (!user) return;
 
+      console.log("Fetching properties for user:", user.id);
       const { data: properties, error: propertiesError } = await supabase
         .from("properties")
         .select("id, name")
@@ -51,6 +52,7 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
         return;
       }
 
+      console.log("Fetched properties:", properties);
       setProperties(properties || []);
     };
 
@@ -210,6 +212,7 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
         <Label htmlFor="property">Property</Label>
         <Select 
           onValueChange={(value) => {
+            console.log("Property selected:", value);
             form.setValue("property_id", value);
             setSelectedPropertyId(value);
           }}
@@ -219,11 +222,17 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
             <SelectValue placeholder="Select a property" />
           </SelectTrigger>
           <SelectContent>
-            {properties.map((property) => (
-              <SelectItem key={property.id} value={property.id}>
-                {property.name}
+            {properties.length > 0 ? (
+              properties.map((property) => (
+                <SelectItem key={property.id} value={property.id}>
+                  {property.name}
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem value="no-properties" disabled>
+                No properties available
               </SelectItem>
-            ))}
+            )}
           </SelectContent>
         </Select>
       </div>

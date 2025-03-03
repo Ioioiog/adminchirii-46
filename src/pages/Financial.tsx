@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { DollarSign, FileText, CreditCard, BarChart2, Building, Calculator } from "lucide-react";
 import { InvoiceList } from "@/components/invoices/InvoiceList";
@@ -22,6 +21,7 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { startOfMonth, endOfMonth } from "date-fns";
 import { CostCalculator } from "@/components/financial/CostCalculator";
 import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 type FinancialSection = 'invoices' | 'payments' | 'overview';
 
@@ -129,7 +129,6 @@ const Financial = () => {
           description="Summary of your financial activities for the current month"
         />
         
-        {/* Add Cost Calculator at the top */}
         {isLandlordOrTenant && <CostCalculator />}
         
         <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
@@ -257,7 +256,11 @@ const Financial = () => {
                 }
               />
               {userRole === 'landlord' && (
-                <Button onClick={() => setShowInvoiceDialog(true)}>
+                <Button 
+                  onClick={() => setShowInvoiceDialog(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
                   Create Invoice
                 </Button>
               )}
@@ -275,6 +278,7 @@ const Financial = () => {
             )}
             {showInvoiceDialog && userId && filteredUserRole && (
               <InvoiceDialog 
+                open={showInvoiceDialog}
                 onOpenChange={setShowInvoiceDialog}
                 userId={userId}
                 userRole={filteredUserRole}
