@@ -20,7 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Invoice } from "@/types/invoice";
+import { Invoice, InvoiceMetadata } from "@/types/invoice";
 
 export interface InvoiceActionsProps {
   invoiceId: string;
@@ -89,18 +89,23 @@ export function InvoiceActions({
       if (fetchError) throw fetchError;
       
       // If the invoice included utilities, update their status
-      if (invoiceData?.metadata?.utilities_included) {
-        const utilities = invoiceData.metadata.utilities_included;
+      if (invoiceData?.metadata) {
+        // Safely cast metadata to our expected structure
+        const metadata = invoiceData.metadata as InvoiceMetadata;
         
-        for (const utility of utilities) {
-          // Reset the utility to not be invoiced
-          await supabase
-            .from("utilities")
-            .update({ 
-              invoiced: false, 
-              invoiced_percentage: null 
-            })
-            .eq("id", utility.id);
+        if (metadata && metadata.utilities_included && Array.isArray(metadata.utilities_included)) {
+          const utilities = metadata.utilities_included;
+          
+          for (const utility of utilities) {
+            // Reset the utility to not be invoiced
+            await supabase
+              .from("utilities")
+              .update({ 
+                invoiced: false, 
+                invoiced_percentage: null 
+              })
+              .eq("id", utility.id);
+          }
         }
       }
       
