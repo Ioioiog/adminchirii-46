@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,13 +9,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { DateRange } from "react-day-picker";
-import { DatePickerWithRange } from "@/components/ui/date-range-picker";
-import { CalendarIcon, Percent, BarChart3, FileText, Building, Clock, Upload, CreditCard, Calculator, AlertCircle } from "lucide-react";
-import { UtilityItem, InvoiceFormProps, InvoiceMetadata } from "@/types/invoice";
-import { Json } from "@/integrations/supabase/types/json";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { FileText, Building, CreditCard, Calculator } from "lucide-react";
+import { InvoiceFormProps, InvoiceMetadata } from "@/types/invoice";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface InvoiceFormValues {
@@ -22,21 +18,6 @@ interface InvoiceFormValues {
   tenant_id: string;
   amount: number;
   due_date: string;
-  is_partial: boolean;
-  calculation_method: string;
-  partial_percentage: number;
-  date_range: DateRange | undefined;
-  include_utilities: boolean;
-  days_calculated?: number;
-}
-
-interface Utility {
-  id: string;
-  type: string;
-  amount: number;
-  due_date: string;
-  property_id: string;
-  status: string;
 }
 
 interface PropertyOption {
@@ -44,7 +25,6 @@ interface PropertyOption {
   name: string;
   monthly_rent: number;
   currency: string;
-  is_partial?: boolean;
 }
 
 interface InvoiceSettings {
@@ -58,57 +38,26 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
   const { toast } = useToast();
   const [tenants, setTenants] = useState<Array<{ id: string; first_name: string; last_name: string }>>([]);
   const [selectedProperty, setSelectedProperty] = useState<PropertyOption | null>(null);
-  const [utilities, setUtilities] = useState<Utility[]>([]);
-  const [includeUtilities, setIncludeUtilities] = useState(false);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(calculationData?.dateRange || undefined);
-  const [daysInMonth, setDaysInMonth] = useState(30);
-  const [dailyRate, setDailyRate] = useState(0);
-  const [validationError, setValidationError] = useState<string | null>(null);
 
   const formSchema = z.object({
     property_id: z.string({ required_error: "Please select a property" }),
     tenant_id: z.string({ required_error: "Please select a tenant" }),
     amount: z.number().min(0, "Amount must be a positive number"),
     due_date: z.string({ required_error: "Please select a due date" }),
-    is_partial: z.boolean().default(false),
-    calculation_method: z.string().optional(),
-    partial_percentage: z.number().min(1).max(100).optional(),
-    include_utilities: z.boolean().default(false),
-    days_calculated: z.number().min(1).optional(),
   });
 
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      is_partial: false,
-      calculation_method: "percentage",
-      partial_percentage: 100,
-      include_utilities: calculationData?.utilities && calculationData.utilities.length > 0 ? true : false,
       amount: calculationData?.rentAmount || 0,
     },
   });
 
-  const isPartial = form.watch("is_partial");
-  const calculationMethod = form.watch("calculation_method");
-  const partialPercentage = form.watch("partial_percentage");
   const propertyId = form.watch("property_id");
-  const includeUtilitiesValue = form.watch("include_utilities");
 
   useEffect(() => {
     if (calculationData?.propertyId) {
       form.setValue("property_id", calculationData.propertyId);
-      
-      if (calculationData.dateRange) {
-        setDateRange(calculationData.dateRange);
-        if (calculationData.dateRange.from && calculationData.dateRange.to) {
-          calculateDays();
-        }
-      }
-      
-      if (calculationData.utilities && calculationData.utilities.length > 0) {
-        form.setValue("include_utilities", true);
-        setIncludeUtilities(true);
-      }
     }
   }, [calculationData]);
 
@@ -230,174 +179,14 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
   }, [propertyId, userRole, toast]);
 
   useEffect(() => {
-    const fetchUtilities = async () => {
-      if (!propertyId) return;
-
-      if (calculationData?.utilities && calculationData.utilities.length > 0) {
-        const formattedUtilities = calculationData.utilities.map(utility => ({
-          id: utility.id,
-          type: utility.type,
-          amount: utility.amount,
-          due_date: new Date().toISOString(),
-          property_id: propertyId,
-          status: "pending"
-        }));
-        setUtilities(formattedUtilities);
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-        const { data, error } = await supabase
-          .from("utilities")
-          .select("*")
-          .eq("property_id", propertyId)
-          .eq("status", "pending");
-
-        if (error) throw error;
-
-        setUtilities(data);
-      } catch (error: any) {
-        console.error("Error fetching utilities:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error.message || "Could not fetch utilities",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchUtilities();
-  }, [propertyId, calculationData, toast]);
-
-  useEffect(() => {
-    if (!selectedProperty) return;
-
-    const dailyRent = selectedProperty.monthly_rent / 30;
-    setDailyRate(dailyRent);
-    setDaysInMonth(30);
-
-    if (dateRange?.from && dateRange?.to) {
-      calculateDays();
+    if (selectedProperty) {
+      form.setValue("amount", selectedProperty.monthly_rent);
     }
-  }, [selectedProperty, dateRange]);
-
-  useEffect(() => {
-    calculateAmount();
-  }, [propertyId, isPartial, calculationMethod, partialPercentage, dateRange, includeUtilitiesValue]);
-
-  const calculateDays = () => {
-    if (!dateRange?.from || !dateRange?.to) return 0;
-
-    const from = new Date(dateRange.from);
-    const to = new Date(dateRange.to);
-    const diffTime = Math.abs(to.getTime() - from.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-
-    form.setValue("days_calculated", diffDays);
-    return diffDays;
-  };
-
-  const calculateAmount = () => {
-    if (!selectedProperty) return;
-    setValidationError(null);
-
-    let amount = selectedProperty.monthly_rent;
-    const days = form.getValues("days_calculated") || 0;
-    
-    if (isPartial) {
-      if (calculationMethod === "percentage") {
-        amount = (selectedProperty.monthly_rent * (partialPercentage || 0)) / 100;
-      } else if (calculationMethod === "days") {
-        if (!dateRange?.from || !dateRange?.to) {
-          setValidationError("Please select a date range for day calculation");
-          return;
-        }
-        amount = dailyRate * days;
-      }
-    }
-
-    if (includeUtilitiesValue && utilities.length > 0) {
-      const utilitiesTotal = utilities.reduce((sum, utility) => sum + utility.amount, 0);
-      
-      if (isPartial && calculationMethod === "percentage") {
-        amount += (utilitiesTotal * (partialPercentage || 0)) / 100;
-      } else {
-        amount += utilitiesTotal;
-      }
-    }
-
-    form.setValue("amount", Math.round(amount * 100) / 100);
-  };
-
-  const validateForm = (): boolean => {
-    if (isPartial && calculationMethod === "days" && (!dateRange?.from || !dateRange?.to)) {
-      setValidationError("Please select a date range for day calculation");
-      return false;
-    }
-
-    if (!form.getValues("due_date")) {
-      setValidationError("Please select a due date");
-      return false;
-    }
-
-    return true;
-  };
+  }, [selectedProperty]);
 
   const onSubmit = async (values: InvoiceFormValues) => {
-    if (!validateForm()) {
-      return;
-    }
-    
     try {
       setIsLoading(true);
-      setValidationError(null);
-
-      const days = calculateDays();
-
-      const metadata: Record<string, any> = {};
-      
-      if (values.is_partial) {
-        metadata.is_partial = true;
-        metadata.calculation_method = values.calculation_method as 'percentage' | 'days';
-        metadata.full_amount = selectedProperty?.monthly_rent;
-        
-        if (values.calculation_method === "percentage") {
-          metadata.partial_percentage = values.partial_percentage;
-        } else if (values.calculation_method === "days") {
-          metadata.days_calculated = days;
-          metadata.daily_rate = dailyRate;
-          if (dateRange?.from && dateRange?.to) {
-            metadata.date_range = {
-              from: dateRange.from.toISOString(),
-              to: dateRange.to.toISOString()
-            };
-          }
-        }
-      }
-
-      if (values.include_utilities && utilities.length > 0) {
-        const utilityItems = utilities.map(utility => {
-          const item: Record<string, any> = {
-            id: utility.id,
-            type: utility.type,
-            amount: utility.amount,
-            due_date: utility.due_date
-          };
-
-          if (values.is_partial && values.calculation_method === "percentage") {
-            item.original_amount = utility.amount;
-            item.percentage = values.partial_percentage;
-            item.amount = (utility.amount * values.partial_percentage) / 100;
-          }
-
-          return item;
-        });
-        
-        metadata.utilities_included = utilityItems;
-      }
 
       const { data: landlordProfile, error: profileError } = await supabase
         .from("profiles")
@@ -430,40 +219,10 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
           due_date: values.due_date,
           status: "pending",
           currency: selectedProperty?.currency || "EUR",
-          metadata: metadata,
           vat_rate: vatRate
         });
 
       if (error) throw error;
-
-      if (values.include_utilities && utilities.length > 0) {
-        for (const utility of utilities) {
-          const updateObj: any = {
-            id: utility.id,
-            invoiced: true
-          };
-          
-          if (values.is_partial && values.calculation_method === "percentage") {
-            updateObj.invoiced_percentage = values.partial_percentage;
-          } else {
-            updateObj.invoiced_percentage = 100; // Full invoice
-          }
-          
-          const { error: utilityError } = await supabase
-            .from("utilities")
-            .update(updateObj)
-            .eq("id", utility.id);
-          
-          if (utilityError) {
-            console.error("Error updating utility:", utilityError);
-            toast({
-              variant: "destructive",
-              title: "Warning",
-              description: `Some utilities may not have been properly marked as invoiced. ${utilityError.message}`,
-            });
-          }
-        }
-      }
 
       toast({
         title: "Success",
@@ -490,13 +249,6 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        {validationError && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{validationError}</AlertDescription>
-          </Alert>
-        )}
-        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
@@ -579,193 +331,24 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
 
           <FormField
             control={form.control}
-            name="is_partial"
+            name="amount"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center space-x-3 space-y-0 mt-8">
+              <FormItem>
+                <FormLabel>Amount</FormLabel>
                 <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
+                  <Input
+                    type="number"
+                    step="0.01"
+                    {...field}
+                    onChange={(e) => field.onChange(parseFloat(e.target.value))}
                     disabled={isLoading}
                   />
                 </FormControl>
-                <FormLabel className="cursor-pointer font-normal">
-                  Partial Invoice
-                </FormLabel>
+                <FormMessage />
               </FormItem>
             )}
           />
         </div>
-
-        {isPartial && (
-          <Card className="border bg-slate-50">
-            <CardContent className="pt-6 space-y-6">
-              <h3 className="text-md font-medium flex items-center gap-2">
-                <Percent className="h-5 w-5 text-slate-500" />
-                Partial Invoice Settings
-              </h3>
-
-              <FormField
-                control={form.control}
-                name="calculation_method"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Calculation Method</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select calculation method" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="percentage">By Percentage</SelectItem>
-                        <SelectItem value="days">By Days</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {calculationMethod === "percentage" && (
-                <FormField
-                  control={form.control}
-                  name="partial_percentage"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Percentage of Monthly Rent (%)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={100}
-                          {...field}
-                          onChange={(e) => {
-                            field.onChange(Number(e.target.value));
-                            calculateAmount();
-                          }}
-                          disabled={isLoading}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              {calculationMethod === "days" && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <FormLabel>Date Range</FormLabel>
-                    <DatePickerWithRange
-                      date={dateRange}
-                      onDateChange={(range) => {
-                        setDateRange(range);
-                        if (range && range.from && range.to) {
-                          setValidationError(null);
-                        }
-                      }}
-                    />
-                  </div>
-                
-                  <div className="flex flex-col gap-2 p-4 bg-white rounded-md border border-slate-200">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-slate-700">
-                        <Clock className="w-4 h-4 inline mr-1" />
-                        Daily rate:
-                      </span>
-                      <span className="text-sm font-semibold">
-                        {selectedProperty ? dailyRate.toFixed(2) : "0.00"} {selectedProperty?.currency || "EUR"}
-                      </span>
-                    </div>
-                    
-                    {form.getValues("days_calculated") > 0 && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-slate-700">
-                          <CalendarIcon className="w-4 h-4 inline mr-1" />
-                          Days calculated:
-                        </span>
-                        <span className="text-sm font-semibold">
-                          {form.getValues("days_calculated")}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-200">
-                      <span className="text-sm font-medium text-slate-700">
-                        <Calculator className="w-4 h-4 inline mr-1" />
-                        Subtotal:
-                      </span>
-                      <span className="text-sm font-semibold">
-                        {(dailyRate * (form.getValues("days_calculated") || 0)).toFixed(2)} {selectedProperty?.currency || "EUR"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {utilities.length > 0 && (
-          <Card className="border bg-slate-50">
-            <CardContent className="pt-6 space-y-6">
-              <h3 className="text-md font-medium flex items-center gap-2">
-                <Building className="h-5 w-5 text-slate-500" />
-                Utilities
-              </h3>
-
-              <FormField
-                control={form.control}
-                name="include_utilities"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        disabled={isLoading}
-                      />
-                    </FormControl>
-                    <FormLabel className="cursor-pointer font-normal">
-                      Include pending utilities
-                    </FormLabel>
-                  </FormItem>
-                )}
-              />
-
-              {includeUtilitiesValue && (
-                <div className="space-y-3">
-                  <p className="text-sm text-slate-500">
-                    The following utilities will be included in this invoice:
-                  </p>
-                  <div className="bg-white rounded-md border p-3 space-y-3">
-                    {utilities.map((utility) => (
-                      <div key={utility.id} className="flex justify-between items-center py-2 px-3 bg-slate-50 rounded border text-sm">
-                        <span className="font-medium">{utility.type}</span>
-                        <span className="font-semibold">
-                          {isPartial && calculationMethod === "percentage"
-                            ? `${((utility.amount * (partialPercentage || 0)) / 100).toFixed(2)} (${partialPercentage}%)`
-                            : utility.amount.toFixed(2)}
-                          {" "}{selectedProperty?.currency || "EUR"}
-                        </span>
-                      </div>
-                    ))}
-                    <div className="flex justify-between items-center pt-2 mt-2 border-t border-slate-200">
-                      <span className="text-sm font-medium">Utilities Total:</span>
-                      <span className="text-sm font-semibold">
-                        {isPartial && calculationMethod === "percentage"
-                          ? (utilities.reduce((sum, utility) => sum + (utility.amount * (partialPercentage || 0)) / 100, 0)).toFixed(2)
-                          : (utilities.reduce((sum, utility) => sum + utility.amount, 0)).toFixed(2)}
-                        {" "}{selectedProperty?.currency || "EUR"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
 
         <Card className="border bg-slate-100">
           <CardContent className="pt-6">
@@ -781,36 +364,6 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                     <span className="text-sm">Base Monthly Rent:</span>
                     <span className="text-sm font-medium">
                       {selectedProperty.monthly_rent.toFixed(2)} {selectedProperty.currency}
-                    </span>
-                  </div>
-                )}
-
-                {isPartial && calculationMethod === "percentage" && selectedProperty && (
-                  <div className="flex justify-between items-center py-1">
-                    <span className="text-sm">Percentage Applied:</span>
-                    <span className="text-sm font-medium">
-                      {partialPercentage}%
-                    </span>
-                  </div>
-                )}
-
-                {isPartial && calculationMethod === "days" && form.getValues("days_calculated") > 0 && (
-                  <div className="flex justify-between items-center py-1">
-                    <span className="text-sm">Days Calculation:</span>
-                    <span className="text-sm font-medium">
-                      {form.getValues("days_calculated")} days × {dailyRate.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-
-                {includeUtilitiesValue && utilities.length > 0 && (
-                  <div className="flex justify-between items-center py-1">
-                    <span className="text-sm">Utilities:</span>
-                    <span className="text-sm font-medium">
-                      {isPartial && calculationMethod === "percentage"
-                        ? (utilities.reduce((sum, utility) => sum + (utility.amount * (partialPercentage || 0)) / 100, 0)).toFixed(2)
-                        : (utilities.reduce((sum, utility) => sum + utility.amount, 0)).toFixed(2)}
-                      {" "}{selectedProperty?.currency || "EUR"}
                     </span>
                   </div>
                 )}
