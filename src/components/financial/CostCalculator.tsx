@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useProperties } from '@/hooks/useProperties';
 import { useUserRole } from '@/hooks/use-user-role';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface UtilityItem {
   type: string;
@@ -32,6 +33,7 @@ interface LandlordProfile {
 const CostCalculator = () => {
   const { userRole } = useUserRole();
   const { properties } = useProperties({ userRole: userRole || 'tenant' });
+  const { availableCurrencies } = useCurrency();
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
   const [selectedProperty, setSelectedProperty] = useState<any>(null);
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
@@ -46,6 +48,8 @@ const CostCalculator = () => {
   const [applyVat, setApplyVat] = useState<boolean>(false);
   const [vatRate, setVatRate] = useState<number>(19); // Default VAT rate
   const [vatAmount, setVatAmount] = useState<number>(0);
+  const [grandTotalCurrency, setGrandTotalCurrency] = useState<string>('RON');
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (selectedPropertyId) {
@@ -53,10 +57,33 @@ const CostCalculator = () => {
       setSelectedProperty(property);
       if (property) {
         setRentCurrency(property.currency || 'RON');
+        setGrandTotalCurrency(property.currency || 'RON');
         fetchLandlordVatSettings(property.landlord_id);
       }
     }
   }, [selectedPropertyId, properties]);
+
+  // Fetch exchange rates
+  useEffect(() => {
+    const fetchExchangeRates = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-exchange-rates');
+        
+        if (error) {
+          console.error('Error fetching exchange rates:', error);
+          return;
+        }
+        
+        if (data && data.rates) {
+          setExchangeRates(data.rates);
+        }
+      } catch (error) {
+        console.error('Error in exchange rates fetch:', error);
+      }
+    };
+    
+    fetchExchangeRates();
+  }, []);
 
   const fetchLandlordVatSettings = async (landlordId: string) => {
     try {
@@ -183,6 +210,43 @@ const CostCalculator = () => {
   // Calculate total with VAT included
   const getRentWithVat = () => {
     return rentAmount + vatAmount;
+  };
+
+  // Convert amount from one currency to another using exchange rates
+  const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string): number => {
+    if (fromCurrency === toCurrency) return amount;
+    if (!exchangeRates || Object.keys(exchangeRates).length === 0) return amount;
+    
+    // All rates are in RON, so first convert to RON, then to target currency
+    let amountInRON = amount;
+    if (fromCurrency !== 'RON') {
+      amountInRON = amount * (exchangeRates[fromCurrency] || 1);
+    }
+    
+    if (toCurrency === 'RON') {
+      return amountInRON;
+    }
+    
+    return amountInRON / (exchangeRates[toCurrency] || 1);
+  };
+
+  // Calculate grand total in selected currency
+  const calculateGrandTotal = (): number => {
+    // Start with rent (including VAT if applicable)
+    let total = 0;
+    
+    // Add rent in selected currency
+    if (rentCurrency) {
+      const rentWithVat = applyVat ? getRentWithVat() : rentAmount;
+      total += convertCurrency(rentWithVat, rentCurrency, grandTotalCurrency);
+    }
+    
+    // Add utilities converted to selected currency
+    Object.entries(totalUtilitiesByCurrency).forEach(([currency, amount]) => {
+      total += convertCurrency(amount, currency, grandTotalCurrency);
+    });
+    
+    return Math.round(total * 100) / 100;
   };
 
   return (
@@ -318,6 +382,33 @@ const CostCalculator = () => {
                       </React.Fragment>
                     ))}
                   </div>
+                </div>
+              </div>
+              
+              {/* Grand Total Section */}
+              <div className="mt-6 pt-4 border-t border-blue-200">
+                <div className="flex flex-col items-center space-y-3">
+                  <div className="flex items-center gap-3">
+                    <h5 className="text-lg font-bold text-gray-800">Grand Total in:</h5>
+                    <Select value={grandTotalCurrency} onValueChange={setGrandTotalCurrency}>
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue placeholder="Select currency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableCurrencies?.map((curr) => (
+                          <SelectItem key={curr.code} value={curr.code}>
+                            {curr.code} - {curr.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="text-2xl font-bold text-blue-700 bg-blue-100 px-6 py-2 rounded-lg shadow-sm">
+                    {formatCurrency(calculateGrandTotal(), grandTotalCurrency)}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Converted using current exchange rates from BNR (National Bank of Romania)
+                  </p>
                 </div>
               </div>
             </CardContent>
