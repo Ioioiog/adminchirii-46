@@ -20,6 +20,15 @@ export interface ProfileInvoiceInfo {
   invoice_info: InvoiceSettings;
 }
 
+export interface UtilityItem {
+  id: string;
+  type: string;
+  amount: number;
+  due_date: string;
+  percentage?: number; // Added percentage for partial utility payments
+  original_amount?: number; // Store the original amount before any partial calculation
+}
+
 export interface InvoiceMetadata {
   is_partial?: boolean;
   partial_percentage?: number;
@@ -31,12 +40,7 @@ export interface InvoiceMetadata {
     from: string;
     to: string;
   };
-  utilities_included?: {
-    id: string;
-    type: string;
-    amount: number;
-    due_date: string;
-  }[];
+  utilities_included?: UtilityItem[];
 }
 
 export interface Invoice {

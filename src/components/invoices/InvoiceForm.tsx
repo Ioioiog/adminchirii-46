@@ -1,4 +1,3 @@
-
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +12,8 @@ import { Switch } from "@/components/ui/switch";
 import { differenceInDays, isLastDayOfMonth, format } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Percent } from "lucide-react";
+import { UtilityItem } from "@/types/invoice";
 
 interface InvoiceFormValues {
   property_id: string;
@@ -40,6 +40,9 @@ interface Utility {
   issued_date?: string;
   invoice_number?: string;
   currency: string;
+  percentage?: number;
+  original_amount?: number;
+  is_partial?: boolean;
 }
 
 export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
@@ -116,7 +119,6 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
         form.setValue("tenant_email", tenancy.tenant.email);
       }
 
-      // Fetch the property's monthly rent
       const { data: property, error: propertyError } = await supabase
         .from("properties")
         .select("monthly_rent")
@@ -137,7 +139,6 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
         }
       }
 
-      // Fetch utilities for this property
       fetchUtilities(selectedPropertyId);
     };
 
@@ -164,17 +165,20 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
         return;
       }
 
-      console.log("Fetched utilities for period:", startDate, "to", endDate, utilities);
-      setUtilityData(utilities || []);
+      const utilitiesWithPartial = (utilities || []).map(util => ({
+        ...util,
+        percentage: 100,
+        original_amount: util.amount,
+        is_partial: false
+      }));
       
-      // Automatically select all utilities
-      setSelectedUtilities(utilities || []);
+      setUtilityData(utilitiesWithPartial);
       
-      // Calculate total utility amount
-      const total = (utilities || []).reduce((sum, util) => sum + util.amount, 0);
+      setSelectedUtilities(utilitiesWithPartial);
+      
+      const total = utilitiesWithPartial.reduce((sum, util) => sum + util.amount, 0);
       setUtilityTotal(total);
       
-      // Update the total amount
       if (propertyFullAmount) {
         updateTotalAmount(propertyFullAmount, total);
       }
@@ -187,12 +191,10 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
     if (dateRange?.from && dateRange?.to && selectedPropertyId) {
       fetchUtilities(selectedPropertyId);
       
-      // Calculate days between the dates
       const days = differenceInDays(dateRange.to, dateRange.from) + 1;
       setDaysCalculated(days);
       form.setValue("days_calculated", days);
       
-      // Update amount based on days
       if (propertyFullAmount && isPartialInvoice) {
         updatePartialAmount(propertyFullAmount);
       }
@@ -200,11 +202,9 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
   }, [dateRange, selectedPropertyId]);
 
   useEffect(() => {
-    // Calculate total utility amount whenever selected utilities change
     const total = selectedUtilities.reduce((sum, util) => sum + util.amount, 0);
     setUtilityTotal(total);
     
-    // Update the total amount
     if (propertyFullAmount) {
       updateTotalAmount(propertyFullAmount, total);
     }
@@ -230,7 +230,6 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       const calculatedAmount = (fullAmount * partialPercentage) / 100;
       updateTotalAmount(calculatedAmount, utilityTotal);
     } else if (calculationMethod === 'days') {
-      // Calculate based on days
       const days = daysCalculated;
       const dailyRate = fullAmount / 30;
       const calculatedAmount = dailyRate * days;
@@ -292,6 +291,53 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
     }
   };
 
+  const toggleUtilityPartial = (utility: Utility) => {
+    const updatedUtilities = selectedUtilities.map(util => {
+      if (util.id === utility.id) {
+        return {
+          ...util,
+          is_partial: !util.is_partial,
+          percentage: !util.is_partial ? 100 : util.percentage,
+          amount: !util.is_partial ? util.original_amount || util.amount : util.amount
+        };
+      }
+      return util;
+    });
+    
+    setSelectedUtilities(updatedUtilities);
+    
+    const newTotal = updatedUtilities.reduce((sum, util) => sum + util.amount, 0);
+    setUtilityTotal(newTotal);
+    
+    if (propertyFullAmount) {
+      updateTotalAmount(propertyFullAmount, newTotal);
+    }
+  };
+
+  const updateUtilityPercentage = (utilityId: string, percentage: number) => {
+    const updatedUtilities = selectedUtilities.map(util => {
+      if (util.id === utilityId) {
+        const newAmount = util.original_amount ? (util.original_amount * percentage) / 100 : util.amount;
+        return {
+          ...util,
+          percentage,
+          amount: newAmount,
+          is_partial: percentage < 100
+        };
+      }
+      return util;
+    });
+    
+    setSelectedUtilities(updatedUtilities);
+    
+    const newTotal = updatedUtilities.reduce((sum, util) => sum + util.amount, 0);
+    setUtilityTotal(newTotal);
+    
+    if (propertyFullAmount) {
+      updateTotalAmount(propertyFullAmount, newTotal);
+    }
+  };
+
   const onSubmit = async (values: InvoiceFormValues) => {
     if (!selectedFile) {
       toast({
@@ -349,7 +395,6 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
 
       const dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-      // Create invoice metadata for partial invoices
       let metadata: any = {};
       if (isPartialInvoice) {
         metadata = {
@@ -364,7 +409,10 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
             id: u.id,
             type: u.type,
             amount: u.amount,
-            due_date: u.due_date
+            due_date: u.due_date,
+            percentage: u.percentage,
+            original_amount: u.original_amount,
+            is_partial: u.is_partial
           }))
         };
         
@@ -390,7 +438,10 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
             id: u.id,
             type: u.type,
             amount: u.amount,
-            due_date: u.due_date
+            due_date: u.due_date,
+            percentage: u.percentage,
+            original_amount: u.original_amount,
+            is_partial: u.is_partial
           }))
         };
       }
@@ -412,7 +463,6 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
 
       if (invoiceError) throw invoiceError;
 
-      // Calculate rent portion of the total
       let rentPortion = propertyFullAmount || 0;
       if (isPartialInvoice) {
         if (calculationMethod === 'percentage') {
@@ -430,7 +480,6 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
           : `Partial rent for ${daysCalculated} days (${format(dateRange.from, 'PP')} to ${format(dateRange.to, 'PP')})`
         : `Monthly rent (${format(dateRange.from, 'PP')} to ${format(dateRange.to, 'PP')})`;
 
-      // Add rent invoice item
       const { error: rentItemError } = await supabase
         .from("invoice_items")
         .insert({
@@ -442,20 +491,28 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
 
       if (rentItemError) throw rentItemError;
 
-      // Add utility items
       for (const utility of selectedUtilities) {
+        let utilityDescription = `${utility.type} utility`;
+        
+        if (utility.invoice_number) {
+          utilityDescription += ` (${utility.invoice_number})`;
+        }
+        
+        if (utility.is_partial && utility.percentage !== 100) {
+          utilityDescription += ` (${utility.percentage}% of ${utility.original_amount})`;
+        }
+        
         const { error: utilityItemError } = await supabase
           .from("invoice_items")
           .insert({
             invoice_id: invoice.id,
-            description: `${utility.type} utility (${utility.invoice_number || 'No invoice number'})`,
+            description: utilityDescription,
             amount: utility.amount,
             type: "utility"
           });
         
         if (utilityItemError) throw utilityItemError;
         
-        // Update the utility status to "invoiced"
         const { error: utilityUpdateError } = await supabase
           .from("utilities")
           .update({ status: "invoiced" })
@@ -664,27 +721,65 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
               {utilityData.map(utility => (
                 <div 
                   key={utility.id} 
-                  className={`p-3 border rounded-md flex items-center justify-between cursor-pointer ${
+                  className={`p-3 border rounded-md ${
                     selectedUtilities.some(u => u.id === utility.id) ? 'bg-blue-50 border-blue-200 dark:bg-blue-950/30' : ''
                   }`}
-                  onClick={() => toggleUtilitySelection(utility)}
                 >
-                  <div className="flex items-center space-x-2">
-                    <input 
-                      type="checkbox" 
-                      checked={selectedUtilities.some(u => u.id === utility.id)}
-                      onChange={() => toggleUtilitySelection(utility)}
-                      className="h-4 w-4"
-                    />
-                    <div>
-                      <div className="font-medium capitalize">{utility.type}</div>
-                      <div className="text-sm text-gray-500">
-                        {utility.invoice_number ? `Invoice #${utility.invoice_number}` : 'No invoice number'} | 
-                        Due: {new Date(utility.due_date).toLocaleDateString()}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <input 
+                        type="checkbox" 
+                        checked={selectedUtilities.some(u => u.id === utility.id)}
+                        onChange={() => toggleUtilitySelection(utility)}
+                        className="h-4 w-4"
+                      />
+                      <div>
+                        <div className="font-medium capitalize">{utility.type}</div>
+                        <div className="text-sm text-gray-500">
+                          {utility.invoice_number ? `Invoice #${utility.invoice_number}` : 'No invoice number'} | 
+                          Due: {new Date(utility.due_date).toLocaleDateString()}
+                        </div>
                       </div>
                     </div>
+                    <div className="font-medium">{utility.amount.toFixed(2)} {utility.currency}</div>
                   </div>
-                  <div className="font-medium">{utility.amount.toFixed(2)} {utility.currency}</div>
+                  
+                  {selectedUtilities.some(u => u.id === utility.id) && (
+                    <div className="mt-2 pt-2 border-t">
+                      <div className="flex items-center space-x-2">
+                        <Switch 
+                          checked={selectedUtilities.find(u => u.id === utility.id)?.is_partial || false}
+                          onCheckedChange={() => toggleUtilityPartial(utility)}
+                          id={`partial-${utility.id}`}
+                        />
+                        <Label htmlFor={`partial-${utility.id}`}>Partial payment</Label>
+                      </div>
+                      
+                      {selectedUtilities.find(u => u.id === utility.id)?.is_partial && (
+                        <div className="mt-2 flex items-center space-x-2">
+                          <div className="w-full max-w-xs">
+                            <div className="flex items-center">
+                              <Input
+                                type="number"
+                                min="1"
+                                max="99"
+                                value={selectedUtilities.find(u => u.id === utility.id)?.percentage || 100}
+                                onChange={(e) => updateUtilityPercentage(utility.id, parseInt(e.target.value, 10))}
+                                className="w-20"
+                              />
+                              <span className="ml-2">%</span>
+                            </div>
+                            {utility.original_amount && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                {selectedUtilities.find(u => u.id === utility.id)?.percentage || 100}% of {utility.original_amount.toFixed(2)} = 
+                                {((utility.original_amount * (selectedUtilities.find(u => u.id === utility.id)?.percentage || 100)) / 100).toFixed(2)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

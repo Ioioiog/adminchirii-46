@@ -91,10 +91,13 @@ export function InvoiceDetails({ invoice, userRole }: InvoiceDetailsProps) {
                   <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                   <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
                   <th scope="col" className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                  {userRole === "landlord" && (
+                    <th scope="col" className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {utilitiesIncluded.map((utility: any, index: number) => (
+                {utilitiesIncluded.map((utility, index) => (
                   <tr key={utility.id || index}>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900 capitalize">{utility.type}</td>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
@@ -103,6 +106,15 @@ export function InvoiceDetails({ invoice, userRole }: InvoiceDetailsProps) {
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900 text-right">
                       {formatAmount(utility.amount, invoice.currency)}
                     </td>
+                    {userRole === "landlord" && (
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 text-center">
+                        {utility.percentage && utility.original_amount ? (
+                          <span>{utility.percentage}% of {formatAmount(utility.original_amount, invoice.currency)}</span>
+                        ) : (
+                          <span>Full amount</span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

@@ -9,14 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { InvoiceForm } from "./InvoiceForm";
-
-export interface InvoiceDialogProps {
-  open?: boolean;
-  onOpenChange: (open: boolean) => void;
-  userId: string;
-  userRole: "landlord" | "tenant";
-  onInvoiceCreated?: () => Promise<void>;
-}
+import { InvoiceDialogProps } from "@/types/invoice";
 
 export function InvoiceDialog({ 
   open, 
