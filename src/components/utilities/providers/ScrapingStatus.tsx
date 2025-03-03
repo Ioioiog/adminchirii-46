@@ -58,6 +58,10 @@ export function ScrapingStatus({
       return 'After CAPTCHA verification, waiting for account entry to complete before changing consumption location.';
     }
 
+    if (errorMessage.includes('/prima-pagina')) {
+      return 'Successfully logged in to ENGIE website but encountered issues navigating to the invoices page. Please try again later.';
+    }
+
     if (errorMessage.includes('CAPTCHA')) {
       if (errorMessage.includes('submitted')) {
         return 'CAPTCHA was submitted and the system is proceeding with location selection.';

@@ -56,6 +56,21 @@ export function useScrapingQueue(providers: UtilityProvider[]) {
         throw new Error(errorMessage);
       }
       
+      // Check for prima-pagina (already logged in) error
+      if (error instanceof Error && error.message.includes('/prima-pagina')) {
+        console.log('User is already logged in (on prima-pagina). Updating job status');
+        
+        const customMessage = 'Successfully logged in to the ENGIE website, but encountered issues navigating to the invoices page. Please try again later when the website might be more responsive.';
+        
+        updateScrapingJob(providerId, {
+          status: 'failed',
+          last_run_at: new Date().toISOString(),
+          error_message: customMessage
+        });
+        
+        throw new Error(customMessage);
+      }
+      
       // Check if this is a "waiting for login navigation" or function shutdown error
       if (error instanceof Error && 
           (error.message.includes('Waiting for login navigation') || 

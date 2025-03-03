@@ -101,6 +101,8 @@ function prepareScrapingRequestBody(provider: UtilityProvider, credentials: Cred
     waitForLoginCompletion: provider.provider_name.toLowerCase().includes('engie'),
     // Wait for account entry after CAPTCHA
     waitForAccountEntry: provider.provider_name.toLowerCase().includes('engie'),
+    // Do not click login button again after captcha (check for prima-pagina)
+    checkForPrimaPageAfterCaptcha: provider.provider_name.toLowerCase().includes('engie'),
     // Set user agent to appear as a modern browser
     userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
   };
