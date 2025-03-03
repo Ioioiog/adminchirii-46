@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { DateRange } from 'react-day-picker';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
@@ -10,8 +11,8 @@ const CostCalculator = () => {
   const [totalAmount, setTotalAmount] = useState<number>(0);
 
   const calculateTotalAmount = () => {
-    if (selectedDateRange) {
-      const days = (selectedDateRange.to?.getTime() - selectedDateRange.from?.getTime()) / (1000 * 3600 * 24) + 1;
+    if (selectedDateRange && selectedDateRange.from && selectedDateRange.to) {
+      const days = (selectedDateRange.to.getTime() - selectedDateRange.from.getTime()) / (1000 * 3600 * 24) + 1;
       const amount = dailyRate * days;
       setTotalAmount(amount);
     }
@@ -21,8 +22,8 @@ const CostCalculator = () => {
     <div className="space-y-4">
       <h3 className="text-lg font-medium">Cost Calculator</h3>
       <DatePickerWithRange
-        dateRange={selectedDateRange}
-        onDateRangeChange={setSelectedDateRange}
+        date={selectedDateRange}
+        onDateChange={setSelectedDateRange}
       />
       <div className="flex items-center space-x-4">
         <input

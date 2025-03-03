@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { DollarSign, FileText, CreditCard, BarChart2, Building, Calculator } from "lucide-react";
 import { InvoiceList } from "@/components/invoices/InvoiceList";
@@ -19,7 +20,7 @@ import { useProperties } from "@/hooks/useProperties";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useCurrency } from "@/hooks/useCurrency";
 import { startOfMonth, endOfMonth } from "date-fns";
-import { CostCalculator } from "@/components/financial/CostCalculator";
+import CostCalculator from "@/components/financial/CostCalculator";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 

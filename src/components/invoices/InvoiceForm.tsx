@@ -291,7 +291,7 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
 
       const days = calculateDays();
 
-      const metadata: InvoiceMetadata = {};
+      const metadata: Record<string, any> = {};
       
       if (values.is_partial) {
         metadata.is_partial = true;
@@ -313,8 +313,8 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
       }
 
       if (values.include_utilities && utilities.length > 0) {
-        const utilityItems: UtilityItem[] = utilities.map(utility => {
-          const item: UtilityItem = {
+        const utilityItems = utilities.map(utility => {
+          const item: Record<string, any> = {
             id: utility.id,
             type: utility.type,
             amount: utility.amount,
@@ -343,7 +343,7 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
           due_date: values.due_date,
           status: "pending",
           currency: selectedProperty?.currency || "EUR",
-          metadata: Object.keys(metadata).length > 0 ? metadata : undefined
+          metadata: metadata
         });
 
       if (error) throw error;

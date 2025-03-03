@@ -46,8 +46,8 @@ export function InvoiceFilters({
           <div>
             <Label>Date Range</Label>
             <DatePickerWithRange
-              dateRange={dateRange}
-              onDateRangeChange={setDateRange}
+              date={dateRange}
+              onDateChange={setDateRange}
             />
           </div>
         </div>
