@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Calendar } from "lucide-react";
 import { DateRange } from "react-day-picker";
@@ -7,7 +8,15 @@ import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/use-user-role";
 import { useCurrency } from "@/hooks/useCurrency";
 import { supabase } from "@/integrations/supabase/client";
-import { endOfMonth, startOfMonth, format, isSameMonth, differenceInDays, isLastDayOfMonth } from "date-fns";
+import { 
+  endOfMonth, 
+  startOfMonth, 
+  format, 
+  isSameMonth, 
+  differenceInDays, 
+  isLastDayOfMonth,
+  subMonths 
+} from "date-fns";
 import { useProperties } from "@/hooks/useProperties";
 import { 
   Select,
@@ -17,6 +26,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ProfileInvoiceInfo, InvoiceSettings } from "@/types/invoice";
+import { UTILITY_TYPES } from "@/components/utilities/providers/types";
+
+// Define the missing types
+interface UtilityCost {
+  date: string;
+  utility_type: string;
+  amount: number;
+}
+
+interface ChartData {
+  month: string;
+  electricity: number;
+  water: number;
+  gas: number;
+  internet: number;
+  building_maintenance: number;
+  total: number;
+}
 
 interface CalculationResult {
   rentTotal: number;
