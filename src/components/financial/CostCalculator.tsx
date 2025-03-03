@@ -245,6 +245,65 @@ export function CostCalculator() {
     }
   };
 
+  const processUtilityData = (data: UtilityCost[], range: "6months" | "12months" | "all"): ChartData[] => {
+    let filteredData = [...data];
+    const now = new Date();
+    
+    if (range === "6months") {
+      const sixMonthsAgo = subMonths(now, 6);
+      filteredData = data.filter(item => new Date(item.date) >= sixMonthsAgo);
+    } else if (range === "12months") {
+      const twelveMonthsAgo = subMonths(now, 12);
+      filteredData = data.filter(item => new Date(item.date) >= twelveMonthsAgo);
+    }
+
+    const monthlyData: Record<string, Record<string, number>> = {};
+
+    filteredData.forEach(item => {
+      const date = new Date(item.date);
+      const monthYear = format(date, 'MMM yyyy');
+      
+      if (!monthlyData[monthYear]) {
+        monthlyData[monthYear] = {
+          electricity: 0,
+          water: 0,
+          gas: 0,
+          internet: 0,
+          building_maintenance: 0,
+          total: 0
+        };
+      }
+      
+      const utilityType = item.utility_type.replace(' ', '_').toLowerCase();
+      if (monthlyData[monthYear][utilityType] !== undefined) {
+        monthlyData[monthYear][utilityType] += item.amount;
+        monthlyData[monthYear].total += item.amount;
+      } else {
+        // Handle any utility types not directly mapped, adding to total
+        console.log(`Unmapped utility type: ${utilityType}`);
+        monthlyData[monthYear].total += item.amount;
+      }
+    });
+
+    const chartData: ChartData[] = Object.keys(monthlyData).map(month => ({
+      month,
+      electricity: monthlyData[month].electricity || 0,
+      water: monthlyData[month].water || 0,
+      gas: monthlyData[month].gas || 0,
+      internet: monthlyData[month].internet || 0,
+      building_maintenance: monthlyData[month].building_maintenance || 0,
+      total: monthlyData[month].total || 0
+    }));
+
+    chartData.sort((a, b) => {
+      const dateA = new Date(a.month);
+      const dateB = new Date(b.month);
+      return dateA.getTime() - dateB.getTime();
+    });
+
+    return chartData;
+  };
+
   return (
     <Card className="mb-6">
       <CardHeader>
