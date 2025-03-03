@@ -230,11 +230,14 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
           .select('invoice_info')
           .eq('id', user.id)
           .single();
-        
+      
         // Apply VAT only to rent if VAT is enabled in landlord settings
         let vatAmount = 0;
-        if (profile?.invoice_info?.apply_vat) {
-          vatAmount = rentPortion * 0.19; // Assuming 19% VAT rate
+        if (profile?.invoice_info && typeof profile.invoice_info === 'object') {
+          const invoiceInfo = profile.invoice_info as { [key: string]: any };
+          if (invoiceInfo.apply_vat) {
+            vatAmount = rentPortion * 0.19; // Assuming 19% VAT rate
+          }
         }
         
         // Set the total amount including rent, VAT (if applicable), and utilities
@@ -417,7 +420,12 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
         .eq("id", user.id)
         .single();
       
-      const applyVat = landlordProfile?.invoice_info?.apply_vat || false;
+      let applyVat = false;
+      if (landlordProfile?.invoice_info && typeof landlordProfile.invoice_info === 'object') {
+        const invoiceInfo = landlordProfile.invoice_info as { [key: string]: any };
+        applyVat = !!invoiceInfo.apply_vat;
+      }
+      
       const vatRate = applyVat ? 19 : 0; // 19% VAT if enabled
 
       const dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
