@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DateRange } from 'react-day-picker';
 import { format, addDays, differenceInDays, isSameDay, addMonths } from 'date-fns';
@@ -6,12 +5,13 @@ import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Calculator, DollarSign, Info } from 'lucide-react';
+import { Calendar, Calculator, DollarSign, Info, Percent } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProperties } from '@/hooks/useProperties';
 import { useUserRole } from '@/hooks/use-user-role';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCurrency } from '@/hooks/useCurrency';
+import { Slider } from '@/components/ui/slider';
 
 interface UtilityItem {
   type: string;
@@ -50,6 +50,7 @@ const CostCalculator = () => {
   const [vatAmount, setVatAmount] = useState<number>(0);
   const [grandTotalCurrency, setGrandTotalCurrency] = useState<string>('RON');
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
+  const [utilitiesPercentage, setUtilitiesPercentage] = useState<number>(100); // Default to 100%
 
   useEffect(() => {
     if (selectedPropertyId) {
@@ -63,7 +64,6 @@ const CostCalculator = () => {
     }
   }, [selectedPropertyId, properties]);
 
-  // Fetch exchange rates
   useEffect(() => {
     const fetchExchangeRates = async () => {
       try {
@@ -117,7 +117,6 @@ const CostCalculator = () => {
       const days = differenceInDays(selectedDateRange.to, selectedDateRange.from) + 1;
       setDaysInPeriod(days);
       
-      // Check if it's a full month (e.g., from the 2nd of one month to the 2nd of the next month)
       const fromDate = selectedDateRange.from;
       const nextMonth = addMonths(fromDate, 1);
       const isOneMonthApart = isSameDay(nextMonth, selectedDateRange.to) || 
@@ -134,21 +133,17 @@ const CostCalculator = () => {
       return;
     }
 
-    // Calculate rent for the period
     const days = daysInPeriod;
     const monthlyRent = selectedProperty?.monthly_rent || 0;
     
     let periodRent;
     if (rentCalculationType === 'full') {
-      // If it's a full month, use the monthly rent directly
       periodRent = monthlyRent;
     } else {
-      // Calculate daily rent based on 30 days per month
       const dailyRent = monthlyRent / 30;
       periodRent = dailyRent * days;
     }
     
-    // Calculate VAT if applicable
     let calculatedVatAmount = 0;
     if (applyVat) {
       calculatedVatAmount = (periodRent * vatRate) / 100;
@@ -159,7 +154,6 @@ const CostCalculator = () => {
     
     setRentAmount(Math.round(periodRent * 100) / 100);
 
-    // Fetch utilities for the selected property and date range
     const { data: utilitiesData, error } = await supabase
       .from('utilities')
       .select('*')
@@ -172,27 +166,26 @@ const CostCalculator = () => {
       return;
     }
 
-    // Format utilities data
     const formattedUtilities = utilitiesData?.map(utility => ({
       type: utility.type,
       invoice_number: utility.invoice_number || '-',
       issued_date: utility.issued_date ? format(new Date(utility.issued_date), 'MM/dd/yyyy') : '-',
       due_date: format(new Date(utility.due_date), 'MM/dd/yyyy'),
       amount: utility.amount,
-      currency: utility.currency || rentCurrency // Use the utility's currency or default to property currency
+      currency: utility.currency || rentCurrency
     })) || [];
 
-    // Group utilities by currency and calculate totals
     const utilitiesByCurrency: Record<string, number> = {};
     formattedUtilities.forEach(utility => {
       const currency = utility.currency;
+      const adjustedAmount = (utility.amount * utilitiesPercentage) / 100;
+      
       if (!utilitiesByCurrency[currency]) {
         utilitiesByCurrency[currency] = 0;
       }
-      utilitiesByCurrency[currency] += utility.amount;
+      utilitiesByCurrency[currency] += adjustedAmount;
     });
 
-    // Round values for display
     Object.keys(utilitiesByCurrency).forEach(currency => {
       utilitiesByCurrency[currency] = Math.round(utilitiesByCurrency[currency] * 100) / 100;
     });
@@ -202,22 +195,18 @@ const CostCalculator = () => {
     setHasCalculated(true);
   };
 
-  // Format currency for display
   const formatCurrency = (amount: number, currency: string) => {
     return `${currency} ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  // Calculate total with VAT included
   const getRentWithVat = () => {
     return rentAmount + vatAmount;
   };
 
-  // Convert amount from one currency to another using exchange rates
   const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string): number => {
     if (fromCurrency === toCurrency) return amount;
     if (!exchangeRates || Object.keys(exchangeRates).length === 0) return amount;
     
-    // All rates are in RON, so first convert to RON, then to target currency
     let amountInRON = amount;
     if (fromCurrency !== 'RON') {
       amountInRON = amount * (exchangeRates[fromCurrency] || 1);
@@ -230,23 +219,24 @@ const CostCalculator = () => {
     return amountInRON / (exchangeRates[toCurrency] || 1);
   };
 
-  // Calculate grand total in selected currency
   const calculateGrandTotal = (): number => {
-    // Start with rent (including VAT if applicable)
     let total = 0;
     
-    // Add rent in selected currency
     if (rentCurrency) {
       const rentWithVat = applyVat ? getRentWithVat() : rentAmount;
       total += convertCurrency(rentWithVat, rentCurrency, grandTotalCurrency);
     }
     
-    // Add utilities converted to selected currency
     Object.entries(totalUtilitiesByCurrency).forEach(([currency, amount]) => {
       total += convertCurrency(amount, currency, grandTotalCurrency);
     });
     
     return Math.round(total * 100) / 100;
+  };
+
+  const getOriginalUtilityAmount = (currency: string): number => {
+    if (utilitiesPercentage === 0) return 0;
+    return (totalUtilitiesByCurrency[currency] || 0) * 100 / utilitiesPercentage;
   };
 
   return (
@@ -295,6 +285,68 @@ const CostCalculator = () => {
       
       {hasCalculated && (
         <>
+          {utilities.length > 0 && (
+            <Card className="border border-blue-100">
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-2 mb-4">
+                  <Percent className="h-5 w-5 text-blue-600" />
+                  <h4 className="text-lg font-semibold">Utilities Percentage</h4>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center text-sm text-gray-600">
+                    <span>0%</span>
+                    <span>50%</span>
+                    <span>100%</span>
+                  </div>
+                  
+                  <Slider
+                    value={[utilitiesPercentage]}
+                    onValueChange={(values) => {
+                      setUtilitiesPercentage(values[0]);
+                      const updatedUtilitiesByCurrency: Record<string, number> = {};
+                      
+                      utilities.forEach(utility => {
+                        const currency = utility.currency;
+                        const adjustedAmount = (utility.amount * values[0]) / 100;
+                        
+                        if (!updatedUtilitiesByCurrency[currency]) {
+                          updatedUtilitiesByCurrency[currency] = 0;
+                        }
+                        updatedUtilitiesByCurrency[currency] += adjustedAmount;
+                      });
+                      
+                      Object.keys(updatedUtilitiesByCurrency).forEach(currency => {
+                        updatedUtilitiesByCurrency[currency] = Math.round(updatedUtilitiesByCurrency[currency] * 100) / 100;
+                      });
+                      
+                      setTotalUtilitiesByCurrency(updatedUtilitiesByCurrency);
+                    }}
+                    max={100}
+                    step={1}
+                  />
+                  
+                  <div className="flex justify-center">
+                    <span className="px-3 py-1 bg-blue-50 rounded-full font-medium text-blue-700">
+                      {utilitiesPercentage}% of Utilities
+                    </span>
+                  </div>
+                  
+                  {utilitiesPercentage < 100 && (
+                    <div className="mt-2 text-sm text-gray-600">
+                      {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
+                        <div key={currency} className="flex justify-between">
+                          <span>Original amount ({currency}):</span>
+                          <span>{formatCurrency(getOriginalUtilityAmount(currency), currency)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
           <Card className="bg-blue-50 border-blue-100">
             <CardContent className="p-6">
               <h4 className="text-xl font-semibold text-center mb-4">
@@ -349,10 +401,41 @@ const CostCalculator = () => {
                 </div>
                 
                 <div className="text-center">
-                  <p className="text-gray-600">Utilities</p>
+                  <div className="flex items-center justify-center gap-1">
+                    <p className="text-gray-600">Utilities</p>
+                    {utilitiesPercentage < 100 && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="h-4 w-4 text-gray-400" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div className="p-2 max-w-xs">
+                              <p className="font-semibold">Utilities Calculation:</p>
+                              <p className="text-sm">
+                                {utilitiesPercentage}% of total utilities applied
+                              </p>
+                              {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
+                                <p key={currency} className="text-xs mt-1">
+                                  Original: {formatCurrency(getOriginalUtilityAmount(currency), currency)}
+                                </p>
+                              ))}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </div>
                   <div>
                     {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
-                      <p key={currency} className="text-xl font-bold">{formatCurrency(amount, currency)}</p>
+                      <p key={currency} className="text-xl font-bold">
+                        {formatCurrency(amount, currency)}
+                        {utilitiesPercentage < 100 && (
+                          <span className="block text-xs text-gray-500">
+                            ({utilitiesPercentage}% of {formatCurrency(getOriginalUtilityAmount(currency), currency)})
+                          </span>
+                        )}
+                      </p>
                     ))}
                     {Object.keys(totalUtilitiesByCurrency).length === 0 && (
                       <p className="text-xl font-bold">{formatCurrency(0, rentCurrency)}</p>
@@ -385,7 +468,6 @@ const CostCalculator = () => {
                 </div>
               </div>
               
-              {/* Grand Total Section */}
               <div className="mt-6 pt-4 border-t border-blue-200">
                 <div className="flex flex-col items-center space-y-3">
                   <div className="flex items-center gap-3">
@@ -427,6 +509,9 @@ const CostCalculator = () => {
                         <th className="text-left p-3 text-gray-600">ISSUED DATE</th>
                         <th className="text-left p-3 text-gray-600">DUE DATE</th>
                         <th className="text-right p-3 text-gray-600">AMOUNT</th>
+                        {utilitiesPercentage < 100 && (
+                          <th className="text-right p-3 text-gray-600">APPLIED ({utilitiesPercentage}%)</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -437,12 +522,27 @@ const CostCalculator = () => {
                           <td className="p-3">{utility.issued_date}</td>
                           <td className="p-3">{utility.due_date}</td>
                           <td className="p-3 text-right font-medium">{formatCurrency(utility.amount, utility.currency)}</td>
+                          {utilitiesPercentage < 100 && (
+                            <td className="p-3 text-right font-medium">
+                              {formatCurrency((utility.amount * utilitiesPercentage) / 100, utility.currency)}
+                            </td>
+                          )}
                         </tr>
                       ))}
                       {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
                         <tr key={currency} className="border-t font-bold">
-                          <td colSpan={4} className="p-3 text-right">Total Utilities ({currency}):</td>
-                          <td className="p-3 text-right">{formatCurrency(amount, currency)}</td>
+                          <td colSpan={utilitiesPercentage < 100 ? 4 : 4} className="p-3 text-right">
+                            Total Utilities ({currency}):
+                          </td>
+                          {utilitiesPercentage < 100 && (
+                            <>
+                              <td className="p-3 text-right">{formatCurrency(getOriginalUtilityAmount(currency), currency)}</td>
+                              <td className="p-3 text-right">{formatCurrency(amount, currency)}</td>
+                            </>
+                          )}
+                          {utilitiesPercentage === 100 && (
+                            <td className="p-3 text-right">{formatCurrency(amount, currency)}</td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
