@@ -33,6 +33,7 @@ interface Utility {
   amount: number;
   due_date: string;
   property_id: string;
+  status: string;
 }
 
 interface PropertyOption {
@@ -343,7 +344,16 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
         console.error("Error fetching landlord profile:", profileError);
       }
 
-      const applyVat = landlordProfile?.invoice_info?.apply_vat || false;
+      let applyVat = false;
+      try {
+        const invoiceInfo = landlordProfile?.invoice_info;
+        if (invoiceInfo && typeof invoiceInfo === 'object') {
+          applyVat = !!invoiceInfo.apply_vat;
+        }
+      } catch (e) {
+        console.error("Error parsing invoice_info:", e);
+      }
+      
       const vatRate = applyVat ? 19 : 0;
 
       const { data, error } = await supabase
