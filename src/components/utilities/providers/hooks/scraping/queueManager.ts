@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { UtilityProvider, ScrapingJob } from "../../types";
 import { ScrapingState } from "./types";
 import { MAX_RETRIES, RETRY_DELAY } from "./constants";
-import { formatErrorMessage, useErrorNotification, isEdgeFunctionError } from "./errorHandlers";
+import { formatErrorMessage, useErrorNotification, isEdgeFunctionError, formatEdgeFunctionError } from "./errorHandlers";
 import { getProviderCredentials, invokeScrapingFunction } from "./scrapingService";
 import { useJobStatusManager } from "./jobStatusManager";
 

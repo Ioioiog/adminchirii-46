@@ -2,6 +2,8 @@
 /**
  * Error handling utilities for the scraping process
  */
+import { useState } from 'react';
+import { toast } from 'sonner';
 
 /**
  * Determines if an error is from the Edge Function
@@ -92,4 +94,39 @@ export function formatEdgeFunctionError(message: string): string {
   
   // Return original message if no specific error pattern is matched
   return message;
+}
+
+/**
+ * Format any error into a user-friendly message
+ */
+export function formatErrorMessage(error: any): string {
+  if (!error) return 'An unknown error occurred';
+  
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  
+  return formatEdgeFunctionError(errorMessage);
+}
+
+/**
+ * Hook for displaying error notifications to the user
+ */
+export function useErrorNotification() {
+  const [error, setError] = useState<string | null>(null);
+  
+  const showErrorToast = (errorData: any) => {
+    const errorMessage = formatErrorMessage(errorData);
+    setError(errorMessage);
+    
+    // Show toast notification
+    toast.error('Error fetching utility bills', {
+      description: errorMessage,
+      duration: 5000,
+    });
+  };
+  
+  return {
+    error,
+    setError,
+    showErrorToast,
+  };
 }
