@@ -31,6 +31,7 @@ interface PropertyOption {
 
 interface InvoiceSettings {
   apply_vat?: boolean;
+  vat_rate?: number;
   [key: string]: any;
 }
 
@@ -51,6 +52,8 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
   const [selectedProperty, setSelectedProperty] = useState<PropertyOption | null>(null);
   const [utilities, setUtilities] = useState<UtilityForInvoice[]>([]);
   const [defaultTenantId, setDefaultTenantId] = useState<string | null>(null);
+  const [applyVat, setApplyVat] = useState<boolean>(false);
+  const [vatRate, setVatRate] = useState<number>(19);
 
   const formSchema = z.object({
     property_id: z.string({ required_error: "Please select a property" }),
@@ -63,6 +66,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     resolver: zodResolver(formSchema),
     defaultValues: {
       amount: calculationData?.rentAmount || 0,
+      property_id: calculationData?.propertyId || '',
     },
   });
 
@@ -155,6 +159,11 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         if (propertiesData.length === 1 && !calculationData?.propertyId && !form.getValues("property_id")) {
           form.setValue("property_id", propertiesData[0].id);
           setSelectedProperty(propertiesData[0]);
+        } else if (calculationData?.propertyId) {
+          const matchingProperty = propertiesData.find(p => p.id === calculationData.propertyId);
+          if (matchingProperty) {
+            setSelectedProperty(matchingProperty);
+          }
         }
       } catch (error: any) {
         console.error("Error fetching properties:", error);
@@ -233,6 +242,52 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     }
   }, [defaultTenantId, form, userRole]);
 
+  // Fetch VAT settings when property is selected
+  useEffect(() => {
+    const fetchLandlordVatSettings = async () => {
+      if (!selectedProperty || !propertyId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from("properties")
+          .select("landlord_id")
+          .eq("id", propertyId)
+          .single();
+        
+        if (error) {
+          console.error("Error fetching landlord ID:", error);
+          return;
+        }
+        
+        if (!data?.landlord_id) return;
+        
+        const { data: landlordProfile, error: profileError } = await supabase
+          .from("profiles")
+          .select("invoice_info")
+          .eq("id", data.landlord_id)
+          .single();
+        
+        if (profileError) {
+          console.error("Error fetching landlord profile:", profileError);
+          return;
+        }
+        
+        if (landlordProfile?.invoice_info) {
+          const invoiceInfo = landlordProfile.invoice_info as InvoiceSettings;
+          
+          if (typeof invoiceInfo === 'object' && !Array.isArray(invoiceInfo)) {
+            setApplyVat(!!invoiceInfo.apply_vat);
+            setVatRate(invoiceInfo.vat_rate || 19);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching VAT settings:", error);
+      }
+    };
+    
+    fetchLandlordVatSettings();
+  }, [propertyId, selectedProperty]);
+
   const handleUtilitySelection = (id: string, selected: boolean) => {
     setUtilities(prevUtilities => 
       prevUtilities.map(util => 
@@ -246,7 +301,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       id: util.id,
       amount: util.amount,
       type: util.type,
-      percentage: util.percentage,
+      percentage: util.percentage || 100,
       original_amount: util.original_amount,
     }));
   };
@@ -254,27 +309,6 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
   const onSubmit = async (values: InvoiceFormValues) => {
     try {
       setIsLoading(true);
-
-      const { data: landlordProfile, error: profileError } = await supabase
-        .from("profiles")
-        .select("invoice_info")
-        .eq("id", userRole === "landlord" ? userId : selectedProperty?.id)
-        .single();
-
-      if (profileError) {
-        console.error("Error fetching landlord profile:", profileError);
-      }
-
-      let applyVat = false;
-      
-      if (landlordProfile?.invoice_info) {
-        const invoiceInfo = landlordProfile.invoice_info as InvoiceSettings;
-        if (typeof invoiceInfo === 'object' && !Array.isArray(invoiceInfo)) {
-          applyVat = !!invoiceInfo.apply_vat;
-        }
-      }
-      
-      const vatRate = applyVat ? 19 : 0;
       
       // Prepare metadata with date range and selected utilities
       let metadata: InvoiceMetadata = {};
@@ -297,12 +331,12 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         .insert({
           property_id: values.property_id,
           tenant_id: values.tenant_id || userId,
-          landlord_id: userRole === "landlord" ? userId : selectedProperty?.id,
+          landlord_id: userRole === "landlord" ? userId : null,
           amount: values.amount,
           due_date: values.due_date,
           status: "pending",
-          currency: calculationData?.currency || selectedProperty?.currency || "EUR",
-          vat_rate: vatRate,
+          currency: selectedProperty?.currency || calculationData?.currency || "EUR",
+          vat_rate: applyVat ? vatRate : 0,
           metadata: metadata
         });
 
@@ -335,7 +369,10 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     const baseAmount = form.getValues("amount") || 0;
     const selectedUtilsTotal = utilities
       .filter(util => util.selected)
-      .reduce((sum, util) => sum + util.amount, 0);
+      .reduce((sum, util) => {
+        const percentage = util.percentage || 100;
+        return sum + (util.amount * percentage / 100);
+      }, 0);
     
     return baseAmount + selectedUtilsTotal;
   };
@@ -428,13 +465,13 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
             name="amount"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Amount</FormLabel>
+                <FormLabel>Rent Amount</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
                     step="0.01"
                     {...field}
-                    onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                     disabled={isLoading || !!calculationData?.rentAmount}
                   />
                 </FormControl>
@@ -465,9 +502,18 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                 <div className="flex justify-between items-center py-1">
                   <span className="text-sm">Rent Amount:</span>
                   <span className="text-sm font-medium">
-                    {form.getValues("amount")} {calculationData?.currency || selectedProperty?.currency || "EUR"}
+                    {form.getValues("amount")} {selectedProperty?.currency || calculationData?.currency || "EUR"}
                   </span>
                 </div>
+
+                {applyVat && (
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-sm">VAT ({vatRate}%):</span>
+                    <span className="text-sm font-medium">
+                      {(form.getValues("amount") * vatRate / 100).toFixed(2)} {selectedProperty?.currency || calculationData?.currency || "EUR"}
+                    </span>
+                  </div>
+                )}
 
                 {/* Display utilities section only if there are utilities */}
                 {utilities.length > 0 && (
@@ -484,11 +530,15 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                             />
                             <label htmlFor={`utility-${utility.id}`} className="text-sm cursor-pointer">
                               {utility.type} 
-                              {utility.percentage && <span className="text-xs text-gray-500 ml-1">({utility.percentage}%)</span>}
+                              {utility.percentage !== undefined && utility.percentage !== 100 && (
+                                <span className="text-xs text-gray-500 ml-1">({utility.percentage}%)</span>
+                              )}
                             </label>
                           </div>
                           <span className="text-sm font-medium">
-                            {utility.amount} {calculationData?.currency || selectedProperty?.currency || "EUR"}
+                            {utility.percentage !== undefined && utility.percentage !== 100
+                              ? (utility.amount * utility.percentage / 100).toFixed(2)
+                              : utility.amount.toFixed(2)} {selectedProperty?.currency || calculationData?.currency || "EUR"}
                           </span>
                         </div>
                       ))}
@@ -499,7 +549,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                 <div className="flex justify-between items-center pt-2 mt-2 border-t border-slate-200">
                   <span className="font-bold">Total Amount:</span>
                   <span className="text-lg font-bold">
-                    {calculateTotal()} {calculationData?.currency || selectedProperty?.currency || "EUR"}
+                    {calculateTotal().toFixed(2)} {selectedProperty?.currency || calculationData?.currency || "EUR"}
                   </span>
                 </div>
               </div>
@@ -527,4 +577,3 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     </Form>
   );
 }
-
