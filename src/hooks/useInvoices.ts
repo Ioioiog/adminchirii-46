@@ -7,13 +7,16 @@ import { DateRange } from "react-day-picker";
 import { Invoice } from "@/types/invoice";
 import { useUserRole } from "@/hooks/use-user-role";
 
+// Define a type for the valid invoice status values
+type InvoiceStatus = "pending" | "paid" | "overdue";
+
 export const useInvoices = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const { userRole, userId } = useUserRole();
 
@@ -50,7 +53,9 @@ export const useInvoices = () => {
       
       // Apply status filter if not "all"
       if (statusFilter !== "all") {
-        query = query.eq('status', statusFilter);
+        // Make sure we only pass valid status values to the query
+        const validStatus = statusFilter as InvoiceStatus;
+        query = query.eq('status', validStatus);
       }
       
       // Apply date range filter if available
