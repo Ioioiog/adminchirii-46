@@ -437,6 +437,7 @@ export type Database = {
           due_date: string
           id: string
           landlord_id: string
+          metadata: Json | null
           paid_at: string | null
           property_id: string
           status: Database["public"]["Enums"]["invoice_status"] | null
@@ -450,6 +451,7 @@ export type Database = {
           due_date: string
           id?: string
           landlord_id: string
+          metadata?: Json | null
           paid_at?: string | null
           property_id: string
           status?: Database["public"]["Enums"]["invoice_status"] | null
@@ -463,6 +465,7 @@ export type Database = {
           due_date?: string
           id?: string
           landlord_id?: string
+          metadata?: Json | null
           paid_at?: string | null
           property_id?: string
           status?: Database["public"]["Enums"]["invoice_status"] | null

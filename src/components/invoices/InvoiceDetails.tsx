@@ -209,7 +209,8 @@ export function InvoiceDetails({ invoice, userRole, onStatusUpdate }: InvoiceDet
       <CardFooter className="pt-0 justify-end">
         {onStatusUpdate && (
           <InvoiceActions 
-            invoice={invoice} 
+            invoiceId={invoice.id} 
+            status={invoice.status} 
             userRole={userRole} 
             onStatusUpdate={onStatusUpdate} 
           />
