@@ -21,6 +21,14 @@ interface UtilityItem {
   currency: string;
 }
 
+interface LandlordProfile {
+  id: string;
+  invoice_info?: {
+    apply_vat?: boolean;
+    vat_rate?: number;
+  };
+}
+
 const CostCalculator = () => {
   const { userRole } = useUserRole();
   const { properties } = useProperties({ userRole: userRole || 'tenant' });
@@ -35,6 +43,9 @@ const CostCalculator = () => {
   const [totalUtilitiesByCurrency, setTotalUtilitiesByCurrency] = useState<Record<string, number>>({});
   const [daysInPeriod, setDaysInPeriod] = useState<number>(0);
   const [isFullMonth, setIsFullMonth] = useState<boolean>(false);
+  const [applyVat, setApplyVat] = useState<boolean>(false);
+  const [vatRate, setVatRate] = useState<number>(19); // Default VAT rate
+  const [vatAmount, setVatAmount] = useState<number>(0);
 
   useEffect(() => {
     if (selectedPropertyId) {
@@ -42,9 +53,37 @@ const CostCalculator = () => {
       setSelectedProperty(property);
       if (property) {
         setRentCurrency(property.currency || 'RON');
+        fetchLandlordVatSettings(property.landlord_id);
       }
     }
   }, [selectedPropertyId, properties]);
+
+  const fetchLandlordVatSettings = async (landlordId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('invoice_info')
+        .eq('id', landlordId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching landlord profile:', error);
+        return;
+      }
+
+      if (data && data.invoice_info) {
+        const invoiceInfo = data.invoice_info as LandlordProfile['invoice_info'];
+        setApplyVat(!!invoiceInfo.apply_vat);
+        setVatRate(invoiceInfo.vat_rate || 19);
+      } else {
+        setApplyVat(false);
+        setVatRate(19);
+      }
+    } catch (error) {
+      console.error('Error processing landlord VAT settings:', error);
+      setApplyVat(false);
+    }
+  };
 
   useEffect(() => {
     if (selectedDateRange?.from && selectedDateRange?.to) {
@@ -80,6 +119,15 @@ const CostCalculator = () => {
       // Calculate daily rent based on 30 days per month
       const dailyRent = monthlyRent / 30;
       periodRent = dailyRent * days;
+    }
+    
+    // Calculate VAT if applicable
+    let calculatedVatAmount = 0;
+    if (applyVat) {
+      calculatedVatAmount = (periodRent * vatRate) / 100;
+      setVatAmount(Math.round(calculatedVatAmount * 100) / 100);
+    } else {
+      setVatAmount(0);
     }
     
     setRentAmount(Math.round(periodRent * 100) / 100);
@@ -130,6 +178,11 @@ const CostCalculator = () => {
   // Format currency for display
   const formatCurrency = (amount: number, currency: string) => {
     return `${currency} ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  // Calculate total with VAT included
+  const getRentWithVat = () => {
+    return rentAmount + vatAmount;
   };
 
   return (
@@ -206,12 +259,24 @@ const CostCalculator = () => {
                                 {formatCurrency(selectedProperty?.monthly_rent / 30, rentCurrency)} × {daysInPeriod} days
                               </p>
                             )}
+                            {applyVat && (
+                              <p className="text-xs mt-1">
+                                VAT ({vatRate}%): {formatCurrency(vatAmount, rentCurrency)}
+                              </p>
+                            )}
                           </div>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </div>
-                  <p className="text-xl font-bold">{formatCurrency(rentAmount, rentCurrency)}</p>
+                  <p className="text-xl font-bold">
+                    {formatCurrency(rentAmount, rentCurrency)}
+                    {applyVat && (
+                      <span className="block text-sm text-gray-600">
+                        + {formatCurrency(vatAmount, rentCurrency)} VAT
+                      </span>
+                    )}
+                  </p>
                   <p className="text-xs text-gray-500">
                     {rentCalculationType === 'full' 
                       ? 'Full monthly rent' 
@@ -234,12 +299,16 @@ const CostCalculator = () => {
                 <div className="text-center">
                   <p className="text-gray-600">Total</p>
                   <div>
-                    <p className="text-xl font-bold text-blue-600">{formatCurrency(rentAmount, rentCurrency)}</p>
+                    <p className="text-xl font-bold text-blue-600">
+                      {applyVat 
+                        ? formatCurrency(getRentWithVat(), rentCurrency)
+                        : formatCurrency(rentAmount, rentCurrency)}
+                    </p>
                     {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
                       <React.Fragment key={currency}>
                         {currency === rentCurrency ? (
                           <p className="text-lg font-bold text-blue-600">
-                            = {formatCurrency(rentAmount + amount, currency)}
+                            = {formatCurrency(amount + (applyVat ? getRentWithVat() : rentAmount), currency)}
                           </p>
                         ) : (
                           <p className="text-sm text-gray-500">
