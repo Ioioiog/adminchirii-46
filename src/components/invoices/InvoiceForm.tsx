@@ -525,8 +525,8 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
                 <div className="space-y-2">
                   <FormLabel>Date Range</FormLabel>
                   <DatePickerWithRange
-                    dateRange={dateRange}
-                    onDateRangeChange={(range) => {
+                    date={dateRange}
+                    onDateChange={(range) => {
                       setDateRange(range);
                     }}
                   />
