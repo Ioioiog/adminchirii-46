@@ -27,6 +27,16 @@ export interface InvoiceMetadata {
   calculation_method?: 'percentage' | 'days';
   days_calculated?: number;
   daily_rate?: number;
+  date_range?: {
+    from: string;
+    to: string;
+  };
+  utilities_included?: {
+    id: string;
+    type: string;
+    amount: number;
+    due_date: string;
+  }[];
 }
 
 export interface Invoice {

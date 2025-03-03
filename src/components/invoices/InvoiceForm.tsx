@@ -10,7 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Switch } from "@/components/ui/switch";
-import { differenceInDays, isLastDayOfMonth } from "date-fns";
+import { differenceInDays, isLastDayOfMonth, format } from "date-fns";
+import { DateRange } from "react-day-picker";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
+import { CalendarIcon } from "lucide-react";
 
 interface InvoiceFormValues {
   property_id: string;
@@ -29,6 +32,16 @@ interface InvoiceFormProps {
   onSuccess?: () => void;
 }
 
+interface Utility {
+  id: string;
+  type: string;
+  amount: number;
+  due_date: string;
+  issued_date?: string;
+  invoice_number?: string;
+  currency: string;
+}
+
 export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [properties, setProperties] = useState<Array<{ id: string; name: string; monthly_rent: number }>>([]);
@@ -41,12 +54,15 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
   const [isPartialInvoice, setIsPartialInvoice] = useState(false);
   const [propertyFullAmount, setPropertyFullAmount] = useState<number | null>(null);
   const [partialPercentage, setPartialPercentage] = useState<number>(50);
-  const [calculationMethod, setCalculationMethod] = useState<'percentage' | 'days'>('percentage');
-  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
+  const [calculationMethod, setCalculationMethod] = useState<'percentage' | 'days'>('days');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(),
     to: new Date(),
   });
   const [daysCalculated, setDaysCalculated] = useState<number>(0);
+  const [utilityData, setUtilityData] = useState<Utility[]>([]);
+  const [selectedUtilities, setSelectedUtilities] = useState<Utility[]>([]);
+  const [utilityTotal, setUtilityTotal] = useState<number>(0);
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -120,21 +136,105 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
           updatePartialAmount(property.monthly_rent);
         }
       }
+
+      // Fetch utilities for this property
+      fetchUtilities(selectedPropertyId);
     };
 
     fetchTenantEmail();
   }, [selectedPropertyId, form]);
 
+  const fetchUtilities = async (propertyId: string) => {
+    if (!dateRange?.from || !dateRange?.to) return;
+
+    const startDate = format(dateRange.from, 'yyyy-MM-dd');
+    const endDate = format(dateRange.to, 'yyyy-MM-dd');
+
+    try {
+      const { data: utilities, error } = await supabase
+        .from('utilities')
+        .select('id, type, amount, due_date, issued_date, invoice_number, currency')
+        .eq('property_id', propertyId)
+        .gte('issued_date', startDate)
+        .lte('issued_date', endDate)
+        .eq('status', 'pending');
+
+      if (error) {
+        console.error("Error fetching utilities:", error);
+        return;
+      }
+
+      console.log("Fetched utilities for period:", startDate, "to", endDate, utilities);
+      setUtilityData(utilities || []);
+      
+      // Automatically select all utilities
+      setSelectedUtilities(utilities || []);
+      
+      // Calculate total utility amount
+      const total = (utilities || []).reduce((sum, util) => sum + util.amount, 0);
+      setUtilityTotal(total);
+      
+      // Update the total amount
+      if (propertyFullAmount) {
+        updateTotalAmount(propertyFullAmount, total);
+      }
+    } catch (error) {
+      console.error("Error in fetchUtilities:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (dateRange?.from && dateRange?.to && selectedPropertyId) {
+      fetchUtilities(selectedPropertyId);
+      
+      // Calculate days between the dates
+      const days = differenceInDays(dateRange.to, dateRange.from) + 1;
+      setDaysCalculated(days);
+      form.setValue("days_calculated", days);
+      
+      // Update amount based on days
+      if (propertyFullAmount && isPartialInvoice) {
+        updatePartialAmount(propertyFullAmount);
+      }
+    }
+  }, [dateRange, selectedPropertyId]);
+
+  useEffect(() => {
+    // Calculate total utility amount whenever selected utilities change
+    const total = selectedUtilities.reduce((sum, util) => sum + util.amount, 0);
+    setUtilityTotal(total);
+    
+    // Update the total amount
+    if (propertyFullAmount) {
+      updateTotalAmount(propertyFullAmount, total);
+    }
+  }, [selectedUtilities, propertyFullAmount]);
+
+  const updateTotalAmount = (rentAmount: number, utilitiesAmount: number) => {
+    let rentPortion = rentAmount;
+    
+    if (isPartialInvoice) {
+      if (calculationMethod === 'percentage') {
+        rentPortion = (rentAmount * partialPercentage) / 100;
+      } else if (calculationMethod === 'days') {
+        const dailyRate = rentAmount / 30;
+        rentPortion = dailyRate * daysCalculated;
+      }
+    }
+    
+    form.setValue("amount", rentPortion + utilitiesAmount);
+  };
+
   const updatePartialAmount = (fullAmount: number) => {
     if (calculationMethod === 'percentage') {
       const calculatedAmount = (fullAmount * partialPercentage) / 100;
-      form.setValue("amount", calculatedAmount);
+      updateTotalAmount(calculatedAmount, utilityTotal);
     } else if (calculationMethod === 'days') {
       // Calculate based on days
       const days = daysCalculated;
       const dailyRate = fullAmount / 30;
       const calculatedAmount = dailyRate * days;
-      form.setValue("amount", calculatedAmount);
+      updateTotalAmount(calculatedAmount, utilityTotal);
     }
   };
 
@@ -158,7 +258,7 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
           form.setValue("days_calculated", daysCalculated);
         }
       } else {
-        form.setValue("amount", propertyFullAmount);
+        updateTotalAmount(propertyFullAmount, utilityTotal);
         form.setValue("partial_percentage", undefined);
         form.setValue("days_calculated", undefined);
       }
@@ -175,16 +275,6 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
     }
   };
 
-  const handleDaysChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const days = parseInt(e.target.value, 10);
-    setDaysCalculated(days);
-    form.setValue("days_calculated", days);
-    
-    if (propertyFullAmount && isPartialInvoice && calculationMethod === 'days') {
-      updatePartialAmount(propertyFullAmount);
-    }
-  };
-
   const handleCalculationMethodChange = (method: 'percentage' | 'days') => {
     setCalculationMethod(method);
     form.setValue("calculation_method", method);
@@ -194,11 +284,28 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
     }
   };
 
+  const toggleUtilitySelection = (utility: Utility) => {
+    if (selectedUtilities.some(u => u.id === utility.id)) {
+      setSelectedUtilities(selectedUtilities.filter(u => u.id !== utility.id));
+    } else {
+      setSelectedUtilities([...selectedUtilities, utility]);
+    }
+  };
+
   const onSubmit = async (values: InvoiceFormValues) => {
     if (!selectedFile) {
       toast({
         title: "Error",
         description: "Please upload an invoice document",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!dateRange?.from || !dateRange?.to) {
+      toast({
+        title: "Error",
+        description: "Please select a date range",
         variant: "destructive",
       });
       return;
@@ -243,12 +350,22 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       const dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       // Create invoice metadata for partial invoices
-      let metadata = {};
-      if (values.is_partial) {
+      let metadata: any = {};
+      if (isPartialInvoice) {
         metadata = {
           is_partial: true,
           full_amount: propertyFullAmount,
-          calculation_method: calculationMethod
+          calculation_method: calculationMethod,
+          date_range: {
+            from: dateRange.from.toISOString(),
+            to: dateRange.to.toISOString()
+          },
+          utilities_included: selectedUtilities.map(u => ({
+            id: u.id,
+            type: u.type,
+            amount: u.amount,
+            due_date: u.due_date
+          }))
         };
         
         if (calculationMethod === 'percentage') {
@@ -259,10 +376,23 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
         } else if (calculationMethod === 'days') {
           metadata = {
             ...metadata,
-            days_calculated: values.days_calculated,
+            days_calculated: daysCalculated,
             daily_rate: propertyFullAmount ? propertyFullAmount / 30 : 0
           };
         }
+      } else {
+        metadata = {
+          date_range: {
+            from: dateRange.from.toISOString(),
+            to: dateRange.to.toISOString()
+          },
+          utilities_included: selectedUtilities.map(u => ({
+            id: u.id,
+            type: u.type,
+            amount: u.amount,
+            due_date: u.due_date
+          }))
+        };
       }
 
       const { data: invoice, error: invoiceError } = await supabase
@@ -282,27 +412,57 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
 
       if (invoiceError) throw invoiceError;
 
-      const invoiceItemType = values.is_partial ? "partial_rent" : "utility";
-      let description = values.details || "Invoice payment";
-      
-      if (values.is_partial) {
+      // Calculate rent portion of the total
+      let rentPortion = propertyFullAmount || 0;
+      if (isPartialInvoice) {
         if (calculationMethod === 'percentage') {
-          description = values.details || `Partial rent payment (${values.partial_percentage}%)`;
+          rentPortion = ((propertyFullAmount || 0) * partialPercentage) / 100;
         } else {
-          description = values.details || `Partial rent payment (${values.days_calculated} days)`;
+          const dailyRate = (propertyFullAmount || 0) / 30;
+          rentPortion = dailyRate * daysCalculated;
         }
       }
 
-      const { error: itemError } = await supabase
+      const invoiceItemType = isPartialInvoice ? "partial_rent" : "rent";
+      let rentDescription = isPartialInvoice 
+        ? calculationMethod === 'percentage'
+          ? `Partial rent (${values.partial_percentage}%)`
+          : `Partial rent for ${daysCalculated} days (${format(dateRange.from, 'PP')} to ${format(dateRange.to, 'PP')})`
+        : `Monthly rent (${format(dateRange.from, 'PP')} to ${format(dateRange.to, 'PP')})`;
+
+      // Add rent invoice item
+      const { error: rentItemError } = await supabase
         .from("invoice_items")
         .insert({
           invoice_id: invoice.id,
-          description: description,
-          amount: values.amount,
+          description: rentDescription,
+          amount: rentPortion,
           type: invoiceItemType
         });
 
-      if (itemError) throw itemError;
+      if (rentItemError) throw rentItemError;
+
+      // Add utility items
+      for (const utility of selectedUtilities) {
+        const { error: utilityItemError } = await supabase
+          .from("invoice_items")
+          .insert({
+            invoice_id: invoice.id,
+            description: `${utility.type} utility (${utility.invoice_number || 'No invoice number'})`,
+            amount: utility.amount,
+            type: "utility"
+          });
+        
+        if (utilityItemError) throw utilityItemError;
+        
+        // Update the utility status to "invoiced"
+        const { error: utilityUpdateError } = await supabase
+          .from("utilities")
+          .update({ status: "invoiced" })
+          .eq("id", utility.id);
+          
+        if (utilityUpdateError) throw utilityUpdateError;
+      }
 
       if (selectedFile) {
         const fileExt = selectedFile.name.split('.').pop();
@@ -330,8 +490,15 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       setSelectedPropertyId(null);
       setIsPartialInvoice(false);
       setPartialPercentage(50);
-      setCalculationMethod('percentage');
+      setCalculationMethod('days');
       setDaysCalculated(0);
+      setDateRange({
+        from: new Date(),
+        to: new Date(),
+      });
+      setUtilityData([]);
+      setSelectedUtilities([]);
+      setUtilityTotal(0);
     } catch (error: any) {
       console.error("Error creating invoice:", error);
       toast({
@@ -389,13 +556,27 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       )}
 
       {selectedPropertyId && (
-        <div className="flex items-center space-x-2 my-4">
-          <Switch 
-            id="is_partial"
-            checked={isPartialInvoice}
-            onCheckedChange={handlePartialToggle}
-          />
-          <Label htmlFor="is_partial" className="cursor-pointer">Create Partial Invoice</Label>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="date_range">Billing Period</Label>
+            <DatePickerWithRange 
+              date={dateRange} 
+              setDate={setDateRange} 
+              className="w-full"
+            />
+            <p className="text-sm text-muted-foreground">
+              Select the period for this invoice
+            </p>
+          </div>
+          
+          <div className="flex items-center space-x-2 my-4">
+            <Switch 
+              id="is_partial"
+              checked={isPartialInvoice}
+              onCheckedChange={handlePartialToggle}
+            />
+            <Label htmlFor="is_partial" className="cursor-pointer">Create Partial Rent Invoice</Label>
+          </div>
         </div>
       )}
 
@@ -451,26 +632,65 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
 
           {calculationMethod === 'days' && (
             <div className="space-y-2">
-              <Label htmlFor="days_calculated">Number of days</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="days_calculated"
-                  type="number"
-                  min="1"
-                  max="31"
-                  value={daysCalculated}
-                  onChange={handleDaysChange}
-                  className="w-24"
-                />
-                <span>days</span>
+              <Label htmlFor="days_calculated">Period details</Label>
+              <div className="text-sm text-muted-foreground">
+                <p>Selected period: {dateRange?.from && dateRange?.to ? 
+                  `${format(dateRange.from, 'PP')} to ${format(dateRange.to, 'PP')} (${daysCalculated} days)` : 
+                  'No period selected'}</p>
+                {propertyFullAmount && (
+                  <>
+                    <p>Full monthly amount: {propertyFullAmount}</p>
+                    <p>Daily rate: {(propertyFullAmount / 30).toFixed(2)}</p>
+                    <p>Partial rent amount for {daysCalculated} days: {((propertyFullAmount / 30) * daysCalculated).toFixed(2)}</p>
+                  </>
+                )}
               </div>
-              {propertyFullAmount && (
-                <div className="text-sm text-muted-foreground">
-                  <p>Full monthly amount: {propertyFullAmount}</p>
-                  <p>Daily rate: {(propertyFullAmount / 30).toFixed(2)}</p>
-                  <p>Partial amount for {daysCalculated} days: {((propertyFullAmount / 30) * daysCalculated).toFixed(2)}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {selectedPropertyId && dateRange?.from && dateRange?.to && (
+        <div className="space-y-4 border p-4 rounded-md">
+          <div className="flex justify-between items-center">
+            <Label>Utilities for this period</Label>
+            <div className="text-sm">
+              Total: {utilityTotal.toFixed(2)}
+            </div>
+          </div>
+          
+          {utilityData.length > 0 ? (
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {utilityData.map(utility => (
+                <div 
+                  key={utility.id} 
+                  className={`p-3 border rounded-md flex items-center justify-between cursor-pointer ${
+                    selectedUtilities.some(u => u.id === utility.id) ? 'bg-blue-50 border-blue-200 dark:bg-blue-950/30' : ''
+                  }`}
+                  onClick={() => toggleUtilitySelection(utility)}
+                >
+                  <div className="flex items-center space-x-2">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedUtilities.some(u => u.id === utility.id)}
+                      onChange={() => toggleUtilitySelection(utility)}
+                      className="h-4 w-4"
+                    />
+                    <div>
+                      <div className="font-medium capitalize">{utility.type}</div>
+                      <div className="text-sm text-gray-500">
+                        {utility.invoice_number ? `Invoice #${utility.invoice_number}` : 'No invoice number'} | 
+                        Due: {new Date(utility.due_date).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="font-medium">{utility.amount.toFixed(2)} {utility.currency}</div>
                 </div>
-              )}
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4 text-gray-500">
+              No utilities found for this period
             </div>
           )}
         </div>
@@ -478,7 +698,7 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="amount">Amount</Label>
+          <Label htmlFor="amount">Total Amount</Label>
           <Input
             id="amount"
             type="number"
@@ -486,7 +706,8 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
             required
             {...form.register("amount", { valueAsNumber: true })}
             placeholder="Enter invoice amount"
-            readOnly={selectedPropertyId && (isPartialInvoice || propertyFullAmount !== null)}
+            readOnly
+            className="bg-gray-50"
           />
         </div>
 
