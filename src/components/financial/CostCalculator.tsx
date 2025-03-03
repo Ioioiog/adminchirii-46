@@ -615,6 +615,14 @@ const CostCalculator = () => {
             currency: rentCurrency,
             grandTotal: calculateGrandTotal(),
             utilities: utilities
+              .filter(util => util.selected)
+              .map(util => ({
+                id: util.id,
+                type: util.type,
+                amount: getAdjustedUtilityAmount(util),
+                percentage: util.percentage,
+                original_amount: util.amount
+              }))
           }}
         />
       )}
