@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ProfileInvoiceInfo } from "@/types/invoice";
+import { ProfileInvoiceInfo, InvoiceSettings } from "@/types/invoice";
 
 interface CalculationResult {
   rentTotal: number;
@@ -89,25 +89,22 @@ export function CostCalculator() {
       let rentDetails: RentDetail | null = null;
       let selectedPropertyName = '';
       
-      // Get the property name
       const selectedProperty = properties.find(p => p.id === selectedPropertyId);
       if (selectedProperty) {
         selectedPropertyName = selectedProperty.name;
       }
       
-      // Get VAT settings for the user
       const { data: profileData } = await supabase
         .from('profiles')
         .select('invoice_info')
         .eq('id', userId)
         .single();
       
-      // Determine if VAT should be applied and at what rate
       let applyVat = false;
       let vatRate = 19; // Default VAT rate (percent)
       
       if (profileData?.invoice_info) {
-        const invoiceInfo = profileData.invoice_info as ProfileInvoiceInfo['invoice_info'];
+        const invoiceInfo = profileData.invoice_info as unknown as InvoiceSettings;
         applyVat = !!invoiceInfo?.apply_vat;
       }
       
@@ -131,21 +128,16 @@ export function CostCalculator() {
           const monthlyRent = tenancy.properties.monthly_rent;
           const dailyRate = monthlyRent / 30;
           
-          // Check if this is a full month period
           const isFullMonth = (
-            // Either same day of different months (e.g., 1st to 1st)
             (dateRange.from.getDate() === dateRange.to.getDate() && 
              !isSameMonth(dateRange.from, dateRange.to) && 
              days >= 28) || 
-            // Or start is 1st and end is last day of month
             (dateRange.from.getDate() === 1 && 
              isLastDayOfMonth(dateRange.to))
           );
           
-          // Calculate rent based on whether it's a full month or partial period
           rentTotal = isFullMonth ? monthlyRent : dailyRate * days;
           
-          // Apply VAT if enabled
           if (applyVat) {
             rentVatRate = vatRate;
             rentVatAmount = (rentTotal * vatRate) / 100;
@@ -185,29 +177,23 @@ export function CostCalculator() {
               const monthlyRent = property.monthly_rent;
               const dailyRate = monthlyRent / 30;
               
-              // Check if this is a full month period
               const isFullMonth = (
-                // Either same day of different months (e.g., 1st to 1st)
                 (dateRange.from.getDate() === dateRange.to.getDate() && 
                  !isSameMonth(dateRange.from, dateRange.to) && 
                  days >= 28) || 
-                // Or start is 1st and end is last day of month
                 (dateRange.from.getDate() === 1 && 
                  isLastDayOfMonth(dateRange.to))
               );
               
-              // Calculate rent based on whether it's a full month or partial period
               const propertyRent = isFullMonth ? monthlyRent : dailyRate * days;
               rentTotal += propertyRent;
               
-              // Apply VAT if enabled
               if (applyVat) {
                 rentVatRate = vatRate;
                 const propertyVatAmount = (propertyRent * vatRate) / 100;
                 rentVatAmount += propertyVatAmount;
               }
               
-              // Just use the first property for rent details if there are multiple
               if (!rentDetails) {
                 rentDetails = {
                   property_name: property.name || selectedPropertyName,
@@ -234,12 +220,9 @@ export function CostCalculator() {
 
       const utilitiesTotal = utilities.reduce((sum, item) => sum + (parseFloat(item.amount.toString()) || 0), 0);
 
-      // For grand total, we need to convert currencies properly
-      // Get exchange rates
       const { data: exchangeRatesData } = await supabase.functions.invoke('get-exchange-rates');
-      const rates = exchangeRatesData?.rates || { EUR: 4.97, RON: 1 }; // Fallback rates
-      
-      // Convert rent and VAT from EUR to RON for proper summing
+      const rates = exchangeRatesData?.rates || { EUR: 4.97, RON: 1 };
+
       const rentInRON = rentTotal * rates.EUR;
       const vatInRON = rentVatAmount * rates.EUR;
       const grandTotal = rentInRON + vatInRON + utilitiesTotal;
