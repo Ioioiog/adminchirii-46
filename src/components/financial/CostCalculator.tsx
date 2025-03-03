@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Calendar } from "lucide-react";
 import { DateRange } from "react-day-picker";
@@ -28,7 +27,6 @@ import {
 import { ProfileInvoiceInfo, InvoiceSettings } from "@/types/invoice";
 import { UTILITY_TYPES } from "@/components/utilities/providers/types";
 
-// Define the missing types
 interface UtilityCost {
   date: string;
   utility_type: string;
@@ -253,6 +251,18 @@ export function CostCalculator() {
         .lte('issued_date', endDate)
         .eq('property_id', selectedPropertyId);
 
+      console.log('Utilities fetched for period:', startDate, 'to', endDate);
+      console.log('Property ID:', selectedPropertyId);
+      console.log('Utilities data:', utilities);
+      console.log('Utility types found:', utilities.map(u => u.type));
+      
+      const internetUtilities = utilities.filter(u => 
+        u.type.toLowerCase() === 'internet' || 
+        u.type.toLowerCase().includes('internet') ||
+        u.type.toLowerCase().includes('digi')
+      );
+      console.log('Internet utilities:', internetUtilities);
+
       const utilitiesTotal = utilities.reduce((sum, item) => sum + (parseFloat(item.amount.toString()) || 0), 0);
 
       const { data: exchangeRatesData } = await supabase.functions.invoke('get-exchange-rates');
@@ -292,6 +302,8 @@ export function CostCalculator() {
       filteredData = data.filter(item => new Date(item.date) >= twelveMonthsAgo);
     }
 
+    console.log('Processing utility data:', filteredData);
+
     const monthlyData: Record<string, Record<string, number>> = {};
 
     filteredData.forEach(item => {
@@ -317,20 +329,27 @@ export function CostCalculator() {
         };
       }
       
-      // Normalize utility_type by removing spaces and converting to lowercase
       let utilityType = item.utility_type.replace(/ /g, '_').toLowerCase();
       
-      // Check if the utility type is one of our predefined types
+      console.log('Processing item:', { 
+        date: item.date,
+        original_type: item.utility_type,
+        normalized_type: utilityType,
+        amount: item.amount
+      });
+      
       if (monthlyData[monthYear][utilityType] !== undefined) {
         monthlyData[monthYear][utilityType] += item.amount;
         monthlyData[monthYear].total += item.amount;
+        console.log(`Added ${item.amount} to ${utilityType}, new total: ${monthlyData[monthYear][utilityType]}`);
       } else {
-        // For any other utility types not directly mapped, add to 'other' category
-        console.log(`Unmapped utility type: ${utilityType}`);
+        console.log(`Unmapped utility type: ${utilityType}, adding to "other"`);
         monthlyData[monthYear].other += item.amount;
         monthlyData[monthYear].total += item.amount;
       }
     });
+
+    console.log('Monthly data processed:', monthlyData);
 
     const chartData: ChartData[] = Object.keys(monthlyData).map(month => ({
       month,
@@ -355,6 +374,8 @@ export function CostCalculator() {
       const dateB = new Date(b.month);
       return dateA.getTime() - dateB.getTime();
     });
+
+    console.log('Final chart data:', chartData);
 
     return chartData;
   };
