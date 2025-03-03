@@ -247,8 +247,8 @@ export function CostCalculator() {
       const { data: utilities = [] } = await supabase
         .from('utilities')
         .select('id, type, amount, due_date, currency, invoice_number, issued_date')
-        .gte('issued_date', startDate)
-        .lte('issued_date', endDate)
+        .or(`issued_date.gte.${startDate},due_date.gte.${startDate}`)
+        .or(`issued_date.lte.${endDate},due_date.lte.${endDate}`)
         .eq('property_id', selectedPropertyId);
 
       console.log('Utilities fetched for period:', startDate, 'to', endDate);
