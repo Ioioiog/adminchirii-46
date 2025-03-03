@@ -50,6 +50,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
   const [tenants, setTenants] = useState<Array<{ id: string; first_name: string; last_name: string }>>([]);
   const [selectedProperty, setSelectedProperty] = useState<PropertyOption | null>(null);
   const [utilities, setUtilities] = useState<UtilityForInvoice[]>([]);
+  const [defaultTenantId, setDefaultTenantId] = useState<string | null>(null);
 
   const formSchema = z.object({
     property_id: z.string({ required_error: "Please select a property" }),
@@ -149,6 +150,12 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         }
 
         setProperties(propertiesData);
+        
+        // Auto-select the first property if only one exists and no specific one is already selected
+        if (propertiesData.length === 1 && !calculationData?.propertyId && !form.getValues("property_id")) {
+          form.setValue("property_id", propertiesData[0].id);
+          setSelectedProperty(propertiesData[0]);
+        }
       } catch (error: any) {
         console.error("Error fetching properties:", error);
         toast({
@@ -162,7 +169,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     };
 
     fetchProperties();
-  }, [userId, userRole, toast]);
+  }, [userId, userRole, toast, form, calculationData?.propertyId]);
 
   useEffect(() => {
     const fetchTenants = async () => {
@@ -192,6 +199,12 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         }));
 
         setTenants(tenantsData);
+        
+        // Auto-select the tenant if only one exists for this property
+        if (tenantsData.length === 1 && !form.getValues("tenant_id")) {
+          setDefaultTenantId(tenantsData[0].id);
+          form.setValue("tenant_id", tenantsData[0].id);
+        }
       } catch (error: any) {
         console.error("Error fetching tenants:", error);
         toast({
@@ -205,13 +218,20 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     };
 
     fetchTenants();
-  }, [propertyId, userRole, toast]);
+  }, [propertyId, userRole, toast, form]);
 
   useEffect(() => {
     if (selectedProperty) {
       form.setValue("amount", selectedProperty.monthly_rent);
     }
   }, [selectedProperty, form]);
+
+  // Set default tenant when defaultTenantId changes
+  useEffect(() => {
+    if (defaultTenantId && userRole === "landlord") {
+      form.setValue("tenant_id", defaultTenantId);
+    }
+  }, [defaultTenantId, form, userRole]);
 
   const handleUtilitySelection = (id: string, selected: boolean) => {
     setUtilities(prevUtilities => 
@@ -507,3 +527,4 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     </Form>
   );
 }
+
