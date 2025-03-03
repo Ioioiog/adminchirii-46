@@ -58,6 +58,7 @@ const CostCalculator = () => {
   const [grandTotalCurrency, setGrandTotalCurrency] = useState<string>('RON');
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
+  const [landlordId, setLandlordId] = useState<string>('');
 
   useEffect(() => {
     if (selectedPropertyId) {
