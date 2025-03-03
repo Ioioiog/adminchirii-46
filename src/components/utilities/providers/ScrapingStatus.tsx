@@ -64,8 +64,8 @@ export function ScrapingStatus({
       return 'Login to the provider website failed. Please check your credentials.';
     }
     
-    if (errorMessage.includes('function is shutdown')) {
-      return 'The scraping process was interrupted. This may be due to the provider website taking too long to respond.';
+    if (errorMessage.includes('function is shutdown') || errorMessage.includes('EarlyDrop')) {
+      return 'The scraping process was interrupted due to resource limitations. Please try again with a shorter date range or during off-peak hours.';
     }
     
     if (errorMessage.includes('Change consumption location') || errorMessage.includes('Schimbă locul de consum')) {
@@ -85,8 +85,11 @@ export function ScrapingStatus({
     }
     
     // Handle WebSocket and SSL protocol errors
-    if (errorMessage.includes('WebSocket') || errorMessage.includes('NoApplicationProtocol')) {
-      return 'Network connection issue occurred. This may be due to SSL/TLS protocol mismatch or firewall restrictions. Please try again later.';
+    if (errorMessage.includes('WebSocket')) {
+      if (errorMessage.includes('NoApplicationProtocol')) {
+        return 'Network connection issue due to SSL/TLS protocol mismatch. The provider website may have updated its security settings. Please try again later.';
+      }
+      return 'WebSocket connection error occurred. This may be due to network issues or firewall restrictions. Please try again later.';
     }
     
     return errorMessage;

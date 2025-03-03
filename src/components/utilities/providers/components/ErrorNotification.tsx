@@ -60,8 +60,8 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
       return "The process was interrupted by a promotional popup on the ENGIE website asking to use their app. We'll improve our handling of this popup in future updates. Please try again.";
     }
     
-    if (errorMessage.includes('shutdown') || errorMessage.includes('interrupted')) {
-      return "The scraping process was interrupted. This may be due to the provider website taking too long to respond or session timeout. Please try again later.";
+    if (errorMessage.includes('shutdown') || errorMessage.includes('interrupted') || errorMessage.includes('EarlyDrop')) {
+      return "The scraping process was interrupted due to resource limitations. This can happen when the process takes too long or uses too much memory. Please try again with a shorter date range or during off-peak hours.";
     }
 
     if (errorMessage.includes('istoric-facturi') || errorMessage.includes('table/tbody')) {

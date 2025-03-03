@@ -35,6 +35,30 @@ export function useJobStatusManager() {
       console.log('Job status:', job.status);
       console.log('Job error message:', job.error_message || 'None');
       
+      // Check if the job has a shutdown event in the error message
+      if (job.status === 'in_progress' && 
+          (job.error_message?.includes('shutdown') || job.error_message?.includes('EarlyDrop'))) {
+        console.log('Job was terminated due to resource limitations, marking as failed');
+        
+        // Update the job status directly in the database
+        await supabase
+          .from('scraping_jobs')
+          .update({
+            status: 'failed',
+            error_message: 'The scraping process was interrupted due to resource limitations. The Edge Function was shut down with reason: EarlyDrop. This typically happens when the process takes too long or uses too much memory.'
+          })
+          .eq('id', jobId);
+          
+        // Update the local state
+        updateJobStatus(providerId, {
+          status: 'failed',
+          last_run_at: job.created_at,
+          error_message: 'The scraping process was interrupted due to resource limitations. Please try again with a shorter date range or during off-peak hours.'
+        });
+        
+        return 'failed';
+      }
+      
       // Check if the job was interrupted during "Waiting for login navigation"
       if (job.status === 'in_progress' && job.error_message && job.error_message.includes('Waiting for login navigation')) {
         console.log('Job appears to be stuck in login navigation, marking as failed');
@@ -53,6 +77,36 @@ export function useJobStatusManager() {
           status: 'failed',
           last_run_at: job.created_at,
           error_message: 'The process timed out while waiting for the login page to respond after CAPTCHA. This often happens when the provider website is experiencing high traffic.'
+        });
+        
+        return 'failed';
+      }
+      
+      // Check for WebSocket connection issues
+      if (job.status === 'in_progress' && job.error_message && 
+          (job.error_message.includes('WebSocket') || job.error_message.includes('NoApplicationProtocol'))) {
+        console.log('Job failed due to WebSocket connection issues, marking as failed');
+        
+        let errorMessageToShow = 'Network connection issue occurred. Please try again later.';
+        
+        if (job.error_message.includes('NoApplicationProtocol')) {
+          errorMessageToShow = 'Network connection issue due to SSL/TLS protocol mismatch. The provider website may have updated its security settings. Please try again later.';
+        }
+        
+        // Update the job status directly in the database
+        await supabase
+          .from('scraping_jobs')
+          .update({
+            status: 'failed',
+            error_message: errorMessageToShow
+          })
+          .eq('id', jobId);
+          
+        // Update the local state
+        updateJobStatus(providerId, {
+          status: 'failed',
+          last_run_at: job.created_at,
+          error_message: errorMessageToShow
         });
         
         return 'failed';
@@ -194,6 +248,16 @@ export function useJobStatusManager() {
                      job.error_message.includes('Mai târziu')) {
               errorDescription = "The process was interrupted by a promotional popup on the ENGIE website. We'll improve handling of this in future updates. Please try again later.";
             }
+            else if (job.error_message.includes('shutdown') || job.error_message.includes('EarlyDrop')) {
+              errorDescription = "The scraping process was interrupted due to resource limitations. Please try again with a shorter date range or during off-peak hours.";
+            }
+            else if (job.error_message.includes('WebSocket')) {
+              if (job.error_message.includes('NoApplicationProtocol')) {
+                errorDescription = "Network connection issue due to SSL/TLS protocol mismatch. The provider website may have updated its security settings. Please try again later.";
+              } else {
+                errorDescription = "WebSocket connection error occurred. This may be due to network issues or firewall restrictions. Please try again later.";
+              }
+            }
             else {
               errorDescription = formatEdgeFunctionError(job.error_message);
             }
@@ -209,8 +273,8 @@ export function useJobStatusManager() {
               errorDescription = "The provider website returned unexpected data. This often happens when they update their site structure. Please try again later.";
             } else if (job.error_message.includes("timeout")) {
               errorDescription = "The request to the provider website timed out. This could be due to slow internet or the website being temporarily down.";
-            } else if (job.error_message.includes("function is shutdown") || job.error_message.includes("interrupted")) {
-              errorDescription = "The scraping process was interrupted. This may be due to exceeding the function execution time limit. Please try again.";
+            } else if (job.error_message.includes("function is shutdown") || job.error_message.includes("interrupted") || job.error_message.includes("EarlyDrop")) {
+              errorDescription = "The scraping process was interrupted due to resource limitations. This can happen when the process takes too long or uses too much memory. Please try again with a shorter date range or during off-peak hours.";
             }
           }
           
