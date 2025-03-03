@@ -38,14 +38,14 @@ export function useJobStatusManager() {
       // Check if the job has a shutdown event in the error message
       if (job.status === 'in_progress' && 
           (job.error_message?.includes('shutdown') || job.error_message?.includes('EarlyDrop'))) {
-        console.log('Job was terminated due to resource limitations, marking as failed');
+        console.log('Job was terminated due to provider website timeout, marking as failed');
         
         // Update the job status directly in the database
         await supabase
           .from('scraping_jobs')
           .update({
             status: 'failed',
-            error_message: 'The scraping process was interrupted due to resource limitations. The Edge Function was shut down with reason: EarlyDrop. This typically happens when the process takes too long or uses too much memory.'
+            error_message: 'The scraping process was terminated due to the ENGIE website taking too long to respond. The Edge Function was shut down with reason: EarlyDrop. This typically happens during peak hours when ENGIE\'s website becomes slow.'
           })
           .eq('id', jobId);
           
@@ -53,7 +53,7 @@ export function useJobStatusManager() {
         updateJobStatus(providerId, {
           status: 'failed',
           last_run_at: job.created_at,
-          error_message: 'The scraping process was interrupted due to resource limitations. Please try again with a shorter date range or during off-peak hours.'
+          error_message: 'The scraping process was terminated due to ENGIE\'s website slow response. Please try again during off-peak hours.'
         });
         
         return 'failed';
@@ -90,13 +90,13 @@ export function useJobStatusManager() {
       }
       
       // Continue with regular error handling
-      if (job.status === 'failed' && job.error_message && job.error_message.includes('navigation timeout')) {
-        console.log('Job failed due to navigation timeout, special handling');
+      if (job.status === 'failed' && job.error_message && job.error_message.includes('shutdown')) {
+        console.log('Job failed due to shutdown, special handling');
         
         updateJobStatus(providerId, {
           status: 'failed',
           last_run_at: job.created_at,
-          error_message: 'Navigation timed out. The provider website may be slow or experiencing high traffic. Please try again later.'
+          error_message: 'The process was terminated due to timeout. ENGIE\'s website took too long to respond. Please try again in a few minutes when their website might be less busy.'
         });
       } 
       // Check if the job shows signs of being interrupted after CAPTCHA
@@ -108,7 +108,7 @@ export function useJobStatusManager() {
         updateJobStatus(providerId, {
           status: 'failed',
           last_run_at: job.created_at,
-          error_message: 'CAPTCHA was submitted but the process was interrupted afterward. This often happens when the provider website is slow to respond after login. Please try again.'
+          error_message: 'CAPTCHA was submitted but the process was interrupted afterward. The ENGIE website might be slow to respond after login. Please try again.'
         });
       } 
       // Check for cookie or session issues
@@ -201,10 +201,9 @@ export function useJobStatusManager() {
           if (job?.error_message) {
             console.error('Scraping job failed with error:', job.error_message);
             
-            // Handle navigation timeout
-            if (job.error_message.includes('navigation timeout') ||
-                job.error_message.includes('function is shutdown')) {
-              errorDescription = "The system timed out. The provider website may be slow or experiencing high traffic. Please try again later.";
+            // Handle shutdown errors (seen in your logs)
+            if (job.error_message.includes('shutdown')) {
+              errorDescription = "The process was terminated due to timeout. ENGIE's website took too long to respond. Please try again in a few minutes when their website might be less busy.";
             }
             // Handle CAPTCHA specific errors
             else if (job.error_message.includes('CAPTCHA submitted')) {
@@ -222,7 +221,7 @@ export function useJobStatusManager() {
               errorDescription = "The process was interrupted by a promotional popup on the ENGIE website. We'll improve handling of this in future updates. Please try again later.";
             }
             else if (job.error_message.includes('shutdown') || job.error_message.includes('EarlyDrop')) {
-              errorDescription = "The scraping process was interrupted due to resource limitations. Please try again with a shorter date range or during off-peak hours.";
+              errorDescription = "The scraping process was terminated due to ENGIE's website slow response. Please try again during off-peak hours.";
             }
             else if (job.error_message.includes('WebSocket')) {
               if (job.error_message.includes('NoApplicationProtocol')) {
@@ -246,8 +245,6 @@ export function useJobStatusManager() {
               errorDescription = "The provider website returned unexpected data. This often happens when they update their site structure. Please try again later.";
             } else if (job.error_message.includes("timeout")) {
               errorDescription = "The request to the provider website timed out. This could be due to slow internet or the website being temporarily down.";
-            } else if (job.error_message.includes("function is shutdown") || job.error_message.includes("interrupted") || job.error_message.includes("EarlyDrop")) {
-              errorDescription = "The scraping process was interrupted due to resource limitations. This can happen when the process takes too long or uses too much memory. Please try again with a shorter date range or during off-peak hours.";
             }
           }
           
@@ -274,20 +271,20 @@ export function useJobStatusManager() {
             .from('scraping_jobs')
             .update({
               status: 'failed',
-              error_message: 'The process timed out. This often happens when the provider website is slow to respond.'
+              error_message: 'The process timed out. ENGIE\'s website was taking too long to respond. Please try again later when their servers might be less busy.'
             })
             .eq('id', jobId);
             
           updateJobStatus(providerId, {
             status: 'failed',
             last_run_at: new Date().toISOString(),
-            error_message: 'The process timed out. This often happens when the provider website is slow to respond.'
+            error_message: 'The process timed out. ENGIE\'s website was taking too long to respond. Please try again later when their servers might be less busy.'
           });
           
           toast({
             variant: "destructive",
             title: "Error",
-            description: "The utility bill fetch process timed out. Please try again later.",
+            description: "The utility bill fetch process timed out. Please try again later when ENGIE's website might be less busy.",
           });
         }
       });

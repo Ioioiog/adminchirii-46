@@ -29,7 +29,7 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
     }
 
     if (errorMessage.includes('function is shutdown')) {
-      return "The process timed out. The provider's website may be experiencing high traffic or slowness. Please try again in a few minutes.";
+      return "The process was terminated due to timeout. The ENGIE website was taking too long to respond. Please try again in a few minutes when their servers might be less busy.";
     }
     
     if (errorMessage.includes('Change consumption location') || errorMessage.includes('Schimbă locul de consum') || errorMessage.includes('alege locul de consum')) {
@@ -65,7 +65,7 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
     }
     
     if (errorMessage.includes('shutdown') || errorMessage.includes('interrupted') || errorMessage.includes('EarlyDrop')) {
-      return "The scraping process was interrupted due to resource limitations. This can happen when the process takes too long or uses too much memory. Please try again with a shorter date range or during off-peak hours.";
+      return "The scraping process was interrupted due to the provider website's slow response time. ENGIE's website is sometimes slow during peak hours. Please try again during off-peak hours.";
     }
 
     if (errorMessage.includes('istoric-facturi') || errorMessage.includes('table/tbody')) {

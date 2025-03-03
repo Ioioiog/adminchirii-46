@@ -1,5 +1,6 @@
 
 import { Button } from "@/components/ui/button";
+import { CardTitle } from "@/components/ui/card";
 import { Loader2, RefreshCw, AlertCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -50,7 +51,7 @@ export function ScrapingStatus({
     }
     
     if (errorMessage.includes('function is shutdown')) {
-      return 'The system timed out. Please try again in a few minutes when the provider website might be less busy.';
+      return 'The scraping process was terminated because ENGIE\'s website took too long to respond. Please try again in a few minutes when their website might be less busy.';
     }
 
     if (errorMessage.includes('Waiting for account entry')) {
@@ -69,7 +70,7 @@ export function ScrapingStatus({
     }
     
     if (errorMessage.includes('function is shutdown') || errorMessage.includes('EarlyDrop')) {
-      return 'The scraping process was interrupted due to resource limitations. Please try again with a shorter date range or during off-peak hours.';
+      return 'The scraping process was terminated due to the provider website\'s slow response time. ENGIE websites often slow down during peak hours.';
     }
     
     if (errorMessage.includes('Change consumption location') || errorMessage.includes('Schimbă locul de consum') || errorMessage.includes('alege locul de consum')) {
@@ -112,6 +113,10 @@ export function ScrapingStatus({
     
     if (errorMessage.includes('timeout')) {
       return 'The provider website is responding slowly. Please try again later when their service might be less busy.';
+    }
+    
+    if (errorMessage.includes('shutdown')) {
+      return 'The process was terminated due to timeout. ENGIE\'s website took too long to respond. Please try again in a few minutes.';
     }
     
     return errorMessage;
