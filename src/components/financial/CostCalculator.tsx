@@ -43,6 +43,13 @@ interface ChartData {
   internet: number;
   building_maintenance: number;
   other: number;
+  trash: number;
+  heating: number;
+  cooling: number;
+  sewage: number;
+  security: number;
+  landscaping: number;
+  cleaning: number;
   total: number;
 }
 
@@ -298,6 +305,13 @@ export function CostCalculator() {
           gas: 0,
           internet: 0,
           building_maintenance: 0,
+          trash: 0,
+          heating: 0,
+          cooling: 0,
+          sewage: 0,
+          security: 0,
+          landscaping: 0,
+          cleaning: 0,
           other: 0,
           total: 0
         };
@@ -325,6 +339,13 @@ export function CostCalculator() {
       gas: monthlyData[month].gas || 0,
       internet: monthlyData[month].internet || 0,
       building_maintenance: monthlyData[month].building_maintenance || 0,
+      trash: monthlyData[month].trash || 0,
+      heating: monthlyData[month].heating || 0,
+      cooling: monthlyData[month].cooling || 0,
+      sewage: monthlyData[month].sewage || 0,
+      security: monthlyData[month].security || 0,
+      landscaping: monthlyData[month].landscaping || 0,
+      cleaning: monthlyData[month].cleaning || 0,
       other: monthlyData[month].other || 0,
       total: monthlyData[month].total || 0
     }));
