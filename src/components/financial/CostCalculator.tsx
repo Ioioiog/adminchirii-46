@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Calendar } from "lucide-react";
 import { DateRange } from "react-day-picker";
@@ -17,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ProfileInvoiceInfo } from "@/types/invoice";
 
 interface CalculationResult {
   rentTotal: number;
@@ -107,7 +107,8 @@ export function CostCalculator() {
       let vatRate = 19; // Default VAT rate (percent)
       
       if (profileData?.invoice_info) {
-        applyVat = profileData.invoice_info.apply_vat === true;
+        const invoiceInfo = profileData.invoice_info as ProfileInvoiceInfo['invoice_info'];
+        applyVat = !!invoiceInfo?.apply_vat;
       }
       
       if (userRole === 'tenant') {
