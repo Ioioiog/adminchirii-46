@@ -24,6 +24,15 @@ interface CalculationResult {
   grandTotal: number;
   period: string;
   utilities: UtilityDetail[];
+  rentDetails: RentDetail | null;
+}
+
+interface RentDetail {
+  property_name: string;
+  monthly_amount: number;
+  currency: string;
+  days_calculated: number;
+  daily_rate: number;
 }
 
 interface UtilityDetail {
@@ -70,13 +79,23 @@ export function CostCalculator() {
       }
 
       let rentTotal = 0;
+      let rentDetails: RentDetail | null = null;
+      let selectedPropertyName = '';
+      
+      // Get the property name
+      const selectedProperty = properties.find(p => p.id === selectedPropertyId);
+      if (selectedProperty) {
+        selectedPropertyName = selectedProperty.name;
+      }
+      
       if (userRole === 'tenant') {
         const { data: tenancy } = await supabase
           .from('tenancies')
           .select(`
             property_id,
             properties:properties (
-              monthly_rent
+              monthly_rent,
+              name
             )
           `)
           .eq('tenant_id', userId)
@@ -87,13 +106,23 @@ export function CostCalculator() {
         if (tenancy?.properties?.monthly_rent) {
           const days = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
           const monthlyRent = tenancy.properties.monthly_rent;
-          rentTotal = days <= 31 ? (monthlyRent / 30) * days : monthlyRent;
+          const dailyRate = monthlyRent / 30;
+          rentTotal = days <= 31 ? dailyRate * days : monthlyRent;
+          
+          rentDetails = {
+            property_name: tenancy.properties.name || selectedPropertyName,
+            monthly_amount: monthlyRent,
+            currency: 'EUR',
+            days_calculated: days,
+            daily_rate: dailyRate
+          };
         }
       } else if (userRole === 'landlord') {
         const { data: properties } = await supabase
           .from('properties')
           .select(`
             id,
+            name,
             monthly_rent,
             tenancies:tenancies (
               id,
@@ -103,13 +132,25 @@ export function CostCalculator() {
           .eq('landlord_id', userId)
           .eq(selectedPropertyId ? 'id' : 'id', selectedPropertyId || undefined);
 
-        if (properties) {
+        if (properties && properties.length > 0) {
           for (const property of properties) {
             const activeTenancies = property.tenancies.filter((t: any) => t.status === 'active');
             if (activeTenancies.length > 0) {
               const days = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
               const monthlyRent = property.monthly_rent;
-              rentTotal += days <= 31 ? (monthlyRent / 30) * days : monthlyRent;
+              const dailyRate = monthlyRent / 30;
+              rentTotal += days <= 31 ? dailyRate * days : monthlyRent;
+              
+              // Just use the first property for rent details if there are multiple
+              if (!rentDetails) {
+                rentDetails = {
+                  property_name: property.name || selectedPropertyName,
+                  monthly_amount: monthlyRent,
+                  currency: 'EUR',
+                  days_calculated: days,
+                  daily_rate: dailyRate
+                };
+              }
             }
           }
         }
@@ -138,7 +179,8 @@ export function CostCalculator() {
         utilitiesTotal,
         grandTotal,
         period: displayPeriod,
-        utilities: utilities
+        utilities: utilities,
+        rentDetails: rentDetails
       });
 
     } catch (error) {
@@ -230,6 +272,35 @@ export function CostCalculator() {
                   </div>
                 </div>
               </div>
+
+              {/* Add Rent Details Section */}
+              {results.rentDetails && (
+                <div className="p-4 border rounded-md">
+                  <h3 className="font-medium mb-3">Rent Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-500">Property</p>
+                      <p className="font-medium">{results.rentDetails.property_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Monthly Rent</p>
+                      <p className="font-medium">{formatAmount(results.rentDetails.monthly_amount, 'EUR')}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Days Calculated</p>
+                      <p className="font-medium">{results.rentDetails.days_calculated} days</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Daily Rate</p>
+                      <p className="font-medium">{formatAmount(results.rentDetails.daily_rate, 'EUR')}/day</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <p className="text-sm text-gray-500">Total Rent (for selected period)</p>
+                      <p className="font-bold text-blue-600">{formatAmount(results.rentTotal, 'EUR')}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {results.utilities.length > 0 && (
                 <div className="p-4 border rounded-md">
