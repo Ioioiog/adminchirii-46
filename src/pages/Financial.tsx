@@ -129,7 +129,13 @@ const Financial = () => {
           description="Summary of your financial activities for the current month"
         />
         
-        {isLandlordOrTenant && <CostCalculator />}
+        {isLandlordOrTenant && (
+          <Card>
+            <CardContent className="pt-6">
+              <CostCalculator />
+            </CardContent>
+          </Card>
+        )}
         
         <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
           <Card>
