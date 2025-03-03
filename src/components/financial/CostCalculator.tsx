@@ -42,6 +42,7 @@ interface ChartData {
   gas: number;
   internet: number;
   building_maintenance: number;
+  other: number;
   total: number;
 }
 
@@ -297,6 +298,7 @@ export function CostCalculator() {
           gas: 0,
           internet: 0,
           building_maintenance: 0,
+          other: 0,
           total: 0
         };
       }
@@ -309,8 +311,9 @@ export function CostCalculator() {
         monthlyData[monthYear][utilityType] += item.amount;
         monthlyData[monthYear].total += item.amount;
       } else {
-        // For any other utility types not directly mapped, just add to total
+        // For any other utility types not directly mapped, add to 'other' category
         console.log(`Unmapped utility type: ${utilityType}`);
+        monthlyData[monthYear].other += item.amount;
         monthlyData[monthYear].total += item.amount;
       }
     });
@@ -322,6 +325,7 @@ export function CostCalculator() {
       gas: monthlyData[month].gas || 0,
       internet: monthlyData[month].internet || 0,
       building_maintenance: monthlyData[month].building_maintenance || 0,
+      other: monthlyData[month].other || 0,
       total: monthlyData[month].total || 0
     }));
 
