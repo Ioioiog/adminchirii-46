@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { FileText, Building, CreditCard, Calculator } from "lucide-react";
 import { InvoiceFormProps, InvoiceMetadata } from "@/types/invoice";
 import { Card, CardContent } from "@/components/ui/card";
+import { format } from "date-fns";
 
 interface InvoiceFormValues {
   property_id: string;
@@ -59,7 +60,16 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     if (calculationData?.propertyId) {
       form.setValue("property_id", calculationData.propertyId);
     }
-  }, [calculationData]);
+    
+    if (calculationData?.rentAmount) {
+      form.setValue("amount", calculationData.rentAmount);
+    }
+    
+    // Set default due date to 14 days from today if not provided
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 14);
+    form.setValue("due_date", dueDate.toISOString().split('T')[0]);
+  }, [calculationData, form]);
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -182,7 +192,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     if (selectedProperty) {
       form.setValue("amount", selectedProperty.monthly_rent);
     }
-  }, [selectedProperty]);
+  }, [selectedProperty, form]);
 
   const onSubmit = async (values: InvoiceFormValues) => {
     try {
@@ -208,6 +218,18 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       }
       
       const vatRate = applyVat ? 19 : 0;
+      
+      // Prepare metadata if we have date range from calculation
+      let metadata: InvoiceMetadata | undefined;
+      
+      if (calculationData?.dateRange) {
+        metadata = {
+          date_range: {
+            from: format(calculationData.dateRange.from, 'yyyy-MM-dd'),
+            to: format(calculationData.dateRange.to, 'yyyy-MM-dd')
+          }
+        };
+      }
 
       const { data, error } = await supabase
         .from("invoices")
@@ -218,8 +240,9 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
           amount: values.amount,
           due_date: values.due_date,
           status: "pending",
-          currency: selectedProperty?.currency || "EUR",
-          vat_rate: vatRate
+          currency: calculationData?.currency || selectedProperty?.currency || "EUR",
+          vat_rate: vatRate,
+          metadata: metadata
         });
 
       if (error) throw error;
@@ -341,7 +364,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                     step="0.01"
                     {...field}
                     onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                    disabled={isLoading}
+                    disabled={isLoading || !!calculationData?.rentAmount}
                   />
                 </FormControl>
                 <FormMessage />
@@ -359,19 +382,26 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
               </h3>
 
               <div className="space-y-2 bg-white p-4 rounded-md border">
-                {selectedProperty && (
+                {calculationData?.dateRange && (
                   <div className="flex justify-between items-center py-1">
-                    <span className="text-sm">Base Monthly Rent:</span>
+                    <span className="text-sm">Period:</span>
                     <span className="text-sm font-medium">
-                      {selectedProperty.monthly_rent.toFixed(2)} {selectedProperty.currency}
+                      {format(calculationData.dateRange.from, 'MMM d, yyyy')} to {format(calculationData.dateRange.to, 'MMM d, yyyy')}
                     </span>
                   </div>
                 )}
+                
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-sm">Invoice Amount:</span>
+                  <span className="text-sm font-medium">
+                    {form.getValues("amount")} {calculationData?.currency || selectedProperty?.currency || "EUR"}
+                  </span>
+                </div>
 
                 <div className="flex justify-between items-center pt-2 mt-2 border-t border-slate-200">
                   <span className="font-bold">Total Amount:</span>
                   <span className="text-lg font-bold">
-                    {form.getValues("amount") || 0} {selectedProperty?.currency || "EUR"}
+                    {form.getValues("amount")} {calculationData?.currency || selectedProperty?.currency || "EUR"}
                   </span>
                 </div>
               </div>

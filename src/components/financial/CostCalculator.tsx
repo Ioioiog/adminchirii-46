@@ -298,22 +298,17 @@ const CostCalculator = () => {
       return;
     }
 
+    const dateRangeForInvoice = selectedDateRange && 
+      selectedDateRange.from && 
+      selectedDateRange.to ? {
+        from: selectedDateRange.from,
+        to: selectedDateRange.to
+      } : undefined;
+
     const calculationData = {
       propertyId: selectedPropertyId,
       rentAmount: rentAmount + vatAmount,
-      dateRange: selectedDateRange && selectedDateRange.from && selectedDateRange.to ? {
-        from: selectedDateRange.from,
-        to: selectedDateRange.to
-      } : undefined,
-      utilities: utilities
-        .filter(utility => utility.selected)
-        .map(utility => ({
-          id: utility.id,
-          type: utility.type,
-          amount: getAdjustedUtilityAmount(utility),
-          percentage: utility.percentage,
-          selected: utility.selected
-        })),
+      dateRange: dateRangeForInvoice,
       currency: rentCurrency,
       grandTotal: calculateGrandTotal()
     };
@@ -600,19 +595,12 @@ const CostCalculator = () => {
           calculationData={{
             propertyId: selectedPropertyId,
             rentAmount: rentAmount + vatAmount,
-            dateRange: selectedDateRange && selectedDateRange.from && selectedDateRange.to ? {
-              from: selectedDateRange.from,
-              to: selectedDateRange.to
-            } : undefined,
-            utilities: utilities
-              .filter(utility => utility.selected)
-              .map(utility => ({
-                id: utility.id,
-                type: utility.type,
-                amount: getAdjustedUtilityAmount(utility),
-                percentage: utility.percentage,
-                selected: utility.selected
-              })),
+            dateRange: selectedDateRange && 
+              selectedDateRange.from && 
+              selectedDateRange.to ? {
+                from: selectedDateRange.from,
+                to: selectedDateRange.to
+              } : undefined,
             currency: rentCurrency,
             grandTotal: calculateGrandTotal()
           }}

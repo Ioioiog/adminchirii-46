@@ -25,8 +25,8 @@ export interface UtilityItem {
   type: string;
   amount: number;
   due_date: string;
-  percentage?: number; // Added percentage for partial utility payments
-  original_amount?: number; // Store the original amount before any partial calculation
+  percentage?: number;
+  original_amount?: number;
 }
 
 export interface InvoiceMetadata {
@@ -40,7 +40,6 @@ export interface InvoiceMetadata {
     from: string;
     to: string;
   };
-  utilities_included?: UtilityItem[];
 }
 
 export interface Invoice {
@@ -100,13 +99,6 @@ export interface CalculationData {
     from: Date;
     to: Date;
   };
-  utilities?: Array<{
-    id: string;
-    type: string;
-    amount: number;
-    percentage?: number;
-    selected?: boolean;
-  }>;
   currency?: string;
   grandTotal?: number;
 }
