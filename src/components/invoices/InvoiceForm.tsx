@@ -53,7 +53,7 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [tenantEmail, setTenantEmail] = useState<string | null>(null);
-  const { availableCurrencies } = useCurrency();
+  const { availableCurrencies, formatAmount } = useCurrency();
   const [isPartialInvoice, setIsPartialInvoice] = useState(false);
   const [propertyFullAmount, setPropertyFullAmount] = useState<number | null>(null);
   const [partialPercentage, setPartialPercentage] = useState<number>(50);
@@ -66,6 +66,7 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
   const [utilityData, setUtilityData] = useState<Utility[]>([]);
   const [selectedUtilities, setSelectedUtilities] = useState<Utility[]>([]);
   const [utilityTotal, setUtilityTotal] = useState<number>(0);
+  const [selectedCurrency, setSelectedCurrency] = useState<string>("EUR");
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -208,9 +209,12 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
     if (propertyFullAmount) {
       updateTotalAmount(propertyFullAmount, total);
     }
-  }, [selectedUtilities, propertyFullAmount]);
+  }, [selectedUtilities, propertyFullAmount, selectedCurrency]);
 
-  const updateTotalAmount = (rentAmount: number, utilitiesAmount: number) => {
+  const updateTotalAmount = async (rentAmount: number, utilitiesAmount: number) => {
+    const { data: exchangeRatesData } = await supabase.functions.invoke('get-exchange-rates');
+    const rates = exchangeRatesData?.rates || { USD: 4.56, EUR: 4.97, RON: 1 };
+    
     let rentPortion = rentAmount;
     
     if (isPartialInvoice) {
@@ -222,7 +226,36 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       }
     }
     
-    // Get the landlord's VAT setting
+    const convertAmount = (amount: number, fromCurrency: string, toCurrency: string) => {
+      if (fromCurrency === toCurrency) return amount;
+      
+      let amountInRON = amount;
+      if (fromCurrency !== 'RON') {
+        amountInRON = amount * rates[fromCurrency];
+      }
+      
+      if (toCurrency === 'RON') {
+        return amountInRON;
+      }
+      
+      return amountInRON / rates[toCurrency];
+    };
+    
+    const { data: property } = await supabase
+      .from("properties")
+      .select("currency")
+      .eq("id", selectedPropertyId)
+      .maybeSingle();
+    
+    const propertyCurrency = property?.currency || "EUR";
+    
+    const convertedRentPortion = convertAmount(rentPortion, propertyCurrency, selectedCurrency);
+    
+    const convertedUtilitiesAmount = selectedUtilities.reduce((sum, util) => {
+      const convertedAmount = convertAmount(util.amount, util.currency || "EUR", selectedCurrency);
+      return sum + convertedAmount;
+    }, 0);
+    
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (user) {
         const { data: profile } = await supabase
@@ -231,17 +264,16 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
           .eq('id', user.id)
           .single();
       
-        // Apply VAT only to rent if VAT is enabled in landlord settings
         let vatAmount = 0;
         if (profile?.invoice_info && typeof profile.invoice_info === 'object') {
           const invoiceInfo = profile.invoice_info as { [key: string]: any };
           if (invoiceInfo.apply_vat) {
-            vatAmount = rentPortion * 0.19; // Assuming 19% VAT rate
+            vatAmount = convertedRentPortion * 0.19;
           }
         }
         
-        // Set the total amount including rent, VAT (if applicable), and utilities
-        form.setValue("amount", rentPortion + vatAmount + utilitiesAmount);
+        form.setValue("amount", convertedRentPortion + vatAmount + convertedUtilitiesAmount);
+        form.setValue("currency", selectedCurrency);
       }
     });
   };
@@ -359,6 +391,15 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
     }
   };
 
+  const handleCurrencyChange = (currency: string) => {
+    setSelectedCurrency(currency);
+    form.setValue("currency", currency);
+    
+    if (propertyFullAmount) {
+      updateTotalAmount(propertyFullAmount, utilityTotal);
+    }
+  };
+
   const onSubmit = async (values: InvoiceFormValues) => {
     if (!selectedFile) {
       toast({
@@ -426,7 +467,7 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
         applyVat = !!invoiceInfo.apply_vat;
       }
       
-      const vatRate = applyVat ? 19 : 0; // 19% VAT if enabled
+      const vatRate = applyVat ? 19 : 0;
 
       const dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
@@ -491,7 +532,7 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
           property_id: values.property_id,
           tenant_id: tenancy.tenant_id,
           status: "pending",
-          vat_rate: vatRate, // Add VAT rate to invoice
+          vat_rate: vatRate,
           metadata: metadata
         })
         .select()
@@ -527,7 +568,6 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
 
       if (rentItemError) throw rentItemError;
 
-      // Add VAT as a separate item if applicable
       if (applyVat && rentPortion > 0) {
         const vatAmount = rentPortion * (vatRate / 100);
         const { error: vatItemError } = await supabase
@@ -860,7 +900,8 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
         <div className="space-y-2">
           <Label htmlFor="currency">Currency</Label>
           <Select 
-            onValueChange={(value) => form.setValue("currency", value)}
+            onValueChange={(value) => handleCurrencyChange(value)}
+            value={selectedCurrency}
             required
           >
             <SelectTrigger>
