@@ -93,6 +93,8 @@ function prepareScrapingRequestBody(provider: UtilityProvider, credentials: Cred
     clearCookies: provider.provider_name.toLowerCase().includes('engie'),
     // Set flag to handle MyENGIE app popup
     handleMyEngiePopup: provider.provider_name.toLowerCase().includes('engie'),
+    // Set flag to skip waiting for navigation after selecting consumption location
+    skipWaitAfterLocationSelection: provider.provider_name.toLowerCase().includes('engie'),
     // Set user agent to appear as a modern browser
     userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
   };
@@ -152,6 +154,13 @@ export async function invokeScrapingFunction(
         throw new Error(`The process encountered a promotional popup about the MyENGIE app. We'll improve handling of this in future updates. Please try again.`);
       }
       
+      // Check for consumption location selection issues
+      if (scrapeData.error && (scrapeData.error.includes('Change consumption location') || 
+                              scrapeData.error.includes('Schimbă locul de consum') || 
+                              scrapeData.error.includes('alege locul de consum'))) {
+        throw new Error(`The process encountered an issue while selecting the consumption location. The system will try to proceed without waiting for navigation.`);
+      }
+      
       throw new Error(scrapeData?.error || 'Scraping failed');
     }
 
@@ -183,6 +192,32 @@ export async function invokeScrapingFunction(
       } catch (fallbackError) {
         console.error('Fallback job creation failed:', fallbackError);
         throw new Error('CAPTCHA was submitted but the process was interrupted. Please try again.');
+      }
+    }
+    
+    // Check for consumption location selection issues
+    if (error instanceof Error && 
+        (error.message.includes('Change consumption location') || 
+         error.message.includes('Schimbă locul de consum') ||
+         error.message.includes('alege locul de consum'))) {
+      console.log('Consumption location selection issue detected, creating fallback job...');
+      
+      try {
+        const jobId = await createScrapingJobDirectly(
+          provider.id,
+          provider.provider_name,
+          provider.utility_type,
+          provider.location_name
+        );
+        
+        return {
+          success: true,
+          jobId: jobId,
+          error: 'The process encountered an issue while selecting the consumption location. A fallback job has been created and will be processed skipping the navigation wait.'
+        };
+      } catch (fallbackError) {
+        console.error('Fallback job creation failed:', fallbackError);
+        throw new Error('The process encountered an issue while selecting the consumption location. Please try again later.');
       }
     }
     
@@ -257,8 +292,9 @@ export async function invokeScrapingFunction(
         }
         
         if (error.message.includes('Change consumption location') || 
-            error.message.includes('Schimbă locul de consum')) {
-          throw new Error('The scraping process failed while trying to select the consumption location. This may be due to cookie or session issues. Please try again later.');
+            error.message.includes('Schimbă locul de consum') ||
+            error.message.includes('alege locul de consum')) {
+          throw new Error('The scraping process failed while trying to select the consumption location. The system will try to proceed without waiting for navigation.');
         }
         
         if (error.message.includes('cookie') || error.message.includes('session')) {

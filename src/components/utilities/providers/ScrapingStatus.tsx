@@ -68,8 +68,8 @@ export function ScrapingStatus({
       return 'The scraping process was interrupted due to resource limitations. Please try again with a shorter date range or during off-peak hours.';
     }
     
-    if (errorMessage.includes('Change consumption location') || errorMessage.includes('Schimbă locul de consum')) {
-      return 'Failed while selecting consumption location. This is a common issue with ENGIE Romania. Please try again later.';
+    if (errorMessage.includes('Change consumption location') || errorMessage.includes('Schimbă locul de consum') || errorMessage.includes('alege locul de consum')) {
+      return 'Failed while selecting consumption location. This is a common issue with ENGIE Romania. The system will now try to proceed without waiting for navigation.';
     }
     
     if (errorMessage.includes('cookie') || errorMessage.includes('session')) {

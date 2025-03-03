@@ -28,6 +28,10 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
       return "The process timed out while waiting for the login page to respond after submission. The provider's website may be experiencing high traffic or slowness. Please try again later.";
     }
     
+    if (errorMessage.includes('Change consumption location') || errorMessage.includes('Schimbă locul de consum') || errorMessage.includes('alege locul de consum')) {
+      return "The process encountered an issue while trying to select your consumption location. This is a common issue with the ENGIE Romania website. The system will now try to proceed without waiting for navigation.";
+    }
+    
     if (errorMessage.includes('CAPTCHA') || errorMessage.includes('captcha')) {
       return "The provider's website requires CAPTCHA verification which could not be automatically solved. Please try again or log in to the provider's website directly.";
     }
@@ -46,10 +50,6 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
     
     if (errorMessage.includes('timeout')) {
       return "The request timed out. The provider website may be slow or temporarily down.";
-    }
-    
-    if (errorMessage.includes('Change consumption location') || errorMessage.includes('Schimbă locul de consum')) {
-      return "The process failed while trying to select the utility consumption location. This is a common issue with the ENGIE Romania website. Please try again later.";
     }
     
     if (errorMessage.includes('cookie') || errorMessage.includes('session')) {
