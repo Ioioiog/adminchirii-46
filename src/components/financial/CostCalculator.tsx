@@ -126,7 +126,7 @@ export function CostCalculator() {
       setResults({
         rentTotal,
         utilitiesTotal,
-        grandTotal: utilitiesTotal,
+        grandTotal: rentTotal + utilitiesTotal,
         period: displayPeriod,
         utilities: utilities
       });
@@ -205,12 +205,16 @@ export function CostCalculator() {
                     <p className="text-lg font-medium">{formatAmount(results.utilitiesTotal, 'RON')}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Total (RON)</p>
+                    <p className="text-sm text-muted-foreground">Total</p>
                     <p className="text-xl font-bold text-blue-600">
                       {formatAmount(results.utilitiesTotal, 'RON')}
                       <br />
                       <span className="text-sm font-normal text-gray-500">
                         + rent ({formatAmount(results.rentTotal, 'EUR')})
+                      </span>
+                      <br />
+                      <span className="text-lg font-semibold text-blue-700">
+                        = {formatAmount(results.grandTotal, 'RON')}
                       </span>
                     </p>
                   </div>
