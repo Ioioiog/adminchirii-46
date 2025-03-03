@@ -2572,6 +2572,7 @@ export type Database = {
         | "water"
         | "internet"
         | "building maintenance"
+        | "other"
     }
     CompositeTypes: {
       provider_credentials: {

@@ -164,7 +164,7 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
       // Clean and map the utility type to a valid database value
       const sanitizedUtilityType = utilityType.toLowerCase().replace(/\s+/g, ' ').trim();
       
-      // Map to a valid database type - ensure 'other' is handled appropriately
+      // Map to a valid database type - now including 'other'
       const validDatabaseType = (() => {
         switch(sanitizedUtilityType) {
           case 'electricity':
@@ -177,14 +177,14 @@ export function UtilityDialog({ properties, onUtilityCreated }: UtilityDialogPro
             return 'internet';
           case 'building maintenance':
             return 'building maintenance';
+          case 'other':
+            return 'other';
           default:
-            // Map any other value to one of the accepted types
-            // You might want to choose the most appropriate default or
-            // customize this based on your application logic
-            console.warn(`Unknown utility type: ${sanitizedUtilityType}, defaulting to 'electricity'`);
-            return 'electricity';
+            // Map any unrecognized value to 'other'
+            console.warn(`Unknown utility type: ${sanitizedUtilityType}, defaulting to 'other'`);
+            return 'other';
         }
-      })();
+      })() as UtilityType;
       
       const { data: utility, error: utilityError } = await supabase
         .from("utilities")
