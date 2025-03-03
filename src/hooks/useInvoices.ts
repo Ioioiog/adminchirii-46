@@ -101,7 +101,7 @@ export const useInvoices = () => {
       .on(
         'postgres_changes',
         {
-          event: '*', // Listen to all changes
+          event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
           schema: 'public',
           table: 'invoices'
         },

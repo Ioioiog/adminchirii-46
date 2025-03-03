@@ -1,12 +1,8 @@
-
-import { useToast } from "@/hooks/use-toast";
-import { Invoice } from "@/types/invoice";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { InvoiceGenerator } from "./InvoiceGenerator";
 import { useState } from "react";
-import { InvoiceDetails } from "./InvoiceDetails";
-import { InvoiceActions } from "./InvoiceActions";
-import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { useCurrency } from "@/hooks/useCurrency";
+import { InvoiceActions } from "@/components/invoices/InvoiceActions";
 import {
   Table,
   TableBody,
@@ -15,9 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
-import { useCurrency } from "@/hooks/useCurrency";
+import { Invoice } from "@/types/invoice";
+import { useNavigate } from "react-router-dom";
 
 interface InvoiceListProps {
   invoices: Invoice[];
@@ -26,98 +21,60 @@ interface InvoiceListProps {
 }
 
 export function InvoiceList({ invoices, userRole, onStatusUpdate }: InvoiceListProps) {
-  const { toast } = useToast();
   const { formatAmount } = useCurrency();
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
-  const [companyInfo, setCompanyInfo] = useState<any>(null);
-  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
-  const handleViewInvoice = async (invoice: Invoice) => {
-    try {
-      console.log("Fetching invoice details for ID:", invoice.id);
-      
-      // Get invoice items
-      const { data: items, error: itemsError } = await supabase
-        .from('invoice_items')
-        .select('*')
-        .eq('invoice_id', invoice.id);
-
-      if (itemsError) throw itemsError;
-
-      // Get landlord profile for company info
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('invoice_info')
-        .eq('id', invoice.landlord_id)
-        .single();
-
-      if (profileError) throw profileError;
-
-      // Transform invoice items
-      const transformedItems = items.map(item => ({
-        description: item.description,
-        unitPrice: item.amount,
-        quantity: 1,
-        type: item.type
-      }));
-
-      setInvoiceItems(transformedItems);
-      setCompanyInfo(profile.invoice_info);
-      setSelectedInvoice(invoice);
-
-    } catch (error) {
-      console.error("Error viewing invoice:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to retrieve invoice details.",
-      });
-    }
+  const handleViewInvoice = (invoice: Invoice) => {
+    // Navigate to the invoice details page
+    navigate(`/invoices/${invoice.id}`);
   };
 
   return (
-    <>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Invoice #</TableHead>
+            <TableHead>Property</TableHead>
+            <TableHead>Tenant</TableHead>
+            <TableHead>Amount</TableHead>
+            <TableHead>Due Date</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {invoices.length === 0 ? (
             <TableRow>
-              <TableHead>Property</TableHead>
-              {userRole === "landlord" && <TableHead>Tenant</TableHead>}
-              <TableHead>Amount</TableHead>
-              <TableHead>Due Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                No invoices found
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {invoices.map((invoice) => (
+          ) : (
+            invoices.map((invoice) => (
               <TableRow key={invoice.id}>
                 <TableCell>
-                  <div>
-                    <div className="font-medium">{invoice.property?.name}</div>
-                    <div className="text-sm text-gray-500">{invoice.property?.address}</div>
-                  </div>
-                </TableCell>
-                {userRole === "landlord" && (
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">
-                        {invoice.tenant?.first_name} {invoice.tenant?.last_name}
-                      </div>
-                      <div className="text-sm text-gray-500">{invoice.tenant?.email}</div>
-                    </div>
-                  </TableCell>
-                )}
-                <TableCell className="font-medium text-blue-600">
-                  {formatAmount(invoice.amount)}
+                  {invoice.id.substring(0, 8)}
                 </TableCell>
                 <TableCell>
-                  {format(new Date(invoice.due_date), 'PPP')}
+                  {invoice.property?.name || "N/A"}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={invoice.status === "paid" ? "default" : "secondary"}>
-                    {invoice.status}
+                  {invoice.tenant ? `${invoice.tenant.first_name} ${invoice.tenant.last_name}` : "N/A"}
+                </TableCell>
+                <TableCell className="font-medium">
+                  {formatAmount(invoice.amount, invoice.currency)}
+                </TableCell>
+                <TableCell>
+                  {new Date(invoice.due_date).toLocaleDateString()}
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    variant={invoice.status === "paid" ? "default" : 
+                           invoice.status === "overdue" ? "destructive" : "secondary"}
+                  >
+                    {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
@@ -127,37 +84,14 @@ export function InvoiceList({ invoices, userRole, onStatusUpdate }: InvoiceListP
                     userRole={userRole}
                     onStatusUpdate={onStatusUpdate}
                     onViewInvoice={() => handleViewInvoice(invoice)}
-                    isSendingEmail={isSendingEmail}
+                    onDelete={onStatusUpdate}
                   />
                 </TableCell>
               </TableRow>
-            ))}
-            {invoices.length === 0 && (
-              <TableRow>
-                <TableCell 
-                  colSpan={userRole === "landlord" ? 6 : 5} 
-                  className="text-center py-8 text-gray-500"
-                >
-                  No invoices found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      <Dialog open={!!selectedInvoice} onOpenChange={() => setSelectedInvoice(null)}>
-        <DialogContent className="max-w-4xl">
-          <DialogTitle className="sr-only">Invoice Details</DialogTitle>
-          {selectedInvoice && companyInfo && (
-            <InvoiceGenerator
-              invoice={selectedInvoice}
-              invoiceItems={invoiceItems}
-              companyInfo={companyInfo}
-            />
+            ))
           )}
-        </DialogContent>
-      </Dialog>
-    </>
+        </TableBody>
+      </Table>
+    </div>
   );
 }

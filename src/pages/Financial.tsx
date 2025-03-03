@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { DollarSign, FileText, CreditCard, BarChart2, Building, Calculator } from "lucide-react";
 import { InvoiceList } from "@/components/invoices/InvoiceList";
@@ -325,6 +324,8 @@ const Financial = () => {
             )}
           </div>
         );
+      default:
+        return null;
     }
   };
 

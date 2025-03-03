@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { FileText, CheckCircle, XCircle } from "lucide-react";
+import { FileText, CheckCircle, XCircle, Trash } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -10,6 +10,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Invoice } from "@/types/invoice";
 
 export interface InvoiceActionsProps {
@@ -19,6 +29,7 @@ export interface InvoiceActionsProps {
   onStatusUpdate?: () => void;
   onViewInvoice?: () => void;
   isSendingEmail?: boolean;
+  onDelete?: () => void;
 }
 
 export function InvoiceActions({ 
@@ -27,10 +38,12 @@ export function InvoiceActions({
   userRole, 
   onStatusUpdate, 
   onViewInvoice, 
-  isSendingEmail = false 
+  isSendingEmail = false,
+  onDelete
 }: InvoiceActionsProps) {
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const handleStatusUpdate = async (newStatus: 'pending' | 'paid' | 'overdue') => {
     try {
@@ -62,54 +75,149 @@ export function InvoiceActions({
     }
   };
 
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
-          Actions
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {onViewInvoice && (
-          <DropdownMenuItem onClick={onViewInvoice} className="cursor-pointer">
-            <FileText className="mr-2 h-4 w-4" />
-            View Invoice
-          </DropdownMenuItem>
-        )}
+  const handleDeleteInvoice = async () => {
+    try {
+      setIsUpdating(true);
+      
+      // Find any utilities that were included in this invoice and update them
+      const { data: invoiceData, error: fetchError } = await supabase
+        .from("invoices")
+        .select("metadata")
+        .eq("id", invoiceId)
+        .single();
         
-        {userRole === "landlord" && status !== "paid" && (
-          <DropdownMenuItem 
-            onClick={() => handleStatusUpdate("paid")} 
-            disabled={isUpdating}
-            className="cursor-pointer text-green-600"
-          >
-            <CheckCircle className="mr-2 h-4 w-4" />
-            Mark as Paid
-          </DropdownMenuItem>
-        )}
+      if (fetchError) throw fetchError;
+      
+      // If the invoice included utilities, update their status
+      if (invoiceData?.metadata?.utilities_included) {
+        const utilities = invoiceData.metadata.utilities_included;
+        
+        for (const utility of utilities) {
+          // Reset the utility to not be invoiced
+          await supabase
+            .from("utilities")
+            .update({ 
+              invoiced: false, 
+              invoiced_percentage: null 
+            })
+            .eq("id", utility.id);
+        }
+      }
+      
+      // Delete the invoice
+      const { error } = await supabase
+        .from("invoices")
+        .delete()
+        .eq("id", invoiceId);
 
-        {userRole === "tenant" && status === "pending" && (
-          <DropdownMenuItem 
-            onClick={() => handleStatusUpdate("paid")}
-            disabled={isUpdating || isSendingEmail}
-            className="cursor-pointer text-green-600"
-          >
-            <CheckCircle className="mr-2 h-4 w-4" />
-            {isSendingEmail ? "Processing Payment..." : "Pay Now"}
-          </DropdownMenuItem>
-        )}
+      if (error) throw error;
 
-        {userRole === "landlord" && status !== "overdue" && (
-          <DropdownMenuItem 
-            onClick={() => handleStatusUpdate("overdue")}
-            disabled={isUpdating}
-            className="cursor-pointer text-red-600"
-          >
-            <XCircle className="mr-2 h-4 w-4" />
-            Mark as Overdue
-          </DropdownMenuItem>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      toast({
+        title: "Success",
+        description: "Invoice deleted successfully",
+      });
+
+      if (onDelete) {
+        onDelete();
+      }
+    } catch (error) {
+      console.error("Error deleting invoice:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not delete invoice",
+      });
+    } finally {
+      setIsUpdating(false);
+      setDeleteConfirmOpen(false);
+    }
+  };
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm">
+            Actions
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {onViewInvoice && (
+            <DropdownMenuItem onClick={onViewInvoice} className="cursor-pointer">
+              <FileText className="mr-2 h-4 w-4" />
+              View Invoice
+            </DropdownMenuItem>
+          )}
+          
+          {userRole === "landlord" && status !== "paid" && (
+            <DropdownMenuItem 
+              onClick={() => handleStatusUpdate("paid")} 
+              disabled={isUpdating}
+              className="cursor-pointer text-green-600"
+            >
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Mark as Paid
+            </DropdownMenuItem>
+          )}
+
+          {userRole === "tenant" && status === "pending" && (
+            <DropdownMenuItem 
+              onClick={() => handleStatusUpdate("paid")}
+              disabled={isUpdating || isSendingEmail}
+              className="cursor-pointer text-green-600"
+            >
+              <CheckCircle className="mr-2 h-4 w-4" />
+              {isSendingEmail ? "Processing Payment..." : "Pay Now"}
+            </DropdownMenuItem>
+          )}
+
+          {userRole === "landlord" && status !== "overdue" && (
+            <DropdownMenuItem 
+              onClick={() => handleStatusUpdate("overdue")}
+              disabled={isUpdating}
+              className="cursor-pointer text-red-600"
+            >
+              <XCircle className="mr-2 h-4 w-4" />
+              Mark as Overdue
+            </DropdownMenuItem>
+          )}
+          
+          {userRole === "landlord" && (
+            <DropdownMenuItem 
+              onClick={() => setDeleteConfirmOpen(true)}
+              disabled={isUpdating}
+              className="cursor-pointer text-red-600"
+            >
+              <Trash className="mr-2 h-4 w-4" />
+              Delete Invoice
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the invoice{status === 'paid' ? ' even though it is marked as paid' : ''}.
+              {invoiceId && status === 'paid' && 
+                " The payment record will remain, but the invoice will be removed."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isUpdating}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteInvoice}
+              disabled={isUpdating}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isUpdating ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
