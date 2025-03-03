@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,6 +15,7 @@ import { CalendarIcon, Percent, BarChart3, FileText, Building, Clock, Upload, Cr
 import { UtilityItem, InvoiceFormProps, InvoiceMetadata } from "@/types/invoice";
 import { Json } from "@/integrations/supabase/types/json";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface InvoiceFormValues {
   property_id: string;
@@ -301,7 +301,6 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
   };
 
   const validateForm = (): boolean => {
-    // Extra validations beyond what zod provides
     if (isPartial && calculationMethod === "days" && (!dateRange?.from || !dateRange?.to)) {
       setValidationError("Please select a date range for day calculation");
       return false;
@@ -567,154 +566,233 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
         </div>
 
         {isPartial && (
-          <div className="bg-slate-50 p-4 rounded-md space-y-6 border">
-            <h3 className="text-md font-medium flex items-center gap-2">
-              <Percent className="h-5 w-5 text-slate-500" />
-              Partial Invoice Settings
-            </h3>
+          <Card className="border bg-slate-50">
+            <CardContent className="pt-6 space-y-6">
+              <h3 className="text-md font-medium flex items-center gap-2">
+                <Percent className="h-5 w-5 text-slate-500" />
+                Partial Invoice Settings
+              </h3>
 
-            <FormField
-              control={form.control}
-              name="calculation_method"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Calculation Method</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select calculation method" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="percentage">By Percentage</SelectItem>
-                      <SelectItem value="days">By Days</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {calculationMethod === "percentage" && (
               <FormField
                 control={form.control}
-                name="partial_percentage"
+                name="calculation_method"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Percentage of Monthly Rent (%)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={100}
-                        {...field}
-                        onChange={(e) => {
-                          field.onChange(Number(e.target.value));
-                          calculateAmount();
-                        }}
-                        disabled={isLoading}
-                      />
-                    </FormControl>
+                    <FormLabel>Calculation Method</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select calculation method" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="percentage">By Percentage</SelectItem>
+                        <SelectItem value="days">By Days</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            )}
 
-            {calculationMethod === "days" && (
-              <>
-                <div className="space-y-2">
-                  <FormLabel>Date Range</FormLabel>
-                  <DatePickerWithRange
-                    date={dateRange}
-                    onDateChange={(range) => {
-                      setDateRange(range);
-                      if (range && range.from && range.to) {
-                        setValidationError(null);
-                      }
-                    }}
-                  />
-                  <p className="text-sm text-slate-500">
-                    <Clock className="w-4 h-4 inline mr-1" />
-                    Daily rate: {selectedProperty ? dailyRate.toFixed(2) : "0.00"} {selectedProperty?.currency || "EUR"}
-                  </p>
-                  {form.getValues("days_calculated") > 0 && (
-                    <p className="text-sm text-slate-500">
-                      <CalendarIcon className="w-4 h-4 inline mr-1" />
-                      Days calculated: {form.getValues("days_calculated")}
-                    </p>
+              {calculationMethod === "percentage" && (
+                <FormField
+                  control={form.control}
+                  name="partial_percentage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Percentage of Monthly Rent (%)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={100}
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(Number(e.target.value));
+                            calculateAmount();
+                          }}
+                          disabled={isLoading}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
+                />
+              )}
+
+              {calculationMethod === "days" && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <FormLabel>Date Range</FormLabel>
+                    <DatePickerWithRange
+                      date={dateRange}
+                      onDateChange={(range) => {
+                        setDateRange(range);
+                        if (range && range.from && range.to) {
+                          setValidationError(null);
+                        }
+                      }}
+                    />
+                  </div>
+                
+                  <div className="flex flex-col gap-2 p-4 bg-white rounded-md border border-slate-200">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-slate-700">
+                        <Clock className="w-4 h-4 inline mr-1" />
+                        Daily rate:
+                      </span>
+                      <span className="text-sm font-semibold">
+                        {selectedProperty ? dailyRate.toFixed(2) : "0.00"} {selectedProperty?.currency || "EUR"}
+                      </span>
+                    </div>
+                    
+                    {form.getValues("days_calculated") > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-slate-700">
+                          <CalendarIcon className="w-4 h-4 inline mr-1" />
+                          Days calculated:
+                        </span>
+                        <span className="text-sm font-semibold">
+                          {form.getValues("days_calculated")}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-200">
+                      <span className="text-sm font-medium text-slate-700">
+                        <Calculator className="w-4 h-4 inline mr-1" />
+                        Subtotal:
+                      </span>
+                      <span className="text-sm font-semibold">
+                        {(dailyRate * (form.getValues("days_calculated") || 0)).toFixed(2)} {selectedProperty?.currency || "EUR"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </>
-            )}
-          </div>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {utilities.length > 0 && (
-          <div className="bg-slate-50 p-4 rounded-md space-y-6 border">
-            <h3 className="text-md font-medium flex items-center gap-2">
-              <Building className="h-5 w-5 text-slate-500" />
-              Utilities
-            </h3>
+          <Card className="border bg-slate-50">
+            <CardContent className="pt-6 space-y-6">
+              <h3 className="text-md font-medium flex items-center gap-2">
+                <Building className="h-5 w-5 text-slate-500" />
+                Utilities
+              </h3>
 
-            <FormField
-              control={form.control}
-              name="include_utilities"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      disabled={isLoading}
-                    />
-                  </FormControl>
-                  <FormLabel className="cursor-pointer font-normal">
-                    Include pending utilities
-                  </FormLabel>
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="include_utilities"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={isLoading}
+                      />
+                    </FormControl>
+                    <FormLabel className="cursor-pointer font-normal">
+                      Include pending utilities
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
 
-            {includeUtilitiesValue && (
-              <div className="space-y-3">
-                <p className="text-sm text-slate-500">
-                  The following utilities will be included in this invoice:
-                </p>
-                <ul className="space-y-2">
-                  {utilities.map((utility) => (
-                    <li key={utility.id} className="flex justify-between text-sm p-2 bg-white rounded border">
-                      <span className="font-medium">{utility.type}</span>
-                      <span>
+              {includeUtilitiesValue && (
+                <div className="space-y-3">
+                  <p className="text-sm text-slate-500">
+                    The following utilities will be included in this invoice:
+                  </p>
+                  <div className="bg-white rounded-md border p-3 space-y-3">
+                    {utilities.map((utility) => (
+                      <div key={utility.id} className="flex justify-between items-center py-2 px-3 bg-slate-50 rounded border text-sm">
+                        <span className="font-medium">{utility.type}</span>
+                        <span className="font-semibold">
+                          {isPartial && calculationMethod === "percentage"
+                            ? `${((utility.amount * (partialPercentage || 0)) / 100).toFixed(2)} (${partialPercentage}%)`
+                            : utility.amount.toFixed(2)}
+                          {" "}{selectedProperty?.currency || "EUR"}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between items-center pt-2 mt-2 border-t border-slate-200">
+                      <span className="text-sm font-medium">Utilities Total:</span>
+                      <span className="text-sm font-semibold">
                         {isPartial && calculationMethod === "percentage"
-                          ? `${((utility.amount * (partialPercentage || 0)) / 100).toFixed(2)} (${partialPercentage}%)`
-                          : utility.amount.toFixed(2)}
+                          ? (utilities.reduce((sum, utility) => sum + (utility.amount * (partialPercentage || 0)) / 100, 0)).toFixed(2)
+                          : (utilities.reduce((sum, utility) => sum + utility.amount, 0)).toFixed(2)}
+                        {" "}{selectedProperty?.currency || "EUR"}
                       </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
 
-        <div className="flex flex-col gap-2">
-          <div className="flex justify-between p-4 bg-slate-100 rounded-md">
-            <span className="font-medium flex items-center">
-              <Calculator className="h-4 w-4 mr-2" />
-              Total Amount
-            </span>
-            <span className="text-lg font-bold">
-              {form.getValues("amount") || 0} {selectedProperty?.currency || "EUR"}
-            </span>
-          </div>
-          {selectedProperty && (
-            <p className="text-xs text-slate-500 italic text-right">
-              Full monthly rent: {selectedProperty.monthly_rent} {selectedProperty.currency}
-              {isPartial && ` (${calculationMethod === "percentage" ? `${partialPercentage}%` : `${form.getValues("days_calculated") || 0} days`})`}
-            </p>
-          )}
-        </div>
+        <Card className="border bg-slate-100">
+          <CardContent className="pt-6">
+            <div className="flex flex-col gap-3">
+              <h3 className="text-md font-medium flex items-center gap-2">
+                <Calculator className="h-5 w-5 text-slate-500" />
+                Invoice Summary
+              </h3>
+
+              <div className="space-y-2 bg-white p-4 rounded-md border">
+                {selectedProperty && (
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-sm">Base Monthly Rent:</span>
+                    <span className="text-sm font-medium">
+                      {selectedProperty.monthly_rent.toFixed(2)} {selectedProperty.currency}
+                    </span>
+                  </div>
+                )}
+
+                {isPartial && calculationMethod === "percentage" && selectedProperty && (
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-sm">Percentage Applied:</span>
+                    <span className="text-sm font-medium">
+                      {partialPercentage}%
+                    </span>
+                  </div>
+                )}
+
+                {isPartial && calculationMethod === "days" && form.getValues("days_calculated") > 0 && (
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-sm">Days Calculation:</span>
+                    <span className="text-sm font-medium">
+                      {form.getValues("days_calculated")} days × {dailyRate.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+
+                {includeUtilitiesValue && utilities.length > 0 && (
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-sm">Utilities:</span>
+                    <span className="text-sm font-medium">
+                      {isPartial && calculationMethod === "percentage"
+                        ? (utilities.reduce((sum, utility) => sum + (utility.amount * (partialPercentage || 0)) / 100, 0)).toFixed(2)
+                        : (utilities.reduce((sum, utility) => sum + utility.amount, 0)).toFixed(2)}
+                      {" "}{selectedProperty?.currency || "EUR"}
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center pt-2 mt-2 border-t border-slate-200">
+                  <span className="font-bold">Total Amount:</span>
+                  <span className="text-lg font-bold">
+                    {form.getValues("amount") || 0} {selectedProperty?.currency || "EUR"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="flex justify-end">
           <Button 
