@@ -449,7 +449,7 @@ const CostCalculator = () => {
                         : formatCurrency(rentAmount, rentCurrency)}
                     </p>
                     {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
-                      <React.Fragment key={currency}>
+                      <div key={currency}>
                         {currency === rentCurrency ? (
                           <p className="text-lg font-bold text-blue-600">
                             = {formatCurrency(amount + (applyVat ? getRentWithVat() : rentAmount), currency)}
@@ -459,7 +459,7 @@ const CostCalculator = () => {
                             + {formatCurrency(amount, currency)} <span className="text-xs">(different currency)</span>
                           </p>
                         )}
-                      </React.Fragment>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -621,7 +621,8 @@ const CostCalculator = () => {
                 type: util.type,
                 amount: getAdjustedUtilityAmount(util),
                 percentage: util.percentage,
-                original_amount: util.amount
+                original_amount: util.amount,
+                currency: util.currency
               }))
           }}
         />

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -43,6 +44,7 @@ interface UtilityForInvoice {
   percentage?: number;
   original_amount?: number;
   selected?: boolean;
+  currency?: string;
 }
 
 export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: InvoiceFormProps) {
@@ -56,6 +58,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
   const [applyVat, setApplyVat] = useState<boolean>(false);
   const [vatRate, setVatRate] = useState<number>(19);
   const [invoiceCurrency, setInvoiceCurrency] = useState<string>(calculationData?.currency || 'EUR');
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
 
   const formSchema = z.object({
     property_id: z.string({ required_error: "Please select a property" }),
@@ -73,6 +76,28 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
   });
 
   const propertyId = form.watch("property_id");
+
+  // Fetch exchange rates on component mount
+  useEffect(() => {
+    const fetchExchangeRates = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-exchange-rates');
+        
+        if (error) {
+          console.error('Error fetching exchange rates:', error);
+          return;
+        }
+        
+        if (data && data.rates) {
+          setExchangeRates(data.rates);
+        }
+      } catch (error) {
+        console.error('Error in exchange rates fetch:', error);
+      }
+    };
+    
+    fetchExchangeRates();
+  }, []);
 
   useEffect(() => {
     if (calculationData?.propertyId) {
@@ -310,7 +335,26 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       type: util.type,
       percentage: util.percentage || 100,
       original_amount: util.original_amount,
+      currency: util.currency
     }));
+  };
+
+  const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string): number => {
+    if (fromCurrency === toCurrency) return amount;
+    if (!exchangeRates || Object.keys(exchangeRates).length === 0) return amount;
+    
+    // Convert to RON first (base currency for BNR rates)
+    let amountInRON = amount;
+    if (fromCurrency !== 'RON') {
+      amountInRON = amount * (exchangeRates[fromCurrency] || 1);
+    }
+    
+    // Then convert from RON to target currency
+    if (toCurrency === 'RON') {
+      return amountInRON;
+    }
+    
+    return amountInRON / (exchangeRates[toCurrency] || 1);
   };
 
   const onSubmit = async (values: InvoiceFormValues) => {
@@ -331,13 +375,19 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         metadata.utilities_included = selectedUtils;
       }
 
+      // Convert the amount to the selected invoice currency if it's different
+      const rentCurrency = selectedProperty?.currency || 'EUR';
+      const finalAmount = rentCurrency !== invoiceCurrency 
+        ? convertCurrency(values.amount, rentCurrency, invoiceCurrency)
+        : values.amount;
+
       const { data, error } = await supabase
         .from("invoices")
         .insert({
           property_id: values.property_id,
           tenant_id: values.tenant_id || userId,
           landlord_id: userRole === "landlord" ? userId : null,
-          amount: values.amount,
+          amount: finalAmount,
           due_date: values.due_date,
           status: "pending",
           currency: invoiceCurrency,
@@ -371,19 +421,35 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
 
   const calculateTotal = () => {
     const baseAmount = form.getValues("amount") || 0;
-    const selectedUtilsTotal = utilities
-      .filter(util => util.selected)
-      .reduce((sum, util) => {
-        const percentage = util.percentage || 100;
-        return sum + (util.amount * percentage / 100);
-      }, 0);
+    const rentCurrency = selectedProperty?.currency || 'EUR';
     
-    return baseAmount + selectedUtilsTotal;
+    let convertedBaseAmount = baseAmount;
+    if (rentCurrency !== invoiceCurrency) {
+      convertedBaseAmount = convertCurrency(baseAmount, rentCurrency, invoiceCurrency);
+    }
+    
+    let utilitiesTotal = 0;
+    utilities
+      .filter(util => util.selected)
+      .forEach(util => {
+        const percentage = util.percentage || 100;
+        const utilAmount = util.amount * percentage / 100;
+        
+        // Convert utility amount if the currency is different
+        const utilCurrency = util.currency || 'EUR';
+        if (utilCurrency !== invoiceCurrency) {
+          utilitiesTotal += convertCurrency(utilAmount, utilCurrency, invoiceCurrency);
+        } else {
+          utilitiesTotal += utilAmount;
+        }
+      });
+    
+    return convertedBaseAmount + utilitiesTotal;
   };
 
   const calculateVatAmount = () => {
-    const baseAmount = form.getValues("amount") || 0;
-    return baseAmount * vatRate / 100;
+    // Calculate VAT based on the total amount in the selected currency
+    return calculateTotal() * vatRate / 100;
   };
 
   return (
@@ -498,7 +564,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
             <div className="flex flex-col gap-3">
               <h3 className="text-md font-medium flex items-center gap-2">
                 <Calculator className="h-5 w-5 text-slate-500" />
-                Invoice Summary
+                Invoice Summary ({invoiceCurrency})
               </h3>
 
               <div className="space-y-2 bg-white p-4 rounded-md border">
@@ -514,7 +580,12 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                 <div className="flex justify-between items-center py-1">
                   <span className="text-sm">Rent Amount:</span>
                   <span className="text-sm font-medium">
-                    {formatAmount(form.getValues("amount"), invoiceCurrency)}
+                    {formatAmount(
+                      selectedProperty && selectedProperty.currency !== invoiceCurrency 
+                        ? convertCurrency(form.getValues("amount"), selectedProperty.currency, invoiceCurrency)
+                        : form.getValues("amount"), 
+                      invoiceCurrency
+                    )}
                   </span>
                 </div>
 
@@ -548,9 +619,16 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                           </div>
                           <span className="text-sm font-medium">
                             {formatAmount(
-                              utility.percentage !== undefined && utility.percentage !== 100
-                                ? (utility.amount * utility.percentage / 100)
-                                : utility.amount,
+                              (() => {
+                                const utilCurrency = utility.currency || 'EUR';
+                                const amount = utility.percentage !== undefined && utility.percentage !== 100
+                                  ? (utility.amount * utility.percentage / 100)
+                                  : utility.amount;
+                                  
+                                return utilCurrency !== invoiceCurrency
+                                  ? convertCurrency(amount, utilCurrency, invoiceCurrency)
+                                  : amount;
+                              })(),
                               invoiceCurrency
                             )}
                           </span>
