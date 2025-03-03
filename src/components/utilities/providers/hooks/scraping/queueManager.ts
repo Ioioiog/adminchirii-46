@@ -51,6 +51,22 @@ export function useScrapingQueue(providers: UtilityProvider[]) {
         throw new Error(errorMessage);
       }
       
+      // Check if this is a "waiting for login navigation" or function shutdown error
+      if (error instanceof Error && 
+          (error.message.includes('Waiting for login navigation') || 
+           error.message.includes('function is shutdown'))) {
+        console.log('Login navigation or function shutdown issue detected, updating job status');
+        
+        // Update the job status to show that we detected the navigation timeout
+        updateScrapingJob(providerId, {
+          status: 'failed',
+          last_run_at: new Date().toISOString(),
+          error_message: 'The process timed out while waiting for the login page to respond after CAPTCHA submission. The provider website may be slow or experiencing high traffic. Please try again later.'
+        });
+        
+        throw new Error('The process timed out while waiting for the login page to respond after CAPTCHA. Please try again later.');
+      }
+      
       if (retryCount < MAX_RETRIES) {
         console.log(`Retrying in ${RETRY_DELAY}ms...`);
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
@@ -64,7 +80,7 @@ export function useScrapingQueue(providers: UtilityProvider[]) {
       
       throw new Error(errorMessage);
     }
-  }, [showErrorToast]);
+  }, [showErrorToast, updateScrapingJob]);
 
   // Main scraping handler
   const handleScrape = useCallback(async (providerId: string) => {
@@ -102,11 +118,22 @@ export function useScrapingQueue(providers: UtilityProvider[]) {
     } catch (error) {
       console.error('Scraping failed:', error);
       
-      updateScrapingJob(providerId, {
-        status: 'failed',
-        last_run_at: new Date().toISOString(),
-        error_message: error instanceof Error ? error.message : 'An unexpected error occurred'
-      });
+      // Special handling for navigation timeout errors
+      if (error instanceof Error && 
+          (error.message.includes('Waiting for login navigation') || 
+           error.message.includes('function is shutdown'))) {
+        updateScrapingJob(providerId, {
+          status: 'failed',
+          last_run_at: new Date().toISOString(),
+          error_message: 'The process timed out while waiting for the login page to respond after CAPTCHA submission. The provider website may be slow or experiencing high traffic. Please try again later.'
+        });
+      } else {
+        updateScrapingJob(providerId, {
+          status: 'failed',
+          last_run_at: new Date().toISOString(),
+          error_message: error instanceof Error ? error.message : 'An unexpected error occurred'
+        });
+      }
 
       throw error;
     } finally {
@@ -141,14 +168,25 @@ export function useScrapingQueue(providers: UtilityProvider[]) {
     } catch (error) {
       console.error('Error processing queue:', error);
       
-      // Update job status to failed when we've exhausted retries
-      updateScrapingJob(providerId, {
-        status: 'failed',
-        last_run_at: new Date().toISOString(),
-        error_message: error instanceof Error 
-          ? error.message 
-          : 'Failed to connect to utility provider. Please try again later.'
-      });
+      // Special handling for specific errors
+      if (error instanceof Error && 
+          (error.message.includes('Waiting for login navigation') || 
+           error.message.includes('function is shutdown'))) {
+        updateScrapingJob(providerId, {
+          status: 'failed', 
+          last_run_at: new Date().toISOString(),
+          error_message: 'The process timed out while waiting for the login page to respond after CAPTCHA submission. The provider website may be slow or experiencing high traffic. Please try again later.'
+        });
+      } else {
+        // Update job status to failed when we've exhausted retries
+        updateScrapingJob(providerId, {
+          status: 'failed',
+          last_run_at: new Date().toISOString(),
+          error_message: error instanceof Error 
+            ? error.message 
+            : 'Failed to connect to utility provider. Please try again later.'
+        });
+      }
     } finally {
       setState(prev => ({
         ...prev,

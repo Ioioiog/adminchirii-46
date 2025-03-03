@@ -24,7 +24,7 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
       return "The CAPTCHA was successfully submitted, but the process was interrupted afterward. This could be due to a timeout or resource limitation. Please try again.";
     }
 
-    if (errorMessage.includes('Waiting for login navigation')) {
+    if (errorMessage.includes('Waiting for login navigation') || errorMessage.includes('function is shutdown')) {
       return "The process timed out while waiting for the login page to respond after CAPTCHA submission. The provider's website may be experiencing high traffic or slowness. Please try again later.";
     }
     
@@ -34,10 +34,6 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
     
     if (errorMessage.includes('Edge Function') || errorMessage.includes('500')) {
       return "The utility provider service is temporarily unavailable. Please try again later.";
-    }
-    
-    if (errorMessage.includes('function is shutdown')) {
-      return "The scraping process was interrupted due to a timeout or resource limitation. Try again with shorter time intervals between requests.";
     }
     
     if (errorMessage.includes('Login failed')) {
@@ -61,7 +57,11 @@ export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
     }
 
     if (errorMessage.includes('MyENGIE app popup') || errorMessage.includes('Mai târziu')) {
-      return "The process was interrupted by a promotional popup on the ENGIE website. We'll improve our handling of this popup in future updates. Please try again.";
+      return "The process was interrupted by a promotional popup on the ENGIE website asking to use their app. We'll improve our handling of this popup in future updates. Please try again.";
+    }
+    
+    if (errorMessage.includes('shutdown') || errorMessage.includes('interrupted')) {
+      return "The scraping process was interrupted. This may be due to the provider website taking too long to respond or session timeout. Please try again later.";
     }
     
     return "There was an error fetching your utility bills. Please try again later.";

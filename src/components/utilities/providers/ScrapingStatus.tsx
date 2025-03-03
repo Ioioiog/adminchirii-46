@@ -49,7 +49,7 @@ export function ScrapingStatus({
       return 'The scraping service returned invalid data. This is often due to provider website changes.';
     }
     
-    if (errorMessage.includes('Waiting for login navigation')) {
+    if (errorMessage.includes('Waiting for login navigation') || errorMessage.includes('function is shutdown')) {
       return 'The system timed out while waiting for the login page to respond after CAPTCHA. Please try again later.';
     }
 

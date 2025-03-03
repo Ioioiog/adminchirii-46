@@ -35,7 +35,30 @@ export function useJobStatusManager() {
       console.log('Job status:', job.status);
       console.log('Job error message:', job.error_message || 'None');
       
-      // Check for navigation timeout after CAPTCHA
+      // Check if the job was interrupted during "Waiting for login navigation"
+      if (job.status === 'in_progress' && job.error_message && job.error_message.includes('Waiting for login navigation')) {
+        console.log('Job appears to be stuck in login navigation, marking as failed');
+        
+        // Update the job status directly in the database
+        await supabase
+          .from('scraping_jobs')
+          .update({
+            status: 'failed',
+            error_message: 'The process timed out while waiting for the login page to respond after CAPTCHA. This often happens when the provider website is experiencing high traffic.'
+          })
+          .eq('id', jobId);
+          
+        // Update the local state
+        updateJobStatus(providerId, {
+          status: 'failed',
+          last_run_at: job.created_at,
+          error_message: 'The process timed out while waiting for the login page to respond after CAPTCHA. This often happens when the provider website is experiencing high traffic.'
+        });
+        
+        return 'failed';
+      }
+      
+      // Continue with regular error handling
       if (job.status === 'failed' && 
           job.error_message && 
           (job.error_message.includes('Waiting for login navigation') || 
@@ -120,6 +143,11 @@ export function useJobStatusManager() {
   ) => {
     console.log('Setting up job status monitoring for job:', jobId);
     
+    // Implement an initial immediate check to detect early failures
+    setTimeout(() => {
+      checkJobStatus(jobId, providerId, updateJobStatus);
+    }, 5000); // Check after 5 seconds initially
+    
     const checkJobInterval = setInterval(async () => {
       const status = await checkJobStatus(jobId, providerId, updateJobStatus);
       console.log('Job status check:', status);
@@ -147,7 +175,8 @@ export function useJobStatusManager() {
             
             // Handle navigation timeout after CAPTCHA
             if (job.error_message.includes('Waiting for login navigation') || 
-                job.error_message.includes('navigation timeout')) {
+                job.error_message.includes('navigation timeout') ||
+                job.error_message.includes('function is shutdown')) {
               errorDescription = "The system timed out while waiting for the login page to respond after CAPTCHA submission. The provider website may be slow or experiencing high traffic. Please try again later.";
             }
             // Handle CAPTCHA specific errors
@@ -195,7 +224,37 @@ export function useJobStatusManager() {
     }, JOB_CHECK_INTERVAL);
 
     // Cleanup interval after max time
-    setTimeout(() => clearInterval(checkJobInterval), JOB_CHECK_MAX_TIME);
+    setTimeout(() => {
+      clearInterval(checkJobInterval);
+      
+      // Check one last time if the job is still in progress
+      checkJobStatus(jobId, providerId, async (providerId, status) => {
+        if (status.status === 'in_progress') {
+          console.log('Job appears to be stuck, marking as failed');
+          
+          // Update the job status directly in the database
+          await supabase
+            .from('scraping_jobs')
+            .update({
+              status: 'failed',
+              error_message: 'The process timed out. This often happens when the provider website is slow to respond.'
+            })
+            .eq('id', jobId);
+            
+          updateJobStatus(providerId, {
+            status: 'failed',
+            last_run_at: new Date().toISOString(),
+            error_message: 'The process timed out. This often happens when the provider website is slow to respond.'
+          });
+          
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "The utility bill fetch process timed out. Please try again later.",
+          });
+        }
+      });
+    }, JOB_CHECK_MAX_TIME);
     
     return checkJobInterval;
   }, [checkJobStatus, toast]);
