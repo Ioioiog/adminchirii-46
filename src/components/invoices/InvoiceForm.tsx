@@ -13,6 +13,7 @@ import { DateRange } from "react-day-picker";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { CalendarIcon, Percent, BarChart3, FileText, Building, Clock, Upload, CreditCard } from "lucide-react";
 import { UtilityItem, InvoiceFormProps, InvoiceMetadata } from "@/types/invoice";
+import { Json } from "@/integrations/supabase/types/json";
 
 interface InvoiceFormValues {
   property_id: string;
@@ -42,6 +43,11 @@ interface PropertyOption {
   monthly_rent: number;
   currency: string;
   is_partial?: boolean;
+}
+
+interface InvoiceSettings {
+  apply_vat?: boolean;
+  [key: string]: any;
 }
 
 export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
@@ -345,13 +351,12 @@ export function InvoiceForm({ onSuccess, userId, userRole }: InvoiceFormProps) {
       }
 
       let applyVat = false;
-      try {
-        const invoiceInfo = landlordProfile?.invoice_info;
-        if (invoiceInfo && typeof invoiceInfo === 'object') {
+      
+      if (landlordProfile?.invoice_info) {
+        const invoiceInfo = landlordProfile.invoice_info as InvoiceSettings;
+        if (typeof invoiceInfo === 'object' && !Array.isArray(invoiceInfo)) {
           applyVat = !!invoiceInfo.apply_vat;
         }
-      } catch (e) {
-        console.error("Error parsing invoice_info:", e);
       }
       
       const vatRate = applyVat ? 19 : 0;
