@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Calendar } from "lucide-react";
 import { DateRange } from "react-day-picker";
@@ -123,10 +124,19 @@ export function CostCalculator() {
 
       const utilitiesTotal = utilities.reduce((sum, item) => sum + (parseFloat(item.amount.toString()) || 0), 0);
 
+      // For grand total, we need to convert currencies properly
+      // Get exchange rates
+      const { data: exchangeRatesData } = await supabase.functions.invoke('get-exchange-rates');
+      const rates = exchangeRatesData?.rates || { EUR: 4.97, RON: 1 }; // Fallback rates
+      
+      // Convert rent from EUR to RON for proper summing
+      const rentInRON = rentTotal * rates.EUR;
+      const grandTotal = rentInRON + utilitiesTotal;
+
       setResults({
         rentTotal,
         utilitiesTotal,
-        grandTotal: rentTotal + utilitiesTotal,
+        grandTotal,
         period: displayPeriod,
         utilities: utilities
       });
