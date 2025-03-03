@@ -222,7 +222,25 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       }
     }
     
-    form.setValue("amount", rentPortion + utilitiesAmount);
+    // Get the landlord's VAT setting
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('invoice_info')
+          .eq('id', user.id)
+          .single();
+        
+        // Apply VAT only to rent if VAT is enabled in landlord settings
+        let vatAmount = 0;
+        if (profile?.invoice_info?.apply_vat) {
+          vatAmount = rentPortion * 0.19; // Assuming 19% VAT rate
+        }
+        
+        // Set the total amount including rent, VAT (if applicable), and utilities
+        form.setValue("amount", rentPortion + vatAmount + utilitiesAmount);
+      }
+    });
   };
 
   const updatePartialAmount = (fullAmount: number) => {
@@ -393,6 +411,15 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
         if (updateError) throw updateError;
       }
 
+      const { data: landlordProfile } = await supabase
+        .from("profiles")
+        .select("invoice_info")
+        .eq("id", user.id)
+        .single();
+      
+      const applyVat = landlordProfile?.invoice_info?.apply_vat || false;
+      const vatRate = applyVat ? 19 : 0; // 19% VAT if enabled
+
       const dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       let metadata: any = {};
@@ -456,6 +483,7 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
           property_id: values.property_id,
           tenant_id: tenancy.tenant_id,
           status: "pending",
+          vat_rate: vatRate, // Add VAT rate to invoice
           metadata: metadata
         })
         .select()
@@ -490,6 +518,21 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
         });
 
       if (rentItemError) throw rentItemError;
+
+      // Add VAT as a separate item if applicable
+      if (applyVat && rentPortion > 0) {
+        const vatAmount = rentPortion * (vatRate / 100);
+        const { error: vatItemError } = await supabase
+          .from("invoice_items")
+          .insert({
+            invoice_id: invoice.id,
+            description: `VAT (${vatRate}%) on Rent`,
+            amount: vatAmount,
+            type: "tax"
+          });
+        
+        if (vatItemError) throw vatItemError;
+      }
 
       for (const utility of selectedUtilities) {
         let utilityDescription = `${utility.type} utility`;

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { formatDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -50,10 +51,13 @@ export function InvoiceGenerator({ invoice, invoiceItems, companyInfo }: Invoice
   };
 
   const calculateRentVAT = () => {
+    // Only apply VAT if it's specified in the invoice
+    if (!invoice.vat_rate) return 0;
+    
     // Find rent items and calculate VAT only for them
     const rentItems = invoiceItems.filter(item => item.type === 'rent');
     const rentTotal = rentItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-    return invoice.vat_rate ? (rentTotal * invoice.vat_rate) / 100 : 0;
+    return (rentTotal * invoice.vat_rate) / 100;
   };
 
   const calculateTotal = () => {
@@ -132,7 +136,7 @@ export function InvoiceGenerator({ invoice, invoiceItems, companyInfo }: Invoice
               {formatAmount(calculateSubtotal(), invoice.currency)}
             </span>
           </div>
-          {invoice.vat_rate && (
+          {invoice.vat_rate && invoice.vat_rate > 0 && (
             <div className="flex justify-between mb-2">
               <span className="text-muted-foreground">VAT ({invoice.vat_rate}%) on Rent</span>
               <span className="text-foreground">

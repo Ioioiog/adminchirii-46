@@ -56,6 +56,11 @@ export function InvoiceDetails({ invoice, userRole }: InvoiceDetailsProps) {
               {daysCalculated} days at {formatAmount(dailyRate, invoice.currency)}/day from {formatAmount(fullAmount, invoice.currency)}/month
             </div>
           )}
+          {invoice.vat_rate && invoice.vat_rate > 0 && (
+            <div className="text-xs text-gray-500">
+              Includes {invoice.vat_rate}% VAT on rent
+            </div>
+          )}
         </div>
         <div>
           <div className="text-sm font-medium text-gray-500">Due Date</div>
