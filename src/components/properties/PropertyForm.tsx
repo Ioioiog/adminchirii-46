@@ -14,12 +14,20 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { Property, PropertyType } from "@/utils/propertyUtils";
 
 const propertyFormSchema = z.object({
   name: z.string().min(1, "Property name is required"),
   address: z.string().min(1, "Address is required"),
   monthly_rent: z.coerce.number().min(0, "Monthly rent must be a positive number"),
+  currency: z.string().min(1, "Currency is required"),
   type: z.enum(["Apartment", "House", "Condo", "Commercial"] as const),
   description: z.string().optional(),
   available_from: z.string().optional(),
@@ -40,6 +48,7 @@ export function PropertyForm({ onSubmit, initialData, isSubmitting }: PropertyFo
       name: initialData?.name || "",
       address: initialData?.address || "",
       monthly_rent: initialData?.monthly_rent || 0,
+      currency: initialData?.currency || "EUR",
       type: initialData?.type || "Apartment",
       description: initialData?.description || "",
       available_from: initialData?.tenancy?.end_date || initialData?.available_from || "",
@@ -77,24 +86,53 @@ export function PropertyForm({ onSubmit, initialData, isSubmitting }: PropertyFo
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="monthly_rent"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Monthly Rent (€)</FormLabel>
-              <FormControl>
-                <Input 
-                  type="number" 
-                  placeholder="Enter monthly rent in EUR" 
-                  {...field}
-                  onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="monthly_rent"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Monthly Rent</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    placeholder="Enter monthly rent" 
+                    {...field}
+                    onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="currency"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Currency</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="EUR">EUR (€)</SelectItem>
+                    <SelectItem value="USD">USD ($)</SelectItem>
+                    <SelectItem value="GBP">GBP (£)</SelectItem>
+                    <SelectItem value="RON">RON (lei)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <FormField
           control={form.control}

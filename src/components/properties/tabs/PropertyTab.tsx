@@ -159,7 +159,10 @@ export function PropertyTab({
                     Monthly Rent
                   </h4>
                   <p className="text-base text-gray-900 mt-1">
-                    €{property.monthly_rent?.toLocaleString() || 0}
+                    {property.currency === 'EUR' ? '€' : 
+                     property.currency === 'USD' ? '$' : 
+                     property.currency === 'GBP' ? '£' : 
+                     property.currency}{property.monthly_rent?.toLocaleString() || 0}
                   </p>
                 </div>
                 <div>

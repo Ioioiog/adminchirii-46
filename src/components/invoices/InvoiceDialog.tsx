@@ -43,7 +43,7 @@ export function InvoiceDialog({
           </DialogHeader>
           
           <div className="p-6 overflow-y-auto max-h-[80vh]">
-            <InvoiceForm onSuccess={handleInvoiceCreated} />
+            <InvoiceForm onSuccess={handleInvoiceCreated} userId={userId} userRole={userRole} />
           </div>
         </div>
       </DialogContent>

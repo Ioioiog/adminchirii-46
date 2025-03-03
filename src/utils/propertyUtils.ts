@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export type PropertyType = "Apartment" | "House" | "Condo" | "Commercial";
@@ -8,6 +9,7 @@ export interface Property {
   name: string;
   address: string;
   monthly_rent: number;
+  currency: string;
   type: PropertyType;
   description?: string;
   available_from?: string | null;

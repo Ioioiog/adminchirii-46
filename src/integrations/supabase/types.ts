@@ -1500,6 +1500,7 @@ export type Database = {
           bedrooms: number | null
           construction_year: number | null
           created_at: string
+          currency: string
           description: string | null
           id: string
           landlord_id: string
@@ -1524,6 +1525,7 @@ export type Database = {
           bedrooms?: number | null
           construction_year?: number | null
           created_at?: string
+          currency?: string
           description?: string | null
           id?: string
           landlord_id: string
@@ -1548,6 +1550,7 @@ export type Database = {
           bedrooms?: number | null
           construction_year?: number | null
           created_at?: string
+          currency?: string
           description?: string | null
           id?: string
           landlord_id?: string
