@@ -417,6 +417,18 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     }
   };
 
+  const calculateVatAmount = () => {
+    const baseAmount = form.getValues("amount") || 0;
+    const rentCurrency = selectedProperty?.currency || 'EUR';
+    
+    let convertedBaseAmount = baseAmount;
+    if (rentCurrency !== invoiceCurrency) {
+      convertedBaseAmount = convertCurrency(baseAmount, rentCurrency, invoiceCurrency);
+    }
+    
+    return convertedBaseAmount * (19 / 100);
+  };
+
   const calculateTotal = () => {
     const baseAmount = form.getValues("amount") || 0;
     const rentCurrency = selectedProperty?.currency || 'EUR';
@@ -426,13 +438,14 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       convertedBaseAmount = convertCurrency(baseAmount, rentCurrency, invoiceCurrency);
     }
     
+    const totalRentWithVat = applyVat ? (convertedBaseAmount + calculateVatAmount()) : convertedBaseAmount;
+    
     let utilitiesTotal = 0;
     utilities
       .filter(util => util.selected)
       .forEach(util => {
         const utilAmount = util.amount;
         
-        // Convert utility amount if the currency is different
         const utilCurrency = util.currency || 'EUR';
         if (utilCurrency !== invoiceCurrency) {
           utilitiesTotal += convertCurrency(utilAmount, utilCurrency, invoiceCurrency);
@@ -441,12 +454,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         }
       });
     
-    return convertedBaseAmount + utilitiesTotal;
-  };
-
-  const calculateVatAmount = () => {
-    // Calculate VAT based on the total amount in the selected currency
-    return calculateTotal() * (vatRate / 100);
+    return totalRentWithVat + utilitiesTotal;
   };
 
   return (
