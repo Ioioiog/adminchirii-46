@@ -430,7 +430,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     utilities
       .filter(util => util.selected)
       .forEach(util => {
-        const percentage = util.percentage || 100;
+        const percentage = util.percentage !== undefined ? util.percentage : 100;
         const utilAmount = util.amount * (percentage / 100);
         
         // Convert utility amount if the currency is different
@@ -601,12 +601,15 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                     <h4 className="text-sm font-medium mb-2">Utilities:</h4>
                     <div className="space-y-2 max-h-40 overflow-y-auto">
                       {utilities.map((utility) => {
-                        const percentage = utility.percentage || 100;
-                        let displayAmount = utility.amount * (percentage / 100);
+                        const percentage = utility.percentage !== undefined ? utility.percentage : 100;
+                        
+                        const calculatedAmount = utility.amount * (percentage / 100);
                         
                         const utilCurrency = utility.currency || 'EUR';
+                        let displayAmount = calculatedAmount;
+                        
                         if (utilCurrency !== invoiceCurrency) {
-                          displayAmount = convertCurrency(displayAmount, utilCurrency, invoiceCurrency);
+                          displayAmount = convertCurrency(calculatedAmount, utilCurrency, invoiceCurrency);
                         }
                         
                         return (
@@ -619,8 +622,8 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                               />
                               <label htmlFor={`utility-${utility.id}`} className="text-sm cursor-pointer">
                                 {utility.type} 
-                                {utility.percentage !== undefined && utility.percentage !== 100 && (
-                                  <span className="text-xs text-gray-500 ml-1">({utility.percentage}%)</span>
+                                {percentage !== 100 && (
+                                  <span className="text-xs text-gray-500 ml-1">({percentage}%)</span>
                                 )}
                               </label>
                             </div>
