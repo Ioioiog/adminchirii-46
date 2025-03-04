@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { InvoiceMetadata } from "@/types/invoice";
 
 interface Utility {
   id: string;
@@ -80,10 +81,10 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
             if (error) throw error;
             
             if (invoices && invoices.length > 0) {
-              const invoiceMetadata = invoices[0].metadata;
+              const invoiceMetadata = invoices[0].metadata as { utilities_included?: Array<{ id: string; amount: number }> };
               if (invoiceMetadata && invoiceMetadata.utilities_included) {
                 const utilityInInvoice = invoiceMetadata.utilities_included.find(
-                  (u: any) => u.id === utility.id
+                  (u) => u.id === utility.id
                 );
                 
                 if (utilityInInvoice && utilityInInvoice.amount) {
