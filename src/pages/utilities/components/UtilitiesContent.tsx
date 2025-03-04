@@ -33,7 +33,7 @@ interface UtilitiesContentProps {
   onEditProvider: (provider: UtilityProvider) => void;
   setShowCsvImporter: (value: boolean) => void;
   children?: ReactNode;
-  onTabChange: (value: UtilitiesSection) => void; // Add this prop to handle tab changes
+  onTabChange: (value: UtilitiesSection) => void;
 }
 
 export function UtilitiesContent({
@@ -46,11 +46,11 @@ export function UtilitiesContent({
   if (userRole !== "landlord" && userRole !== "tenant") return null;
 
   return (
-    <div className="container mx-auto p-4 max-w-7xl">
+    <div className="max-w-7xl mx-auto space-y-4">
       <Tabs 
         value={activeSection} 
         className="space-y-4"
-        onValueChange={(value) => onTabChange(value as UtilitiesSection)} // Add this handler
+        onValueChange={(value) => onTabChange(value as UtilitiesSection)}
       >
         <TabsList className="grid grid-cols-4 w-full max-w-md">
           <TabsTrigger value="utilities">Bills</TabsTrigger>

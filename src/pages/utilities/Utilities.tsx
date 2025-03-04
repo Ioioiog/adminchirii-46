@@ -8,6 +8,7 @@ import { UtilityProvidersSection } from "./components/sections/UtilityProvidersS
 import { MeterReadingsSection } from "./components/sections/MeterReadingsSection";
 import { CsvImporterDialog } from "./components/CsvImporterDialog";
 import CostCalculator from "@/components/financial/CostCalculator";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 
 export interface UtilityWithProperty {
   id: string;
@@ -301,33 +302,35 @@ const Utilities = () => {
   const filteredUtilities = utilities;
 
   return (
-    <>
-      <UtilitiesContent
-        activeSection={activeTab as any}
-        userRole={userRole || "tenant"}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        statusFilter={statusFilter}
-        setStatusFilter={setStatusFilter}
-        typeFilter={typeFilter}
-        setTypeFilter={setTypeFilter}
-        propertyFilter={propertyFilter}
-        setPropertyFilter={setPropertyFilter}
-        filteredUtilities={filteredUtilities}
-        providers={providers}
-        isProviderLoading={isProviderLoading}
-        landlordId={userId || ""}
-        showProviderForm={showProviderForm}
-        setShowProviderForm={setShowProviderForm}
-        editingProvider={editingProvider}
-        setEditingProvider={setEditingProvider}
-        onDeleteProvider={handleDeleteProvider}
-        onEditProvider={handleEditProvider}
-        setShowCsvImporter={setShowCsvImporter}
-        onTabChange={handleTabChange}
-      >
-        {renderActiveSection()}
-      </UtilitiesContent>
+    <DashboardLayout>
+      <div className="p-4">
+        <UtilitiesContent
+          activeSection={activeTab as any}
+          userRole={userRole || "tenant"}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          typeFilter={typeFilter}
+          setTypeFilter={setTypeFilter}
+          propertyFilter={propertyFilter}
+          setPropertyFilter={setPropertyFilter}
+          filteredUtilities={filteredUtilities}
+          providers={providers}
+          isProviderLoading={isProviderLoading}
+          landlordId={userId || ""}
+          showProviderForm={showProviderForm}
+          setShowProviderForm={setShowProviderForm}
+          editingProvider={editingProvider}
+          setEditingProvider={setEditingProvider}
+          onDeleteProvider={handleDeleteProvider}
+          onEditProvider={handleEditProvider}
+          setShowCsvImporter={setShowCsvImporter}
+          onTabChange={handleTabChange}
+        >
+          {renderActiveSection()}
+        </UtilitiesContent>
+      </div>
 
       {showCsvImporter && (
         <CsvImporterDialog
@@ -335,7 +338,7 @@ const Utilities = () => {
           setShowCsvImporter={setShowCsvImporter}
         />
       )}
-    </>
+    </DashboardLayout>
   );
 };
 
