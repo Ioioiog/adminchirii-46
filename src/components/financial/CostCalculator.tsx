@@ -17,6 +17,7 @@ import { toast } from '@/hooks/use-toast';
 import { InvoiceDialog } from '@/components/invoices/InvoiceDialog';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { InvoiceMetadata } from '@/types/invoice';
 
 interface UtilityItem {
   id: string;
@@ -231,10 +232,13 @@ const CostCalculator = () => {
       }
       
       const overlappingInvoices = invoices.filter(invoice => {
-        if (!invoice.metadata?.date_range) return false;
+        if (!invoice.metadata) return false;
         
-        const invoiceFrom = new Date(invoice.metadata.date_range.from);
-        const invoiceTo = new Date(invoice.metadata.date_range.to);
+        const metadata = invoice.metadata as unknown as InvoiceMetadata;
+        if (!metadata.date_range) return false;
+        
+        const invoiceFrom = new Date(metadata.date_range.from);
+        const invoiceTo = new Date(metadata.date_range.to);
         
         return (
           isWithinInterval(selectedDateRange.from, { start: invoiceFrom, end: invoiceTo }) ||
@@ -250,11 +254,15 @@ const CostCalculator = () => {
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         )[0];
         
-        if (mostRecentInvoice.metadata?.date_range) {
-          setInvoicedPeriod({
-            from: new Date(mostRecentInvoice.metadata.date_range.from),
-            to: new Date(mostRecentInvoice.metadata.date_range.to)
-          });
+        if (mostRecentInvoice.metadata) {
+          const metadata = mostRecentInvoice.metadata as unknown as InvoiceMetadata;
+          
+          if (metadata.date_range) {
+            setInvoicedPeriod({
+              from: new Date(metadata.date_range.from),
+              to: new Date(metadata.date_range.to)
+            });
+          }
         }
       } else {
         setRentAlreadyInvoiced(false);
