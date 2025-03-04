@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,6 +42,7 @@ interface Utility {
     address: string;
   } | null;
   invoiced_amount?: number;
+  metadataAmount?: number;
 }
 
 interface UtilityListProps {
@@ -93,8 +93,10 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
                   console.log(`Found utility in invoice:`, utilityInInvoice);
                   enhancedUtilities[i] = {
                     ...utility,
-                    invoiced_amount: utilityInInvoice.amount
+                    invoiced_amount: utilityInInvoice.amount,
+                    metadataAmount: utilityInInvoice.amount
                   };
+                  console.log(`Updated utility with metadata amount:`, enhancedUtilities[i]);
                 }
               }
             }
@@ -278,19 +280,20 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
     );
   }
 
-  // Utility function to display invoiced amount
   const renderInvoicedAmount = (utility: Utility) => {
-    // If we have the explicit invoiced_amount from metadata, use it
+    if (utility.metadataAmount !== undefined) {
+      console.log(`Using metadataAmount for utility ${utility.id}:`, utility.metadataAmount);
+      return formatAmount(utility.metadataAmount, utility.currency);
+    }
+    
     if (utility.invoiced_amount !== undefined) {
       return formatAmount(utility.invoiced_amount, utility.currency);
     }
 
-    // If utility is invoiced and has a percentage, calculate amount
     if (utility.invoiced && utility.invoiced_percentage) {
       return formatAmount((utility.amount * utility.invoiced_percentage) / 100, utility.currency);
     }
 
-    // Default case - no invoiced amount available
     return 'N/A';
   };
 
