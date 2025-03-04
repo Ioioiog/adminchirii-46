@@ -625,16 +625,23 @@ const CostCalculator = () => {
                 <div className="text-center">
                   <p className="text-gray-600">Total</p>
                   <div>
-                    <p className="text-xl font-bold text-blue-600">
-                      {applyVat && !rentAlreadyInvoiced
-                        ? formatCurrency(getRentWithVat(), rentCurrency)
-                        : formatCurrency(rentAmount, rentCurrency)}
-                    </p>
+                    {!rentAlreadyInvoiced ? (
+                      <p className="text-xl font-bold text-blue-600">
+                        {applyVat
+                          ? formatCurrency(getRentWithVat(), rentCurrency)
+                          : formatCurrency(rentAmount, rentCurrency)}
+                      </p>
+                    ) : (
+                      <p className="text-xl font-bold text-blue-600">
+                        {formatCurrency(0, rentCurrency)}
+                        <span className="block text-xs text-amber-600">(Rent excluded)</span>
+                      </p>
+                    )}
                     {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
                       <div key={currency}>
                         {currency === rentCurrency ? (
                           <p className="text-lg font-bold text-blue-600">
-                            = {formatCurrency(amount + (applyVat && !rentAlreadyInvoiced ? getRentWithVat() : rentAmount), currency)}
+                            = {formatCurrency(rentAlreadyInvoiced ? amount : amount + (applyVat ? getRentWithVat() : rentAmount), currency)}
                           </p>
                         ) : (
                           <p className="text-sm text-gray-500">
