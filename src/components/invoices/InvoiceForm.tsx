@@ -647,7 +647,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                 <div className="flex justify-between items-center pt-2 mt-2 border-t border-slate-200">
                   <span className="font-bold">Total Amount:</span>
                   <span className="text-lg font-bold">
-                    {formatAmount(calculateTotal() + (applyVat ? calculateVatAmount() : 0), invoiceCurrency)}
+                    {formatAmount(calculateTotal(), invoiceCurrency)}
                   </span>
                 </div>
               </div>
