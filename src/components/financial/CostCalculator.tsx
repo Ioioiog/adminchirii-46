@@ -104,6 +104,10 @@ const UtilityRow = ({
     }
   };
 
+  // Calculate remaining amount
+  const remainingAmount = utility.amount - (utility.invoiced_amount || 0);
+  const hasBeenPartiallyInvoiced = utility.invoiced_amount && utility.invoiced_amount > 0 && utility.invoiced_amount < utility.amount;
+
   return (
     <>
       <tr className={`border-t ${!utility.selected ? 'bg-gray-50 text-gray-400' : ''}`}>
@@ -123,6 +127,11 @@ const UtilityRow = ({
           {utility.invoiced_amount && utility.invoiced_amount > 0 && (
             <div className="text-xs text-gray-500">
               ({formatCurrency(utility.invoiced_amount, utility.currency)} invoiced)
+              {hasBeenPartiallyInvoiced && (
+                <div className="text-xs text-blue-600">
+                  {formatCurrency(remainingAmount, utility.currency)} remaining
+                </div>
+              )}
             </div>
           )}
         </td>
