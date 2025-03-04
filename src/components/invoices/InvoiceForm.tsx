@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -919,3 +920,14 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
           <Button 
             type="submit" 
             disabled={isLoading || !selectedProperty || (
+              form.getValues("amount") === 0 && 
+              (!utilities.some(u => u.selected) || utilities.length === 0)
+            )}
+          >
+            Create Invoice
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
