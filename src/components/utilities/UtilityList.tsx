@@ -52,7 +52,7 @@ interface UtilityListProps {
   onStatusUpdate?: () => void;
 }
 
-type SortField = "due_date" | "issued_date" | "amount" | "type" | "status" | "invoiced_amount";
+type SortField = "due_date" | "issued_date" | "amount" | "type" | "status";
 type SortDirection = "asc" | "desc";
 
 export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityListProps) {
@@ -192,10 +192,6 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
         valueA = a.amount;
         valueB = b.amount;
         break;
-      case "invoiced_amount":
-        valueA = a.metadata_amount || a.invoiced_amount || 0;
-        valueB = b.metadata_amount || b.invoiced_amount || 0;
-        break;
       case "due_date":
         valueA = new Date(a.due_date).getTime();
         valueB = new Date(b.due_date).getTime();
@@ -289,9 +285,6 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
             <DropdownMenuItem onClick={() => handleSort("amount")}>
               Amount {sortField === "amount" && (sortDirection === "asc" ? "↑" : "↓")}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleSort("invoiced_amount")}>
-              Invoiced Amount {sortField === "invoiced_amount" && (sortDirection === "asc" ? "↑" : "↓")}
-            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleSort("type")}>
               Type {sortField === "type" && (sortDirection === "asc" ? "↑" : "↓")}
             </DropdownMenuItem>
@@ -308,7 +301,6 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
             <TableHead>Type</TableHead>
             <TableHead>Invoice #</TableHead>
             <TableHead>Amount</TableHead>
-            <TableHead>Invoiced Amount</TableHead>
             <TableHead>Issued Date</TableHead>
             <TableHead>Due Date</TableHead>
             <TableHead>Status</TableHead>
@@ -359,9 +351,6 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
                   )}
                 </div>
               </TableCell>
-              <TableCell className="font-medium text-green-600">
-                {renderInvoicedAmount(utility)}
-              </TableCell>
               <TableCell>
                 {utility.issued_date ? new Date(utility.issued_date).toLocaleDateString() : 'N/A'}
               </TableCell>
@@ -410,7 +399,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
           ))}
           {utilities.length === 0 && (
             <TableRow>
-              <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+              <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                 No utility bills found.
               </TableCell>
             </TableRow>
