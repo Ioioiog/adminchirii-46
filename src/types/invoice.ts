@@ -1,3 +1,4 @@
+
 import { DateRange } from "react-day-picker";
 
 export interface InvoiceSettings {
@@ -27,7 +28,7 @@ export interface UtilityItem {
   percentage?: number;
   original_amount?: number;
   currency?: string;
-  invoiced_percentage?: number;
+  invoiced_amount?: number;
 }
 
 export interface InvoiceMetadata {
@@ -45,10 +46,10 @@ export interface InvoiceMetadata {
     id: string;
     amount: number;
     type: string;
-    invoiced_percentage?: number;
+    invoiced_amount?: number;
     percentage?: number;
     original_amount?: number;
-    current_invoiced_percentage?: number; // Track the previously invoiced percentage
+    current_invoiced_amount?: number; // Track the previously invoiced amount
   }>;
   [key: string]: any; // Add index signature to make it compatible with Json
 }

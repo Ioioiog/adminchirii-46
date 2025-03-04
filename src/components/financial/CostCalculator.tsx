@@ -29,7 +29,7 @@ interface UtilityItem {
   currency: string;
   percentage?: number;
   selected?: boolean;
-  invoiced_percentage?: number;
+  invoiced_amount?: number;
 }
 
 interface LandlordProfile {
@@ -66,9 +66,9 @@ const UtilityRow = ({ utility, getOriginalUtilityAmount, getAdjustedUtilityAmoun
         </td>
         <td className="p-3 text-right font-medium">
           {formatCurrency(utility.amount, utility.currency)}
-          {utility.invoiced_percentage && utility.invoiced_percentage > 0 && (
+          {utility.invoiced_amount && utility.invoiced_amount > 0 && (
             <div className="text-xs text-gray-500">
-              ({utility.invoiced_percentage}% invoiced)
+              ({formatCurrency(utility.invoiced_amount, utility.currency)} invoiced)
             </div>
           )}
         </td>
@@ -319,6 +319,8 @@ const CostCalculator = () => {
 
     const formattedUtilities = utilitiesData?.map(utility => {
       const maxPercentage = 100;
+      const remainingAmount = utility.amount - (utility.invoiced_amount || 0);
+      const availablePercentage = Math.round((remainingAmount / utility.amount) * 100);
       
       return {
         id: utility.id,
@@ -328,9 +330,9 @@ const CostCalculator = () => {
         due_date: format(new Date(utility.due_date), 'MM/dd/yyyy'),
         amount: utility.amount,
         currency: utility.currency || rentCurrency,
-        percentage: maxPercentage,
+        percentage: availablePercentage,
         selected: true,
-        invoiced_percentage: utility.invoiced_percentage || 0
+        invoiced_amount: utility.invoiced_amount || 0
       };
     }) || [];
 
@@ -432,8 +434,8 @@ const CostCalculator = () => {
   const getAdjustedUtilityAmount = (utility: UtilityItem): number => {
     if (!utility.selected) return 0;
     const percentage = utility.percentage || 100;
-    const remainingPercentage = 100 - (utility.invoiced_percentage || 0);
-    const adjustableAmount = (utility.amount * remainingPercentage) / 100;
+    const remainingAmount = utility.amount - (utility.invoiced_amount || 0);
+    const adjustableAmount = remainingAmount;
     return (adjustableAmount * percentage) / 100;
   };
 
@@ -456,7 +458,8 @@ const CostCalculator = () => {
         percentage: utility.percentage,
         original_amount: utility.amount,
         currency: utility.currency,
-        due_date: utility.due_date
+        due_date: utility.due_date,
+        invoiced_amount: utility.invoiced_amount || 0
       }));
 
     const dateRangeForInvoice = selectedDateRange && 
@@ -771,7 +774,8 @@ const CostCalculator = () => {
                 percentage: util.percentage,
                 original_amount: util.amount,
                 currency: util.currency,
-                due_date: util.due_date
+                due_date: util.due_date,
+                invoiced_amount: util.invoiced_amount || 0
               }))
           }}
         />
