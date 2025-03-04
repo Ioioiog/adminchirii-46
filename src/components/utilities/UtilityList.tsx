@@ -65,6 +65,11 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
     }
   };
 
+  // Ensure we only pass 'landlord' or 'tenant' to components that require it
+  const safeUserRole = userRole === 'landlord' || userRole === 'tenant' 
+    ? userRole 
+    : 'tenant'; // Default to tenant for other roles like service_provider
+
   if (!utilities || utilities.length === 0) {
     return (
       <Card className="p-8 flex flex-col items-center justify-center">
@@ -148,7 +153,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
                       utilityId={utility.id}
                       documentPath={utility.document_path}
                       onDocumentDeleted={onStatusUpdate}
-                      userRole={userRole}
+                      userRole={safeUserRole} // Use our safe version here
                     />
                   ) : (
                     userRole === "landlord" && (
