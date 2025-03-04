@@ -21,7 +21,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { InvoiceMetadata } from "@/types/invoice";
 
 interface Utility {
   id: string;
@@ -58,7 +57,7 @@ type SortDirection = "asc" | "desc";
 export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityListProps) {
   const { toast } = useToast();
   const { formatAmount } = useCurrency();
-  const [sortField, setSortField] = useState<SortField>("due_date");
+  const [sortField, setSortField] = useState<SortField>("issued_date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [utilitiesWithInvoiceData, setUtilitiesWithInvoiceData] = useState<Utility[]>([]);
 
@@ -209,8 +208,8 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
         valueB = b.status.toLowerCase();
         break;
       default:
-        valueA = new Date(a.due_date).getTime();
-        valueB = new Date(b.due_date).getTime();
+        valueA = a.issued_date ? new Date(a.issued_date).getTime() : 0;
+        valueB = b.issued_date ? new Date(b.issued_date).getTime() : 0;
     }
     
     const sortFactor = sortDirection === "asc" ? 1 : -1;
