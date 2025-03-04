@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { FileText, Calendar, User, Building, CreditCard } from "lucide-react";
+import { FileText, Calendar, User, Building, CreditCard, Download, Printer, ClipboardCheck, Receipt } from "lucide-react";
 import { formatAmount } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Invoice } from "@/types/invoice";
@@ -11,6 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 interface InvoiceDetailsDialogProps {
   open: boolean;
@@ -65,15 +68,34 @@ export function InvoiceDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl p-0 overflow-hidden bg-white rounded-lg shadow-lg border-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-full bg-blue-100 text-blue-600">
-              <FileText size={20} />
+      <DialogContent className="max-w-3xl p-0 overflow-hidden bg-white rounded-lg shadow-lg border-0">
+        <DialogHeader className="p-6 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-blue-100 text-blue-600">
+                <Receipt size={24} />
+              </div>
+              <div>
+                <DialogTitle className="text-2xl font-bold text-gray-800">
+                  {isLoading ? "Loading Invoice..." : `Invoice #${invoiceId.substr(0, 8)}`}
+                </DialogTitle>
+                {!isLoading && invoice && (
+                  <p className="text-gray-500 mt-1">
+                    Issued: {format(new Date(invoice.created_at), 'MMMM d, yyyy')}
+                  </p>
+                )}
+              </div>
             </div>
-            <DialogTitle className="text-xl font-semibold text-gray-800">
-              {isLoading ? "Loading Invoice..." : `Invoice #${invoiceId.substr(0, 8)}`}
-            </DialogTitle>
+            <div className="flex space-x-2">
+              <Button size="sm" variant="outline" className="flex items-center gap-1">
+                <Download size={16} /> 
+                <span className="hidden sm:inline">Download</span>
+              </Button>
+              <Button size="sm" variant="outline" className="flex items-center gap-1">
+                <Printer size={16} /> 
+                <span className="hidden sm:inline">Print</span>
+              </Button>
+            </div>
           </div>
         </DialogHeader>
         
@@ -86,72 +108,195 @@ export function InvoiceDetailsDialog({
             </div>
           ) : invoice ? (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium flex items-center gap-2">
-                    <Building className="h-5 w-5 text-gray-400" />
-                    Property Details
-                  </h3>
-                  <div className="bg-gray-50 p-4 rounded-md border space-y-2">
-                    <p><span className="font-medium">Name:</span> {invoice.property.name}</p>
-                    <p><span className="font-medium">Address:</span> {invoice.property.address}</p>
+              <div className="flex justify-between flex-col md:flex-row gap-6">
+                <div className="space-y-4 flex-1">
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold flex items-center gap-2 text-gray-700">
+                      <Building className="h-5 w-5 text-blue-500" />
+                      From
+                    </h3>
+                    <Card className="overflow-hidden border border-gray-200">
+                      <CardContent className="p-4 bg-gray-50">
+                        <p className="font-semibold">{invoice.property.name}</p>
+                        <p className="text-gray-600 mt-1">{invoice.property.address}</p>
+                      </CardContent>
+                    </Card>
                   </div>
                   
-                  <h3 className="text-lg font-medium flex items-center gap-2">
-                    <User className="h-5 w-5 text-gray-400" />
-                    Tenant Information
-                  </h3>
-                  <div className="bg-gray-50 p-4 rounded-md border space-y-2">
-                    <p><span className="font-medium">Name:</span> {invoice.tenant?.first_name} {invoice.tenant?.last_name}</p>
-                    <p><span className="font-medium">Email:</span> {invoice.tenant?.email}</p>
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold flex items-center gap-2 text-gray-700">
+                      <User className="h-5 w-5 text-blue-500" />
+                      Bill To
+                    </h3>
+                    <Card className="overflow-hidden border border-gray-200">
+                      <CardContent className="p-4 bg-gray-50">
+                        <p className="font-semibold">{invoice.tenant?.first_name} {invoice.tenant?.last_name}</p>
+                        <p className="text-gray-600 mt-1">{invoice.tenant?.email}</p>
+                      </CardContent>
+                    </Card>
                   </div>
                 </div>
                 
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-gray-400" />
-                    Invoice Details
-                  </h3>
-                  <div className="bg-gray-50 p-4 rounded-md border space-y-2">
-                    <p><span className="font-medium">Status:</span> <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                      invoice.status === 'paid' ? 'bg-green-100 text-green-800' : 
-                      invoice.status === 'overdue' ? 'bg-red-100 text-red-800' : 
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>{invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}</span></p>
-                    <p><span className="font-medium">Created:</span> {format(new Date(invoice.created_at), 'MMM d, yyyy')}</p>
-                    <p><span className="font-medium">Due Date:</span> {format(new Date(invoice.due_date), 'MMM d, yyyy')}</p>
-                    {invoice.paid_at && (
-                      <p><span className="font-medium">Paid Date:</span> {format(new Date(invoice.paid_at), 'MMM d, yyyy')}</p>
+                <div className="space-y-4 flex-1">
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold flex items-center gap-2 text-gray-700">
+                      <Calendar className="h-5 w-5 text-blue-500" />
+                      Invoice Details
+                    </h3>
+                    <Card className="overflow-hidden border border-gray-200">
+                      <CardContent className="p-4 bg-gray-50 space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Status:</span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            invoice.status === 'paid' ? 'bg-green-100 text-green-800' : 
+                            invoice.status === 'overdue' ? 'bg-red-100 text-red-800' : 
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Invoice Date:</span>
+                          <span>{format(new Date(invoice.created_at), 'MMM d, yyyy')}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Due Date:</span>
+                          <span className={invoice.status === 'overdue' ? 'text-red-600 font-medium' : ''}>
+                            {format(new Date(invoice.due_date), 'MMM d, yyyy')}
+                          </span>
+                        </div>
+                        {invoice.paid_at && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Payment Date:</span>
+                            <span className="text-green-600">
+                              {format(new Date(invoice.paid_at), 'MMM d, yyyy')}
+                            </span>
+                          </div>
+                        )}
+                        {invoice.metadata?.date_range && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Period:</span>
+                            <span>
+                              {format(new Date(invoice.metadata.date_range.from), 'MMM d')} - {format(new Date(invoice.metadata.date_range.to), 'MMM d, yyyy')}
+                            </span>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold mb-4 text-gray-700">Invoice Summary</h3>
+                <div className="bg-white border rounded-md overflow-hidden">
+                  <div className="grid grid-cols-12 bg-gray-100 p-4 text-sm font-medium text-gray-700">
+                    <div className="col-span-6">Description</div>
+                    <div className="col-span-2 text-right">Amount</div>
+                    <div className="col-span-2 text-right">VAT</div>
+                    <div className="col-span-2 text-right">Total</div>
+                  </div>
+                  
+                  <div className="divide-y">
+                    <div className="grid grid-cols-12 p-4 text-sm">
+                      <div className="col-span-6">
+                        <p className="font-medium">Rent</p>
+                        {invoice.metadata?.is_partial && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {invoice.metadata.partial_percentage}% of {formatAmount(invoice.metadata.full_amount || 0, invoice.currency)}
+                          </p>
+                        )}
+                      </div>
+                      <div className="col-span-2 text-right">
+                        {formatAmount(
+                          invoice.vat_rate > 0 
+                            ? invoice.amount / (1 + invoice.vat_rate / 100) 
+                            : invoice.amount, 
+                          invoice.currency
+                        )}
+                      </div>
+                      <div className="col-span-2 text-right">
+                        {invoice.vat_rate > 0 
+                          ? formatAmount(
+                              invoice.amount - (invoice.amount / (1 + invoice.vat_rate / 100)),
+                              invoice.currency
+                            )
+                          : formatAmount(0, invoice.currency)
+                        }
+                      </div>
+                      <div className="col-span-2 text-right font-medium">
+                        {formatAmount(invoice.amount, invoice.currency)}
+                      </div>
+                    </div>
+                    
+                    {invoice.metadata?.utilities_included && invoice.metadata.utilities_included.length > 0 && (
+                      invoice.metadata.utilities_included.map((util, idx) => (
+                        <div key={idx} className="grid grid-cols-12 p-4 text-sm">
+                          <div className="col-span-6">
+                            <p className="font-medium">{util.type}</p>
+                            {util.percentage && util.percentage < 100 && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                {util.percentage}% of {formatAmount(util.original_amount || 0, invoice.currency)}
+                              </p>
+                            )}
+                          </div>
+                          <div className="col-span-2 text-right">{formatAmount(util.amount, invoice.currency)}</div>
+                          <div className="col-span-2 text-right">{formatAmount(0, invoice.currency)}</div>
+                          <div className="col-span-2 text-right font-medium">{formatAmount(util.amount, invoice.currency)}</div>
+                        </div>
+                      ))
                     )}
                   </div>
                   
-                  <h3 className="text-lg font-medium flex items-center gap-2">
-                    <CreditCard className="h-5 w-5 text-gray-400" />
-                    Payment Details
-                  </h3>
-                  <div className="bg-gray-50 p-4 rounded-md border space-y-2">
-                    <p><span className="font-medium">Amount:</span> {formatAmount(invoice.amount, invoice.currency)}</p>
+                  <div className="bg-gray-50 p-4 border-t">
+                    <div className="grid grid-cols-12 text-sm">
+                      <div className="col-span-8 text-right font-medium">Subtotal:</div>
+                      <div className="col-span-4 text-right">
+                        {formatAmount(
+                          invoice.vat_rate > 0 
+                            ? invoice.amount / (1 + invoice.vat_rate / 100) 
+                            : invoice.amount, 
+                          invoice.currency
+                        )}
+                      </div>
+                    </div>
                     
                     {invoice.vat_rate > 0 && (
-                      <p><span className="font-medium">VAT Rate:</span> {invoice.vat_rate}%</p>
-                    )}
-                    
-                    {invoice.metadata?.utilities_included?.length > 0 && (
-                      <div className="mt-2">
-                        <p className="font-medium">Utilities Included:</p>
-                        <ul className="list-disc list-inside ml-2 mt-1">
-                          {invoice.metadata.utilities_included.map((util, idx) => (
-                            <li key={idx}>{util.type}: {formatAmount(util.amount, invoice.currency)}</li>
-                          ))}
-                        </ul>
+                      <div className="grid grid-cols-12 text-sm mt-2">
+                        <div className="col-span-8 text-right font-medium">VAT ({invoice.vat_rate}%):</div>
+                        <div className="col-span-4 text-right">
+                          {formatAmount(
+                            invoice.amount - (invoice.amount / (1 + invoice.vat_rate / 100)),
+                            invoice.currency
+                          )}
+                        </div>
                       </div>
                     )}
                     
-                    {invoice.metadata?.date_range && (
-                      <p><span className="font-medium">Period:</span> {format(new Date(invoice.metadata.date_range.from), 'MMM d, yyyy')} - {format(new Date(invoice.metadata.date_range.to), 'MMM d, yyyy')}</p>
+                    <Separator className="my-3" />
+                    
+                    <div className="grid grid-cols-12 text-base font-bold">
+                      <div className="col-span-8 text-right">Total Due:</div>
+                      <div className="col-span-4 text-right">{formatAmount(invoice.amount, invoice.currency)}</div>
+                    </div>
+                    
+                    {invoice.status === 'paid' && (
+                      <div className="mt-4 text-center">
+                        <div className="inline-flex items-center px-3 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">
+                          <ClipboardCheck size={16} className="mr-1" />
+                          <span className="text-sm font-medium">Paid in Full</span>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
+              </div>
+              
+              <div className="bg-gray-50 p-4 rounded-md border mt-8">
+                <p className="text-sm text-gray-600 text-center">
+                  Thank you for your business. If you have any questions about this invoice,
+                  please contact your property manager.
+                </p>
               </div>
             </>
           ) : (
