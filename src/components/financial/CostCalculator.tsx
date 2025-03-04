@@ -36,6 +36,68 @@ interface LandlordProfile {
   };
 }
 
+const UtilityRow = ({ utility, getOriginalUtilityAmount, getAdjustedUtilityAmount, formatCurrency, onPercentageChange, onSelectionChange }: {
+  utility: UtilityItem;
+  getOriginalUtilityAmount: (utility: UtilityItem) => number;
+  getAdjustedUtilityAmount: (utility: UtilityItem) => number;
+  formatCurrency: (amount: number, currency: string) => string;
+  onPercentageChange: (id: string, percentage: number) => void;
+  onSelectionChange: (id: string, selected: boolean) => void;
+}) => {
+  return (
+    <>
+      <tr className={`border-t ${!utility.selected ? 'bg-gray-50 text-gray-400' : ''}`}>
+        <td className="p-3">{utility.type}</td>
+        <td className="p-3">{utility.invoice_number}</td>
+        <td className="p-3">{utility.issued_date}</td>
+        <td className="p-3">{utility.due_date}</td>
+        <td className="p-3 text-center">
+          <Checkbox 
+            checked={utility.selected}
+            onCheckedChange={(checked) => onSelectionChange(utility.id, !!checked)}
+            className="mx-auto"
+          />
+        </td>
+        <td className="p-3 text-right font-medium">{formatCurrency(utility.amount, utility.currency)}</td>
+        <td className="p-3 text-right font-medium">
+          {utility.selected ? `${utility.percentage || 100}%` : '-'}
+        </td>
+        <td className="p-3 text-right font-medium">
+          {utility.selected ? formatCurrency(getAdjustedUtilityAmount(utility), utility.currency) : '-'}
+        </td>
+      </tr>
+      {utility.selected && (
+        <tr className="border-b border-dashed">
+          <td colSpan={8} className="p-3 bg-gray-50">
+            <div className="space-y-2 px-2">
+              <div className="flex justify-between items-center text-xs text-gray-600">
+                <span>0%</span>
+                <span>50%</span>
+                <span>100%</span>
+              </div>
+              <Slider
+                value={[utility.percentage || 100]}
+                onValueChange={(values) => onPercentageChange(utility.id, values[0])}
+                max={100}
+                step={1}
+                className="mt-1"
+              />
+              <div className="flex justify-between items-center">
+                <span className="px-2 py-0.5 bg-blue-50 rounded-full text-xs font-medium text-blue-700">
+                  {utility.percentage || 100}%
+                </span>
+                <span className="text-sm font-medium">
+                  Applied: {formatCurrency(getAdjustedUtilityAmount(utility), utility.currency)}
+                </span>
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+};
+
 const CostCalculator = () => {
   const { userRole, userId } = useUserRole();
   const { properties } = useProperties({ userRole: userRole || 'tenant' });
@@ -522,56 +584,15 @@ const CostCalculator = () => {
                     </thead>
                     <tbody>
                       {utilities.map((utility) => (
-                        <div key={utility.id}>
-                          <tr className={`border-t ${!utility.selected ? 'bg-gray-50 text-gray-400' : ''}`}>
-                            <td className="p-3">{utility.type}</td>
-                            <td className="p-3">{utility.invoice_number}</td>
-                            <td className="p-3">{utility.issued_date}</td>
-                            <td className="p-3">{utility.due_date}</td>
-                            <td className="p-3 text-center">
-                              <Checkbox 
-                                checked={utility.selected}
-                                onCheckedChange={(checked) => handleUtilitySelectionChange(utility.id, !!checked)}
-                                className="mx-auto"
-                              />
-                            </td>
-                            <td className="p-3 text-right font-medium">{formatCurrency(utility.amount, utility.currency)}</td>
-                            <td className="p-3 text-right font-medium">
-                              {utility.selected ? `${utility.percentage || 100}%` : '-'}
-                            </td>
-                            <td className="p-3 text-right font-medium">
-                              {utility.selected ? formatCurrency(getAdjustedUtilityAmount(utility), utility.currency) : '-'}
-                            </td>
-                          </tr>
-                          {utility.selected && (
-                            <tr className="border-b border-dashed">
-                              <td colSpan={8} className="p-3 bg-gray-50">
-                                <div className="space-y-2 px-2">
-                                  <div className="flex justify-between items-center text-xs text-gray-600">
-                                    <span>0%</span>
-                                    <span>50%</span>
-                                    <span>100%</span>
-                                  </div>
-                                  <Slider
-                                    value={[utility.percentage || 100]}
-                                    onValueChange={(values) => handleUtilityPercentageChange(utility.id, values[0])}
-                                    max={100}
-                                    step={1}
-                                    className="mt-1"
-                                  />
-                                  <div className="flex justify-between items-center">
-                                    <span className="px-2 py-0.5 bg-blue-50 rounded-full text-xs font-medium text-blue-700">
-                                      {utility.percentage || 100}%
-                                    </span>
-                                    <span className="text-sm font-medium">
-                                      Applied: {formatCurrency(getAdjustedUtilityAmount(utility), utility.currency)}
-                                    </span>
-                                  </div>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </div>
+                        <UtilityRow 
+                          key={utility.id}
+                          utility={utility}
+                          getOriginalUtilityAmount={getOriginalUtilityAmount}
+                          getAdjustedUtilityAmount={getAdjustedUtilityAmount}
+                          formatCurrency={formatCurrency}
+                          onPercentageChange={handleUtilityPercentageChange}
+                          onSelectionChange={handleUtilitySelectionChange}
+                        />
                       ))}
                       {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
                         <tr key={currency} className="border-t font-bold">
