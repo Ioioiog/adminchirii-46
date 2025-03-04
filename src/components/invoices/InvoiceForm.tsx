@@ -533,9 +533,12 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
 
       const rentCurrency = selectedProperty?.currency || 'EUR';
       
+      // For consistent calculation, pass 0 for rent amount if it's already invoiced
+      const baseRentAmount = rentAlreadyInvoiced ? 0 : values.amount;
+      
       const rentAmount = rentCurrency !== invoiceCurrency 
-        ? convertCurrency(values.amount, rentCurrency, invoiceCurrency)
-        : values.amount;
+        ? convertCurrency(baseRentAmount, rentCurrency, invoiceCurrency)
+        : baseRentAmount;
       
       const currentVatRate = applyVat ? vatRate : 0;
       const vatAmount = applyVat ? (rentAmount * (currentVatRate / 100)) : 0;
@@ -554,9 +557,20 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       
       const totalAmount = rentAmount + vatAmount + utilitiesTotal;
       
+      // Make sure the metadata includes the correct calculation breakdown
       metadata.subtotal = rentAmount;
       metadata.vat_amount = vatAmount;
       metadata.utilities_total = utilitiesTotal;
+      
+      console.log('Saving invoice with total amount:', totalAmount, 'breakdown:', {
+        rentAmount, 
+        vatAmount, 
+        utilitiesTotal,
+        rentCurrency,
+        invoiceCurrency,
+        rentAlreadyInvoiced,
+        selectedUtils
+      });
       
       for (const util of selectedUtils) {
         const newInvoicedPercentage = util.current_invoiced_percentage + util.percentage;
@@ -609,7 +623,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
   };
 
   const calculateVatAmount = () => {
-    const baseAmount = form.getValues("amount") || 0;
+    const baseAmount = rentAlreadyInvoiced ? 0 : (form.getValues("amount") || 0);
     const rentCurrency = selectedProperty?.currency || 'EUR';
     
     let convertedBaseAmount = baseAmount;
@@ -617,11 +631,11 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       convertedBaseAmount = convertCurrency(baseAmount, rentCurrency, invoiceCurrency);
     }
     
-    return convertedBaseAmount * (19 / 100);
+    return convertedBaseAmount * (vatRate / 100);
   };
 
   const calculateTotal = () => {
-    const baseAmount = form.getValues("amount") || 0;
+    const baseAmount = rentAlreadyInvoiced ? 0 : (form.getValues("amount") || 0);
     const rentCurrency = selectedProperty?.currency || 'EUR';
     
     let convertedBaseAmount = baseAmount;
@@ -635,7 +649,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     utilities
       .filter(util => util.selected)
       .forEach(util => {
-        const utilAmount = util.amount;
+        const utilAmount = (util.original_amount * util.percentage) / 100;
         
         const utilCurrency = util.currency || 'EUR';
         if (utilCurrency !== invoiceCurrency) {
@@ -793,19 +807,20 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                 <div className="flex justify-between items-center py-1">
                   <span className="text-sm">Rent Amount:</span>
                   <span className="text-sm font-medium">
-                    {formatAmount(
-                      selectedProperty && selectedProperty.currency !== invoiceCurrency 
-                        ? convertCurrency(form.getValues("amount"), selectedProperty.currency, invoiceCurrency)
-                        : form.getValues("amount"), 
-                      invoiceCurrency
-                    )}
-                    {rentAlreadyInvoiced && form.getValues("amount") === 0 && (
-                      <span className="ml-2 text-xs text-amber-600">(skipped - already invoiced)</span>
+                    {rentAlreadyInvoiced ? (
+                      <span className="text-amber-600">Already invoiced</span>
+                    ) : (
+                      formatAmount(
+                        selectedProperty && selectedProperty.currency !== invoiceCurrency 
+                          ? convertCurrency(form.getValues("amount"), selectedProperty.currency, invoiceCurrency)
+                          : form.getValues("amount"), 
+                        invoiceCurrency
+                      )
                     )}
                   </span>
                 </div>
 
-                {applyVat && (
+                {applyVat && !rentAlreadyInvoiced && (
                   <div className="flex justify-between items-center py-1">
                     <span className="text-sm">VAT ({vatRate}%):</span>
                     <span className="text-sm font-medium">
@@ -931,3 +946,4 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     </Form>
   );
 }
+
