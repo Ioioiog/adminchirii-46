@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { FileText, Calendar, User, Building, CreditCard, Download, Printer, ClipboardCheck, Receipt } from "lucide-react";
@@ -31,12 +32,24 @@ export function InvoiceDetailsDialog({
 
   // Helper functions for amount calculations
   const calculateSubtotal = (invoice: Invoice): number => {
+    // First check if subtotal is stored in metadata
+    if (invoice.metadata?.subtotal) {
+      return invoice.metadata.subtotal;
+    }
+    
+    // Fall back to calculation if not stored
     return invoice.vat_rate > 0 
       ? invoice.amount / (1 + invoice.vat_rate / 100) 
       : invoice.amount;
   };
 
   const calculateVatAmount = (invoice: Invoice): number => {
+    // First check if VAT amount is stored in metadata
+    if (invoice.metadata?.vat_amount) {
+      return invoice.metadata.vat_amount;
+    }
+    
+    // Fall back to calculation if not stored
     return invoice.vat_rate > 0 
       ? invoice.amount - calculateSubtotal(invoice)
       : 0;
@@ -67,6 +80,7 @@ export function InvoiceDetailsDialog({
 
         if (error) throw error;
         setInvoice(data as Invoice);
+        console.log("Fetched invoice:", data);
       } catch (error) {
         console.error("Error fetching invoice details:", error);
       } finally {
@@ -231,7 +245,7 @@ export function InvoiceDetailsDialog({
                         {formatAmount(calculateVatAmount(invoice), invoice.currency)}
                       </div>
                       <div className="col-span-2 text-right font-medium">
-                        {formatAmount(invoice.amount, invoice.currency)}
+                        {formatAmount(calculateSubtotal(invoice) + calculateVatAmount(invoice), invoice.currency)}
                       </div>
                     </div>
                     

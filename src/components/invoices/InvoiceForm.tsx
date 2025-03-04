@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -375,17 +376,44 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
 
       // Convert the amount to the selected invoice currency if it's different
       const rentCurrency = selectedProperty?.currency || 'EUR';
-      const finalAmount = rentCurrency !== invoiceCurrency 
+      
+      // Calculate the subtotal (rent amount before VAT)
+      const rentAmount = rentCurrency !== invoiceCurrency 
         ? convertCurrency(values.amount, rentCurrency, invoiceCurrency)
         : values.amount;
-
+      
+      // Calculate VAT amount if applicable
+      const vatRate = applyVat ? vatRate : 0;
+      const vatAmount = applyVat ? (rentAmount * (vatRate / 100)) : 0;
+      
+      // Calculate total amount including utilities
+      let utilitiesTotal = 0;
+      selectedUtils.forEach(util => {
+        const utilAmount = util.amount;
+        const utilCurrency = util.currency || 'EUR';
+        
+        if (utilCurrency !== invoiceCurrency) {
+          utilitiesTotal += convertCurrency(utilAmount, utilCurrency, invoiceCurrency);
+        } else {
+          utilitiesTotal += utilAmount;
+        }
+      });
+      
+      const totalAmount = rentAmount + vatAmount + utilitiesTotal;
+      
+      // Store subtotal and VAT information in metadata for later reference
+      metadata.subtotal = rentAmount;
+      metadata.vat_amount = vatAmount;
+      metadata.utilities_total = utilitiesTotal;
+      
+      // Insert the invoice with the calculated values
       const { data, error } = await supabase
         .from("invoices")
         .insert({
           property_id: values.property_id,
           tenant_id: values.tenant_id || userId,
           landlord_id: userRole === "landlord" ? userId : null,
-          amount: finalAmount,
+          amount: totalAmount, // Store the total amount
           due_date: values.due_date,
           status: "pending",
           currency: invoiceCurrency,
