@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -30,6 +31,8 @@ export function InvoiceList({ invoices, userRole, onStatusUpdate }: InvoiceListP
     setSelectedInvoiceId(invoiceId);
     setDetailsDialogOpen(true);
   };
+
+  console.log("InvoiceList received invoices:", invoices);
 
   return (
     <div className="rounded-md border">
@@ -65,7 +68,16 @@ export function InvoiceList({ invoices, userRole, onStatusUpdate }: InvoiceListP
                   {invoice.tenant ? `${invoice.tenant.first_name} ${invoice.tenant.last_name}` : "N/A"}
                 </TableCell>
                 <TableCell className="font-medium">
-                  {formatAmount(invoice.amount, invoice.currency)}
+                  {invoice.amount ? (
+                    <>
+                      {formatAmount(invoice.amount, invoice.currency)}
+                      <span className="text-xs text-muted-foreground block">
+                        Raw: {invoice.amount} {invoice.currency}
+                      </span>
+                    </>
+                  ) : (
+                    "0.00"
+                  )}
                 </TableCell>
                 <TableCell>
                   {new Date(invoice.due_date).toLocaleDateString()}
