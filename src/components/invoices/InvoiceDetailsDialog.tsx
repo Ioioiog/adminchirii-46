@@ -39,7 +39,7 @@ export function InvoiceDetailsDialog({
 
   const calculateVatAmount = (invoice: Invoice): number => {
     return invoice.vat_rate > 0 
-      ? invoice.amount - (invoice.amount / (1 + invoice.vat_rate / 100))
+      ? invoice.amount - calculateSubtotal(invoice)
       : 0;
   };
 
