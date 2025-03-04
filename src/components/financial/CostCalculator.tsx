@@ -5,7 +5,7 @@ import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Calculator, DollarSign, Info, CheckSquare, FileText, AlertCircle } from 'lucide-react';
+import { Calendar, Calculator, DollarSign, Info, CheckSquare, FileText, AlertCircle, Edit2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProperties } from '@/hooks/useProperties';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -17,6 +17,7 @@ import { InvoiceDialog } from '@/components/invoices/InvoiceDialog';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { InvoiceMetadata } from '@/types/invoice';
+import { Input } from '@/components/ui/input';
 
 interface UtilityItem {
   id: string;
@@ -28,6 +29,8 @@ interface UtilityItem {
   currency: string;
   selected?: boolean;
   invoiced_amount?: number;
+  applied_amount?: number;
+  isEditing?: boolean;
 }
 
 interface LandlordProfile {
@@ -38,13 +41,69 @@ interface LandlordProfile {
   };
 }
 
-const UtilityRow = ({ utility, getOriginalUtilityAmount, getAdjustedUtilityAmount, formatCurrency, onSelectionChange }: {
+const UtilityRow = ({ 
+  utility, 
+  getOriginalUtilityAmount, 
+  getAdjustedUtilityAmount, 
+  formatCurrency, 
+  onSelectionChange,
+  onAppliedAmountChange
+}: {
   utility: UtilityItem;
   getOriginalUtilityAmount: (utility: UtilityItem) => number;
   getAdjustedUtilityAmount: (utility: UtilityItem) => number;
   formatCurrency: (amount: number, currency: string) => string;
   onSelectionChange: (id: string, selected: boolean) => void;
+  onAppliedAmountChange: (id: string, amount: number) => void;
 }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editAmount, setEditAmount] = useState(getAdjustedUtilityAmount(utility).toString());
+  
+  const toggleEdit = () => {
+    if (isEditing) {
+      const newAmount = parseFloat(editAmount);
+      if (!isNaN(newAmount) && newAmount >= 0 && newAmount <= (utility.amount - (utility.invoiced_amount || 0))) {
+        onAppliedAmountChange(utility.id, newAmount);
+      } else {
+        setEditAmount(getAdjustedUtilityAmount(utility).toString());
+        toast({
+          title: "Invalid amount",
+          description: "Please enter a valid amount not exceeding the remaining balance.",
+          variant: "destructive",
+        });
+      }
+    }
+    setIsEditing(!isEditing);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEditAmount(e.target.value);
+  };
+
+  const handleBlur = () => {
+    const newAmount = parseFloat(editAmount);
+    if (!isNaN(newAmount) && newAmount >= 0 && newAmount <= (utility.amount - (utility.invoiced_amount || 0))) {
+      onAppliedAmountChange(utility.id, newAmount);
+      setIsEditing(false);
+    } else {
+      setEditAmount(getAdjustedUtilityAmount(utility).toString());
+      toast({
+        title: "Invalid amount",
+        description: "Please enter a valid amount not exceeding the remaining balance.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleBlur();
+    } else if (e.key === 'Escape') {
+      setEditAmount(getAdjustedUtilityAmount(utility).toString());
+      setIsEditing(false);
+    }
+  };
+
   return (
     <>
       <tr className={`border-t ${!utility.selected ? 'bg-gray-50 text-gray-400' : ''}`}>
@@ -68,7 +127,36 @@ const UtilityRow = ({ utility, getOriginalUtilityAmount, getAdjustedUtilityAmoun
           )}
         </td>
         <td className="p-3 text-right font-medium">
-          {utility.selected ? formatCurrency(getAdjustedUtilityAmount(utility), utility.currency) : '-'}
+          {utility.selected ? (
+            <div className="flex items-center justify-end space-x-2">
+              {isEditing ? (
+                <Input 
+                  type="number"
+                  value={editAmount}
+                  onChange={handleInputChange}
+                  onBlur={handleBlur}
+                  onKeyDown={handleKeyDown}
+                  step="0.01"
+                  min="0"
+                  max={utility.amount - (utility.invoiced_amount || 0)}
+                  className="w-24 text-right h-8 text-sm"
+                  autoFocus
+                />
+              ) : (
+                <span>{formatCurrency(getAdjustedUtilityAmount(utility), utility.currency)}</span>
+              )}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={toggleEdit} 
+                className="h-7 w-7 text-gray-500 hover:text-blue-600"
+              >
+                <Edit2 size={16} />
+              </Button>
+            </div>
+          ) : (
+            '-'
+          )}
         </td>
       </tr>
     </>
@@ -292,7 +380,8 @@ const CostCalculator = () => {
         amount: utility.amount,
         currency: utility.currency || rentCurrency,
         selected: remainingAmount > 0,
-        invoiced_amount: utility.invoiced_amount || 0
+        invoiced_amount: utility.invoiced_amount || 0,
+        applied_amount: remainingAmount
       };
     }) || [];
 
@@ -327,6 +416,18 @@ const CostCalculator = () => {
     const updatedUtilities = utilities.map(utility => {
       if (utility.id === id) {
         return { ...utility, selected: isSelected };
+      }
+      return utility;
+    });
+    
+    setUtilities(updatedUtilities);
+    recalculateUtilityTotals(updatedUtilities);
+  };
+
+  const handleAppliedAmountChange = (id: string, amount: number) => {
+    const updatedUtilities = utilities.map(utility => {
+      if (utility.id === id) {
+        return { ...utility, applied_amount: amount };
       }
       return utility;
     });
@@ -382,7 +483,12 @@ const CostCalculator = () => {
   const getAdjustedUtilityAmount = (utility: UtilityItem): number => {
     if (!utility.selected) return 0;
     
-    // Calculate the remaining amount that can be invoiced
+    // If applied_amount is specified, use that
+    if (utility.applied_amount !== undefined) {
+      return utility.applied_amount;
+    }
+    
+    // Otherwise calculate the remaining amount that can be invoiced
     const remainingAmount = utility.amount - (utility.invoiced_amount || 0);
     return Math.max(0, remainingAmount);
   };
@@ -667,6 +773,7 @@ const CostCalculator = () => {
                           getAdjustedUtilityAmount={getAdjustedUtilityAmount}
                           formatCurrency={formatCurrency}
                           onSelectionChange={handleUtilitySelectionChange}
+                          onAppliedAmountChange={handleAppliedAmountChange}
                         />
                       ))}
                       {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
