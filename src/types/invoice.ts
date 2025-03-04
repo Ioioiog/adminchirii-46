@@ -25,7 +25,6 @@ export interface UtilityItem {
   type: string;
   amount: number;
   due_date: string;
-  percentage?: number;
   original_amount?: number;
   currency?: string;
   invoiced_amount?: number;
@@ -33,7 +32,6 @@ export interface UtilityItem {
 
 export interface InvoiceMetadata {
   is_partial?: boolean;
-  partial_percentage?: number;
   full_amount?: number;
   calculation_method?: 'percentage' | 'days';
   days_calculated?: number;
@@ -47,7 +45,6 @@ export interface InvoiceMetadata {
     amount: number;
     type: string;
     invoiced_amount?: number;
-    percentage?: number;
     original_amount?: number;
     current_invoiced_amount?: number; // Track the previously invoiced amount
   }>;
@@ -120,7 +117,6 @@ export interface UtilityForInvoice {
   id: string;
   type: string;
   amount: number;
-  percentage?: number;
   original_amount?: number;
   selected?: boolean;
   currency?: string;
