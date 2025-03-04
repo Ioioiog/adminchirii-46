@@ -46,7 +46,7 @@ const UtilityRow = ({ utility, getOriginalUtilityAmount, getAdjustedUtilityAmoun
   onPercentageChange: (id: string, percentage: number) => void;
   onSelectionChange: (id: string, selected: boolean) => void;
 }) => {
-  const maxPercentage = utility.invoiced_percentage ? 100 - utility.invoiced_percentage : 100;
+  const maxPercentage = 100;
   
   return (
     <>
@@ -250,7 +250,7 @@ const CostCalculator = () => {
     }
 
     const formattedUtilities = utilitiesData?.map(utility => {
-      const maxPercentage = utility.invoiced_percentage ? 100 - utility.invoiced_percentage : 100;
+      const maxPercentage = 100;
       
       return {
         id: utility.id,
