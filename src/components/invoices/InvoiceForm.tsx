@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -77,7 +76,6 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
 
   const propertyId = form.watch("property_id");
 
-  // Fetch exchange rates on component mount
   useEffect(() => {
     const fetchExchangeRates = async () => {
       try {
@@ -433,7 +431,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       .filter(util => util.selected)
       .forEach(util => {
         const percentage = util.percentage || 100;
-        const utilAmount = util.amount * percentage / 100;
+        const utilAmount = util.amount * (percentage / 100);
         
         // Convert utility amount if the currency is different
         const utilCurrency = util.currency || 'EUR';
@@ -449,7 +447,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
 
   const calculateVatAmount = () => {
     // Calculate VAT based on the total amount in the selected currency
-    return calculateTotal() * vatRate / 100;
+    return calculateTotal() * (vatRate / 100);
   };
 
   return (
@@ -602,38 +600,36 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                   <div className="mt-3 pt-2 border-t">
                     <h4 className="text-sm font-medium mb-2">Utilities:</h4>
                     <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {utilities.map((utility) => (
-                        <div key={utility.id} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Checkbox 
-                              id={`utility-${utility.id}`}
-                              checked={utility.selected}
-                              onCheckedChange={(checked) => handleUtilitySelection(utility.id, !!checked)}
-                            />
-                            <label htmlFor={`utility-${utility.id}`} className="text-sm cursor-pointer">
-                              {utility.type} 
-                              {utility.percentage !== undefined && utility.percentage !== 100 && (
-                                <span className="text-xs text-gray-500 ml-1">({utility.percentage}%)</span>
-                              )}
-                            </label>
+                      {utilities.map((utility) => {
+                        const percentage = utility.percentage || 100;
+                        let displayAmount = utility.amount * (percentage / 100);
+                        
+                        const utilCurrency = utility.currency || 'EUR';
+                        if (utilCurrency !== invoiceCurrency) {
+                          displayAmount = convertCurrency(displayAmount, utilCurrency, invoiceCurrency);
+                        }
+                        
+                        return (
+                          <div key={utility.id} className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Checkbox 
+                                id={`utility-${utility.id}`}
+                                checked={utility.selected}
+                                onCheckedChange={(checked) => handleUtilitySelection(utility.id, !!checked)}
+                              />
+                              <label htmlFor={`utility-${utility.id}`} className="text-sm cursor-pointer">
+                                {utility.type} 
+                                {utility.percentage !== undefined && utility.percentage !== 100 && (
+                                  <span className="text-xs text-gray-500 ml-1">({utility.percentage}%)</span>
+                                )}
+                              </label>
+                            </div>
+                            <span className="text-sm font-medium">
+                              {formatAmount(displayAmount, invoiceCurrency)}
+                            </span>
                           </div>
-                          <span className="text-sm font-medium">
-                            {formatAmount(
-                              (() => {
-                                const utilCurrency = utility.currency || 'EUR';
-                                const amount = utility.percentage !== undefined && utility.percentage !== 100
-                                  ? (utility.amount * utility.percentage / 100)
-                                  : utility.amount;
-                                  
-                                return utilCurrency !== invoiceCurrency
-                                  ? convertCurrency(amount, utilCurrency, invoiceCurrency)
-                                  : amount;
-                              })(),
-                              invoiceCurrency
-                            )}
-                          </span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
