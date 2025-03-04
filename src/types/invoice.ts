@@ -113,7 +113,7 @@ export interface CalculationData {
   };
   currency?: string;
   grandTotal?: number;
-  utilities?: UtilityItem[];
+  utilities?: UtilityForInvoice[];
 }
 
 export interface UtilityForInvoice {
@@ -126,4 +126,5 @@ export interface UtilityForInvoice {
   currency?: string;
   invoiced_percentage?: number;
   is_partially_invoiced?: boolean;
+  due_date?: string;
 }

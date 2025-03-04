@@ -386,7 +386,9 @@ const CostCalculator = () => {
         type: utility.type,
         amount: getAdjustedUtilityAmount(utility),
         percentage: utility.percentage,
-        original_amount: utility.amount
+        original_amount: utility.amount,
+        currency: utility.currency,
+        due_date: utility.due_date
       }));
 
     const dateRangeForInvoice = selectedDateRange && 
@@ -662,7 +664,8 @@ const CostCalculator = () => {
                 amount: getAdjustedUtilityAmount(util),
                 percentage: util.percentage,
                 original_amount: util.amount,
-                currency: util.currency
+                currency: util.currency,
+                due_date: util.due_date
               }))
           }}
         />
