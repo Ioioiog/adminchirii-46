@@ -21,6 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Invoice, InvoiceMetadata } from "@/types/invoice";
+import { InvoiceDetailsDialog } from "./InvoiceDetailsDialog";
 
 export interface InvoiceActionsProps {
   invoiceId: string;
@@ -44,6 +45,7 @@ export function InvoiceActions({
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [invoiceDetailsOpen, setInvoiceDetailsOpen] = useState(false);
 
   const handleStatusUpdate = async (newStatus: 'pending' | 'paid' | 'overdue') => {
     try {
@@ -138,6 +140,13 @@ export function InvoiceActions({
     }
   };
 
+  const handleViewInvoice = () => {
+    setInvoiceDetailsOpen(true);
+    if (onViewInvoice) {
+      onViewInvoice();
+    }
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -147,12 +156,10 @@ export function InvoiceActions({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {onViewInvoice && (
-            <DropdownMenuItem onClick={onViewInvoice} className="cursor-pointer">
-              <FileText className="mr-2 h-4 w-4" />
-              View Invoice
-            </DropdownMenuItem>
-          )}
+          <DropdownMenuItem onClick={handleViewInvoice} className="cursor-pointer">
+            <FileText className="mr-2 h-4 w-4" />
+            View Invoice
+          </DropdownMenuItem>
           
           {userRole === "landlord" && status !== "paid" && (
             <DropdownMenuItem 
@@ -223,6 +230,13 @@ export function InvoiceActions({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Invoice Details Dialog */}
+      <InvoiceDetailsDialog 
+        open={invoiceDetailsOpen} 
+        onOpenChange={setInvoiceDetailsOpen} 
+        invoiceId={invoiceId} 
+      />
     </>
   );
 }
