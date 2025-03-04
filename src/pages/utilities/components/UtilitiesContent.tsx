@@ -5,8 +5,10 @@ import { UtilityProvidersSection } from "./sections/UtilityProvidersSection";
 import { UtilityWithProperty } from "../Utilities";
 import { UtilityProvider } from "@/components/utilities/providers/types";
 import { UserRole } from "@/hooks/use-user-role";
+import { ReactNode } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-type UtilitiesSection = 'bills' | 'readings' | 'providers';
+type UtilitiesSection = 'utilities' | 'providers' | 'meter-readings' | 'calculator';
 
 interface UtilitiesContentProps {
   activeSection: UtilitiesSection;
@@ -30,68 +32,31 @@ interface UtilitiesContentProps {
   onDeleteProvider: (id: string) => Promise<void>;
   onEditProvider: (provider: UtilityProvider) => void;
   setShowCsvImporter: (value: boolean) => void;
+  children?: ReactNode; // Add children prop
 }
 
 export function UtilitiesContent({
   activeSection,
   userRole,
-  searchTerm,
-  setSearchTerm,
-  statusFilter,
-  setStatusFilter,
-  typeFilter,
-  setTypeFilter,
-  propertyFilter,
-  setPropertyFilter,
-  filteredUtilities,
-  providers,
-  isProviderLoading,
-  landlordId,
-  showProviderForm,
-  setShowProviderForm,
-  editingProvider,
-  setEditingProvider,
-  onDeleteProvider,
-  onEditProvider,
-  setShowCsvImporter
+  children
 }: UtilitiesContentProps) {
   if (userRole !== "landlord" && userRole !== "tenant") return null;
 
-  switch (activeSection) {
-    case 'bills':
-      return (
-        <UtilityBillsSection 
-          userRole={userRole}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-          typeFilter={typeFilter}
-          setTypeFilter={setTypeFilter}
-          propertyFilter={propertyFilter}
-          setPropertyFilter={setPropertyFilter}
-          utilities={filteredUtilities}
-          setShowCsvImporter={setShowCsvImporter}
-        />
-      );
-    case 'readings':
-      return <MeterReadingsSection userRole={userRole} />;
-    case 'providers':
-      if (userRole !== 'landlord') return null;
-      return (
-        <UtilityProvidersSection 
-          providers={providers}
-          isLoading={isProviderLoading}
-          landlordId={landlordId}
-          showProviderForm={showProviderForm}
-          setShowProviderForm={setShowProviderForm}
-          editingProvider={editingProvider}
-          setEditingProvider={setEditingProvider}
-          onDeleteProvider={onDeleteProvider}
-          onEditProvider={onEditProvider}
-        />
-      );
-    default:
-      return null;
-  }
+  return (
+    <div className="container mx-auto p-4 max-w-7xl">
+      <Tabs value={activeSection} className="space-y-4">
+        <TabsList className="grid grid-cols-4 w-full max-w-md">
+          <TabsTrigger value="utilities">Bills</TabsTrigger>
+          {userRole === "landlord" && (
+            <TabsTrigger value="providers">Providers</TabsTrigger>
+          )}
+          <TabsTrigger value="meter-readings">Meter Readings</TabsTrigger>
+          <TabsTrigger value="calculator">Calculator</TabsTrigger>
+        </TabsList>
+        <TabsContent value={activeSection}>
+          {children}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
 }

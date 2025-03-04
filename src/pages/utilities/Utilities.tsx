@@ -8,7 +8,7 @@ import { UtilityBillsSection } from "./components/sections/UtilityBillsSection";
 import { UtilityProvidersSection } from "./components/sections/UtilityProvidersSection";
 import { MeterReadingsSection } from "./components/sections/MeterReadingsSection";
 import { CsvImporterDialog } from "./components/CsvImporterDialog";
-import { CostCalculator } from "@/components/financial/CostCalculator";
+import CostCalculator from "@/components/financial/CostCalculator"; // Fixed import
 
 export interface UtilityWithProperty {
   id: string;
@@ -41,6 +41,12 @@ const Utilities = () => {
   const [utilities, setUtilities] = useState<UtilityWithProperty[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [showCsvImporter, setShowCsvImporter] = useState<boolean>(false);
+  
+  // Add a state for managing provider section
+  const [providers, setProviders] = useState<any[]>([]);
+  const [isProviderLoading, setIsProviderLoading] = useState<boolean>(true);
+  const [showProviderForm, setShowProviderForm] = useState<boolean>(false);
+  const [editingProvider, setEditingProvider] = useState<any>(null);
 
   useEffect(() => {
     if (userId) {
@@ -127,9 +133,11 @@ const Utilities = () => {
         query = query.eq('status', statusFilter);
       }
       
-      // Apply type filter
+      // Apply type filter with proper type handling
       if (typeFilter !== 'all') {
-        query = query.eq('type', typeFilter);
+        // Use a type assertion to ensure typeFilter is of the correct type
+        // This is safe because we're checking against valid utility types in the UI
+        query = query.eq('type', typeFilter as any);
       }
       
       // Apply property filter
@@ -156,6 +164,65 @@ const Utilities = () => {
     }
   };
 
+  // Handler for provider deletion
+  const handleDeleteProvider = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('utility_provider_credentials')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      // Refetch providers
+      fetchProviders();
+      
+      toast({
+        title: "Success",
+        description: "Provider deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting provider:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete provider",
+      });
+    }
+  };
+
+  // Handler for provider editing
+  const handleEditProvider = (provider: any) => {
+    setEditingProvider(provider);
+    setShowProviderForm(true);
+  };
+
+  // Function to fetch utility providers
+  const fetchProviders = async () => {
+    if (userRole !== 'landlord' || !userId) return;
+    
+    try {
+      setIsProviderLoading(true);
+      const { data, error } = await supabase
+        .from('utility_provider_credentials')
+        .select('*, property:properties(name, address)')
+        .eq('landlord_id', userId);
+      
+      if (error) throw error;
+      
+      setProviders(data || []);
+    } catch (error) {
+      console.error('Error fetching providers:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not fetch utility providers",
+      });
+    } finally {
+      setIsProviderLoading(false);
+    }
+  };
+
   // Render the appropriate section based on activeTab
   const renderActiveSection = () => {
     switch (activeTab) {
@@ -176,9 +243,20 @@ const Utilities = () => {
           />
         );
       case "providers":
-        return <UtilityProvidersSection userRole={userRole || "tenant"} />;
+        return <UtilityProvidersSection
+          providers={providers}
+          isLoading={isProviderLoading}
+          landlordId={userId || ""}
+          showProviderForm={showProviderForm}
+          setShowProviderForm={setShowProviderForm}
+          editingProvider={editingProvider}
+          setEditingProvider={setEditingProvider}
+          onDeleteProvider={handleDeleteProvider}
+          onEditProvider={handleEditProvider}
+          userRole={userRole || "tenant"}
+        />;
       case "meter-readings":
-        return <MeterReadingsSection />;
+        return <MeterReadingsSection userRole={userRole || "tenant"} />;
       case "calculator":
         return <CostCalculator />;
       default:
@@ -205,21 +283,48 @@ const Utilities = () => {
     return <div>Loading...</div>;
   }
 
+  // Create a new filtered utilities array for the utilities content
+  const filteredUtilities = utilities;
+
+  // Load providers when component mounts or user role changes
+  useEffect(() => {
+    if (userRole === 'landlord' && userId) {
+      fetchProviders();
+    }
+  }, [userRole, userId]);
+
   return (
     <>
       <UtilitiesContent
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        isLoading={isLoading}
+        activeSection={activeTab as any}
+        userRole={userRole || "tenant"}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        typeFilter={typeFilter}
+        setTypeFilter={setTypeFilter}
+        propertyFilter={propertyFilter}
+        setPropertyFilter={setPropertyFilter}
+        filteredUtilities={filteredUtilities}
+        providers={providers}
+        isProviderLoading={isProviderLoading}
+        landlordId={userId || ""}
+        showProviderForm={showProviderForm}
+        setShowProviderForm={setShowProviderForm}
+        editingProvider={editingProvider}
+        setEditingProvider={setEditingProvider}
+        onDeleteProvider={handleDeleteProvider}
+        onEditProvider={handleEditProvider}
+        setShowCsvImporter={setShowCsvImporter}
       >
         {renderActiveSection()}
       </UtilitiesContent>
 
       {showCsvImporter && (
         <CsvImporterDialog
-          open={showCsvImporter}
-          onOpenChange={setShowCsvImporter}
-          onImportComplete={fetchUtilities}
+          showCsvImporter={showCsvImporter}
+          setShowCsvImporter={setShowCsvImporter}
         />
       )}
     </>

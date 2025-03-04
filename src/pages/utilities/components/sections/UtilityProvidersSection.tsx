@@ -6,6 +6,7 @@ import { ProviderForm } from "@/components/utilities/providers/ProviderForm";
 import { ProviderList } from "@/components/utilities/providers/ProviderList";
 import { useQueryClient } from "@tanstack/react-query";
 import { UtilityProvider } from "@/components/utilities/providers/types";
+import { UserRole } from "@/hooks/use-user-role";
 
 interface UtilityProvidersSectionProps {
   providers: any[];
@@ -17,6 +18,7 @@ interface UtilityProvidersSectionProps {
   setEditingProvider: (provider: any) => void;
   onDeleteProvider: (id: string) => Promise<void>;
   onEditProvider: (provider: UtilityProvider) => void;
+  userRole: UserRole;
 }
 
 export function UtilityProvidersSection({
@@ -28,9 +30,21 @@ export function UtilityProvidersSection({
   editingProvider,
   setEditingProvider,
   onDeleteProvider,
-  onEditProvider
+  onEditProvider,
+  userRole
 }: UtilityProvidersSectionProps) {
   const queryClient = useQueryClient();
+
+  // If not a landlord, don't show the provider section
+  if (userRole !== "landlord") {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-8">
+          <p className="text-gray-500">Provider management is only available for landlords.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
