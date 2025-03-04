@@ -28,6 +28,7 @@ export interface UtilityItem {
   original_amount?: number;
   currency?: string;
   invoiced_amount?: number;
+  remaining_amount?: number;
 }
 
 export interface InvoiceMetadata {
