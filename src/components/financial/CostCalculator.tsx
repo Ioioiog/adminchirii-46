@@ -345,8 +345,7 @@ const CostCalculator = () => {
     updatedUtilities.forEach(utility => {
       if (utility.selected) {
         const currency = utility.currency;
-        const percentage = utility.percentage || 100;
-        const adjustedAmount = (utility.amount * percentage) / 100;
+        const adjustedAmount = getAdjustedUtilityAmount(utility);
         
         if (!utilitiesByCurrency[currency]) {
           utilitiesByCurrency[currency] = 0;
@@ -477,6 +476,12 @@ const CostCalculator = () => {
 
     setShowInvoiceDialog(true);
   };
+
+  useEffect(() => {
+    if (utilities.length > 0) {
+      recalculateUtilityTotals(utilities);
+    }
+  }, [utilities]);
 
   return (
     <div className="space-y-6">
