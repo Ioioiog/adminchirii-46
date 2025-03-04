@@ -846,7 +846,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                           displayAmount = convertCurrency(adjustedAmount, utilCurrency, invoiceCurrency);
                         }
                         
-                        const originalDisplayAmount = utility.original_amount || utility.amount;
+                        let originalDisplayAmount = utility.original_amount || utility.amount;
                         if (utilCurrency !== invoiceCurrency) {
                           originalDisplayAmount = convertCurrency(originalDisplayAmount, utilCurrency, invoiceCurrency);
                         }
