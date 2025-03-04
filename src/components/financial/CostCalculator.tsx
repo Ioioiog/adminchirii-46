@@ -15,6 +15,7 @@ import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { InvoiceDialog } from '@/components/invoices/InvoiceDialog';
+import { Badge } from '@/components/ui/badge';
 
 interface UtilityItem {
   id: string;
@@ -26,6 +27,7 @@ interface UtilityItem {
   currency: string;
   percentage?: number;
   selected?: boolean;
+  invoiced_percentage?: number;
 }
 
 interface LandlordProfile {
@@ -44,6 +46,8 @@ const UtilityRow = ({ utility, getOriginalUtilityAmount, getAdjustedUtilityAmoun
   onPercentageChange: (id: string, percentage: number) => void;
   onSelectionChange: (id: string, selected: boolean) => void;
 }) => {
+  const maxPercentage = utility.invoiced_percentage ? 100 - utility.invoiced_percentage : 100;
+  
   return (
     <>
       <tr className={`border-t ${!utility.selected ? 'bg-gray-50 text-gray-400' : ''}`}>
@@ -58,9 +62,16 @@ const UtilityRow = ({ utility, getOriginalUtilityAmount, getAdjustedUtilityAmoun
             className="mx-auto"
           />
         </td>
-        <td className="p-3 text-right font-medium">{formatCurrency(utility.amount, utility.currency)}</td>
         <td className="p-3 text-right font-medium">
-          {utility.selected ? `${utility.percentage || 100}%` : '-'}
+          {formatCurrency(utility.amount, utility.currency)}
+          {utility.invoiced_percentage && utility.invoiced_percentage > 0 && (
+            <div className="text-xs text-gray-500">
+              ({utility.invoiced_percentage}% invoiced)
+            </div>
+          )}
+        </td>
+        <td className="p-3 text-right font-medium">
+          {utility.selected ? `${utility.percentage || maxPercentage}%` : '-'}
         </td>
         <td className="p-3 text-right font-medium">
           {utility.selected ? formatCurrency(getAdjustedUtilityAmount(utility), utility.currency) : '-'}
@@ -72,19 +83,20 @@ const UtilityRow = ({ utility, getOriginalUtilityAmount, getAdjustedUtilityAmoun
             <div className="space-y-2 px-2">
               <div className="flex justify-between items-center text-xs text-gray-600">
                 <span>0%</span>
-                <span>50%</span>
-                <span>100%</span>
+                <span>{maxPercentage/2}%</span>
+                <span>{maxPercentage}%</span>
               </div>
               <Slider
-                value={[utility.percentage || 100]}
+                value={[utility.percentage || maxPercentage]}
                 onValueChange={(values) => onPercentageChange(utility.id, values[0])}
-                max={100}
+                max={maxPercentage}
+                min={1}
                 step={1}
                 className="mt-1"
               />
               <div className="flex justify-between items-center">
                 <span className="px-2 py-0.5 bg-blue-50 rounded-full text-xs font-medium text-blue-700">
-                  {utility.percentage || 100}%
+                  {utility.percentage || maxPercentage}%
                 </span>
                 <span className="text-sm font-medium">
                   Applied: {formatCurrency(getAdjustedUtilityAmount(utility), utility.currency)}
@@ -237,17 +249,22 @@ const CostCalculator = () => {
       return;
     }
 
-    const formattedUtilities = utilitiesData?.map(utility => ({
-      id: utility.id,
-      type: utility.type,
-      invoice_number: utility.invoice_number || '-',
-      issued_date: utility.issued_date ? format(new Date(utility.issued_date), 'MM/dd/yyyy') : '-',
-      due_date: format(new Date(utility.due_date), 'MM/dd/yyyy'),
-      amount: utility.amount,
-      currency: utility.currency || rentCurrency,
-      percentage: 100,
-      selected: true
-    })) || [];
+    const formattedUtilities = utilitiesData?.map(utility => {
+      const maxPercentage = utility.invoiced_percentage ? 100 - utility.invoiced_percentage : 100;
+      
+      return {
+        id: utility.id,
+        type: utility.type,
+        invoice_number: utility.invoice_number || '-',
+        issued_date: utility.issued_date ? format(new Date(utility.issued_date), 'MM/dd/yyyy') : '-',
+        due_date: format(new Date(utility.due_date), 'MM/dd/yyyy'),
+        amount: utility.amount,
+        currency: utility.currency || rentCurrency,
+        percentage: maxPercentage,
+        selected: true,
+        invoiced_percentage: utility.invoiced_percentage || 0
+      };
+    }) || [];
 
     recalculateUtilityTotals(formattedUtilities);
     setUtilities(formattedUtilities);
@@ -347,7 +364,9 @@ const CostCalculator = () => {
   const getAdjustedUtilityAmount = (utility: UtilityItem): number => {
     if (!utility.selected) return 0;
     const percentage = utility.percentage || 100;
-    return (utility.amount * percentage) / 100;
+    const remainingPercentage = 100 - (utility.invoiced_percentage || 0);
+    const adjustableAmount = (utility.amount * remainingPercentage) / 100;
+    return (adjustableAmount * percentage) / 100;
   };
 
   const createInvoiceFromCalculation = () => {

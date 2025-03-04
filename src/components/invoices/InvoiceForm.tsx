@@ -15,6 +15,7 @@ import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatAmount } from "@/lib/utils";
 import { useCurrency } from "@/hooks/useCurrency";
+import { Badge } from "@/components/ui/badge";
 
 interface InvoiceFormValues {
   property_id: string;
@@ -318,6 +319,56 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     fetchLandlordVatSettings();
   }, [propertyId, selectedProperty]);
 
+  const fetchUtilitiesForProperty = async (propertyId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('utilities')
+        .select('*')
+        .eq('property_id', propertyId)
+        .eq('status', 'pending')
+        .order('due_date', { ascending: false });
+        
+      if (error) throw error;
+      
+      const formattedUtilities = data?.map(utility => ({
+        id: utility.id,
+        type: utility.type,
+        amount: utility.amount,
+        currency: utility.currency,
+        due_date: utility.due_date,
+        original_amount: utility.amount,
+        selected: false,
+        percentage: utility.invoiced_percentage 
+          ? Math.min(100 - utility.invoiced_percentage, 100) 
+          : 100,
+        invoiced_percentage: utility.invoiced_percentage || 0,
+        is_partially_invoiced: utility.invoiced_percentage && utility.invoiced_percentage < 100
+      }));
+      
+      if (calculationData?.utilities && Array.isArray(calculationData.utilities)) {
+        setUtilities([
+          ...calculationData.utilities.map(util => ({
+            ...util,
+            selected: true
+          })),
+          ...formattedUtilities.filter(util => 
+            !calculationData.utilities.some(calcUtil => calcUtil.id === util.id)
+          )
+        ]);
+      } else {
+        setUtilities(formattedUtilities);
+      }
+    } catch (error) {
+      console.error("Error fetching utilities:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (propertyId) {
+      fetchUtilitiesForProperty(propertyId);
+    }
+  }, [propertyId]);
+
   const handleUtilitySelection = (id: string, selected: boolean) => {
     setUtilities(prevUtilities => 
       prevUtilities.map(util => 
@@ -326,14 +377,23 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     );
   };
 
+  const handleUtilityPercentageChange = (id: string, percentage: number) => {
+    setUtilities(prevUtilities => 
+      prevUtilities.map(util => 
+        util.id === id ? { ...util, percentage } : util
+      )
+    );
+  };
+
   const getSelectedUtilities = () => {
     return utilities.filter(util => util.selected).map(util => ({
       id: util.id,
-      amount: util.amount,
+      amount: (util.amount * util.percentage) / 100,
       type: util.type,
-      percentage: util.percentage || 100,
+      percentage: util.percentage,
       original_amount: util.original_amount,
-      currency: util.currency
+      currency: util.currency,
+      current_invoiced_percentage: util.invoiced_percentage || 0
     }));
   };
 
@@ -341,13 +401,11 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     if (fromCurrency === toCurrency) return amount;
     if (!exchangeRates || Object.keys(exchangeRates).length === 0) return amount;
     
-    // Convert to RON first (base currency for BNR rates)
     let amountInRON = amount;
     if (fromCurrency !== 'RON') {
       amountInRON = amount * (exchangeRates[fromCurrency] || 1);
     }
     
-    // Then convert from RON to target currency
     if (toCurrency === 'RON') {
       return amountInRON;
     }
@@ -373,19 +431,15 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         metadata.utilities_included = selectedUtils;
       }
 
-      // Convert the amount to the selected invoice currency if it's different
       const rentCurrency = selectedProperty?.currency || 'EUR';
       
-      // Calculate the subtotal (rent amount before VAT)
       const rentAmount = rentCurrency !== invoiceCurrency 
         ? convertCurrency(values.amount, rentCurrency, invoiceCurrency)
         : values.amount;
       
-      // Calculate VAT amount if applicable
       const currentVatRate = applyVat ? vatRate : 0;
       const vatAmount = applyVat ? (rentAmount * (currentVatRate / 100)) : 0;
       
-      // Calculate total amount including utilities
       let utilitiesTotal = 0;
       selectedUtils.forEach(util => {
         const utilAmount = util.amount;
@@ -400,19 +454,29 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       
       const totalAmount = rentAmount + vatAmount + utilitiesTotal;
       
-      // Store subtotal and VAT information in metadata for later reference
       metadata.subtotal = rentAmount;
       metadata.vat_amount = vatAmount;
       metadata.utilities_total = utilitiesTotal;
       
-      // Insert the invoice with the calculated values
+      for (const util of selectedUtils) {
+        const newInvoicedPercentage = util.current_invoiced_percentage + util.percentage;
+        
+        await supabase
+          .from('utilities')
+          .update({
+            invoiced: true,
+            invoiced_percentage: newInvoicedPercentage
+          })
+          .eq('id', util.id);
+      }
+      
       const { data, error } = await supabase
         .from("invoices")
         .insert({
           property_id: values.property_id,
           tenant_id: values.tenant_id || userId,
           landlord_id: userRole === "landlord" ? userId : null,
-          amount: totalAmount, // Store the total amount
+          amount: totalAmount,
           due_date: values.due_date,
           status: "pending",
           currency: invoiceCurrency,
@@ -642,28 +706,59 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                           displayAmount = convertCurrency(displayAmount, utilCurrency, invoiceCurrency);
                         }
                         
-                        const percentageText = utility.original_amount && utility.original_amount > 0 
-                          ? Math.round((utility.amount / utility.original_amount) * 100) 
-                          : null;
+                        const adjustedAmount = (displayAmount * utility.percentage) / 100;
+                        
+                        const percentageText = utility.invoiced_percentage && utility.invoiced_percentage > 0
+                          ? `${utility.percentage}% (${utility.invoiced_percentage}% already invoiced)`
+                          : `${utility.percentage}%`;
                         
                         return (
                           <div key={utility.id} className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-start gap-2">
                               <Checkbox 
                                 id={`utility-${utility.id}`}
                                 checked={utility.selected}
                                 onCheckedChange={(checked) => handleUtilitySelection(utility.id, !!checked)}
+                                className="mt-1"
                               />
-                              <label htmlFor={`utility-${utility.id}`} className="text-sm cursor-pointer">
-                                {utility.type}
-                                {percentageText !== null && percentageText !== 100 && (
-                                  <span className="text-xs text-gray-500 ml-1">({percentageText}%)</span>
+                              <div>
+                                <label htmlFor={`utility-${utility.id}`} className="text-sm cursor-pointer">
+                                  {utility.type}
+                                  {utility.invoiced_percentage > 0 && utility.invoiced_percentage < 100 && (
+                                    <Badge className="ml-2 text-xs bg-amber-100 text-amber-800">
+                                      Partially Invoiced
+                                    </Badge>
+                                  )}
+                                </label>
+                                {utility.selected && (
+                                  <div className="mt-1">
+                                    <input
+                                      type="range"
+                                      min="1"
+                                      max={100 - (utility.invoiced_percentage || 0)}
+                                      value={utility.percentage}
+                                      onChange={(e) => handleUtilityPercentageChange(utility.id, parseInt(e.target.value))}
+                                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                                      <span>1%</span>
+                                      <span>{percentageText}</span>
+                                      <span>{100 - (utility.invoiced_percentage || 0)}%</span>
+                                    </div>
+                                  </div>
                                 )}
-                              </label>
+                              </div>
                             </div>
-                            <span className="text-sm font-medium">
-                              {formatAmount(displayAmount, invoiceCurrency)}
-                            </span>
+                            <div className="text-right">
+                              <span className="text-sm font-medium">
+                                {formatAmount(adjustedAmount, invoiceCurrency)}
+                              </span>
+                              {utility.invoiced_percentage > 0 && (
+                                <div className="text-xs text-gray-500">
+                                  of {formatAmount(displayAmount, invoiceCurrency)}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
