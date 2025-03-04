@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { FileText, Calendar, User, Building, CreditCard, Download, Printer, ClipboardCheck, Receipt } from "lucide-react";
-import { formatAmount } from "@/lib/utils";
+import { useCurrency } from "@/hooks/useCurrency";
 import { supabase } from "@/integrations/supabase/client";
 import { Invoice } from "@/types/invoice";
 import {
@@ -28,6 +28,20 @@ export function InvoiceDetailsDialog({
 }: InvoiceDetailsDialogProps) {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { formatAmount, currency } = useCurrency();
+
+  // Helper functions for amount calculations
+  const calculateSubtotal = (invoice: Invoice): number => {
+    return invoice.vat_rate > 0 
+      ? invoice.amount / (1 + invoice.vat_rate / 100) 
+      : invoice.amount;
+  };
+
+  const calculateVatAmount = (invoice: Invoice): number => {
+    return invoice.vat_rate > 0 
+      ? invoice.amount - (invoice.amount / (1 + invoice.vat_rate / 100))
+      : 0;
+  };
 
   useEffect(() => {
     const fetchInvoiceDetails = async () => {
@@ -165,6 +179,10 @@ export function InvoiceDetailsDialog({
                             {format(new Date(invoice.due_date), 'MMM d, yyyy')}
                           </span>
                         </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Currency:</span>
+                          <span>{invoice.currency}</span>
+                        </div>
                         {invoice.paid_at && (
                           <div className="flex justify-between">
                             <span className="text-gray-600">Payment Date:</span>
@@ -208,21 +226,10 @@ export function InvoiceDetailsDialog({
                         )}
                       </div>
                       <div className="col-span-2 text-right">
-                        {formatAmount(
-                          invoice.vat_rate > 0 
-                            ? invoice.amount / (1 + invoice.vat_rate / 100) 
-                            : invoice.amount, 
-                          invoice.currency
-                        )}
+                        {formatAmount(calculateSubtotal(invoice), invoice.currency)}
                       </div>
                       <div className="col-span-2 text-right">
-                        {invoice.vat_rate > 0 
-                          ? formatAmount(
-                              invoice.amount - (invoice.amount / (1 + invoice.vat_rate / 100)),
-                              invoice.currency
-                            )
-                          : formatAmount(0, invoice.currency)
-                        }
+                        {formatAmount(calculateVatAmount(invoice), invoice.currency)}
                       </div>
                       <div className="col-span-2 text-right font-medium">
                         {formatAmount(invoice.amount, invoice.currency)}
@@ -252,12 +259,7 @@ export function InvoiceDetailsDialog({
                     <div className="grid grid-cols-12 text-sm">
                       <div className="col-span-8 text-right font-medium">Subtotal:</div>
                       <div className="col-span-4 text-right">
-                        {formatAmount(
-                          invoice.vat_rate > 0 
-                            ? invoice.amount / (1 + invoice.vat_rate / 100) 
-                            : invoice.amount, 
-                          invoice.currency
-                        )}
+                        {formatAmount(calculateSubtotal(invoice), invoice.currency)}
                       </div>
                     </div>
                     
@@ -265,10 +267,7 @@ export function InvoiceDetailsDialog({
                       <div className="grid grid-cols-12 text-sm mt-2">
                         <div className="col-span-8 text-right font-medium">VAT ({invoice.vat_rate}%):</div>
                         <div className="col-span-4 text-right">
-                          {formatAmount(
-                            invoice.amount - (invoice.amount / (1 + invoice.vat_rate / 100)),
-                            invoice.currency
-                          )}
+                          {formatAmount(calculateVatAmount(invoice), invoice.currency)}
                         </div>
                       </div>
                     )}
