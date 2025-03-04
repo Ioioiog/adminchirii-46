@@ -127,4 +127,5 @@ export interface UtilityForInvoice {
   invoiced_percentage?: number;
   is_partially_invoiced?: boolean;
   due_date?: string;
+  remaining_percentage?: number;  // Added field to track remaining percentage that can be invoiced
 }

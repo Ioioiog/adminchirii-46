@@ -412,26 +412,37 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         
       if (error) throw error;
       
-      const formattedUtilities = data?.map(utility => ({
-        id: utility.id,
-        type: utility.type,
-        amount: utility.amount,
-        currency: utility.currency,
-        due_date: utility.due_date,
-        original_amount: utility.amount,
-        selected: false,
-        percentage: utility.invoiced_percentage 
+      const formattedUtilities = data?.map(utility => {
+        const remainingPercentage = utility.invoiced_percentage 
           ? Math.min(100 - utility.invoiced_percentage, 100) 
-          : 100,
-        invoiced_percentage: utility.invoiced_percentage || 0,
-        is_partially_invoiced: utility.invoiced_percentage && utility.invoiced_percentage < 100
-      }));
+          : 100;
+        
+        return {
+          id: utility.id,
+          type: utility.type,
+          amount: utility.amount,
+          currency: utility.currency,
+          due_date: utility.due_date,
+          original_amount: utility.amount,
+          selected: false,
+          percentage: remainingPercentage,
+          invoiced_percentage: utility.invoiced_percentage || 0,
+          is_partially_invoiced: utility.invoiced_percentage && utility.invoiced_percentage < 100,
+          remaining_percentage: remainingPercentage
+        };
+      });
       
       if (calculationData?.utilities && Array.isArray(calculationData.utilities)) {
         setUtilities([
           ...calculationData.utilities.map(util => ({
             ...util,
-            selected: true
+            selected: true,
+            remaining_percentage: util.invoiced_percentage 
+              ? Math.min(100 - util.invoiced_percentage, 100) 
+              : 100,
+            percentage: util.percentage || (util.invoiced_percentage 
+              ? Math.min(100 - util.invoiced_percentage, 100) 
+              : 100)
           })),
           ...formattedUtilities.filter(util => 
             !calculationData.utilities.some(calcUtil => calcUtil.id === util.id)
@@ -810,8 +821,10 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                         
                         const adjustedAmount = (displayAmount * utility.percentage) / 100;
                         
-                        const percentageText = utility.invoiced_percentage && utility.invoiced_percentage > 0
-                          ? `${utility.percentage}% (${utility.invoiced_percentage}% already invoiced)`
+                        const currentInvoiced = utility.invoiced_percentage || 0;
+                        const willBeInvoiced = currentInvoiced + utility.percentage;
+                        const percentageText = currentInvoiced > 0
+                          ? `${utility.percentage}% (${currentInvoiced}% already invoiced, will be ${willBeInvoiced}% total)`
                           : `${utility.percentage}%`;
                         
                         return (
@@ -828,7 +841,12 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                                   {utility.type}
                                   {utility.invoiced_percentage > 0 && utility.invoiced_percentage < 100 && (
                                     <Badge className="ml-2 text-xs bg-amber-100 text-amber-800">
-                                      Partially Invoiced
+                                      Partially Invoiced ({utility.invoiced_percentage}%)
+                                    </Badge>
+                                  )}
+                                  {utility.invoiced_percentage >= 100 && (
+                                    <Badge className="ml-2 text-xs bg-green-100 text-green-800">
+                                      Fully Invoiced
                                     </Badge>
                                   )}
                                 </label>
@@ -837,15 +855,16 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                                     <input
                                       type="range"
                                       min="1"
-                                      max={100 - (utility.invoiced_percentage || 0)}
+                                      max={utility.remaining_percentage || 100}
                                       value={utility.percentage}
                                       onChange={(e) => handleUtilityPercentageChange(utility.id, parseInt(e.target.value))}
                                       className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                      disabled={utility.invoiced_percentage >= 100}
                                     />
                                     <div className="flex justify-between text-xs text-gray-500 mt-1">
                                       <span>1%</span>
                                       <span>{percentageText}</span>
-                                      <span>{100 - (utility.invoiced_percentage || 0)}%</span>
+                                      <span>{utility.remaining_percentage || 100}%</span>
                                     </div>
                                   </div>
                                 )}
@@ -858,6 +877,9 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                               {utility.invoiced_percentage > 0 && (
                                 <div className="text-xs text-gray-500">
                                   of {formatAmount(displayAmount, invoiceCurrency)}
+                                  <div className="text-xs text-amber-600">
+                                    Remaining: {formatAmount(displayAmount * (utility.remaining_percentage / 100), invoiceCurrency)}
+                                  </div>
                                 </div>
                               )}
                             </div>
