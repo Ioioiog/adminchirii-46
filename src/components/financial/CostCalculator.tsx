@@ -522,7 +522,7 @@ const CostCalculator = () => {
                     </thead>
                     <tbody>
                       {utilities.map((utility) => (
-                        <React.Fragment key={utility.id}>
+                        <div key={utility.id}>
                           <tr className={`border-t ${!utility.selected ? 'bg-gray-50 text-gray-400' : ''}`}>
                             <td className="p-3">{utility.type}</td>
                             <td className="p-3">{utility.invoice_number}</td>
@@ -571,7 +571,7 @@ const CostCalculator = () => {
                               </td>
                             </tr>
                           )}
-                        </React.Fragment>
+                        </div>
                       ))}
                       {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
                         <tr key={currency} className="border-t font-bold">
