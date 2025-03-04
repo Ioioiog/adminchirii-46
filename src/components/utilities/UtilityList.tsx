@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,13 +80,16 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
             if (error) throw error;
             
             if (invoices && invoices.length > 0) {
-              const invoiceMetadata = invoices[0].metadata as { utilities_included?: Array<{ id: string; amount: number }> };
-              if (invoiceMetadata && invoiceMetadata.utilities_included) {
-                const utilityInInvoice = invoiceMetadata.utilities_included.find(
-                  (u) => u.id === utility.id
+              console.log(`Found invoice for utility ${utility.id}:`, invoices[0].metadata);
+              const metadata = invoices[0].metadata as InvoiceMetadata;
+              
+              if (metadata && metadata.utilities_included && metadata.utilities_included.length > 0) {
+                const utilityInInvoice = metadata.utilities_included.find(
+                  item => item.id === utility.id
                 );
                 
-                if (utilityInInvoice && utilityInInvoice.amount) {
+                if (utilityInInvoice) {
+                  console.log(`Found utility in invoice:`, utilityInInvoice);
                   enhancedUtilities[i] = {
                     ...utility,
                     invoiced_amount: utilityInInvoice.amount
