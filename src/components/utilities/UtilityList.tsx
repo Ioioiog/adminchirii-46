@@ -6,7 +6,7 @@ import { TableCell, TableRow, TableHeader, TableHead, Table, TableBody } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Check, X, FilePlus, FileText } from "lucide-react";
+import { Check, X, FilePlus, FileText, Trash2, Ban } from "lucide-react";
 import { format } from "date-fns";
 import { Card } from "@/components/ui/card";
 import {
@@ -95,6 +95,34 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
     }
   };
 
+  const handleDeleteSelected = async () => {
+    if (selectedUtilities.length === 0) return;
+    
+    try {
+      const { error } = await supabase
+        .from('utilities')
+        .delete()
+        .in('id', selectedUtilities);
+      
+      if (error) throw error;
+      
+      onStatusUpdate();
+      setSelectedUtilities([]);
+      
+      toast({
+        title: "Success",
+        description: `${selectedUtilities.length} utilities deleted successfully`,
+      });
+    } catch (error) {
+      console.error("Error deleting utilities:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete utilities",
+      });
+    }
+  };
+
   const toggleSelectAll = (checked: boolean) => {
     if (checked) {
       // Only select unpaid utilities
@@ -150,14 +178,32 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
               {selectedUnpaidCount} {selectedUnpaidCount === 1 ? 'utility' : 'utilities'} selected
             </span>
           </div>
-          <Button
-            variant="default"
-            size="sm"
-            className="gap-1"
-            onClick={() => handleBulkStatusUpdate('paid')}
-          >
-            <Check className="h-4 w-4" /> Mark Selected as Paid
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="default"
+              size="sm"
+              className="gap-1"
+              onClick={() => handleBulkStatusUpdate('paid')}
+            >
+              <Check className="h-4 w-4" /> Mark as Paid
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1 border-yellow-500 text-yellow-500 hover:text-yellow-600 hover:bg-yellow-50"
+              onClick={() => handleBulkStatusUpdate('pending')}
+            >
+              <Ban className="h-4 w-4" /> Mark as Unpaid
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1 border-red-500 text-red-500 hover:text-red-600 hover:bg-red-50"
+              onClick={handleDeleteSelected}
+            >
+              <Trash2 className="h-4 w-4" /> Delete Selected
+            </Button>
+          </div>
         </div>
       )}
       
