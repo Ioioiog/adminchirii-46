@@ -44,6 +44,7 @@ export interface InvoiceMetadata {
     id: string;
     amount: number;
     type: string;
+    percentage?: number; // Added back for backwards compatibility
     invoiced_amount?: number;
     original_amount?: number;
     current_invoiced_amount?: number; // Track the previously invoiced amount
@@ -124,4 +125,5 @@ export interface UtilityForInvoice {
   is_partially_invoiced?: boolean;
   due_date?: string;
   remaining_amount?: number;  // Added field to track remaining amount that can be invoiced
+  percentage?: number; // Added back for backwards compatibility
 }
