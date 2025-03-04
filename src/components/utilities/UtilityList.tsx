@@ -284,8 +284,11 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
                   <TableCell>
                     {utility.invoiced ? (
                       <Badge variant="secondary">
-                        {utility.invoiced_percentage 
-                          ? `${utility.invoiced_percentage}%` 
+                        {utility.invoiced_amount > 0 
+                          ? `${new Intl.NumberFormat(undefined, {
+                              style: "currency",
+                              currency: utility.currency,
+                            }).format(utility.invoiced_amount)}` 
                           : "Yes"}
                       </Badge>
                     ) : (

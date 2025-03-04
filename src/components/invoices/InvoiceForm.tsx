@@ -472,9 +472,18 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
   };
 
   const handleUtilityPercentageChange = (id: string, percentage: number) => {
-    const updatedUtilities = utilities.map(util => 
-      util.id === id ? { ...util, percentage } : util
-    );
+    const updatedUtilities = utilities.map(util => {
+      if (util.id === id) {
+        const adjustableAmount = (util.original_amount || util.amount);
+        const newAmount = (adjustableAmount * percentage) / 100;
+        return { 
+          ...util, 
+          percentage, 
+          amount: newAmount 
+        };
+      }
+      return util;
+    });
     
     setUtilities(updatedUtilities);
     updateGrandTotal(updatedUtilities);
@@ -506,8 +515,9 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     }
     
     const percentage = utility.percentage || 100;
-    const remainingPercentage = 100 - (utility.invoiced_percentage || 0);
-    const adjustableAmount = (utility.original_amount || utility.amount) * remainingPercentage / 100;
+    const originalAmount = utility.original_amount || utility.amount;
+    const remainingAmount = originalAmount - (utility.invoiced_amount || 0);
+    const adjustableAmount = remainingAmount;
     return (adjustableAmount * percentage) / 100;
   };
 
@@ -520,7 +530,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         percentage: util.percentage || 100,
         original_amount: util.original_amount || util.amount,
         currency: util.currency,
-        current_invoiced_percentage: util.invoiced_percentage || 0
+        current_invoiced_amount: util.invoiced_amount || 0
       }));
     }
     
@@ -531,7 +541,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       percentage: util.percentage || 100,
       original_amount: util.original_amount || util.amount,
       currency: util.currency,
-      current_invoiced_percentage: util.invoiced_percentage || 0
+      current_invoiced_amount: util.invoiced_amount || 0
     }));
   };
 
@@ -577,17 +587,17 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       });
       
       for (const util of selectedUtils) {
-        const newInvoicedPercentage = util.current_invoiced_percentage + util.percentage;
+        const newInvoicedAmount = (util.current_invoiced_amount || 0) + util.amount;
         
         await supabase
           .from('utilities')
           .update({
             invoiced: true,
-            invoiced_percentage: newInvoicedPercentage
+            invoiced_amount: newInvoicedAmount
           })
           .eq('id', util.id);
           
-        console.log(`Updated utility ${util.id}: invoiced_percentage set to ${newInvoicedPercentage}%`);  
+        console.log(`Updated utility ${util.id}: invoiced_amount set to ${newInvoicedAmount}`);  
       }
       
       const { data, error } = await supabase
@@ -677,7 +687,10 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         <div className="space-y-2 max-h-40 overflow-y-auto">
           {utilities.map((utility) => {
             const isFromCalculator = calculationData?.utilities?.some(u => u.id === utility.id);
-            const isPartiallyInvoiced = utility.invoiced_percentage > 0 && utility.invoiced_percentage < 100;
+            const isPartiallyInvoiced = utility.invoiced_amount > 0 && utility.invoiced_amount < utility.amount;
+            const originalAmount = utility.original_amount || utility.amount;
+            const remainingAmount = originalAmount - (utility.invoiced_amount || 0);
+            const remainingPercentage = Math.round((remainingAmount / originalAmount) * 100);
             
             return (
               <div key={utility.id} className="flex items-center justify-between">
@@ -694,7 +707,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                       {utility.type}
                       {isPartiallyInvoiced && (
                         <Badge className="ml-2 text-xs bg-amber-100 text-amber-800">
-                          Partially Invoiced ({utility.invoiced_percentage}%)
+                          Partially Invoiced ({formatAmount(utility.invoiced_amount || 0, utility.currency || invoiceCurrency)})
                         </Badge>
                       )}
                       {isFromCalculator && (
@@ -708,13 +721,15 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                         <Slider
                           value={[utility.percentage || 100]}
                           min={1}
-                          max={utility.remaining_percentage || 100}
+                          max={100}
                           step={1}
                           onValueChange={([value]) => handleUtilityPercentageChange(utility.id, value)}
                         />
                         <div className="flex justify-between text-xs text-gray-500 mt-1">
                           <span>{utility.percentage || 100}% applied</span>
-                          <span>Max: {utility.remaining_percentage || 100}%</span>
+                          <span>
+                            {formatAmount(getAdjustedUtilityAmount(utility), utility.currency || invoiceCurrency)}
+                          </span>
                         </div>
                       </div>
                     )}
@@ -727,11 +742,18 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                       utility.currency || invoiceCurrency
                     )}
                   </span>
-                  {utility.original_amount && utility.original_amount !== utility.amount && (
-                    <div className="text-xs text-gray-500">
-                      of {formatAmount(utility.original_amount, utility.currency || invoiceCurrency)}
-                    </div>
-                  )}
+                  <div className="text-xs text-gray-500">
+                    {remainingAmount < originalAmount ? (
+                      <>
+                        <span>{formatAmount(remainingAmount, utility.currency || invoiceCurrency)}</span>
+                        <span className="mx-1">of</span>
+                      </>
+                    ) : null}
+                    <span>{formatAmount(originalAmount, utility.currency || invoiceCurrency)}</span>
+                    {remainingAmount < originalAmount && (
+                      <span className="ml-1">remaining</span>
+                    )}
+                  </div>
                 </div>
               </div>
             );

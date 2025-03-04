@@ -12,6 +12,7 @@ export interface Utility {
     status: string;
     created_at: string;
     updated_at: string;
+    invoiced_amount: number | null;
   };
   Insert: {
     id?: string;
@@ -23,6 +24,7 @@ export interface Utility {
     issued_date?: string | null;
     invoice_number?: string | null;
     status?: string;
+    invoiced_amount?: number | null;
   };
   Update: {
     type?: string;
@@ -32,6 +34,7 @@ export interface Utility {
     issued_date?: string | null;
     invoice_number?: string | null;
     status?: string;
+    invoiced_amount?: number | null;
   };
 }
 

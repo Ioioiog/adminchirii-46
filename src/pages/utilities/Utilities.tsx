@@ -22,7 +22,7 @@ export interface UtilityWithProperty {
   created_at?: string;
   updated_at?: string;
   invoiced?: boolean;
-  invoiced_percentage?: number;
+  invoiced_amount?: number;
   metadata_amount?: number;
   document_path?: string | null;
   property?: {
@@ -94,7 +94,7 @@ const Utilities = () => {
           created_at,
           updated_at,
           invoiced,
-          invoiced_percentage,
+          invoiced_amount,
           metadata_amount,
           document_path,
           property:properties (

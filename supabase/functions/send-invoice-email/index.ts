@@ -112,6 +112,8 @@ const handler = async (req: Request): Promise<Response> => {
     // Format the metadata for utilities
     const metadata = invoice.metadata || {};
     const utilsList = metadata.utilities_included ? metadata.utilities_included.map((util: any) => {
+      // Calculate percentage display if needed
+      const originalAmount = util.original_amount || util.amount;
       const percentage = util.percentage || 100;
       const percentageText = percentage < 100 ? ` (${percentage}%)` : '';
       
