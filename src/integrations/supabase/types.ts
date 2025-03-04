@@ -2142,6 +2142,7 @@ export type Database = {
           invoiced: boolean | null
           invoiced_percentage: number | null
           issued_date: string | null
+          metadata_amount: number | null
           property_id: string
           property_name: string | null
           status: string
@@ -2159,6 +2160,7 @@ export type Database = {
           invoiced?: boolean | null
           invoiced_percentage?: number | null
           issued_date?: string | null
+          metadata_amount?: number | null
           property_id: string
           property_name?: string | null
           status?: string
@@ -2176,6 +2178,7 @@ export type Database = {
           invoiced?: boolean | null
           invoiced_percentage?: number | null
           issued_date?: string | null
+          metadata_amount?: number | null
           property_id?: string
           property_name?: string | null
           status?: string
@@ -2522,6 +2525,10 @@ export type Database = {
           p_emoji: string
         }
         Returns: boolean
+      }
+      update_existing_utilities_metadata: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       update_provider_utility_type: {
         Args: {

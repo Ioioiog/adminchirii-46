@@ -37,6 +37,7 @@ interface Utility {
   updated_at?: string;
   invoiced?: boolean;
   invoiced_percentage?: number;
+  metadata_amount?: number;
   property?: {
     name: string;
     address: string;
@@ -65,55 +66,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
   console.log('UtilityList - User role:', userRole);
 
   useEffect(() => {
-    const fetchInvoiceData = async () => {
-      try {
-        const enhancedUtilities = [...utilities];
-        
-        for (let i = 0; i < enhancedUtilities.length; i++) {
-          const utility = enhancedUtilities[i];
-          if (utility.invoiced) {
-            const { data: invoices, error } = await supabase
-              .from('invoices')
-              .select('metadata')
-              .eq('status', 'paid')
-              .contains('metadata', { utilities_included: [{ id: utility.id }] });
-            
-            if (error) throw error;
-            
-            if (invoices && invoices.length > 0) {
-              console.log(`Found invoice for utility ${utility.id}:`, invoices[0].metadata);
-              const metadata = invoices[0].metadata as InvoiceMetadata;
-              
-              if (metadata && metadata.utilities_included && metadata.utilities_included.length > 0) {
-                const utilityInInvoice = metadata.utilities_included.find(
-                  item => item.id === utility.id
-                );
-                
-                if (utilityInInvoice) {
-                  console.log(`Found utility in invoice:`, utilityInInvoice);
-                  enhancedUtilities[i] = {
-                    ...utility,
-                    invoiced_amount: utilityInInvoice.amount,
-                    metadataAmount: utilityInInvoice.amount
-                  };
-                  console.log(`Updated utility with metadata amount:`, enhancedUtilities[i]);
-                }
-              }
-            }
-          }
-        }
-        
-        setUtilitiesWithInvoiceData(enhancedUtilities);
-      } catch (error) {
-        console.error("Error fetching invoice data:", error);
-      }
-    };
-    
-    if (utilities.length > 0) {
-      fetchInvoiceData();
-    } else {
-      setUtilitiesWithInvoiceData([]);
-    }
+    setUtilitiesWithInvoiceData(utilities);
   }, [utilities]);
 
   const handleStatusUpdate = async (utilityId: string, newStatus: string) => {
@@ -240,8 +193,8 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
         valueB = b.amount;
         break;
       case "invoiced_amount":
-        valueA = a.invoiced_amount || 0;
-        valueB = b.invoiced_amount || 0;
+        valueA = a.metadata_amount || a.invoiced_amount || 0;
+        valueB = b.metadata_amount || b.invoiced_amount || 0;
         break;
       case "due_date":
         valueA = new Date(a.due_date).getTime();
@@ -281,8 +234,11 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
   }
 
   const renderInvoicedAmount = (utility: Utility) => {
+    if (utility.metadata_amount !== undefined) {
+      return formatAmount(utility.metadata_amount, utility.currency);
+    }
+    
     if (utility.metadataAmount !== undefined) {
-      console.log(`Using metadataAmount for utility ${utility.id}:`, utility.metadataAmount);
       return formatAmount(utility.metadataAmount, utility.currency);
     }
     
