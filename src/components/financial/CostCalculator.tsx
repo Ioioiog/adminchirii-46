@@ -412,7 +412,8 @@ const CostCalculator = () => {
   const calculateGrandTotal = (): number => {
     let total = 0;
     
-    if (rentCurrency) {
+    // Only include rent in the total if it hasn't already been invoiced
+    if (rentCurrency && !rentAlreadyInvoiced) {
       const rentWithVat = applyVat ? getRentWithVat() : rentAmount;
       total += convertCurrency(rentWithVat, rentCurrency, grandTotalCurrency);
     }
@@ -625,7 +626,7 @@ const CostCalculator = () => {
                   <p className="text-gray-600">Total</p>
                   <div>
                     <p className="text-xl font-bold text-blue-600">
-                      {applyVat 
+                      {applyVat && !rentAlreadyInvoiced
                         ? formatCurrency(getRentWithVat(), rentCurrency)
                         : formatCurrency(rentAmount, rentCurrency)}
                     </p>
@@ -633,7 +634,7 @@ const CostCalculator = () => {
                       <div key={currency}>
                         {currency === rentCurrency ? (
                           <p className="text-lg font-bold text-blue-600">
-                            = {formatCurrency(amount + (applyVat ? getRentWithVat() : rentAmount), currency)}
+                            = {formatCurrency(amount + (applyVat && !rentAlreadyInvoiced ? getRentWithVat() : rentAmount), currency)}
                           </p>
                         ) : (
                           <p className="text-sm text-gray-500">
