@@ -1,365 +1,778 @@
+import React, { useState, useEffect } from 'react';
+import { DateRange } from 'react-day-picker';
+import { format, addDays, differenceInDays, isSameDay, addMonths, isWithinInterval } from 'date-fns';
+import { DatePickerWithRange } from '@/components/ui/date-range-picker';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar, Calculator, DollarSign, Info, Percent, CheckSquare, FileText, AlertCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useProperties } from '@/hooks/useProperties';
+import { useUserRole } from '@/hooks/use-user-role';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useCurrency } from '@/hooks/useCurrency';
+import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from '@/hooks/use-toast';
+import { InvoiceDialog } from '@/components/invoices/InvoiceDialog';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { InvoiceMetadata } from '@/types/invoice';
 
-import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { DateRange } from "react-day-picker";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Calculator } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
-import { useProperties } from "@/hooks/useProperties";
-import { useUserRole } from "@/hooks/use-user-role";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { InvoiceDialog } from "@/components/invoices/InvoiceDialog";
-import { UtilityForInvoice } from "@/types/invoice";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+interface UtilityItem {
+  id: string;
+  type: string;
+  invoice_number: string;
+  issued_date: string;
+  due_date: string;
+  amount: number;
+  currency: string;
+  percentage?: number;
+  selected?: boolean;
+  invoiced_percentage?: number;
+}
+
+interface LandlordProfile {
+  id: string;
+  invoice_info?: {
+    apply_vat?: boolean;
+    vat_rate?: number;
+  };
+}
+
+const UtilityRow = ({ utility, getOriginalUtilityAmount, getAdjustedUtilityAmount, formatCurrency, onPercentageChange, onSelectionChange }: {
+  utility: UtilityItem;
+  getOriginalUtilityAmount: (utility: UtilityItem) => number;
+  getAdjustedUtilityAmount: (utility: UtilityItem) => number;
+  formatCurrency: (amount: number, currency: string) => string;
+  onPercentageChange: (id: string, percentage: number) => void;
+  onSelectionChange: (id: string, selected: boolean) => void;
+}) => {
+  const maxPercentage = 100;
+  
+  return (
+    <>
+      <tr className={`border-t ${!utility.selected ? 'bg-gray-50 text-gray-400' : ''}`}>
+        <td className="p-3">{utility.type}</td>
+        <td className="p-3">{utility.invoice_number}</td>
+        <td className="p-3">{utility.issued_date}</td>
+        <td className="p-3">{utility.due_date}</td>
+        <td className="p-3 text-center">
+          <Checkbox 
+            checked={utility.selected}
+            onCheckedChange={(checked) => onSelectionChange(utility.id, !!checked)}
+            className="mx-auto"
+          />
+        </td>
+        <td className="p-3 text-right font-medium">
+          {formatCurrency(utility.amount, utility.currency)}
+          {utility.invoiced_percentage && utility.invoiced_percentage > 0 && (
+            <div className="text-xs text-gray-500">
+              ({utility.invoiced_percentage}% invoiced)
+            </div>
+          )}
+        </td>
+        <td className="p-3 text-right font-medium">
+          {utility.selected ? `${utility.percentage || maxPercentage}%` : '-'}
+        </td>
+        <td className="p-3 text-right font-medium">
+          {utility.selected ? formatCurrency(getAdjustedUtilityAmount(utility), utility.currency) : '-'}
+        </td>
+      </tr>
+      {utility.selected && (
+        <tr className="border-b border-dashed">
+          <td colSpan={8} className="p-3 bg-gray-50">
+            <div className="space-y-2 px-2">
+              <div className="flex justify-between items-center text-xs text-gray-600">
+                <span>0%</span>
+                <span>{maxPercentage/2}%</span>
+                <span>{maxPercentage}%</span>
+              </div>
+              <Slider
+                value={[utility.percentage || maxPercentage]}
+                onValueChange={(values) => onPercentageChange(utility.id, values[0])}
+                max={maxPercentage}
+                min={1}
+                step={1}
+                className="mt-1"
+              />
+              <div className="flex justify-between items-center">
+                <span className="px-2 py-0.5 bg-blue-50 rounded-full text-xs font-medium text-blue-700">
+                  {utility.percentage || maxPercentage}%
+                </span>
+                <span className="text-sm font-medium">
+                  Applied: {formatCurrency(getAdjustedUtilityAmount(utility), utility.currency)}
+                </span>
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+};
 
 const CostCalculator = () => {
-  const { userRole } = useUserRole();
+  const { userRole, userId } = useUserRole();
   const { properties } = useProperties({ userRole: userRole || 'tenant' });
-  const { toast } = useToast();
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: new Date(),
-    to: new Date(),
-  });
-  const [property, setProperty] = useState<string>("");
-  const [propertyRent, setPropertyRent] = useState<number>(0);
-  const [currency, setCurrency] = useState<string>("USD");
-  const [utilities, setUtilities] = useState<UtilityForInvoice[]>([]);
-  const [grandTotal, setGrandTotal] = useState<number>(0);
+  const { availableCurrencies } = useCurrency();
+  
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
+  const [selectedProperty, setSelectedProperty] = useState<any>(null);
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
+  const [rentAmount, setRentAmount] = useState<number>(0);
+  const [rentCalculationType, setRentCalculationType] = useState<'full' | 'daily'>('daily');
+  const [utilities, setUtilities] = useState<UtilityItem[]>([]);
+  const [hasCalculated, setHasCalculated] = useState<boolean>(false);
+  const [rentCurrency, setRentCurrency] = useState<string>('RON');
+  const [totalUtilitiesByCurrency, setTotalUtilitiesByCurrency] = useState<Record<string, number>>({});
+  const [daysInPeriod, setDaysInPeriod] = useState<number>(0);
+  const [isFullMonth, setIsFullMonth] = useState<boolean>(false);
+  const [applyVat, setApplyVat] = useState<boolean>(false);
+  const [vatRate, setVatRate] = useState<number>(19);
+  const [vatAmount, setVatAmount] = useState<number>(0);
+  const [grandTotalCurrency, setGrandTotalCurrency] = useState<string>('RON');
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
+  const [landlordId, setLandlordId] = useState<string>('');
+  const [rentAlreadyInvoiced, setRentAlreadyInvoiced] = useState<boolean>(false);
+  const [invoicedPeriod, setInvoicedPeriod] = useState<{from: Date, to: Date} | null>(null);
 
-  // Fetch utilities for a property
   useEffect(() => {
-    if (!property) return;
+    if (selectedPropertyId) {
+      const property = properties.find(p => p.id === selectedPropertyId);
+      setSelectedProperty(property);
+      if (property) {
+        setRentCurrency(property.currency || 'RON');
+        setGrandTotalCurrency(property.currency || 'RON');
+        fetchLandlordVatSettings(property.landlord_id);
+        setLandlordId(property.landlord_id);
+      }
+    }
+  }, [selectedPropertyId, properties]);
 
-    const fetchUtilities = async () => {
+  useEffect(() => {
+    const fetchExchangeRates = async () => {
       try {
-        const { data, error } = await supabase
-          .from("utilities")
-          .select("*")
-          .eq("property_id", property)
-          .eq("status", "pending");
-
-        if (error) throw error;
-
-        // Map to UtilityForInvoice type and calculate remaining amount
-        const utilityItems: UtilityForInvoice[] = data.map((util) => {
-          const invoicedAmount = util.invoiced_amount || 0;
-          const remaining = Math.max(0, util.amount - invoicedAmount);
-          const isPartiallyInvoiced = invoicedAmount > 0 && invoicedAmount < util.amount;
-          
-          return {
-            id: util.id,
-            type: util.type,
-            amount: remaining, // Default to remaining amount
-            original_amount: util.amount,
-            selected: false,
-            currency: util.currency,
-            due_date: util.due_date,
-            remaining_amount: remaining,
-            is_partially_invoiced: isPartiallyInvoiced
-          };
-        });
-
-        setUtilities(utilityItems);
+        const { data, error } = await supabase.functions.invoke('get-exchange-rates');
+        
+        if (error) {
+          console.error('Error fetching exchange rates:', error);
+          return;
+        }
+        
+        if (data && data.rates) {
+          setExchangeRates(data.rates);
+        }
       } catch (error) {
-        console.error("Error fetching utilities:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Could not fetch utilities",
-        });
+        console.error('Error in exchange rates fetch:', error);
       }
     };
+    
+    fetchExchangeRates();
+  }, []);
 
-    // Find selected property details
-    const selectedProperty = properties.find(p => p.id === property);
-    if (selectedProperty) {
-      setPropertyRent(selectedProperty.monthly_rent);
-      setCurrency(selectedProperty.currency || "USD");
+  const fetchLandlordVatSettings = async (landlordId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('invoice_info')
+        .eq('id', landlordId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching landlord profile:', error);
+        return;
+      }
+
+      if (data && data.invoice_info) {
+        const invoiceInfo = data.invoice_info as LandlordProfile['invoice_info'];
+        setApplyVat(!!invoiceInfo.apply_vat);
+        setVatRate(invoiceInfo.vat_rate || 19);
+      } else {
+        setApplyVat(false);
+        setVatRate(19);
+      }
+    } catch (error) {
+      console.error('Error processing landlord VAT settings:', error);
+      setApplyVat(false);
     }
+  };
 
-    fetchUtilities();
-  }, [property, properties]);
-
-  // Calculate grand total whenever inputs change
   useEffect(() => {
-    let total = 0;
-    
-    // Add property rent if applicable
-    if (property && propertyRent) {
-      total += propertyRent;
+    if (selectedDateRange?.from && selectedDateRange?.to) {
+      const days = differenceInDays(selectedDateRange.to, selectedDateRange.from) + 1;
+      setDaysInPeriod(days);
+      
+      const fromDate = selectedDateRange.from;
+      const nextMonth = addMonths(fromDate, 1);
+      const isOneMonthApart = isSameDay(nextMonth, selectedDateRange.to) || 
+                             (fromDate.getDate() === selectedDateRange.to.getDate() && 
+                              nextMonth.getMonth() === selectedDateRange.to.getMonth());
+      
+      setIsFullMonth(isOneMonthApart);
+      setRentCalculationType(isOneMonthApart ? 'full' : 'daily');
+    }
+  }, [selectedDateRange]);
+
+  const checkExistingInvoices = async () => {
+    if (!selectedPropertyId || !selectedDateRange?.from || !selectedDateRange?.to) {
+      return;
     }
     
-    // Add selected utilities
-    utilities.forEach(util => {
-      if (util.selected) {
-        total += util.amount;
+    try {
+      const { data: invoices, error } = await supabase
+        .from('invoices')
+        .select('*,metadata')
+        .eq('property_id', selectedPropertyId);
+      
+      if (error) {
+        console.error('Error checking existing invoices:', error);
+        return;
+      }
+      
+      const overlappingInvoices = invoices.filter(invoice => {
+        if (!invoice.metadata) return false;
+        
+        const metadata = invoice.metadata as unknown as InvoiceMetadata;
+        if (!metadata.date_range) return false;
+        
+        const invoiceFrom = new Date(metadata.date_range.from);
+        const invoiceTo = new Date(metadata.date_range.to);
+        
+        return (
+          isWithinInterval(selectedDateRange.from, { start: invoiceFrom, end: invoiceTo }) ||
+          isWithinInterval(selectedDateRange.to, { start: invoiceFrom, end: invoiceTo }) ||
+          isWithinInterval(invoiceFrom, { start: selectedDateRange.from, end: selectedDateRange.to }) ||
+          isWithinInterval(invoiceTo, { start: selectedDateRange.from, end: selectedDateRange.to })
+        );
+      });
+      
+      if (overlappingInvoices.length > 0) {
+        setRentAlreadyInvoiced(true);
+        const mostRecentInvoice = overlappingInvoices.sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )[0];
+        
+        if (mostRecentInvoice.metadata) {
+          const metadata = mostRecentInvoice.metadata as unknown as InvoiceMetadata;
+          
+          if (metadata.date_range) {
+            setInvoicedPeriod({
+              from: new Date(metadata.date_range.from),
+              to: new Date(metadata.date_range.to)
+            });
+          }
+        }
+      } else {
+        setRentAlreadyInvoiced(false);
+        setInvoicedPeriod(null);
+      }
+    } catch (error) {
+      console.error('Error in checkExistingInvoices:', error);
+    }
+  };
+
+  const calculateCosts = async () => {
+    if (!selectedPropertyId || !selectedDateRange?.from || !selectedDateRange?.to) {
+      return;
+    }
+
+    await checkExistingInvoices();
+
+    const days = daysInPeriod;
+    const monthlyRent = selectedProperty?.monthly_rent || 0;
+    
+    let periodRent;
+    if (rentAlreadyInvoiced) {
+      periodRent = 0;
+    } else {
+      if (rentCalculationType === 'full') {
+        periodRent = monthlyRent;
+      } else {
+        const dailyRent = monthlyRent / 30;
+        periodRent = dailyRent * days;
+      }
+    }
+    
+    let calculatedVatAmount = 0;
+    if (applyVat && !rentAlreadyInvoiced) {
+      calculatedVatAmount = (periodRent * vatRate) / 100;
+      setVatAmount(Math.round(calculatedVatAmount * 100) / 100);
+    } else {
+      setVatAmount(0);
+    }
+    
+    setRentAmount(Math.round(periodRent * 100) / 100);
+
+    const { data: utilitiesData, error } = await supabase
+      .from('utilities')
+      .select('*')
+      .eq('property_id', selectedPropertyId)
+      .gte('issued_date', selectedDateRange.from.toISOString().split('T')[0])
+      .lte('issued_date', selectedDateRange.to.toISOString().split('T')[0]);
+
+    if (error) {
+      console.error('Error fetching utilities:', error);
+      return;
+    }
+
+    const formattedUtilities = utilitiesData?.map(utility => {
+      const maxPercentage = 100;
+      
+      return {
+        id: utility.id,
+        type: utility.type,
+        invoice_number: utility.invoice_number || '-',
+        issued_date: utility.issued_date ? format(new Date(utility.issued_date), 'MM/dd/yyyy') : '-',
+        due_date: format(new Date(utility.due_date), 'MM/dd/yyyy'),
+        amount: utility.amount,
+        currency: utility.currency || rentCurrency,
+        percentage: maxPercentage,
+        selected: true,
+        invoiced_percentage: utility.invoiced_percentage || 0
+      };
+    }) || [];
+
+    recalculateUtilityTotals(formattedUtilities);
+    setUtilities(formattedUtilities);
+    setHasCalculated(true);
+  };
+
+  const recalculateUtilityTotals = (updatedUtilities: UtilityItem[]) => {
+    const utilitiesByCurrency: Record<string, number> = {};
+    
+    updatedUtilities.forEach(utility => {
+      if (utility.selected) {
+        const currency = utility.currency;
+        const adjustedAmount = getAdjustedUtilityAmount(utility);
+        
+        if (!utilitiesByCurrency[currency]) {
+          utilitiesByCurrency[currency] = 0;
+        }
+        utilitiesByCurrency[currency] += adjustedAmount;
       }
     });
+
+    Object.keys(utilitiesByCurrency).forEach(currency => {
+      utilitiesByCurrency[currency] = Math.round(utilitiesByCurrency[currency] * 100) / 100;
+    });
+
+    setTotalUtilitiesByCurrency(utilitiesByCurrency);
+  };
+
+  const handleUtilityPercentageChange = (id: string, newPercentage: number) => {
+    const updatedUtilities = utilities.map(utility => {
+      if (utility.id === id) {
+        return { ...utility, percentage: newPercentage };
+      }
+      return utility;
+    });
     
-    setGrandTotal(total);
-  }, [property, propertyRent, utilities]);
-
-  const handlePropertyChange = (value: string) => {
-    setProperty(value);
+    setUtilities(updatedUtilities);
+    recalculateUtilityTotals(updatedUtilities);
   };
 
-  const handleUtilityToggle = (id: string, checked: boolean) => {
-    setUtilities(prev => 
-      prev.map(util => 
-        util.id === id ? { ...util, selected: checked } : util
-      )
-    );
+  const handleUtilitySelectionChange = (id: string, isSelected: boolean) => {
+    const updatedUtilities = utilities.map(utility => {
+      if (utility.id === id) {
+        return { ...utility, selected: isSelected };
+      }
+      return utility;
+    });
+    
+    setUtilities(updatedUtilities);
+    recalculateUtilityTotals(updatedUtilities);
   };
 
-  const handleUtilityAmountChange = (id: string, value: string) => {
-    const amount = parseFloat(value);
-    if (isNaN(amount)) return;
-
-    setUtilities(prev => 
-      prev.map(util => {
-        if (util.id === id) {
-          // Make sure the amount doesn't exceed the remaining amount
-          const validAmount = Math.min(amount, util.remaining_amount || util.original_amount || 0);
-          return { ...util, amount: validAmount };
-        }
-        return util;
-      })
-    );
+  const formatCurrency = (amount: number, currency: string) => {
+    return `${currency} ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const handleCreateInvoice = () => {
-    // Verify we have the required data
-    if (!property || !date?.from || !date?.to) {
+  const getRentWithVat = () => {
+    return rentAmount + vatAmount;
+  };
+
+  const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string): number => {
+    if (fromCurrency === toCurrency) return amount;
+    if (!exchangeRates || Object.keys(exchangeRates).length === 0) return amount;
+    
+    let amountInRON = amount;
+    if (fromCurrency !== 'RON') {
+      amountInRON = amount * (exchangeRates[fromCurrency] || 1);
+    }
+    
+    if (toCurrency === 'RON') {
+      return amountInRON;
+    }
+    
+    return amountInRON / (exchangeRates[toCurrency] || 1);
+  };
+
+  const calculateGrandTotal = (): number => {
+    let total = 0;
+    
+    // Only include rent in the total if it hasn't already been invoiced
+    if (rentCurrency && !rentAlreadyInvoiced) {
+      const rentWithVat = applyVat ? getRentWithVat() : rentAmount;
+      total += convertCurrency(rentWithVat, rentCurrency, grandTotalCurrency);
+    }
+    
+    Object.entries(totalUtilitiesByCurrency).forEach(([currency, amount]) => {
+      total += convertCurrency(amount, currency, grandTotalCurrency);
+    });
+    
+    return Math.round(total * 100) / 100;
+  };
+
+  const getOriginalUtilityAmount = (utility: UtilityItem): number => {
+    return utility.amount;
+  };
+
+  const getAdjustedUtilityAmount = (utility: UtilityItem): number => {
+    if (!utility.selected) return 0;
+    const percentage = utility.percentage || 100;
+    const remainingPercentage = 100 - (utility.invoiced_percentage || 0);
+    const adjustableAmount = (utility.amount * remainingPercentage) / 100;
+    return (adjustableAmount * percentage) / 100;
+  };
+
+  const createInvoiceFromCalculation = () => {
+    if (!selectedPropertyId || !selectedProperty || !userId) {
       toast({
-        variant: "destructive",
         title: "Missing information",
-        description: "Please select a property and date range",
-      });
-      return;
-    }
-
-    // Check if at least one utility is selected or property is selected
-    const hasSelectedUtilities = utilities.some(util => util.selected);
-    if (!hasSelectedUtilities && !property) {
-      toast({
+        description: "Please select a property and calculate costs first.",
         variant: "destructive",
-        title: "No items selected",
-        description: "Please select at least one utility or property",
       });
       return;
     }
 
-    // Filter selected utilities
-    const selectedUtilities = utilities.filter(util => util.selected);
-    
-    // Calculate rent amount
-    const rentAmount = property ? propertyRent : 0;
+    const selectedUtilities = utilities
+      .filter(utility => utility.selected)
+      .map(utility => ({
+        id: utility.id,
+        type: utility.type,
+        amount: getAdjustedUtilityAmount(utility),
+        percentage: utility.percentage,
+        original_amount: utility.amount,
+        currency: utility.currency,
+        due_date: utility.due_date
+      }));
 
-    // Prepare calculation data
+    const dateRangeForInvoice = selectedDateRange && 
+      selectedDateRange.from && 
+      selectedDateRange.to ? {
+        from: selectedDateRange.from,
+        to: selectedDateRange.to
+      } : undefined;
+
     const calculationData = {
-      propertyId: property,
-      rentAmount,
-      dateRange: {
-        from: date.from,
-        to: date.to,
-      },
-      currency,
-      grandTotal,
-      utilities: selectedUtilities,
+      propertyId: selectedPropertyId,
+      rentAmount: rentAmount + vatAmount,
+      dateRange: dateRangeForInvoice,
+      currency: grandTotalCurrency,
+      grandTotal: calculateGrandTotal(),
+      utilities: selectedUtilities
     };
 
-    // Show invoice dialog with pre-filled data
     setShowInvoiceDialog(true);
-    
-    // Store calculation data for the invoice dialog
-    localStorage.setItem('calculationData', JSON.stringify(calculationData));
   };
+
+  useEffect(() => {
+    if (utilities.length > 0) {
+      recalculateUtilityTotals(utilities);
+    }
+  }, [utilities]);
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-xl font-bold">Cost Calculator</CardTitle>
-          <Calculator className="h-5 w-5 text-muted-foreground" />
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Property Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="property">Select Property</Label>
-            <Select value={property} onValueChange={handlePropertyChange}>
-              <SelectTrigger id="property" className="w-full">
-                <SelectValue placeholder="Select a property" />
-              </SelectTrigger>
-              <SelectContent>
-                {properties.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      <div className="flex items-center space-x-2 mb-2">
+        <Calendar className="h-8 w-8" />
+        <h3 className="text-2xl font-bold">Cost Calculator</h3>
+      </div>
+      
+      <p className="text-gray-600">
+        Select a property and date range to calculate your total expenses (rent + utilities)
+      </p>
+      
+      <div className="space-y-4">
+        <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select a property" />
+          </SelectTrigger>
+          <SelectContent>
+            {properties.map((property) => (
+              <SelectItem key={property.id} value={property.id}>
+                {property.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
+          <div className="w-full sm:w-3/4">
+            <DatePickerWithRange
+              date={selectedDateRange}
+              onDateChange={setSelectedDateRange}
+            />
           </div>
-
-          {/* Date Range */}
-          <div className="space-y-2">
-            <Label>Select Period</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  id="date"
-                  variant={"outline"}
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !date && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date?.from ? (
-                    date.to ? (
-                      <>
-                        {format(date.from, "LLL dd, y")} -{" "}
-                        {format(date.to, "LLL dd, y")}
-                      </>
-                    ) : (
-                      format(date.from, "LLL dd, y")
-                    )
-                  ) : (
-                    <span>Pick a date</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={date?.from}
-                  selected={date}
-                  onSelect={setDate}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Property Details (Shown if property is selected) */}
-          {property && (
-            <div className="space-y-4 pt-2">
-              <div className="grid gap-2">
-                <Label htmlFor="rent">Monthly Rent ({currency})</Label>
-                <Input
-                  id="rent"
-                  type="number"
-                  value={propertyRent}
-                  onChange={(e) => setPropertyRent(parseFloat(e.target.value) || 0)}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Utilities (Shown if utilities are available) */}
-          {utilities.length > 0 && (
-            <div className="space-y-4">
-              <Separator />
-              <h3 className="text-md font-medium">Available Utilities</h3>
-              <div className="space-y-4">
-                {utilities.map((util) => (
-                  <div key={util.id} className="flex items-start space-x-4 pb-2 border-b">
-                    <Checkbox
-                      id={`utility-${util.id}`}
-                      checked={util.selected}
-                      onCheckedChange={(checked) => handleUtilityToggle(util.id, !!checked)}
-                    />
-                    <div className="grid gap-1.5 w-full">
-                      <div className="flex justify-between w-full">
-                        <Label htmlFor={`utility-${util.id}`} className="capitalize">
-                          {util.type}
-                          {util.is_partially_invoiced && (
-                            <span className="ml-2 text-xs bg-blue-100 text-blue-800 rounded-full px-2 py-0.5">
-                              Partially Invoiced
-                            </span>
-                          )}
-                        </Label>
-                        <div className="text-sm text-muted-foreground">
-                          {util.remaining_amount !== undefined && (
-                            <span>Available: {util.remaining_amount.toFixed(2)} {util.currency}</span>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {util.selected && (
-                        <div className="mt-2">
-                          <Label htmlFor={`amount-${util.id}`}>Amount to invoice ({util.currency})</Label>
-                          <Input
-                            id={`amount-${util.id}`}
-                            type="number"
-                            value={util.amount}
-                            onChange={(e) => handleUtilityAmountChange(util.id, e.target.value)}
-                            className="mt-1"
-                            min="0"
-                            max={util.remaining_amount || util.original_amount}
-                            step="0.01"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Total */}
-          <div className="space-y-2 pt-4">
-            <Separator />
-            <div className="flex justify-between items-center text-lg font-bold mt-4">
-              <span>Grand Total:</span>
-              <span>{grandTotal.toFixed(2)} {currency}</span>
-            </div>
-          </div>
-
-          {/* Action Button */}
           <Button 
-            onClick={handleCreateInvoice} 
-            className="w-full mt-4"
-            disabled={!property && !utilities.some(u => u.selected)}
+            onClick={calculateCosts} 
+            disabled={!selectedPropertyId || !selectedDateRange?.from || !selectedDateRange?.to}
+            className="w-full sm:w-1/4"
+            size="lg"
           >
-            Create Invoice
+            <Calculator className="mr-2 h-4 w-4" />
+            Calculate
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+      
+      {hasCalculated && (
+        <div>
+          <Card className="bg-blue-50 border-blue-100">
+            <CardContent className="p-6">
+              <h4 className="text-xl font-semibold text-center mb-4">
+                Cost Summary for {format(selectedDateRange?.from || new Date(), "MMM d, yyyy")} to {format(selectedDateRange?.to || addDays(new Date(), 1), "MMM d, yyyy")}
+              </h4>
+              
+              {rentAlreadyInvoiced && invoicedPeriod && (
+                <Alert className="mb-4 bg-amber-50 border-amber-200">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <AlertTitle className="text-amber-800">Rent already invoiced</AlertTitle>
+                  <AlertDescription className="text-amber-700">
+                    Rent has already been invoiced for this property from {format(invoicedPeriod.from, 'MMM d, yyyy')} to {format(invoicedPeriod.to, 'MMM d, yyyy')}.
+                    Only utilities will be included in this calculation.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    <p className="text-gray-600">Rent</p>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-4 w-4 text-gray-400" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="p-2 max-w-xs">
+                            {rentAlreadyInvoiced ? (
+                              <p className="font-semibold text-amber-600">Rent already invoiced for this period</p>
+                            ) : (
+                              <>
+                                <p className="font-semibold">Rent Calculation:</p>
+                                <p className="text-sm">
+                                  {rentCalculationType === 'full' 
+                                    ? 'Full month rent applied (same day of consecutive months)' 
+                                    : `Daily rate (monthly rent ÷ 30) × ${daysInPeriod} days`}
+                                </p>
+                                {rentCalculationType === 'daily' && (
+                                  <p className="text-xs mt-1">
+                                    {formatCurrency(selectedProperty?.monthly_rent / 30, rentCurrency)} × {daysInPeriod} days
+                                  </p>
+                                )}
+                                {applyVat && (
+                                  <p className="text-xs mt-1">
+                                    VAT ({vatRate}%): {formatCurrency(vatAmount, rentCurrency)}
+                                  </p>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <p className="text-xl font-bold">
+                    {rentAlreadyInvoiced ? (
+                      <span className="text-amber-600">Already invoiced</span>
+                    ) : (
+                      <>
+                        {formatCurrency(rentAmount, rentCurrency)}
+                        {applyVat && (
+                          <span className="block text-sm text-gray-600">
+                            + {formatCurrency(vatAmount, rentCurrency)} VAT
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {rentAlreadyInvoiced ? 
+                      'Excluded from calculation' : 
+                      (rentCalculationType === 'full' 
+                        ? 'Full monthly rent' 
+                        : `${daysInPeriod} days period`)}
+                  </p>
+                </div>
+                
+                <div className="text-center">
+                  <p className="text-gray-600">Utilities</p>
+                  <div>
+                    {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
+                      <p key={currency} className="text-xl font-bold">
+                        {formatCurrency(amount, currency)}
+                      </p>
+                    ))}
+                    {Object.keys(totalUtilitiesByCurrency).length === 0 && (
+                      <p className="text-xl font-bold">{formatCurrency(0, rentCurrency)}</p>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="text-center">
+                  <p className="text-gray-600">Total</p>
+                  <div>
+                    {!rentAlreadyInvoiced ? (
+                      <p className="text-xl font-bold text-blue-600">
+                        {applyVat
+                          ? formatCurrency(getRentWithVat(), rentCurrency)
+                          : formatCurrency(rentAmount, rentCurrency)}
+                      </p>
+                    ) : (
+                      <p className="text-xl font-bold text-blue-600">
+                        {formatCurrency(0, rentCurrency)}
+                        <span className="block text-xs text-amber-600">(Rent excluded)</span>
+                      </p>
+                    )}
+                    {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
+                      <div key={currency}>
+                        {currency === rentCurrency ? (
+                          <p className="text-lg font-bold text-blue-600">
+                            = {formatCurrency(rentAlreadyInvoiced ? amount : amount + (applyVat ? getRentWithVat() : rentAmount), currency)}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-gray-500">
+                            + {formatCurrency(amount, currency)} <span className="text-xs">(different currency)</span>
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 pt-4 border-t border-blue-200">
+                <div className="flex flex-col items-center space-y-3">
+                  <div className="flex items-center gap-3">
+                    <h5 className="text-lg font-bold text-gray-800">Grand Total in:</h5>
+                    <Select value={grandTotalCurrency} onValueChange={setGrandTotalCurrency}>
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue placeholder="Select currency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableCurrencies?.map((curr) => (
+                          <SelectItem key={curr.code} value={curr.code}>
+                            {curr.code} - {curr.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="text-2xl font-bold text-blue-700 bg-blue-100 px-6 py-2 rounded-lg shadow-sm">
+                    {formatCurrency(calculateGrandTotal(), grandTotalCurrency)}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Converted using current exchange rates from BNR (National Bank of Romania)
+                  </p>
+                  {userRole === 'landlord' && (
+                    <Button 
+                      onClick={createInvoiceFromCalculation}
+                      className="mt-4 bg-green-600 hover:bg-green-700"
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Create Invoice
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {utilities.length > 0 && (
+            <Card>
+              <CardContent className="p-6">
+                <h4 className="text-xl font-semibold mb-4">Utility Details & Customization</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="text-left p-3 text-gray-600">TYPE</th>
+                        <th className="text-left p-3 text-gray-600">INVOICE #</th>
+                        <th className="text-left p-3 text-gray-600">ISSUED DATE</th>
+                        <th className="text-left p-3 text-gray-600">DUE DATE</th>
+                        <th className="text-center p-3 text-gray-600">INCLUDED</th>
+                        <th className="text-right p-3 text-gray-600">ORIGINAL AMOUNT</th>
+                        <th className="text-right p-3 text-gray-600">PERCENTAGE</th>
+                        <th className="text-right p-3 text-gray-600">APPLIED AMOUNT</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {utilities.map((utility) => (
+                        <UtilityRow 
+                          key={utility.id}
+                          utility={utility}
+                          getOriginalUtilityAmount={getOriginalUtilityAmount}
+                          getAdjustedUtilityAmount={getAdjustedUtilityAmount}
+                          formatCurrency={formatCurrency}
+                          onPercentageChange={handleUtilityPercentageChange}
+                          onSelectionChange={handleUtilitySelectionChange}
+                        />
+                      ))}
+                      {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
+                        <tr key={currency} className="border-t font-bold">
+                          <td colSpan={6} className="p-3 text-right">
+                            Total Utilities ({currency}):
+                          </td>
+                          <td colSpan={2} className="p-3 text-right">{formatCurrency(amount, currency)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
-      {/* Invoice Dialog */}
-      {showInvoiceDialog && (
-        <InvoiceDialog
+      {showInvoiceDialog && userId && userRole && userRole !== 'service_provider' && (
+        <InvoiceDialog 
           open={showInvoiceDialog}
           onOpenChange={setShowInvoiceDialog}
-          userId={property ? properties.find(p => p.id === property)?.landlord_id || "" : ""}
-          userRole="landlord"
+          userId={userId}
+          userRole={userRole as "landlord" | "tenant"}
+          onInvoiceCreated={async () => {
+            setShowInvoiceDialog(false);
+            toast({
+              title: "Success",
+              description: "Invoice created successfully.",
+            });
+          }}
           calculationData={{
-            propertyId: property,
-            rentAmount: propertyRent,
-            dateRange: {
-              from: date?.from || new Date(),
-              to: date?.to || new Date(),
-            },
-            currency,
-            grandTotal,
-            utilities: utilities.filter(util => util.selected),
+            propertyId: selectedPropertyId,
+            rentAmount: rentAmount + vatAmount,
+            dateRange: selectedDateRange && 
+              selectedDateRange.from && 
+              selectedDateRange.to ? {
+                from: selectedDateRange.from,
+                to: selectedDateRange.to
+              } : undefined,
+            currency: grandTotalCurrency,
+            grandTotal: calculateGrandTotal(),
+            utilities: utilities
+              .filter(util => util.selected)
+              .map(util => ({
+                id: util.id,
+                type: util.type,
+                amount: getAdjustedUtilityAmount(util),
+                percentage: util.percentage,
+                original_amount: util.amount,
+                currency: util.currency,
+                due_date: util.due_date
+              }))
           }}
         />
       )}
