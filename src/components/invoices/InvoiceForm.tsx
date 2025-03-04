@@ -52,6 +52,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
   const [rentAlreadyInvoiced, setRentAlreadyInvoiced] = useState<boolean>(false);
   const [invoicedPeriod, setInvoicedPeriod] = useState<{from: Date, to: Date} | null>(null);
+  const [grandTotal, setGrandTotal] = useState<number>(calculationData?.grandTotal || 0);
 
   const formSchema = z.object({
     property_id: z.string({ required_error: "Please select a property" }),
@@ -102,6 +103,10 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     
     if (calculationData?.currency) {
       setInvoiceCurrency(calculationData.currency);
+    }
+    
+    if (calculationData?.grandTotal) {
+      setGrandTotal(calculationData.grandTotal);
     }
     
     const dueDate = new Date();
@@ -183,11 +188,9 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
               return true;
             });
             
-            if (overlaps) {
+            if (overlaps && !calculationData.rentAmount) {
               form.setValue("amount", 0);
             }
-          } else {
-            form.setValue("amount", 0);
           }
         } else {
           setRentAlreadyInvoiced(false);
@@ -463,11 +466,11 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
   }, [propertyId]);
 
   const handleUtilitySelection = (id: string, selected: boolean) => {
-    setUtilities(prevUtilities => 
-      prevUtilities.map(util => 
-        util.id === id ? { ...util, selected } : util
-      )
+    const updatedUtilities = utilities.map(util => 
+      util.id === id ? { ...util, selected } : util
     );
+    
+    setUtilities(updatedUtilities);
   };
 
   const handleUtilityPercentageChange = (id: string, percentage: number) => {
@@ -487,19 +490,15 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
   };
 
   const getSelectedUtilities = () => {
-    return utilities.filter(util => util.selected).map(util => {
-      const actualAmount = getAdjustedUtilityAmount(util);
-      
-      return {
-        id: util.id,
-        amount: actualAmount,
-        type: util.type,
-        percentage: util.percentage,
-        original_amount: util.original_amount || util.amount,
-        currency: util.currency,
-        current_invoiced_percentage: util.invoiced_percentage || 0
-      };
-    });
+    return utilities.filter(util => util.selected).map(util => ({
+      id: util.id,
+      amount: util.amount,
+      type: util.type,
+      percentage: util.percentage || 100,
+      original_amount: util.original_amount || util.amount,
+      currency: util.currency,
+      current_invoiced_percentage: util.invoiced_percentage || 0
+    }));
   };
 
   const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string): number => {
@@ -549,7 +548,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       
       let utilitiesTotal = 0;
       selectedUtils.forEach(util => {
-        const utilAmount = util.amount;
+        const utilAmount = getAdjustedUtilityAmount(util);
         
         const utilCurrency = util.currency || 'EUR';
         if (utilCurrency !== invoiceCurrency) {
@@ -663,6 +662,59 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       });
     
     return totalRentWithVat + utilitiesTotal;
+  };
+
+  const renderUtilitiesSection = () => {
+    if (!utilities || utilities.length === 0) return null;
+    
+    return (
+      <div className="mt-3 pt-2 border-t">
+        <h4 className="text-sm font-medium mb-2">Utilities:</h4>
+        <div className="space-y-2 max-h-40 overflow-y-auto">
+          {utilities.map((utility) => {
+            return (
+              <div key={utility.id} className="flex items-center justify-between">
+                <div className="flex items-start gap-2">
+                  <Checkbox 
+                    id={`utility-${utility.id}`}
+                    checked={utility.selected}
+                    onCheckedChange={(checked) => handleUtilitySelection(utility.id, !!checked)}
+                    className="mt-1"
+                  />
+                  <div>
+                    <label htmlFor={`utility-${utility.id}`} className="text-sm cursor-pointer">
+                      {utility.type}
+                      {utility.invoiced_percentage > 0 && utility.invoiced_percentage < 100 && (
+                        <Badge className="ml-2 text-xs bg-amber-100 text-amber-800">
+                          Partially Invoiced ({utility.invoiced_percentage}%)
+                        </Badge>
+                      )}
+                    </label>
+                    {utility.selected && (
+                      <div className="mt-1">
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>{utility.percentage || 100}% applied</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-sm font-medium">
+                    {formatAmount(utility.amount, utility.currency || invoiceCurrency)}
+                  </span>
+                  {utility.original_amount && utility.original_amount !== utility.amount && (
+                    <div className="text-xs text-gray-500">
+                      of {formatAmount(utility.original_amount, utility.currency || invoiceCurrency)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -813,12 +865,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                     {rentAlreadyInvoiced ? (
                       <span className="text-amber-600">Already invoiced</span>
                     ) : (
-                      formatAmount(
-                        selectedProperty && selectedProperty.currency !== invoiceCurrency 
-                          ? convertCurrency(form.getValues("amount"), selectedProperty.currency, invoiceCurrency)
-                          : form.getValues("amount"), 
-                        invoiceCurrency
-                      )
+                      formatAmount(calculationData?.rentAmount || 0, invoiceCurrency)
                     )}
                   </span>
                 </div>
@@ -827,103 +874,17 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                   <div className="flex justify-between items-center py-1">
                     <span className="text-sm">VAT ({vatRate}%):</span>
                     <span className="text-sm font-medium">
-                      {formatAmount(calculateVatAmount(), invoiceCurrency)}
+                      {formatAmount((calculationData?.rentAmount || 0) * vatRate / 100, invoiceCurrency)}
                     </span>
                   </div>
                 )}
 
-                {utilities.length > 0 && (
-                  <div className="mt-3 pt-2 border-t">
-                    <h4 className="text-sm font-medium mb-2">Utilities:</h4>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {utilities.map((utility) => {
-                        const adjustedAmount = getAdjustedUtilityAmount(utility);
-                        
-                        const utilCurrency = utility.currency || 'EUR';
-                        let displayAmount = adjustedAmount;
-                        
-                        if (utilCurrency !== invoiceCurrency) {
-                          displayAmount = convertCurrency(adjustedAmount, utilCurrency, invoiceCurrency);
-                        }
-                        
-                        let originalDisplayAmount = utility.original_amount || utility.amount;
-                        if (utilCurrency !== invoiceCurrency) {
-                          originalDisplayAmount = convertCurrency(originalDisplayAmount, utilCurrency, invoiceCurrency);
-                        }
-                        
-                        const currentInvoiced = utility.invoiced_percentage || 0;
-                        const willBeInvoiced = currentInvoiced + utility.percentage;
-                        const percentageText = currentInvoiced > 0
-                          ? `${utility.percentage}% (${currentInvoiced}% already invoiced, will be ${willBeInvoiced}% total)`
-                          : `${utility.percentage}%`;
-                        
-                        return (
-                          <div key={utility.id} className="flex items-center justify-between">
-                            <div className="flex items-start gap-2">
-                              <Checkbox 
-                                id={`utility-${utility.id}`}
-                                checked={utility.selected}
-                                onCheckedChange={(checked) => handleUtilitySelection(utility.id, !!checked)}
-                                className="mt-1"
-                              />
-                              <div>
-                                <label htmlFor={`utility-${utility.id}`} className="text-sm cursor-pointer">
-                                  {utility.type}
-                                  {utility.invoiced_percentage > 0 && utility.invoiced_percentage < 100 && (
-                                    <Badge className="ml-2 text-xs bg-amber-100 text-amber-800">
-                                      Partially Invoiced ({utility.invoiced_percentage}%)
-                                    </Badge>
-                                  )}
-                                  {utility.invoiced_percentage >= 100 && (
-                                    <Badge className="ml-2 text-xs bg-green-100 text-green-800">
-                                      Fully Invoiced
-                                    </Badge>
-                                  )}
-                                </label>
-                                {utility.selected && (
-                                  <div className="mt-1">
-                                    <input
-                                      type="range"
-                                      min="1"
-                                      max={utility.remaining_percentage || 100}
-                                      value={utility.percentage}
-                                      onChange={(e) => handleUtilityPercentageChange(utility.id, parseInt(e.target.value))}
-                                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                                      disabled={utility.invoiced_percentage >= 100}
-                                    />
-                                    <div className="flex justify-between text-xs text-gray-500 mt-1">
-                                      <span>1%</span>
-                                      <span>{percentageText}</span>
-                                      <span>{utility.remaining_percentage || 100}%</span>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-sm font-medium">
-                                {formatAmount(displayAmount, invoiceCurrency)}
-                              </span>
-                              {utility.invoiced_percentage > 0 && (
-                                <div className="text-xs text-gray-500">
-                                  of {formatAmount(originalDisplayAmount, invoiceCurrency)}
-                                  <div className="text-xs text-amber-600">
-                                    Remaining: {formatAmount(originalDisplayAmount * (utility.remaining_percentage / 100), invoiceCurrency)}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                {utilities.length > 0 && renderUtilitiesSection()}
 
                 <div className="flex justify-between items-center pt-2 mt-2 border-t border-slate-200">
                   <span className="font-bold">Total Amount:</span>
                   <span className="text-lg font-bold">
-                    {formatAmount(calculateTotal(), invoiceCurrency)}
+                    {formatAmount(grandTotal, invoiceCurrency)}
                   </span>
                 </div>
               </div>
@@ -935,8 +896,8 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
           <Button 
             type="submit" 
             disabled={isLoading || !selectedProperty || (
-              form.getValues("amount") === 0 && 
-              (!utilities.some(u => u.selected) || utilities.length === 0)
+              grandTotal === 0 ||
+              !utilities.some(u => u.selected)
             )}
           >
             Create Invoice
