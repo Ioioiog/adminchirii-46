@@ -14,6 +14,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Invoice } from "@/types/invoice";
+import { InfoIcon } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface InvoiceListProps {
   invoices: Invoice[];
@@ -33,6 +35,69 @@ export function InvoiceList({ invoices, userRole, onStatusUpdate }: InvoiceListP
   };
 
   console.log("InvoiceList received invoices:", invoices);
+
+  const getInvoiceTypeLabel = (invoice: Invoice) => {
+    const metadata = invoice.metadata;
+    
+    if (!metadata) return null;
+    
+    if (metadata.utilities_included && metadata.utilities_included.length > 0) {
+      // Check if it contains any utilities
+      const utilitiesOnly = metadata.subtotal === 0 || !metadata.subtotal;
+      if (utilitiesOnly) {
+        return (
+          <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-800 border-blue-200">
+            Utilities Only
+          </Badge>
+        );
+      } else {
+        return (
+          <Badge variant="outline" className="ml-2 bg-purple-50 text-purple-800 border-purple-200">
+            Rent + Utilities
+          </Badge>
+        );
+      }
+    }
+    
+    return null;
+  };
+
+  const getUtilitiesDetails = (invoice: Invoice) => {
+    if (!invoice.metadata?.utilities_included || invoice.metadata.utilities_included.length === 0) {
+      return null;
+    }
+    
+    const utilities = invoice.metadata.utilities_included;
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <InfoIcon className="h-4 w-4 text-blue-500 inline ml-1 cursor-help" />
+          </TooltipTrigger>
+          <TooltipContent className="w-64 p-3">
+            <div className="space-y-2">
+              <p className="font-medium">Included Utilities:</p>
+              <ul className="text-xs space-y-1.5">
+                {utilities.map((util: any, index: number) => (
+                  <li key={index} className="flex justify-between">
+                    <span className="capitalize">{util.type}</span>
+                    <span className="font-medium">
+                      {formatAmount(util.amount, util.currency || invoice.currency)}
+                      {util.percentage && util.percentage < 100 && (
+                        <span className="text-xs ml-1 text-gray-500">
+                          ({util.percentage}%)
+                        </span>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
 
   return (
     <div className="rounded-md border">
@@ -60,6 +125,7 @@ export function InvoiceList({ invoices, userRole, onStatusUpdate }: InvoiceListP
               <TableRow key={invoice.id}>
                 <TableCell>
                   {invoice.id.substring(0, 8)}
+                  {getInvoiceTypeLabel(invoice)}
                 </TableCell>
                 <TableCell>
                   {invoice.property?.name || "N/A"}
@@ -69,12 +135,10 @@ export function InvoiceList({ invoices, userRole, onStatusUpdate }: InvoiceListP
                 </TableCell>
                 <TableCell className="font-medium">
                   {invoice.amount ? (
-                    <>
+                    <div className="flex items-center">
                       {formatAmount(invoice.amount, invoice.currency)}
-                      <span className="text-xs text-muted-foreground block">
-                        Raw: {invoice.amount} {invoice.currency}
-                      </span>
-                    </>
+                      {getUtilitiesDetails(invoice)}
+                    </div>
                   ) : (
                     "0.00"
                   )}

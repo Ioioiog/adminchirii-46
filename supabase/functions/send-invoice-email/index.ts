@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
@@ -108,6 +109,20 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Found tenant email:', tenancy.tenant.email);
 
+    // Format the metadata for utilities
+    const metadata = invoice.metadata || {};
+    const utilsList = metadata.utilities_included ? metadata.utilities_included.map((util: any) => {
+      const percentage = util.percentage || 100;
+      const percentageText = percentage < 100 ? ` (${percentage}%)` : '';
+      
+      return `
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${util.type}${percentageText}</td>
+          <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">$${util.amount.toFixed(2)}</td>
+        </tr>
+      `;
+    }).join('') : '';
+
     // Format the items for email
     const itemsList = invoice.items
       ?.map(item => `
@@ -118,9 +133,19 @@ const handler = async (req: Request): Promise<Response> => {
       `)
       .join('') || '';
 
+    // Determine if this is a rent invoice, utilities only, or both
+    let invoiceTypeText = '';
+    if (metadata.utilities_included && metadata.utilities_included.length > 0) {
+      if (metadata.subtotal > 0) {
+        invoiceTypeText = '<span style="background-color: #f3e8ff; color: #6b21a8; padding: 4px 8px; border-radius: 4px; font-size: 12px; margin-left: 10px;">Rent + Utilities</span>';
+      } else {
+        invoiceTypeText = '<span style="background-color: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 12px; margin-left: 10px;">Utilities Only</span>';
+      }
+    }
+
     const emailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2d3748;">Invoice for ${invoice.property.name}</h2>
+        <h2 style="color: #2d3748;">Invoice for ${invoice.property.name} ${invoiceTypeText}</h2>
         
         <p>Dear ${tenancy.tenant.first_name || ''} ${tenancy.tenant.last_name || ''},</p>
         
@@ -134,7 +159,7 @@ const handler = async (req: Request): Promise<Response> => {
           </p>
         </div>
 
-        <h3>Invoice Items</h3>
+        <h3>Invoice Details</h3>
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
           <thead>
             <tr style="background-color: #edf2f7;">
@@ -143,7 +168,21 @@ const handler = async (req: Request): Promise<Response> => {
             </tr>
           </thead>
           <tbody>
-            ${itemsList}
+            ${metadata.subtotal > 0 ? `
+              <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;">Monthly Rent</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">$${metadata.subtotal.toFixed(2)}</td>
+              </tr>
+              ${metadata.vat_amount > 0 ? `
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #ddd;">VAT (${invoice.vat_rate}%)</td>
+                  <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">$${metadata.vat_amount.toFixed(2)}</td>
+                </tr>
+              ` : ''}
+            ` : ''}
+            
+            ${utilsList || itemsList}
+            
             <tr style="font-weight: bold; background-color: #f7fafc;">
               <td style="padding: 8px; border: 1px solid #ddd;">Total Amount</td>
               <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">$${invoice.amount.toFixed(2)}</td>

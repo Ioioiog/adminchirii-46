@@ -17,6 +17,7 @@ import { formatAmount } from "@/lib/utils";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Slider } from "@/components/ui/slider";
 
 interface InvoiceFormValues {
   property_id: string;
@@ -439,13 +440,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         setUtilities([
           ...calculationData.utilities.map(util => ({
             ...util,
-            selected: true,
-            remaining_percentage: util.invoiced_percentage 
-              ? Math.min(100 - util.invoiced_percentage, 100) 
-              : 100,
-            percentage: util.percentage || (util.invoiced_percentage 
-              ? Math.min(100 - util.invoiced_percentage, 100) 
-              : 100)
+            selected: true
           })),
           ...formattedUtilities.filter(util => 
             !calculationData.utilities.some(calcUtil => calcUtil.id === util.id)
@@ -454,6 +449,8 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       } else {
         setUtilities(formattedUtilities);
       }
+      
+      console.log("Fetched utilities:", formattedUtilities);
     } catch (error) {
       console.error("Error fetching utilities:", error);
     }
@@ -471,18 +468,43 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     );
     
     setUtilities(updatedUtilities);
+    updateGrandTotal(updatedUtilities);
   };
 
   const handleUtilityPercentageChange = (id: string, percentage: number) => {
-    setUtilities(prevUtilities => 
-      prevUtilities.map(util => 
-        util.id === id ? { ...util, percentage } : util
-      )
+    const updatedUtilities = utilities.map(util => 
+      util.id === id ? { ...util, percentage } : util
     );
+    
+    setUtilities(updatedUtilities);
+    updateGrandTotal(updatedUtilities);
+  };
+
+  const updateGrandTotal = (updatedUtilities: UtilityForInvoice[]) => {
+    if (calculationData?.grandTotal) {
+      return;
+    }
+    
+    const baseAmount = form.getValues("amount") || 0;
+    const vatAmount = applyVat ? (baseAmount * vatRate / 100) : 0;
+    
+    const utilitiesTotal = updatedUtilities
+      .filter(util => util.selected)
+      .reduce((sum, util) => {
+        const adjustedAmount = getAdjustedUtilityAmount(util);
+        return sum + adjustedAmount;
+      }, 0);
+      
+    setGrandTotal(baseAmount + vatAmount + utilitiesTotal);
   };
 
   const getAdjustedUtilityAmount = (utility: UtilityForInvoice): number => {
     if (!utility.selected) return 0;
+    
+    if (calculationData?.utilities?.some(u => u.id === utility.id)) {
+      return utility.amount;
+    }
+    
     const percentage = utility.percentage || 100;
     const remainingPercentage = 100 - (utility.invoiced_percentage || 0);
     const adjustableAmount = (utility.original_amount || utility.amount) * remainingPercentage / 100;
@@ -490,9 +512,21 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
   };
 
   const getSelectedUtilities = () => {
+    if (calculationData?.utilities) {
+      return calculationData.utilities.map(util => ({
+        id: util.id,
+        amount: getAdjustedUtilityAmount(util),
+        type: util.type,
+        percentage: util.percentage || 100,
+        original_amount: util.original_amount || util.amount,
+        currency: util.currency,
+        current_invoiced_percentage: util.invoiced_percentage || 0
+      }));
+    }
+    
     return utilities.filter(util => util.selected).map(util => ({
       id: util.id,
-      amount: util.amount,
+      amount: getAdjustedUtilityAmount(util),
       type: util.type,
       percentage: util.percentage || 100,
       original_amount: util.original_amount || util.amount,
@@ -534,43 +568,11 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       if (selectedUtils.length > 0) {
         metadata.utilities_included = selectedUtils;
       }
-
-      const rentCurrency = selectedProperty?.currency || 'EUR';
       
-      const baseRentAmount = rentAlreadyInvoiced ? 0 : values.amount;
-      
-      const rentAmount = rentCurrency !== invoiceCurrency 
-        ? convertCurrency(baseRentAmount, rentCurrency, invoiceCurrency)
-        : baseRentAmount;
-      
-      const currentVatRate = applyVat ? vatRate : 0;
-      const vatAmount = applyVat ? (rentAmount * (currentVatRate / 100)) : 0;
-      
-      let utilitiesTotal = 0;
-      selectedUtils.forEach(util => {
-        const utilAmount = getAdjustedUtilityAmount(util);
-        
-        const utilCurrency = util.currency || 'EUR';
-        if (utilCurrency !== invoiceCurrency) {
-          utilitiesTotal += convertCurrency(utilAmount, utilCurrency, invoiceCurrency);
-        } else {
-          utilitiesTotal += utilAmount;
-        }
-      });
-      
-      const totalAmount = rentAmount + vatAmount + utilitiesTotal;
-      
-      metadata.subtotal = rentAmount;
-      metadata.vat_amount = vatAmount;
-      metadata.utilities_total = utilitiesTotal;
+      const totalAmount = calculationData?.grandTotal || calculateTotal();
       
       console.log('Saving invoice with total amount:', totalAmount, 'breakdown:', {
-        rentAmount, 
-        vatAmount, 
-        utilitiesTotal,
-        rentCurrency,
-        invoiceCurrency,
-        rentAlreadyInvoiced,
+        calculationData,
         selectedUtils
       });
       
@@ -584,6 +586,8 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
             invoiced_percentage: newInvoicedPercentage
           })
           .eq('id', util.id);
+          
+        console.log(`Updated utility ${util.id}: invoiced_percentage set to ${newInvoicedPercentage}%`);  
       }
       
       const { data, error } = await supabase
@@ -672,6 +676,9 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         <h4 className="text-sm font-medium mb-2">Utilities:</h4>
         <div className="space-y-2 max-h-40 overflow-y-auto">
           {utilities.map((utility) => {
+            const isFromCalculator = calculationData?.utilities?.some(u => u.id === utility.id);
+            const isPartiallyInvoiced = utility.invoiced_percentage > 0 && utility.invoiced_percentage < 100;
+            
             return (
               <div key={utility.id} className="flex items-center justify-between">
                 <div className="flex items-start gap-2">
@@ -680,20 +687,34 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                     checked={utility.selected}
                     onCheckedChange={(checked) => handleUtilitySelection(utility.id, !!checked)}
                     className="mt-1"
+                    disabled={isFromCalculator}
                   />
                   <div>
                     <label htmlFor={`utility-${utility.id}`} className="text-sm cursor-pointer">
                       {utility.type}
-                      {utility.invoiced_percentage > 0 && utility.invoiced_percentage < 100 && (
+                      {isPartiallyInvoiced && (
                         <Badge className="ml-2 text-xs bg-amber-100 text-amber-800">
                           Partially Invoiced ({utility.invoiced_percentage}%)
                         </Badge>
                       )}
+                      {isFromCalculator && (
+                        <Badge className="ml-2 text-xs bg-blue-100 text-blue-800">
+                          From Calculator
+                        </Badge>
+                      )}
                     </label>
-                    {utility.selected && (
-                      <div className="mt-1">
+                    {utility.selected && !isFromCalculator && (
+                      <div className="mt-1 w-48">
+                        <Slider
+                          value={[utility.percentage || 100]}
+                          min={1}
+                          max={utility.remaining_percentage || 100}
+                          step={1}
+                          onValueChange={([value]) => handleUtilityPercentageChange(utility.id, value)}
+                        />
                         <div className="flex justify-between text-xs text-gray-500 mt-1">
                           <span>{utility.percentage || 100}% applied</span>
+                          <span>Max: {utility.remaining_percentage || 100}%</span>
                         </div>
                       </div>
                     )}
@@ -701,7 +722,10 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                 </div>
                 <div className="text-right">
                   <span className="text-sm font-medium">
-                    {formatAmount(utility.amount, utility.currency || invoiceCurrency)}
+                    {formatAmount(
+                      isFromCalculator ? utility.amount : getAdjustedUtilityAmount(utility),
+                      utility.currency || invoiceCurrency
+                    )}
                   </span>
                   {utility.original_amount && utility.original_amount !== utility.amount && (
                     <div className="text-xs text-gray-500">

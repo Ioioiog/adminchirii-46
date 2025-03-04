@@ -82,7 +82,17 @@ export const useInvoices = () => {
       if (invoicesError) throw invoicesError;
 
       console.log("Fetched invoices:", invoicesData);
-      setInvoices(invoicesData as Invoice[]);
+      
+      // Process invoices to make sure amounts are properly handled
+      const processedInvoices = invoicesData.map((invoice: any) => {
+        // Ensure amount is a number
+        if (invoice.amount && typeof invoice.amount === 'string') {
+          invoice.amount = parseFloat(invoice.amount);
+        }
+        return invoice;
+      });
+      
+      setInvoices(processedInvoices as Invoice[]);
     } catch (error) {
       console.error("Error fetching invoices:", error);
       // Only show toast if we actually tried to fetch (user exists)
