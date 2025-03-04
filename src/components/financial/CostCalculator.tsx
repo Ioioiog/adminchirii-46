@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { DateRange } from 'react-day-picker';
-import { format, addDays, differenceInDays, isSameDay, addMonths } from 'date-fns';
+import { format, addDays, differenceInDays, isSameDay, addMonths, isWithinInterval } from 'date-fns';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Calculator, DollarSign, Info, Percent, CheckSquare, FileText } from 'lucide-react';
+import { Calendar, Calculator, DollarSign, Info, Percent, CheckSquare, FileText, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProperties } from '@/hooks/useProperties';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { InvoiceDialog } from '@/components/invoices/InvoiceDialog';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface UtilityItem {
   id: string;
@@ -133,6 +134,8 @@ const CostCalculator = () => {
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [landlordId, setLandlordId] = useState<string>('');
+  const [rentAlreadyInvoiced, setRentAlreadyInvoiced] = useState<boolean>(false);
+  const [invoicedPeriod, setInvoicedPeriod] = useState<{from: Date, to: Date} | null>(null);
 
   useEffect(() => {
     if (selectedPropertyId) {
@@ -211,24 +214,81 @@ const CostCalculator = () => {
     }
   }, [selectedDateRange]);
 
+  const checkExistingInvoices = async () => {
+    if (!selectedPropertyId || !selectedDateRange?.from || !selectedDateRange?.to) {
+      return;
+    }
+    
+    try {
+      const { data: invoices, error } = await supabase
+        .from('invoices')
+        .select('*,metadata')
+        .eq('property_id', selectedPropertyId);
+      
+      if (error) {
+        console.error('Error checking existing invoices:', error);
+        return;
+      }
+      
+      const overlappingInvoices = invoices.filter(invoice => {
+        if (!invoice.metadata?.date_range) return false;
+        
+        const invoiceFrom = new Date(invoice.metadata.date_range.from);
+        const invoiceTo = new Date(invoice.metadata.date_range.to);
+        
+        return (
+          isWithinInterval(selectedDateRange.from, { start: invoiceFrom, end: invoiceTo }) ||
+          isWithinInterval(selectedDateRange.to, { start: invoiceFrom, end: invoiceTo }) ||
+          isWithinInterval(invoiceFrom, { start: selectedDateRange.from, end: selectedDateRange.to }) ||
+          isWithinInterval(invoiceTo, { start: selectedDateRange.from, end: selectedDateRange.to })
+        );
+      });
+      
+      if (overlappingInvoices.length > 0) {
+        setRentAlreadyInvoiced(true);
+        const mostRecentInvoice = overlappingInvoices.sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )[0];
+        
+        if (mostRecentInvoice.metadata?.date_range) {
+          setInvoicedPeriod({
+            from: new Date(mostRecentInvoice.metadata.date_range.from),
+            to: new Date(mostRecentInvoice.metadata.date_range.to)
+          });
+        }
+      } else {
+        setRentAlreadyInvoiced(false);
+        setInvoicedPeriod(null);
+      }
+    } catch (error) {
+      console.error('Error in checkExistingInvoices:', error);
+    }
+  };
+
   const calculateCosts = async () => {
     if (!selectedPropertyId || !selectedDateRange?.from || !selectedDateRange?.to) {
       return;
     }
 
+    await checkExistingInvoices();
+
     const days = daysInPeriod;
     const monthlyRent = selectedProperty?.monthly_rent || 0;
     
     let periodRent;
-    if (rentCalculationType === 'full') {
-      periodRent = monthlyRent;
+    if (rentAlreadyInvoiced) {
+      periodRent = 0;
     } else {
-      const dailyRent = monthlyRent / 30;
-      periodRent = dailyRent * days;
+      if (rentCalculationType === 'full') {
+        periodRent = monthlyRent;
+      } else {
+        const dailyRent = monthlyRent / 30;
+        periodRent = dailyRent * days;
+      }
     }
     
     let calculatedVatAmount = 0;
-    if (applyVat) {
+    if (applyVat && !rentAlreadyInvoiced) {
       calculatedVatAmount = (periodRent * vatRate) / 100;
       setVatAmount(Math.round(calculatedVatAmount * 100) / 100);
     } else {
@@ -462,6 +522,17 @@ const CostCalculator = () => {
                 Cost Summary for {format(selectedDateRange?.from || new Date(), "MMM d, yyyy")} to {format(selectedDateRange?.to || addDays(new Date(), 1), "MMM d, yyyy")}
               </h4>
               
+              {rentAlreadyInvoiced && invoicedPeriod && (
+                <Alert className="mb-4 bg-amber-50 border-amber-200">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <AlertTitle className="text-amber-800">Rent already invoiced</AlertTitle>
+                  <AlertDescription className="text-amber-700">
+                    Rent has already been invoiced for this property from {format(invoicedPeriod.from, 'MMM d, yyyy')} to {format(invoicedPeriod.to, 'MMM d, yyyy')}.
+                    Only utilities will be included in this calculation.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1">
@@ -473,21 +544,27 @@ const CostCalculator = () => {
                         </TooltipTrigger>
                         <TooltipContent>
                           <div className="p-2 max-w-xs">
-                            <p className="font-semibold">Rent Calculation:</p>
-                            <p className="text-sm">
-                              {rentCalculationType === 'full' 
-                                ? 'Full month rent applied (same day of consecutive months)' 
-                                : `Daily rate (monthly rent ÷ 30) × ${daysInPeriod} days`}
-                            </p>
-                            {rentCalculationType === 'daily' && (
-                              <p className="text-xs mt-1">
-                                {formatCurrency(selectedProperty?.monthly_rent / 30, rentCurrency)} × {daysInPeriod} days
-                              </p>
-                            )}
-                            {applyVat && (
-                              <p className="text-xs mt-1">
-                                VAT ({vatRate}%): {formatCurrency(vatAmount, rentCurrency)}
-                              </p>
+                            {rentAlreadyInvoiced ? (
+                              <p className="font-semibold text-amber-600">Rent already invoiced for this period</p>
+                            ) : (
+                              <>
+                                <p className="font-semibold">Rent Calculation:</p>
+                                <p className="text-sm">
+                                  {rentCalculationType === 'full' 
+                                    ? 'Full month rent applied (same day of consecutive months)' 
+                                    : `Daily rate (monthly rent ÷ 30) × ${daysInPeriod} days`}
+                                </p>
+                                {rentCalculationType === 'daily' && (
+                                  <p className="text-xs mt-1">
+                                    {formatCurrency(selectedProperty?.monthly_rent / 30, rentCurrency)} × {daysInPeriod} days
+                                  </p>
+                                )}
+                                {applyVat && (
+                                  <p className="text-xs mt-1">
+                                    VAT ({vatRate}%): {formatCurrency(vatAmount, rentCurrency)}
+                                  </p>
+                                )}
+                              </>
                             )}
                           </div>
                         </TooltipContent>
@@ -495,17 +572,25 @@ const CostCalculator = () => {
                     </TooltipProvider>
                   </div>
                   <p className="text-xl font-bold">
-                    {formatCurrency(rentAmount, rentCurrency)}
-                    {applyVat && (
-                      <span className="block text-sm text-gray-600">
-                        + {formatCurrency(vatAmount, rentCurrency)} VAT
-                      </span>
+                    {rentAlreadyInvoiced ? (
+                      <span className="text-amber-600">Already invoiced</span>
+                    ) : (
+                      <>
+                        {formatCurrency(rentAmount, rentCurrency)}
+                        {applyVat && (
+                          <span className="block text-sm text-gray-600">
+                            + {formatCurrency(vatAmount, rentCurrency)} VAT
+                          </span>
+                        )}
+                      </>
                     )}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {rentCalculationType === 'full' 
-                      ? 'Full monthly rent' 
-                      : `${daysInPeriod} days period`}
+                    {rentAlreadyInvoiced ? 
+                      'Excluded from calculation' : 
+                      (rentCalculationType === 'full' 
+                        ? 'Full monthly rent' 
+                        : `${daysInPeriod} days period`)}
                   </p>
                 </div>
                 
