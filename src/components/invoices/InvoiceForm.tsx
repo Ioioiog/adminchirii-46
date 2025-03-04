@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -383,8 +382,8 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         : values.amount;
       
       // Calculate VAT amount if applicable
-      const vatRate = applyVat ? vatRate : 0;
-      const vatAmount = applyVat ? (rentAmount * (vatRate / 100)) : 0;
+      const currentVatRate = applyVat ? vatRate : 0;
+      const vatAmount = applyVat ? (rentAmount * (currentVatRate / 100)) : 0;
       
       // Calculate total amount including utilities
       let utilitiesTotal = 0;
