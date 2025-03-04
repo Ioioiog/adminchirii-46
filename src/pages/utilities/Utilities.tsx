@@ -7,7 +7,6 @@ import { UtilityBillsSection } from "./components/sections/UtilityBillsSection";
 import { UtilityProvidersSection } from "./components/sections/UtilityProvidersSection";
 import { MeterReadingsSection } from "./components/sections/MeterReadingsSection";
 import { CsvImporterDialog } from "./components/CsvImporterDialog";
-import CostCalculator from "@/components/financial/CostCalculator";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 
 export interface UtilityWithProperty {
@@ -262,8 +261,6 @@ const Utilities = () => {
         />;
       case "meter-readings":
         return <MeterReadingsSection userRole={userRole || "tenant"} />;
-      case "calculator":
-        return <CostCalculator />;
       default:
         return (
           <UtilityBillsSection

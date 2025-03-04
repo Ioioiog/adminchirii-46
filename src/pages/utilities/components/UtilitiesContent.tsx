@@ -8,7 +8,7 @@ import { UserRole } from "@/hooks/use-user-role";
 import { ReactNode } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-type UtilitiesSection = 'utilities' | 'providers' | 'meter-readings' | 'calculator';
+type UtilitiesSection = 'utilities' | 'providers' | 'meter-readings';
 
 interface UtilitiesContentProps {
   activeSection: UtilitiesSection;
@@ -52,13 +52,12 @@ export function UtilitiesContent({
         className="space-y-4"
         onValueChange={(value) => onTabChange(value as UtilitiesSection)}
       >
-        <TabsList className="grid grid-cols-4 w-full max-w-md">
+        <TabsList className="grid grid-cols-3 w-full max-w-md">
           <TabsTrigger value="utilities">Bills</TabsTrigger>
           {userRole === "landlord" && (
             <TabsTrigger value="providers">Providers</TabsTrigger>
           )}
           <TabsTrigger value="meter-readings">Meter Readings</TabsTrigger>
-          <TabsTrigger value="calculator">Calculator</TabsTrigger>
         </TabsList>
         <TabsContent value={activeSection}>
           {children}
