@@ -86,8 +86,10 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
             <TableHead>Type</TableHead>
             <TableHead>Property</TableHead>
             <TableHead>Amount</TableHead>
+            <TableHead>Issued Date</TableHead>
             <TableHead>Due Date</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Invoiced</TableHead>
             <TableHead>Documents</TableHead>
             {userRole === "landlord" && <TableHead>Actions</TableHead>}
           </TableRow>
@@ -107,6 +109,11 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
                   }).format(utility.amount)}
                 </TableCell>
                 <TableCell>
+                  {utility.issued_date
+                    ? format(new Date(utility.issued_date), "MMM d, yyyy")
+                    : "N/A"}
+                </TableCell>
+                <TableCell>
                   {utility.due_date
                     ? format(new Date(utility.due_date), "MMM d, yyyy")
                     : "N/A"}
@@ -115,7 +122,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
                   <Badge
                     variant={
                       utility.status === "paid"
-                        ? "success"
+                        ? "default"
                         : utility.status === "pending"
                         ? "outline"
                         : "destructive"
@@ -123,6 +130,17 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
                   >
                     {utility.status}
                   </Badge>
+                </TableCell>
+                <TableCell>
+                  {utility.invoiced ? (
+                    <Badge variant="secondary">
+                      {utility.invoiced_percentage 
+                        ? `${utility.invoiced_percentage}%` 
+                        : "Yes"}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline">No</Badge>
+                  )}
                 </TableCell>
                 <TableCell>
                   {utility.document_path ? (
@@ -178,7 +196,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={userRole === "landlord" ? 7 : 6} className="h-24 text-center">
+              <TableCell colSpan={userRole === "landlord" ? 9 : 8} className="h-24 text-center">
                 <Skeleton className="w-[800px] h-16 mx-auto" />
               </TableCell>
             </TableRow>
