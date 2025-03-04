@@ -139,7 +139,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         
         const rentInvoices = invoices?.filter(invoice => {
           const metadata = invoice.metadata as InvoiceMetadata;
-          return !metadata.utilities_included || 
+          return !metadata?.utilities_included || 
                  metadata.utilities_included.length === 0 || 
                  metadata.subtotal > 0;
         });
@@ -148,11 +148,12 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
           setRentAlreadyInvoiced(true);
           
           const latestInvoice = rentInvoices[rentInvoices.length - 1];
-          if (latestInvoice.metadata?.date_range) {
-            const { from, to } = latestInvoice.metadata.date_range;
+          const metadata = latestInvoice.metadata as InvoiceMetadata;
+          
+          if (metadata && metadata.date_range) {
             setInvoicedPeriod({
-              from: new Date(from),
-              to: new Date(to)
+              from: new Date(metadata.date_range.from),
+              to: new Date(metadata.date_range.to)
             });
           } else {
             setInvoicedPeriod({
@@ -167,7 +168,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
             
             const overlaps = rentInvoices.some(invoice => {
               const metadata = invoice.metadata as InvoiceMetadata;
-              if (metadata.date_range) {
+              if (metadata && metadata.date_range) {
                 const invoiceFrom = new Date(metadata.date_range.from);
                 const invoiceTo = new Date(metadata.date_range.to);
                 
@@ -743,7 +744,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         </div>
 
         {rentAlreadyInvoiced && invoicedPeriod && (
-          <Alert variant="warning" className="bg-amber-50 border-amber-200">
+          <Alert className="bg-amber-50 border-amber-200">
             <AlertCircle className="h-4 w-4 text-amber-600" />
             <AlertTitle className="text-amber-800">Rent already invoiced</AlertTitle>
             <AlertDescription className="text-amber-700">
