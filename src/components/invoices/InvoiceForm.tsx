@@ -479,15 +479,21 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
   };
 
   const getSelectedUtilities = () => {
-    return utilities.filter(util => util.selected).map(util => ({
-      id: util.id,
-      amount: (util.amount * util.percentage) / 100,
-      type: util.type,
-      percentage: util.percentage,
-      original_amount: util.original_amount,
-      currency: util.currency,
-      current_invoiced_percentage: util.invoiced_percentage || 0
-    }));
+    return utilities.filter(util => util.selected).map(util => {
+      // Calculate the actual amount based on the original amount and the selected percentage
+      // This makes sure we're working with the full original amount, not the already reduced one
+      const actualAmount = (util.original_amount * util.percentage) / 100;
+      
+      return {
+        id: util.id,
+        amount: actualAmount,
+        type: util.type,
+        percentage: util.percentage,
+        original_amount: util.original_amount,
+        currency: util.currency,
+        current_invoiced_percentage: util.invoiced_percentage || 0
+      };
+    });
   };
 
   const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string): number => {
@@ -819,7 +825,15 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                           displayAmount = convertCurrency(displayAmount, utilCurrency, invoiceCurrency);
                         }
                         
-                        const adjustedAmount = (displayAmount * utility.percentage) / 100;
+                        // Calculate the amount based on the remaining percentage that can be invoiced
+                        // This takes into account the original amount, not the already reduced amount
+                        let originalDisplayAmount = utility.original_amount || utility.amount;
+                        if (utilCurrency !== invoiceCurrency) {
+                          originalDisplayAmount = convertCurrency(originalDisplayAmount, utilCurrency, invoiceCurrency);
+                        }
+                        
+                        // The adjusted amount is now correctly calculated based on the original amount
+                        const adjustedAmount = (originalDisplayAmount * utility.percentage) / 100;
                         
                         const currentInvoiced = utility.invoiced_percentage || 0;
                         const willBeInvoiced = currentInvoiced + utility.percentage;
@@ -876,9 +890,9 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                               </span>
                               {utility.invoiced_percentage > 0 && (
                                 <div className="text-xs text-gray-500">
-                                  of {formatAmount(displayAmount, invoiceCurrency)}
+                                  of {formatAmount(originalDisplayAmount, invoiceCurrency)}
                                   <div className="text-xs text-amber-600">
-                                    Remaining: {formatAmount(displayAmount * (utility.remaining_percentage / 100), invoiceCurrency)}
+                                    Remaining: {formatAmount(originalDisplayAmount * (utility.remaining_percentage / 100), invoiceCurrency)}
                                   </div>
                                 </div>
                               )}
@@ -904,20 +918,4 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         <div className="flex justify-end">
           <Button 
             type="submit" 
-            disabled={isLoading || !selectedProperty || (calculateTotal() <= 0)} 
-            className="flex items-center gap-2"
-          >
-            {isLoading ? (
-              <>Creating...</>
-            ) : (
-              <>
-                <CreditCard className="h-4 w-4" />
-                Create Invoice
-              </>
-            )}
-          </Button>
-        </div>
-      </form>
-    </Form>
-  );
-}
+            disabled={isLoading || !selectedProperty || (
