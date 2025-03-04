@@ -1,5 +1,4 @@
 
-
 export interface Utility {
   Row: {
     id: string;
@@ -81,4 +80,3 @@ export interface UtilityProviderCredentials {
     end_day?: number | null;
   };
 }
-

@@ -223,6 +223,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
               <TableHead>Type</TableHead>
               <TableHead>Property</TableHead>
               <TableHead>Amount</TableHead>
+              <TableHead>Invoiced Amount</TableHead>
               <TableHead>Issued Date</TableHead>
               <TableHead>Due Date</TableHead>
               <TableHead>Status</TableHead>
@@ -257,6 +258,26 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
                       style: "currency",
                       currency: utility.currency,
                     }).format(utility.amount)}
+                  </TableCell>
+                  <TableCell>
+                    {utility.invoiced_amount ? (
+                      <span className="text-blue-600">
+                        {new Intl.NumberFormat(undefined, {
+                          style: "currency",
+                          currency: utility.currency,
+                        }).format(utility.invoiced_amount)}
+                        {utility.invoiced_amount < utility.amount && (
+                          <span className="ml-1 text-xs text-gray-500">
+                            (Remaining: {new Intl.NumberFormat(undefined, {
+                              style: "currency",
+                              currency: utility.currency,
+                            }).format(utility.amount - utility.invoiced_amount)})
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-gray-500">-</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     {utility.issued_date
@@ -301,7 +322,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
                         utilityId={utility.id}
                         documentPath={utility.document_path}
                         onDocumentDeleted={onStatusUpdate}
-                        userRole={safeUserRole} // Use our safe version here
+                        userRole={safeUserRole}
                       />
                     ) : (
                       userRole === "landlord" && (
@@ -349,7 +370,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={userRole === "landlord" ? 10 : 9} className="h-24 text-center">
+                <TableCell colSpan={userRole === "landlord" ? 11 : 10} className="h-24 text-center">
                   <Skeleton className="w-[800px] h-16 mx-auto" />
                 </TableCell>
               </TableRow>
