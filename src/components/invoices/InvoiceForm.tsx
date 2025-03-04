@@ -430,8 +430,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     utilities
       .filter(util => util.selected)
       .forEach(util => {
-        const percentage = util.percentage !== undefined ? util.percentage : 100;
-        const utilAmount = util.amount * (percentage / 100);
+        const utilAmount = util.amount;
         
         // Convert utility amount if the currency is different
         const utilCurrency = util.currency || 'EUR';
@@ -601,16 +600,16 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                     <h4 className="text-sm font-medium mb-2">Utilities:</h4>
                     <div className="space-y-2 max-h-40 overflow-y-auto">
                       {utilities.map((utility) => {
-                        const percentage = utility.percentage !== undefined ? utility.percentage : 100;
-                        
-                        const calculatedAmount = utility.amount * (percentage / 100);
+                        let displayAmount = utility.amount;
                         
                         const utilCurrency = utility.currency || 'EUR';
-                        let displayAmount = calculatedAmount;
-                        
                         if (utilCurrency !== invoiceCurrency) {
-                          displayAmount = convertCurrency(calculatedAmount, utilCurrency, invoiceCurrency);
+                          displayAmount = convertCurrency(displayAmount, utilCurrency, invoiceCurrency);
                         }
+                        
+                        const percentageText = utility.original_amount && utility.original_amount > 0 
+                          ? Math.round((utility.amount / utility.original_amount) * 100) 
+                          : null;
                         
                         return (
                           <div key={utility.id} className="flex items-center justify-between">
@@ -621,9 +620,9 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                                 onCheckedChange={(checked) => handleUtilitySelection(utility.id, !!checked)}
                               />
                               <label htmlFor={`utility-${utility.id}`} className="text-sm cursor-pointer">
-                                {utility.type} 
-                                {percentage !== 100 && (
-                                  <span className="text-xs text-gray-500 ml-1">({percentage}%)</span>
+                                {utility.type}
+                                {percentageText !== null && percentageText !== 100 && (
+                                  <span className="text-xs text-gray-500 ml-1">({percentageText}%)</span>
                                 )}
                               </label>
                             </div>
