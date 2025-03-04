@@ -29,7 +29,7 @@ export function InvoiceDetailsDialog({
 }: InvoiceDetailsDialogProps) {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { formatAmount: formatCurrencyAmount, currency: userCurrency } = useCurrency();
+  const { formatAmount: formatCurrencyAmount, currency: userCurrency, exchangeRates } = useCurrency();
 
   useEffect(() => {
     const fetchInvoiceDetails = async () => {
@@ -67,11 +67,35 @@ export function InvoiceDetailsDialog({
   }, [invoiceId, open]);
 
   // Format amount with user's preferred currency
-  const displayAmount = (amount: number) => {
-    if (invoice) {
+  const displayAmount = (amount: number, showBoth = false) => {
+    if (!invoice) return formatAmount(amount, 'USD');
+    
+    if (invoice.currency === userCurrency || !showBoth) {
       return formatCurrencyAmount(amount, invoice.currency);
     }
-    return formatAmount(amount, 'USD');
+    
+    // Show both currencies when they differ and showBoth is true
+    return `${formatAmount(amount, invoice.currency)} (${formatCurrencyAmount(amount, invoice.currency)})`;
+  };
+
+  // Calculate subtotal (amount without VAT)
+  const calculateSubtotal = () => {
+    if (!invoice) return 0;
+    return invoice.vat_rate > 0 
+      ? invoice.amount / (1 + invoice.vat_rate / 100) 
+      : invoice.amount;
+  };
+
+  // Calculate VAT amount
+  const calculateVatAmount = () => {
+    if (!invoice || invoice.vat_rate <= 0) return 0;
+    return invoice.amount - calculateSubtotal();
+  };
+
+  // Calculate utilities total
+  const calculateUtilitiesTotal = () => {
+    if (!invoice || !invoice.metadata?.utilities_included) return 0;
+    return invoice.metadata.utilities_included.reduce((sum, util) => sum + util.amount, 0);
   };
 
   if (!invoice && !isLoading) return null;
@@ -166,9 +190,15 @@ export function InvoiceDetailsDialog({
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Currency:</span>
+                          <span className="text-gray-600">Invoice Currency:</span>
                           <span className="font-medium">{invoice.currency}</span>
                         </div>
+                        {invoice.currency !== userCurrency && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Display Currency:</span>
+                            <span className="font-medium">{userCurrency}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between">
                           <span className="text-gray-600">Invoice Date:</span>
                           <span>{format(new Date(invoice.created_at), 'MMM d, yyyy')}</span>
@@ -264,11 +294,7 @@ export function InvoiceDetailsDialog({
                     <div className="grid grid-cols-12 text-sm">
                       <div className="col-span-8 text-right font-medium">Subtotal:</div>
                       <div className="col-span-4 text-right">
-                        {displayAmount(
-                          invoice.vat_rate > 0 
-                            ? invoice.amount / (1 + invoice.vat_rate / 100) 
-                            : invoice.amount
-                        )}
+                        {displayAmount(calculateSubtotal())}
                       </div>
                     </div>
                     
@@ -276,9 +302,7 @@ export function InvoiceDetailsDialog({
                       <div className="grid grid-cols-12 text-sm mt-2">
                         <div className="col-span-8 text-right font-medium">VAT ({invoice.vat_rate}%):</div>
                         <div className="col-span-4 text-right">
-                          {displayAmount(
-                            invoice.amount - (invoice.amount / (1 + invoice.vat_rate / 100))
-                          )}
+                          {displayAmount(calculateVatAmount())}
                         </div>
                       </div>
                     )}
@@ -287,7 +311,9 @@ export function InvoiceDetailsDialog({
                     
                     <div className="grid grid-cols-12 text-base font-bold">
                       <div className="col-span-8 text-right">Total Due:</div>
-                      <div className="col-span-4 text-right">{displayAmount(invoice.amount)}</div>
+                      <div className="col-span-4 text-right">
+                        {displayAmount(invoice.amount, true)}
+                      </div>
                     </div>
                     
                     {invoice.status === 'paid' && (
