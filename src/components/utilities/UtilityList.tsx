@@ -278,6 +278,22 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
     );
   }
 
+  // Utility function to display invoiced amount
+  const renderInvoicedAmount = (utility: Utility) => {
+    // If we have the explicit invoiced_amount from metadata, use it
+    if (utility.invoiced_amount !== undefined) {
+      return formatAmount(utility.invoiced_amount, utility.currency);
+    }
+
+    // If utility is invoiced and has a percentage, calculate amount
+    if (utility.invoiced && utility.invoiced_percentage) {
+      return formatAmount((utility.amount * utility.invoiced_percentage) / 100, utility.currency);
+    }
+
+    // Default case - no invoiced amount available
+    return 'N/A';
+  };
+
   return (
     <div className="rounded-md border">
       <div className="p-4 bg-gray-50 flex justify-end border-b">
@@ -369,12 +385,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
                 </div>
               </TableCell>
               <TableCell className="font-medium text-green-600">
-                {utility.invoiced_amount 
-                  ? formatAmount(utility.invoiced_amount, utility.currency)
-                  : utility.invoiced && utility.invoiced_percentage 
-                    ? formatAmount((utility.amount * utility.invoiced_percentage) / 100, utility.currency)
-                    : 'N/A'
-                }
+                {renderInvoicedAmount(utility)}
               </TableCell>
               <TableCell>
                 {utility.issued_date ? new Date(utility.issued_date).toLocaleDateString() : 'N/A'}
