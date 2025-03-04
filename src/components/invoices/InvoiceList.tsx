@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrency } from "@/hooks/useCurrency";
 import { InvoiceActions } from "@/components/invoices/InvoiceActions";
+import { InvoiceDetailsDialog } from "@/components/invoices/InvoiceDetailsDialog";
 import {
   Table,
   TableBody,
@@ -12,7 +13,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Invoice } from "@/types/invoice";
-import { useNavigate } from "react-router-dom";
 
 interface InvoiceListProps {
   invoices: Invoice[];
@@ -23,11 +23,12 @@ interface InvoiceListProps {
 export function InvoiceList({ invoices, userRole, onStatusUpdate }: InvoiceListProps) {
   const { formatAmount } = useCurrency();
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
-  const handleViewInvoice = (invoice: Invoice) => {
-    // Navigate to the invoice details page
-    navigate(`/invoices/${invoice.id}`);
+  const handleViewInvoice = (invoiceId: string) => {
+    setSelectedInvoiceId(invoiceId);
+    setDetailsDialogOpen(true);
   };
 
   return (
@@ -83,7 +84,7 @@ export function InvoiceList({ invoices, userRole, onStatusUpdate }: InvoiceListP
                     status={invoice.status}
                     userRole={userRole}
                     onStatusUpdate={onStatusUpdate}
-                    onViewInvoice={() => handleViewInvoice(invoice)}
+                    onViewInvoice={() => handleViewInvoice(invoice.id)}
                     onDelete={onStatusUpdate}
                   />
                 </TableCell>
@@ -92,6 +93,15 @@ export function InvoiceList({ invoices, userRole, onStatusUpdate }: InvoiceListP
           )}
         </TableBody>
       </Table>
+
+      {/* Add the invoice details dialog component directly */}
+      {selectedInvoiceId && (
+        <InvoiceDetailsDialog
+          open={detailsDialogOpen}
+          onOpenChange={setDetailsDialogOpen}
+          invoiceId={selectedInvoiceId}
+        />
+      )}
     </div>
   );
 }

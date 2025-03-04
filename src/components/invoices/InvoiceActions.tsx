@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FileText, CheckCircle, XCircle, Trash } from "lucide-react";
@@ -45,7 +44,6 @@ export function InvoiceActions({
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [invoiceDetailsOpen, setInvoiceDetailsOpen] = useState(false);
 
   const handleStatusUpdate = async (newStatus: 'pending' | 'paid' | 'overdue') => {
     try {
@@ -81,7 +79,6 @@ export function InvoiceActions({
     try {
       setIsUpdating(true);
       
-      // Find any utilities that were included in this invoice and update them
       const { data: invoiceData, error: fetchError } = await supabase
         .from("invoices")
         .select("metadata")
@@ -90,16 +87,13 @@ export function InvoiceActions({
         
       if (fetchError) throw fetchError;
       
-      // If the invoice included utilities, update their status
       if (invoiceData?.metadata) {
-        // Safely cast metadata to our expected structure
         const metadata = invoiceData.metadata as InvoiceMetadata;
         
         if (metadata && metadata.utilities_included && Array.isArray(metadata.utilities_included)) {
           const utilities = metadata.utilities_included;
           
           for (const utility of utilities) {
-            // Reset the utility to not be invoiced
             await supabase
               .from("utilities")
               .update({ 
@@ -111,7 +105,6 @@ export function InvoiceActions({
         }
       }
       
-      // Delete the invoice
       const { error } = await supabase
         .from("invoices")
         .delete()
@@ -141,7 +134,6 @@ export function InvoiceActions({
   };
 
   const handleViewInvoice = () => {
-    setInvoiceDetailsOpen(true);
     if (onViewInvoice) {
       onViewInvoice();
     }
@@ -207,7 +199,6 @@ export function InvoiceActions({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -230,13 +221,6 @@ export function InvoiceActions({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Invoice Details Dialog */}
-      <InvoiceDetailsDialog 
-        open={invoiceDetailsOpen} 
-        onOpenChange={setInvoiceDetailsOpen} 
-        invoiceId={invoiceId} 
-      />
     </>
   );
 }
