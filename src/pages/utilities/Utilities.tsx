@@ -24,6 +24,7 @@ export interface UtilityWithProperty {
   invoiced?: boolean;
   invoiced_percentage?: number;
   metadata_amount?: number;
+  document_path?: string | null;
   property?: {
     name: string;
     address: string;
@@ -95,6 +96,7 @@ const Utilities = () => {
           invoiced,
           invoiced_percentage,
           metadata_amount,
+          document_path,
           property:properties (
             name,
             address
