@@ -2,6 +2,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { format } from "date-fns"
+import { useEffect } from "react"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -18,20 +19,22 @@ export function formatAmount(amount: number, currency: string = "USD"): string {
   }).format(amount);
 }
 
-// Add a new utility function to create safe effects
-export function createSafeEffect<T extends any[]>(
+// Utility function to create a safe effect hook that prevents state updates after unmount
+export function useSafeEffect<T extends any[]>(
   effect: (isMounted: () => boolean, ...args: T) => void | (() => void),
   deps: React.DependencyList
-): void {
-  let mounted = true;
-  const isMounted = () => mounted;
-  
-  const cleanup = effect(isMounted);
-  
-  return () => {
-    mounted = false;
-    if (typeof cleanup === 'function') {
-      cleanup();
-    }
-  };
+) {
+  useEffect(() => {
+    let mounted = true;
+    const isMounted = () => mounted;
+    
+    const cleanup = effect(isMounted);
+    
+    return () => {
+      mounted = false;
+      if (typeof cleanup === 'function') {
+        cleanup();
+      }
+    };
+  }, deps);
 }
