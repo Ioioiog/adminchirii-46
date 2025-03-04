@@ -276,7 +276,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
               <TableCell className="font-medium text-blue-600">
                 <div className="flex items-center">
                   {formatAmount(utility.amount, utility.currency)}
-                  {utility.invoiced && utility.invoiced_percentage && utility.invoiced_percentage < 100 && (
+                  {utility.invoiced_percentage && utility.invoiced_percentage > 0 && utility.invoiced_percentage < 100 && (
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger>
@@ -286,10 +286,23 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
                           </Badge>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Partially invoiced at {utility.invoiced_percentage}%</p>
+                          <p className="text-sm">
+                            Partially invoiced: {utility.invoiced_percentage}%
+                            <br />
+                            Original amount: {formatAmount(utility.amount, utility.currency)}
+                            <br />
+                            Invoiced amount: {formatAmount((utility.amount * utility.invoiced_percentage) / 100, utility.currency)}
+                            <br />
+                            Remaining: {formatAmount((utility.amount * (100 - utility.invoiced_percentage)) / 100, utility.currency)}
+                          </p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
+                  )}
+                  {utility.invoiced_percentage && utility.invoiced_percentage === 100 && (
+                    <Badge className="ml-2 bg-green-100 text-green-800 hover:bg-green-200">
+                      Fully Invoiced
+                    </Badge>
                   )}
                 </div>
               </TableCell>
