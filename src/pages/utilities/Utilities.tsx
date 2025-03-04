@@ -49,9 +49,23 @@ const Utilities = () => {
   const [editingProvider, setEditingProvider] = useState<any>(null);
 
   useEffect(() => {
+    let isMounted = true;
+    
     if (userId) {
-      fetchUtilities();
+      const fetchData = async () => {
+        try {
+          await fetchUtilities();
+        } catch (error) {
+          console.error("Error in fetchData:", error);
+        }
+      };
+      
+      fetchData();
     }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [userId, userRole, searchTerm, statusFilter, typeFilter, propertyFilter]);
 
   const fetchUtilities = async () => {
@@ -135,9 +149,9 @@ const Utilities = () => {
       
       // Apply type filter with proper type handling
       if (typeFilter !== 'all') {
-        // Use a type assertion to ensure typeFilter is of the correct type
-        // This is safe because we're checking against valid utility types in the UI
-        query = query.eq('type', typeFilter as any);
+        // Use a type assertion to handle the string type safely
+        const safeTypeFilter = typeFilter as "electricity" | "water" | "gas" | "internet" | "building maintenance" | "other";
+        query = query.eq('type', safeTypeFilter);
       }
       
       // Apply property filter
@@ -278,6 +292,19 @@ const Utilities = () => {
     }
   };
 
+  // Load providers when component mounts or user role changes
+  useEffect(() => {
+    let isMounted = true;
+    
+    if (userRole === 'landlord' && userId) {
+      fetchProviders();
+    }
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [userRole, userId]);
+
   // If the user ID is not available yet, we're still loading
   if (!userId) {
     return <div>Loading...</div>;
@@ -285,13 +312,6 @@ const Utilities = () => {
 
   // Create a new filtered utilities array for the utilities content
   const filteredUtilities = utilities;
-
-  // Load providers when component mounts or user role changes
-  useEffect(() => {
-    if (userRole === 'landlord' && userId) {
-      fetchProviders();
-    }
-  }, [userRole, userId]);
 
   return (
     <>

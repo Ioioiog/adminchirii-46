@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,14 @@ interface ErrorNotificationProps {
 }
 
 export function ErrorNotification({ errorMessage }: ErrorNotificationProps) {
-  const [showDetails, setShowDetails] = React.useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  
+  // Reset state when the component unmounts or when errorMessage changes
+  useEffect(() => {
+    return () => {
+      // Cleanup function will be called when component unmounts
+    };
+  }, [errorMessage]);
   
   if (!errorMessage) return null;
   

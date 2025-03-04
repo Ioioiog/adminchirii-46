@@ -17,3 +17,21 @@ export function formatAmount(amount: number, currency: string = "USD"): string {
     currency,
   }).format(amount);
 }
+
+// Add a new utility function to create safe effects
+export function createSafeEffect<T extends any[]>(
+  effect: (isMounted: () => boolean, ...args: T) => void | (() => void),
+  deps: React.DependencyList
+): void {
+  let mounted = true;
+  const isMounted = () => mounted;
+  
+  const cleanup = effect(isMounted);
+  
+  return () => {
+    mounted = false;
+    if (typeof cleanup === 'function') {
+      cleanup();
+    }
+  };
+}

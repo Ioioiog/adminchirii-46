@@ -32,7 +32,7 @@ interface UtilitiesContentProps {
   onDeleteProvider: (id: string) => Promise<void>;
   onEditProvider: (provider: UtilityProvider) => void;
   setShowCsvImporter: (value: boolean) => void;
-  children?: ReactNode; // Add children prop
+  children?: ReactNode; // This is needed to properly type the children prop
 }
 
 export function UtilitiesContent({
@@ -40,6 +40,7 @@ export function UtilitiesContent({
   userRole,
   children
 }: UtilitiesContentProps) {
+  // Return null early if the user role is invalid
   if (userRole !== "landlord" && userRole !== "tenant") return null;
 
   return (
