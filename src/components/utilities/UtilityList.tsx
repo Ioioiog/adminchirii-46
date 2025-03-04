@@ -234,23 +234,39 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
   }
 
   const renderInvoicedAmount = (utility: Utility) => {
-    if (utility.metadata_amount !== undefined) {
-      return formatAmount(utility.metadata_amount, utility.currency);
-    }
+    const invoicedAmount = utility.metadata_amount !== undefined
+      ? utility.metadata_amount
+      : utility.metadataAmount !== undefined
+        ? utility.metadataAmount
+        : utility.invoiced_amount !== undefined
+          ? utility.invoiced_amount
+          : utility.invoiced && utility.invoiced_percentage
+            ? (utility.amount * utility.invoiced_percentage) / 100
+            : null;
     
-    if (utility.metadataAmount !== undefined) {
-      return formatAmount(utility.metadataAmount, utility.currency);
-    }
+    const remainingAmount = invoicedAmount !== null 
+      ? utility.amount - invoicedAmount
+      : null;
     
-    if (utility.invoiced_amount !== undefined) {
-      return formatAmount(utility.invoiced_amount, utility.currency);
+    if (invoicedAmount === null) {
+      return 'N/A';
     }
 
-    if (utility.invoiced && utility.invoiced_percentage) {
-      return formatAmount((utility.amount * utility.invoiced_percentage) / 100, utility.currency);
-    }
-
-    return 'N/A';
+    return (
+      <div className="flex flex-col">
+        <div>{formatAmount(invoicedAmount, utility.currency)}</div>
+        {remainingAmount !== null && remainingAmount > 0 && (
+          <div className="text-sm text-amber-600 mt-1">
+            Remaining: {formatAmount(remainingAmount, utility.currency)}
+          </div>
+        )}
+        {remainingAmount !== null && remainingAmount <= 0 && (
+          <div className="text-sm text-green-600 mt-1">
+            Fully paid
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
