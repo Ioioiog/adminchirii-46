@@ -1,3 +1,4 @@
+
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -370,8 +371,8 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
               <TableCell className="font-medium text-green-600">
                 {utility.invoiced_amount 
                   ? formatAmount(utility.invoiced_amount, utility.currency)
-                  : utility.invoiced 
-                    ? formatAmount((utility.amount * (utility.invoiced_percentage || 100)) / 100, utility.currency)
+                  : utility.invoiced && utility.invoiced_percentage 
+                    ? formatAmount((utility.amount * utility.invoiced_percentage) / 100, utility.currency)
                     : 'N/A'
                 }
               </TableCell>
