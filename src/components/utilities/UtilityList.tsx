@@ -115,7 +115,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
                   <Badge
                     variant={
                       utility.status === "paid"
-                        ? "success"
+                        ? "default"
                         : utility.status === "pending"
                         ? "outline"
                         : "destructive"
@@ -130,7 +130,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
                       utilityId={utility.id}
                       documentPath={utility.document_path}
                       onDocumentDeleted={onStatusUpdate}
-                      userRole={userRole}
+                      userRole={userRole === "landlord" ? "landlord" : "tenant"}
                     />
                   ) : (
                     userRole === "landlord" && (

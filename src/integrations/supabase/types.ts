@@ -2136,6 +2136,7 @@ export type Database = {
           amount: number
           created_at: string
           currency: string
+          document_path: string | null
           due_date: string
           id: string
           invoice_number: string | null
@@ -2154,6 +2155,7 @@ export type Database = {
           amount: number
           created_at?: string
           currency?: string
+          document_path?: string | null
           due_date: string
           id?: string
           invoice_number?: string | null
@@ -2172,6 +2174,7 @@ export type Database = {
           amount?: number
           created_at?: string
           currency?: string
+          document_path?: string | null
           due_date?: string
           id?: string
           invoice_number?: string | null

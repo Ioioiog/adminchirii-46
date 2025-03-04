@@ -1,4 +1,3 @@
-
 export interface Utility {
   Row: {
     id: string;
@@ -12,6 +11,7 @@ export interface Utility {
     status: string;
     created_at: string;
     updated_at: string;
+    document_path: string | null;
   };
   Insert: {
     id?: string;
@@ -23,6 +23,7 @@ export interface Utility {
     issued_date?: string | null;
     invoice_number?: string | null;
     status?: string;
+    document_path?: string | null;
   };
   Update: {
     type?: string;
@@ -32,6 +33,7 @@ export interface Utility {
     issued_date?: string | null;
     invoice_number?: string | null;
     status?: string;
+    document_path?: string | null;
   };
 }
 
