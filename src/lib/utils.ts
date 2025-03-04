@@ -20,8 +20,8 @@ export function formatAmount(amount: number, currency: string = "USD"): string {
 }
 
 // Utility function to create a safe effect hook that prevents state updates after unmount
-export function useSafeEffect<T extends any[]>(
-  effect: (isMounted: () => boolean, ...args: T) => void | (() => void),
+export function useSafeEffect(
+  effect: (isMounted: () => boolean) => void | (() => void),
   deps: React.DependencyList
 ) {
   useEffect(() => {
