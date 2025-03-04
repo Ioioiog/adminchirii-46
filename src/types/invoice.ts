@@ -27,6 +27,8 @@ export interface UtilityItem {
   due_date: string;
   percentage?: number;
   original_amount?: number;
+  currency?: string;
+  invoiced_percentage?: number;
 }
 
 export interface InvoiceMetadata {
@@ -111,11 +113,17 @@ export interface CalculationData {
   };
   currency?: string;
   grandTotal?: number;
-  utilities?: Array<{
-    id: string;
-    type: string;
-    amount: number;
-    percentage?: number;
-    original_amount?: number;
-  }>;
+  utilities?: UtilityItem[];
+}
+
+export interface UtilityForInvoice {
+  id: string;
+  type: string;
+  amount: number;
+  percentage?: number;
+  original_amount?: number;
+  selected?: boolean;
+  currency?: string;
+  invoiced_percentage?: number;
+  is_partially_invoiced?: boolean;
 }

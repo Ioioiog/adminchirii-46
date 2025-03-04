@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { FileText, Building, CreditCard, Calculator } from "lucide-react";
-import { InvoiceFormProps, InvoiceMetadata } from "@/types/invoice";
+import { InvoiceFormProps, InvoiceMetadata, UtilityForInvoice } from "@/types/invoice";
 import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -35,16 +35,6 @@ interface InvoiceSettings {
   apply_vat?: boolean;
   vat_rate?: number;
   [key: string]: any;
-}
-
-interface UtilityForInvoice {
-  id: string;
-  type: string;
-  amount: number;
-  percentage?: number;
-  original_amount?: number;
-  selected?: boolean;
-  currency?: string;
 }
 
 export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: InvoiceFormProps) {
