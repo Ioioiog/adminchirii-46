@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -479,18 +478,24 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     );
   };
 
+  const getAdjustedUtilityAmount = (utility: UtilityForInvoice): number => {
+    if (!utility.selected) return 0;
+    const percentage = utility.percentage || 100;
+    const remainingPercentage = 100 - (utility.invoiced_percentage || 0);
+    const adjustableAmount = (utility.original_amount || utility.amount) * remainingPercentage / 100;
+    return (adjustableAmount * percentage) / 100;
+  };
+
   const getSelectedUtilities = () => {
     return utilities.filter(util => util.selected).map(util => {
-      // Calculate the actual amount based on the original amount and the selected percentage
-      // This makes sure we're working with the full original amount, not the already reduced one
-      const actualAmount = (util.original_amount * util.percentage) / 100;
+      const actualAmount = getAdjustedUtilityAmount(util);
       
       return {
         id: util.id,
         amount: actualAmount,
         type: util.type,
         percentage: util.percentage,
-        original_amount: util.original_amount,
+        original_amount: util.original_amount || util.amount,
         currency: util.currency,
         current_invoiced_percentage: util.invoiced_percentage || 0
       };
@@ -533,7 +538,6 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
 
       const rentCurrency = selectedProperty?.currency || 'EUR';
       
-      // For consistent calculation, pass 0 for rent amount if it's already invoiced
       const baseRentAmount = rentAlreadyInvoiced ? 0 : values.amount;
       
       const rentAmount = rentCurrency !== invoiceCurrency 
@@ -557,7 +561,6 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       
       const totalAmount = rentAmount + vatAmount + utilitiesTotal;
       
-      // Make sure the metadata includes the correct calculation breakdown
       metadata.subtotal = rentAmount;
       metadata.vat_amount = vatAmount;
       metadata.utilities_total = utilitiesTotal;
@@ -649,7 +652,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     utilities
       .filter(util => util.selected)
       .forEach(util => {
-        const utilAmount = (util.original_amount * util.percentage) / 100;
+        const utilAmount = getAdjustedUtilityAmount(util);
         
         const utilCurrency = util.currency || 'EUR';
         if (utilCurrency !== invoiceCurrency) {
@@ -834,22 +837,19 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                     <h4 className="text-sm font-medium mb-2">Utilities:</h4>
                     <div className="space-y-2 max-h-40 overflow-y-auto">
                       {utilities.map((utility) => {
-                        let displayAmount = utility.amount;
+                        const adjustedAmount = getAdjustedUtilityAmount(utility);
                         
                         const utilCurrency = utility.currency || 'EUR';
+                        let displayAmount = adjustedAmount;
+                        
                         if (utilCurrency !== invoiceCurrency) {
-                          displayAmount = convertCurrency(displayAmount, utilCurrency, invoiceCurrency);
+                          displayAmount = convertCurrency(adjustedAmount, utilCurrency, invoiceCurrency);
                         }
                         
-                        // Calculate the amount based on the remaining percentage that can be invoiced
-                        // This takes into account the original amount, not the already reduced amount
-                        let originalDisplayAmount = utility.original_amount || utility.amount;
+                        const originalDisplayAmount = utility.original_amount || utility.amount;
                         if (utilCurrency !== invoiceCurrency) {
                           originalDisplayAmount = convertCurrency(originalDisplayAmount, utilCurrency, invoiceCurrency);
                         }
-                        
-                        // The adjusted amount is now correctly calculated based on the original amount
-                        const adjustedAmount = (originalDisplayAmount * utility.percentage) / 100;
                         
                         const currentInvoiced = utility.invoiced_percentage || 0;
                         const willBeInvoiced = currentInvoiced + utility.percentage;
@@ -902,7 +902,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                             </div>
                             <div className="text-right">
                               <span className="text-sm font-medium">
-                                {formatAmount(adjustedAmount, invoiceCurrency)}
+                                {formatAmount(displayAmount, invoiceCurrency)}
                               </span>
                               {utility.invoiced_percentage > 0 && (
                                 <div className="text-xs text-gray-500">
@@ -946,4 +946,3 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     </Form>
   );
 }
-
