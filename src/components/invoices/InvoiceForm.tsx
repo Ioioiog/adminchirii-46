@@ -8,14 +8,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { FileText, Building, CreditCard, Calculator } from "lucide-react";
+import { FileText, Building, CreditCard, Calculator, AlertCircle } from "lucide-react";
 import { InvoiceFormProps, InvoiceMetadata, UtilityForInvoice } from "@/types/invoice";
 import { Card, CardContent } from "@/components/ui/card";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatAmount } from "@/lib/utils";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface InvoiceFormValues {
   property_id: string;
@@ -49,6 +50,8 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
   const [vatRate, setVatRate] = useState<number>(19);
   const [invoiceCurrency, setInvoiceCurrency] = useState<string>(calculationData?.currency || 'EUR');
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
+  const [rentAlreadyInvoiced, setRentAlreadyInvoiced] = useState<boolean>(false);
+  const [invoicedPeriod, setInvoicedPeriod] = useState<{from: Date, to: Date} | null>(null);
 
   const formSchema = z.object({
     property_id: z.string({ required_error: "Please select a property" }),
@@ -112,6 +115,90 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       })));
     }
   }, [calculationData, form]);
+
+  useEffect(() => {
+    const checkExistingInvoices = async () => {
+      if (!propertyId) return;
+      
+      try {
+        const currentDate = new Date();
+        const firstDayOfMonth = startOfMonth(currentDate);
+        const lastDayOfMonth = endOfMonth(currentDate);
+        
+        const { data: invoices, error } = await supabase
+          .from('invoices')
+          .select('id, created_at, metadata, amount')
+          .eq('property_id', propertyId)
+          .gte('created_at', firstDayOfMonth.toISOString())
+          .lte('created_at', lastDayOfMonth.toISOString());
+        
+        if (error) {
+          console.error('Error checking existing invoices:', error);
+          return;
+        }
+        
+        const rentInvoices = invoices?.filter(invoice => {
+          const metadata = invoice.metadata as InvoiceMetadata;
+          return !metadata.utilities_included || 
+                 metadata.utilities_included.length === 0 || 
+                 metadata.subtotal > 0;
+        });
+        
+        if (rentInvoices && rentInvoices.length > 0) {
+          setRentAlreadyInvoiced(true);
+          
+          const latestInvoice = rentInvoices[rentInvoices.length - 1];
+          if (latestInvoice.metadata?.date_range) {
+            const { from, to } = latestInvoice.metadata.date_range;
+            setInvoicedPeriod({
+              from: new Date(from),
+              to: new Date(to)
+            });
+          } else {
+            setInvoicedPeriod({
+              from: firstDayOfMonth,
+              to: lastDayOfMonth
+            });
+          }
+          
+          if (calculationData?.dateRange) {
+            const calcFrom = calculationData.dateRange.from;
+            const calcTo = calculationData.dateRange.to;
+            
+            const overlaps = rentInvoices.some(invoice => {
+              const metadata = invoice.metadata as InvoiceMetadata;
+              if (metadata.date_range) {
+                const invoiceFrom = new Date(metadata.date_range.from);
+                const invoiceTo = new Date(metadata.date_range.to);
+                
+                return (
+                  isWithinInterval(calcFrom, { start: invoiceFrom, end: invoiceTo }) ||
+                  isWithinInterval(calcTo, { start: invoiceFrom, end: invoiceTo }) ||
+                  isWithinInterval(invoiceFrom, { start: calcFrom, end: calcTo }) ||
+                  isWithinInterval(invoiceTo, { start: calcFrom, end: calcTo })
+                );
+              }
+              
+              return true;
+            });
+            
+            if (overlaps) {
+              form.setValue("amount", 0);
+            }
+          } else {
+            form.setValue("amount", 0);
+          }
+        } else {
+          setRentAlreadyInvoiced(false);
+          setInvoicedPeriod(null);
+        }
+      } catch (error) {
+        console.error('Error in checkExistingInvoices:', error);
+      }
+    };
+    
+    checkExistingInvoices();
+  }, [propertyId, calculationData, form]);
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -250,13 +337,17 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
   }, [propertyId, userRole, toast, form]);
 
   useEffect(() => {
-    if (selectedProperty) {
+    if (selectedProperty && !rentAlreadyInvoiced) {
       form.setValue("amount", selectedProperty.monthly_rent);
       if (!calculationData?.currency) {
         setInvoiceCurrency(selectedProperty.currency || 'EUR');
       }
+    } else if (selectedProperty && rentAlreadyInvoiced) {
+      if (!calculationData?.rentAmount) {
+        form.setValue("amount", 0);
+      }
     }
-  }, [selectedProperty, form, calculationData?.currency]);
+  }, [selectedProperty, form, calculationData?.currency, rentAlreadyInvoiced, calculationData?.rentAmount]);
 
   useEffect(() => {
     if (defaultTenantId && userRole === "landlord") {
@@ -433,8 +524,8 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       let utilitiesTotal = 0;
       selectedUtils.forEach(util => {
         const utilAmount = util.amount;
-        const utilCurrency = util.currency || 'EUR';
         
+        const utilCurrency = util.currency || 'EUR';
         if (utilCurrency !== invoiceCurrency) {
           utilitiesTotal += convertCurrency(utilAmount, utilCurrency, invoiceCurrency);
         } else {
@@ -636,14 +727,31 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                     step="0.01"
                     {...field}
                     onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                    disabled={isLoading || !!calculationData?.rentAmount}
+                    disabled={isLoading || !!calculationData?.rentAmount || rentAlreadyInvoiced}
                   />
                 </FormControl>
+                {rentAlreadyInvoiced && (
+                  <div className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" /> 
+                    Rent already invoiced for this period
+                  </div>
+                )}
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
+
+        {rentAlreadyInvoiced && invoicedPeriod && (
+          <Alert variant="warning" className="bg-amber-50 border-amber-200">
+            <AlertCircle className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="text-amber-800">Rent already invoiced</AlertTitle>
+            <AlertDescription className="text-amber-700">
+              Rent has already been invoiced for this property from {format(invoicedPeriod.from, 'MMM d, yyyy')} to {format(invoicedPeriod.to, 'MMM d, yyyy')}.
+              {form.getValues("amount") === 0 ? " Only utilities will be included in this invoice." : " Adding rent again may result in double-charging."}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Card className="border bg-slate-100">
           <CardContent className="pt-6">
@@ -671,6 +779,9 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                         ? convertCurrency(form.getValues("amount"), selectedProperty.currency, invoiceCurrency)
                         : form.getValues("amount"), 
                       invoiceCurrency
+                    )}
+                    {rentAlreadyInvoiced && form.getValues("amount") === 0 && (
+                      <span className="ml-2 text-xs text-amber-600">(skipped - already invoiced)</span>
                     )}
                   </span>
                 </div>
@@ -770,7 +881,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         <div className="flex justify-end">
           <Button 
             type="submit" 
-            disabled={isLoading || !selectedProperty} 
+            disabled={isLoading || !selectedProperty || (calculateTotal() <= 0)} 
             className="flex items-center gap-2"
           >
             {isLoading ? (
