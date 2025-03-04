@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useUserRole } from "@/hooks/use-user-role";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +7,7 @@ import { UtilityBillsSection } from "./components/sections/UtilityBillsSection";
 import { UtilityProvidersSection } from "./components/sections/UtilityProvidersSection";
 import { MeterReadingsSection } from "./components/sections/MeterReadingsSection";
 import { CsvImporterDialog } from "./components/CsvImporterDialog";
-import CostCalculator from "@/components/financial/CostCalculator"; // Fixed import
+import CostCalculator from "@/components/financial/CostCalculator";
 
 export interface UtilityWithProperty {
   id: string;
@@ -43,7 +42,6 @@ const Utilities = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [showCsvImporter, setShowCsvImporter] = useState<boolean>(false);
   
-  // Add a state for managing provider section
   const [providers, setProviders] = useState<any[]>([]);
   const [isProviderLoading, setIsProviderLoading] = useState<boolean>(true);
   const [showProviderForm, setShowProviderForm] = useState<boolean>(false);
@@ -103,9 +101,7 @@ const Utilities = () => {
           )
         `);
 
-      // Apply userRole filter
       if (userRole === 'tenant') {
-        // Get properties assigned to this tenant
         const { data: tenancies } = await supabase
           .from('tenancies')
           .select('property_id')
@@ -116,13 +112,11 @@ const Utilities = () => {
           const propertyIds = tenancies.map(t => t.property_id);
           query = query.in('property_id', propertyIds);
         } else {
-          // No properties assigned to this tenant
           setUtilities([]);
           setIsLoading(false);
           return;
         }
       } else if (userRole === 'landlord') {
-        // Get properties owned by this landlord
         const { data: properties } = await supabase
           .from('properties')
           .select('id')
@@ -132,31 +126,25 @@ const Utilities = () => {
           const propertyIds = properties.map(p => p.id);
           query = query.in('property_id', propertyIds);
         } else {
-          // No properties owned by this landlord
           setUtilities([]);
           setIsLoading(false);
           return;
         }
       }
 
-      // Apply search filter (simple implementation)
       if (searchTerm) {
         query = query.or(`type.ilike.%${searchTerm}%,invoice_number.ilike.%${searchTerm}%`);
       }
       
-      // Apply status filter
       if (statusFilter !== 'all') {
         query = query.eq('status', statusFilter);
       }
       
-      // Apply type filter with proper type handling
       if (typeFilter !== 'all') {
-        // Use a type assertion to handle the string type safely
         const safeTypeFilter = typeFilter as "electricity" | "water" | "gas" | "internet" | "building maintenance" | "other";
         query = query.eq('type', safeTypeFilter);
       }
       
-      // Apply property filter
       if (propertyFilter !== 'all') {
         query = query.eq('property_id', propertyFilter);
       }
@@ -180,7 +168,6 @@ const Utilities = () => {
     }
   };
 
-  // Handler for provider deletion
   const handleDeleteProvider = async (id: string) => {
     try {
       const { error } = await supabase
@@ -190,7 +177,6 @@ const Utilities = () => {
       
       if (error) throw error;
       
-      // Refetch providers
       fetchProviders();
       
       toast({
@@ -207,13 +193,11 @@ const Utilities = () => {
     }
   };
 
-  // Handler for provider editing
   const handleEditProvider = (provider: any) => {
     setEditingProvider(provider);
     setShowProviderForm(true);
   };
 
-  // Function to fetch utility providers
   const fetchProviders = async () => {
     if (userRole !== 'landlord' || !userId) return;
     
@@ -239,7 +223,11 @@ const Utilities = () => {
     }
   };
 
-  // Render the appropriate section based on activeTab
+  const handleTabChange = (tabId: string) => {
+    console.log("Tab changed to:", tabId);
+    setActiveTab(tabId);
+  };
+
   const renderActiveSection = () => {
     switch (activeTab) {
       case "utilities":
@@ -294,7 +282,6 @@ const Utilities = () => {
     }
   };
 
-  // Load providers when component mounts or user role changes
   useEffect(() => {
     let isMounted = true;
     
@@ -307,12 +294,10 @@ const Utilities = () => {
     };
   }, [userRole, userId]);
 
-  // If the user ID is not available yet, we're still loading
   if (!userId) {
     return <div>Loading...</div>;
   }
 
-  // Create a new filtered utilities array for the utilities content
   const filteredUtilities = utilities;
 
   return (
@@ -339,6 +324,7 @@ const Utilities = () => {
         onDeleteProvider={handleDeleteProvider}
         onEditProvider={handleEditProvider}
         setShowCsvImporter={setShowCsvImporter}
+        onTabChange={handleTabChange}
       >
         {renderActiveSection()}
       </UtilitiesContent>

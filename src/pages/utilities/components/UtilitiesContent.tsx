@@ -32,20 +32,26 @@ interface UtilitiesContentProps {
   onDeleteProvider: (id: string) => Promise<void>;
   onEditProvider: (provider: UtilityProvider) => void;
   setShowCsvImporter: (value: boolean) => void;
-  children?: ReactNode; // This is needed to properly type the children prop
+  children?: ReactNode;
+  onTabChange: (value: UtilitiesSection) => void; // Add this prop to handle tab changes
 }
 
 export function UtilitiesContent({
   activeSection,
   userRole,
-  children
+  children,
+  onTabChange
 }: UtilitiesContentProps) {
   // Return null early if the user role is invalid
   if (userRole !== "landlord" && userRole !== "tenant") return null;
 
   return (
     <div className="container mx-auto p-4 max-w-7xl">
-      <Tabs value={activeSection} className="space-y-4">
+      <Tabs 
+        value={activeSection} 
+        className="space-y-4"
+        onValueChange={(value) => onTabChange(value as UtilitiesSection)} // Add this handler
+      >
         <TabsList className="grid grid-cols-4 w-full max-w-md">
           <TabsTrigger value="utilities">Bills</TabsTrigger>
           {userRole === "landlord" && (
