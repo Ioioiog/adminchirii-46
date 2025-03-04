@@ -1,3 +1,4 @@
+
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +41,7 @@ interface Utility {
     name: string;
     address: string;
   } | null;
+  invoiced_amount?: number;
 }
 
 interface UtilityListProps {
@@ -48,7 +50,7 @@ interface UtilityListProps {
   onStatusUpdate?: () => void;
 }
 
-type SortField = "due_date" | "issued_date" | "amount" | "type" | "status";
+type SortField = "due_date" | "issued_date" | "amount" | "type" | "status" | "invoiced_amount";
 type SortDirection = "asc" | "desc";
 
 export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityListProps) {
@@ -56,9 +58,57 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
   const { formatAmount } = useCurrency();
   const [sortField, setSortField] = useState<SortField>("due_date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [utilitiesWithInvoiceData, setUtilitiesWithInvoiceData] = useState<Utility[]>([]);
 
   console.log('UtilityList - Received utilities:', utilities);
   console.log('UtilityList - User role:', userRole);
+
+  useEffect(() => {
+    const fetchInvoiceData = async () => {
+      try {
+        const enhancedUtilities = [...utilities];
+        
+        for (let i = 0; i < enhancedUtilities.length; i++) {
+          const utility = enhancedUtilities[i];
+          if (utility.invoiced) {
+            const { data: invoices, error } = await supabase
+              .from('invoices')
+              .select('metadata')
+              .eq('status', 'paid')
+              .contains('metadata', { utilities_included: [{ id: utility.id }] });
+            
+            if (error) throw error;
+            
+            if (invoices && invoices.length > 0) {
+              const invoiceMetadata = invoices[0].metadata;
+              if (invoiceMetadata && invoiceMetadata.utilities_included) {
+                const utilityInInvoice = invoiceMetadata.utilities_included.find(
+                  (u: any) => u.id === utility.id
+                );
+                
+                if (utilityInInvoice && utilityInInvoice.amount) {
+                  enhancedUtilities[i] = {
+                    ...utility,
+                    invoiced_amount: utilityInInvoice.amount
+                  };
+                }
+              }
+            }
+          }
+        }
+        
+        setUtilitiesWithInvoiceData(enhancedUtilities);
+      } catch (error) {
+        console.error("Error fetching invoice data:", error);
+      }
+    };
+    
+    if (utilities.length > 0) {
+      fetchInvoiceData();
+    } else {
+      setUtilitiesWithInvoiceData([]);
+    }
+  }, [utilities]);
 
   const handleStatusUpdate = async (utilityId: string, newStatus: string) => {
     try {
@@ -175,13 +225,17 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
     }
   };
 
-  const sortedUtilities = [...utilities].sort((a, b) => {
+  const sortedUtilities = [...utilitiesWithInvoiceData].sort((a, b) => {
     let valueA, valueB;
     
     switch (sortField) {
       case "amount":
         valueA = a.amount;
         valueB = b.amount;
+        break;
+      case "invoiced_amount":
+        valueA = a.invoiced_amount || 0;
+        valueB = b.invoiced_amount || 0;
         break;
       case "due_date":
         valueA = new Date(a.due_date).getTime();
@@ -240,6 +294,9 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
             <DropdownMenuItem onClick={() => handleSort("amount")}>
               Amount {sortField === "amount" && (sortDirection === "asc" ? "↑" : "↓")}
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleSort("invoiced_amount")}>
+              Invoiced Amount {sortField === "invoiced_amount" && (sortDirection === "asc" ? "↑" : "↓")}
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleSort("type")}>
               Type {sortField === "type" && (sortDirection === "asc" ? "↑" : "↓")}
             </DropdownMenuItem>
@@ -256,6 +313,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
             <TableHead>Type</TableHead>
             <TableHead>Invoice #</TableHead>
             <TableHead>Amount</TableHead>
+            <TableHead>Invoiced Amount</TableHead>
             <TableHead>Issued Date</TableHead>
             <TableHead>Due Date</TableHead>
             <TableHead>Status</TableHead>
@@ -306,6 +364,14 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
                   )}
                 </div>
               </TableCell>
+              <TableCell className="font-medium text-green-600">
+                {utility.invoiced_amount 
+                  ? formatAmount(utility.invoiced_amount, utility.currency)
+                  : utility.invoiced 
+                    ? formatAmount((utility.amount * (utility.invoiced_percentage || 100)) / 100, utility.currency)
+                    : 'N/A'
+                }
+              </TableCell>
               <TableCell>
                 {utility.issued_date ? new Date(utility.issued_date).toLocaleDateString() : 'N/A'}
               </TableCell>
@@ -354,7 +420,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
           ))}
           {utilities.length === 0 && (
             <TableRow>
-              <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+              <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                 No utility bills found.
               </TableCell>
             </TableRow>
