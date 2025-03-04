@@ -372,7 +372,7 @@ const CostCalculator = () => {
       </div>
       
       {hasCalculated && (
-        <>
+        <div>
           <Card className="bg-blue-50 border-blue-100">
             <CardContent className="p-6">
               <h4 className="text-xl font-semibold text-center mb-4">
@@ -587,7 +587,7 @@ const CostCalculator = () => {
               </CardContent>
             </Card>
           )}
-        </>
+        </div>
       )}
 
       {showInvoiceDialog && userId && userRole && userRole !== 'service_provider' && (
