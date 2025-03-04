@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface InvoiceDetailsDialogProps {
   open: boolean;
@@ -28,6 +29,7 @@ export function InvoiceDetailsDialog({
 }: InvoiceDetailsDialogProps) {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { formatAmount: formatCurrencyAmount, currency: userCurrency } = useCurrency();
 
   useEffect(() => {
     const fetchInvoiceDetails = async () => {
@@ -63,6 +65,14 @@ export function InvoiceDetailsDialog({
 
     fetchInvoiceDetails();
   }, [invoiceId, open]);
+
+  // Format amount with user's preferred currency
+  const displayAmount = (amount: number) => {
+    if (invoice) {
+      return formatCurrencyAmount(amount, invoice.currency);
+    }
+    return formatAmount(amount, 'USD');
+  };
 
   if (!invoice && !isLoading) return null;
 
@@ -156,6 +166,10 @@ export function InvoiceDetailsDialog({
                           </span>
                         </div>
                         <div className="flex justify-between">
+                          <span className="text-gray-600">Currency:</span>
+                          <span className="font-medium">{invoice.currency}</span>
+                        </div>
+                        <div className="flex justify-between">
                           <span className="text-gray-600">Invoice Date:</span>
                           <span>{format(new Date(invoice.created_at), 'MMM d, yyyy')}</span>
                         </div>
@@ -203,29 +217,27 @@ export function InvoiceDetailsDialog({
                         <p className="font-medium">Rent</p>
                         {invoice.metadata?.is_partial && (
                           <p className="text-xs text-gray-500 mt-1">
-                            {invoice.metadata.partial_percentage}% of {formatAmount(invoice.metadata.full_amount || 0, invoice.currency)}
+                            {invoice.metadata.partial_percentage}% of {displayAmount(invoice.metadata.full_amount || 0)}
                           </p>
                         )}
                       </div>
                       <div className="col-span-2 text-right">
-                        {formatAmount(
+                        {displayAmount(
                           invoice.vat_rate > 0 
                             ? invoice.amount / (1 + invoice.vat_rate / 100) 
-                            : invoice.amount, 
-                          invoice.currency
+                            : invoice.amount
                         )}
                       </div>
                       <div className="col-span-2 text-right">
                         {invoice.vat_rate > 0 
-                          ? formatAmount(
-                              invoice.amount - (invoice.amount / (1 + invoice.vat_rate / 100)),
-                              invoice.currency
+                          ? displayAmount(
+                              invoice.amount - (invoice.amount / (1 + invoice.vat_rate / 100))
                             )
-                          : formatAmount(0, invoice.currency)
+                          : displayAmount(0)
                         }
                       </div>
                       <div className="col-span-2 text-right font-medium">
-                        {formatAmount(invoice.amount, invoice.currency)}
+                        {displayAmount(invoice.amount)}
                       </div>
                     </div>
                     
@@ -236,13 +248,13 @@ export function InvoiceDetailsDialog({
                             <p className="font-medium">{util.type}</p>
                             {util.percentage && util.percentage < 100 && (
                               <p className="text-xs text-gray-500 mt-1">
-                                {util.percentage}% of {formatAmount(util.original_amount || 0, invoice.currency)}
+                                {util.percentage}% of {displayAmount(util.original_amount || 0)}
                               </p>
                             )}
                           </div>
-                          <div className="col-span-2 text-right">{formatAmount(util.amount, invoice.currency)}</div>
-                          <div className="col-span-2 text-right">{formatAmount(0, invoice.currency)}</div>
-                          <div className="col-span-2 text-right font-medium">{formatAmount(util.amount, invoice.currency)}</div>
+                          <div className="col-span-2 text-right">{displayAmount(util.amount)}</div>
+                          <div className="col-span-2 text-right">{displayAmount(0)}</div>
+                          <div className="col-span-2 text-right font-medium">{displayAmount(util.amount)}</div>
                         </div>
                       ))
                     )}
@@ -252,11 +264,10 @@ export function InvoiceDetailsDialog({
                     <div className="grid grid-cols-12 text-sm">
                       <div className="col-span-8 text-right font-medium">Subtotal:</div>
                       <div className="col-span-4 text-right">
-                        {formatAmount(
+                        {displayAmount(
                           invoice.vat_rate > 0 
                             ? invoice.amount / (1 + invoice.vat_rate / 100) 
-                            : invoice.amount, 
-                          invoice.currency
+                            : invoice.amount
                         )}
                       </div>
                     </div>
@@ -265,9 +276,8 @@ export function InvoiceDetailsDialog({
                       <div className="grid grid-cols-12 text-sm mt-2">
                         <div className="col-span-8 text-right font-medium">VAT ({invoice.vat_rate}%):</div>
                         <div className="col-span-4 text-right">
-                          {formatAmount(
-                            invoice.amount - (invoice.amount / (1 + invoice.vat_rate / 100)),
-                            invoice.currency
+                          {displayAmount(
+                            invoice.amount - (invoice.amount / (1 + invoice.vat_rate / 100))
                           )}
                         </div>
                       </div>
@@ -277,7 +287,7 @@ export function InvoiceDetailsDialog({
                     
                     <div className="grid grid-cols-12 text-base font-bold">
                       <div className="col-span-8 text-right">Total Due:</div>
-                      <div className="col-span-4 text-right">{formatAmount(invoice.amount, invoice.currency)}</div>
+                      <div className="col-span-4 text-right">{displayAmount(invoice.amount)}</div>
                     </div>
                     
                     {invoice.status === 'paid' && (
