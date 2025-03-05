@@ -104,7 +104,6 @@ const UtilityRow = ({
     }
   };
 
-  // Calculate remaining amount
   const remainingAmount = utility.amount - (utility.invoiced_amount || 0);
   const hasBeenPartiallyInvoiced = utility.invoiced_amount && utility.invoiced_amount > 0 && utility.invoiced_amount < utility.amount;
 
@@ -377,22 +376,27 @@ const CostCalculator = () => {
       return;
     }
 
-    const formattedUtilities = utilitiesData?.map(utility => {
-      const remainingAmount = utility.amount - (utility.invoiced_amount || 0);
-      
-      return {
-        id: utility.id,
-        type: utility.type,
-        invoice_number: utility.invoice_number || '-',
-        issued_date: utility.issued_date ? format(new Date(utility.issued_date), 'MM/dd/yyyy') : '-',
-        due_date: format(new Date(utility.due_date), 'MM/dd/yyyy'),
-        amount: utility.amount,
-        currency: utility.currency || rentCurrency,
-        selected: remainingAmount > 0,
-        invoiced_amount: utility.invoiced_amount || 0,
-        applied_amount: remainingAmount
-      };
-    }) || [];
+    const formattedUtilities = utilitiesData
+      ?.filter(utility => {
+        const isFullyInvoiced = utility.invoiced_amount === utility.amount;
+        return !isFullyInvoiced;
+      })
+      .map(utility => {
+        const remainingAmount = utility.amount - (utility.invoiced_amount || 0);
+        
+        return {
+          id: utility.id,
+          type: utility.type,
+          invoice_number: utility.invoice_number || '-',
+          issued_date: utility.issued_date ? format(new Date(utility.issued_date), 'MM/dd/yyyy') : '-',
+          due_date: format(new Date(utility.due_date), 'MM/dd/yyyy'),
+          amount: utility.amount,
+          currency: utility.currency || rentCurrency,
+          selected: remainingAmount > 0,
+          invoiced_amount: utility.invoiced_amount || 0,
+          applied_amount: remainingAmount
+        };
+      }) || [];
 
     recalculateUtilityTotals(formattedUtilities);
     setUtilities(formattedUtilities);
@@ -472,7 +476,6 @@ const CostCalculator = () => {
   const calculateGrandTotal = (): number => {
     let total = 0;
     
-    // Only include rent in the total if it hasn't already been invoiced
     if (rentCurrency && !rentAlreadyInvoiced) {
       const rentWithVat = applyVat ? getRentWithVat() : rentAmount;
       total += convertCurrency(rentWithVat, rentCurrency, grandTotalCurrency);
@@ -492,12 +495,10 @@ const CostCalculator = () => {
   const getAdjustedUtilityAmount = (utility: UtilityItem): number => {
     if (!utility.selected) return 0;
     
-    // If applied_amount is specified, use that
     if (utility.applied_amount !== undefined) {
       return utility.applied_amount;
     }
     
-    // Otherwise calculate the remaining amount that can be invoiced
     const remainingAmount = utility.amount - (utility.invoiced_amount || 0);
     return Math.max(0, remainingAmount);
   };
