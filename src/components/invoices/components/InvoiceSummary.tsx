@@ -45,29 +45,22 @@ export const InvoiceSummary = ({
   const { convertCurrency, formatAmount: formatCurrencyAmount } = useCurrency();
   const totalAmount = calculationData?.grandTotal || calculateTotal();
   
-  // Original property currency (from calculationData or property)
   const propertyCurrency = calculationData?.currency || invoiceCurrency;
   
-  // For display purposes, get the base rent amount (before any conversion)
   const baseRentAmount = calculationData?.rentAmount || formAmount || 0;
   
-  // If the currencies are different, convert the amount to invoice currency
-  // This is the amount that will be displayed as the primary amount and used for calculations
   let displayRentAmount = baseRentAmount;
   if (propertyCurrency !== invoiceCurrency) {
     displayRentAmount = convertCurrency(baseRentAmount, propertyCurrency, invoiceCurrency);
     console.log(`Converting rent for display: ${baseRentAmount} ${propertyCurrency} → ${displayRentAmount.toFixed(2)} ${invoiceCurrency}`);
   }
   
-  // Determine if we have currency conversion
   const hasOriginalCurrency = propertyCurrency !== invoiceCurrency;
   
-  // Check if we have partial period rent calculation
   const hasPartialPeriod = calculationData?.dateRange && 
     (calculationData.dateRange.from > new Date(new Date().getFullYear(), new Date().getMonth(), 1) || 
      calculationData.dateRange.to < new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0));
   
-  // Log values for debugging
   console.log('InvoiceSummary debug:', {
     displayRentAmount,
     baseRentAmount,
@@ -142,7 +135,6 @@ export const InvoiceSummary = ({
                 </div>
               </div>
 
-              {/* Detailed Rent Calculation Section */}
               {!rentAlreadyInvoiced && hasPartialPeriod && (
                 <div className="bg-blue-50 p-3 rounded-md my-2 border border-blue-100">
                   <h4 className="text-sm font-medium text-blue-700 flex items-center mb-2">
@@ -155,7 +147,7 @@ export const InvoiceSummary = ({
                       <span>Monthly base rent:</span>
                       <span className="font-medium">
                         {propertyCurrency !== 'RON' 
-                          ? `${formatCurrencyAmount(baseRentAmount, propertyCurrency)}`
+                          ? formatCurrencyAmount(baseRentAmount, propertyCurrency)
                           : formatCurrencyAmount(baseRentAmount, 'RON')}
                       </span>
                     </div>
@@ -173,9 +165,7 @@ export const InvoiceSummary = ({
                       <div className="flex justify-between text-blue-800">
                         <span>Daily rate:</span>
                         <span>
-                          {propertyCurrency !== 'RON'
-                            ? `${formatCurrencyAmount(calculationData.metadata.daily_rate, propertyCurrency)}/day`
-                            : `${formatCurrencyAmount(calculationData.metadata.daily_rate, 'RON')}/day`}
+                          {formatCurrencyAmount(calculationData.metadata.daily_rate, propertyCurrency)}/day
                         </span>
                       </div>
                     )}
