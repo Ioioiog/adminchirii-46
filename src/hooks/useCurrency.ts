@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -34,8 +35,8 @@ const convertCurrency = (amount: number, fromCurrency: string, toCurrency: strin
   
   console.log(`Converting ${amount} from ${fromCurrency} to ${toCurrency}`, {
     rates,
-    fromRate: rates[fromCurrency],
-    toRate: rates[toCurrency]
+    fromRate: rates[fromCurrency as keyof typeof rates],
+    toRate: rates[toCurrency as keyof typeof rates]
   });
   
   // For proper currency conversion, we need to understand the exchange rate format
@@ -45,7 +46,7 @@ const convertCurrency = (amount: number, fromCurrency: string, toCurrency: strin
   // First convert to RON (base currency in our system)
   let amountInRON = amount;
   if (fromCurrency !== 'RON') {
-    amountInRON = amount * (rates[fromCurrency] || 1);
+    amountInRON = amount * (rates[fromCurrency as keyof typeof rates] || 1);
     console.log(`Step 1: Converted to RON: ${amountInRON}`);
   }
   
@@ -55,7 +56,7 @@ const convertCurrency = (amount: number, fromCurrency: string, toCurrency: strin
     return amountInRON;
   }
   
-  const result = amountInRON / (rates[toCurrency] || 1);
+  const result = amountInRON / (rates[toCurrency as keyof typeof rates] || 1);
   console.log(`Step 2: Converted from RON to ${toCurrency}: ${result}`);
   return result;
 };

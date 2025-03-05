@@ -53,7 +53,7 @@ export const InvoiceSummary = ({
   const baseRentAmount = calculationData?.rentAmount || formAmount || 0;
   
   // If the currencies are different, convert the amount to invoice currency
-  // This is the amount that will be displayed as the primary amount
+  // This is the amount that will be displayed as the primary amount and used for calculations
   let displayRentAmount = baseRentAmount;
   if (propertyCurrency !== invoiceCurrency) {
     displayRentAmount = convertCurrency(baseRentAmount, propertyCurrency, invoiceCurrency);
