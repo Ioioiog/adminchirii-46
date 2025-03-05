@@ -1,3 +1,4 @@
+
 import { DateRange } from "react-day-picker";
 
 export interface InvoiceSettings {
@@ -119,6 +120,12 @@ export interface CalculationData {
   currency?: string;
   grandTotal?: number;
   utilities?: UtilityForInvoice[];
+  metadata?: {
+    daily_rate?: number;
+    calculation_method?: 'percentage' | 'days';
+    percentage?: number;
+    days_calculated?: number;
+  };
 }
 
 export interface UtilityForInvoice {
