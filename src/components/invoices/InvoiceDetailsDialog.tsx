@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { FileText, Calendar, User, Building, CreditCard, Download, Printer, ClipboardCheck, Receipt } from "lucide-react";
@@ -74,12 +73,24 @@ export function InvoiceDetailsDialog({
   };
 
   const calculateRentAmount = (invoice: Invoice): number => {
+    console.log("Calculating rent amount for invoice:", invoice);
+    
+    // Check if the original rent amount is stored directly in metadata
+    if (invoice.metadata?.original_rent_amount && invoice.metadata?.original_rent_currency) {
+      console.log("Using original rent amount from metadata:", 
+        invoice.metadata.original_rent_amount, 
+        invoice.metadata.original_rent_currency);
+      return invoice.metadata.original_rent_amount;
+    }
+    
     // Directly use the stored subtotal if available since it represents the rent amount
     // before VAT but including utilities
     if (invoice.metadata?.subtotal) {
       const utilities = invoice.metadata?.utilities_included || [];
       const utilitiesTotal = utilities.reduce((sum, util) => sum + (util.amount || 0), 0);
-      return invoice.metadata.subtotal - utilitiesTotal;
+      const rentAmount = invoice.metadata.subtotal - utilitiesTotal;
+      console.log("Calculated rent from subtotal:", rentAmount, "Subtotal:", invoice.metadata.subtotal, "Utilities total:", utilitiesTotal);
+      return rentAmount;
     }
     
     // If no metadata, fall back to calculation
@@ -88,7 +99,9 @@ export function InvoiceDetailsDialog({
     const utilitiesTotal = utilities.reduce((sum, util) => sum + (util.amount || 0), 0);
     
     // Rent is subtotal minus utilities
-    return subtotal - utilitiesTotal;
+    const rentAmount = subtotal - utilitiesTotal;
+    console.log("Calculated rent with fallback method:", rentAmount);
+    return rentAmount;
   };
   
   // Helper function to get actual utility amount
@@ -116,7 +129,9 @@ export function InvoiceDetailsDialog({
             *,
             property:properties (
               name,
-              address
+              address,
+              monthly_rent,
+              currency
             ),
             tenant:profiles!invoices_tenant_id_fkey (
               first_name,
@@ -128,6 +143,16 @@ export function InvoiceDetailsDialog({
           .single();
 
         if (error) throw error;
+        
+        // Add property currency and rent to metadata if not present
+        if (data && data.property && data.property.monthly_rent && !data.metadata?.original_rent_amount) {
+          data.metadata = {
+            ...data.metadata,
+            original_rent_amount: data.property.monthly_rent,
+            original_rent_currency: data.property.currency
+          };
+        }
+        
         setInvoice(data as Invoice);
         console.log("Fetched invoice:", data);
       } catch (error) {
@@ -281,6 +306,11 @@ export function InvoiceDetailsDialog({
                     <div className="grid grid-cols-12 p-4 text-sm">
                       <div className="col-span-6">
                         <p className="font-medium">Rent</p>
+                        {invoice.metadata?.original_rent_currency && invoice.metadata.original_rent_currency !== invoice.currency && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {formatAmount(invoice.metadata.original_rent_amount || 0, invoice.metadata.original_rent_currency)} converted to {invoice.currency}
+                          </p>
+                        )}
                         {invoice.metadata?.is_partial && (
                           <p className="text-xs text-gray-500 mt-1">
                             {invoice.metadata.partial_percentage}% of {formatAmount(invoice.metadata.full_amount || 0, invoice.currency)}

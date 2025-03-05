@@ -1,4 +1,3 @@
-
 import { DateRange } from "react-day-picker";
 
 export interface InvoiceSettings {
@@ -53,6 +52,8 @@ export interface InvoiceMetadata {
   }>;
   subtotal?: number;
   vat_amount?: number;
+  original_rent_amount?: number; // Store the original rent amount before conversion
+  original_rent_currency?: string; // Store the currency of the original rent amount
   [key: string]: any; // Add index signature to make it compatible with Json
 }
 
@@ -73,6 +74,8 @@ export interface Invoice {
   property: {
     name: string;
     address: string;
+    monthly_rent?: number;
+    currency?: string;
   };
   tenant?: {
     first_name: string;
