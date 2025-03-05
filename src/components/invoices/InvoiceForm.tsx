@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { InvoiceFormProps } from "@/types/invoice";
 import { format } from "date-fns";
-import { AlertCircle, Building, User, Calendar } from "lucide-react";
+import { AlertCircle, Building, User, Calendar, DollarSign } from "lucide-react";
 import { InvoiceSummary } from "./components/InvoiceSummary";
 import { useInvoiceForm } from "@/hooks/useInvoiceForm";
 import { getAdjustedUtilityAmount } from "./utils/invoiceCalculations";
