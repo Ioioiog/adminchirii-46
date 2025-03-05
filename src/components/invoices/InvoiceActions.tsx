@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FileText, CheckCircle, XCircle, Trash } from "lucide-react";
@@ -95,7 +94,6 @@ export function InvoiceActions({
           const utilities = metadata.utilities_included;
           
           for (const utility of utilities) {
-            // Get the current utility record to calculate the updated invoiced_amount
             const { data: utilityData, error: utilityFetchError } = await supabase
               .from("utilities")
               .select("invoiced_amount")
@@ -107,12 +105,10 @@ export function InvoiceActions({
               continue;
             }
             
-            // Calculate the new invoiced_amount by subtracting the amount in this invoice
             const currentInvoicedAmount = utilityData.invoiced_amount || 0;
             const amountInThisInvoice = utility.amount || 0;
             const newInvoicedAmount = Math.max(0, currentInvoicedAmount - amountInThisInvoice);
             
-            // Set invoiced to false if newInvoicedAmount is 0
             const isInvoiced = newInvoicedAmount > 0;
             
             await supabase
