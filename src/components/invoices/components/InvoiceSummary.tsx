@@ -44,7 +44,7 @@ export const InvoiceSummary = ({
 }: InvoiceSummaryProps) => {
   const totalAmount = calculationData?.grandTotal || calculateTotal();
   
-  // Use the calculation rent amount if available, otherwise use form amount
+  // For display purposes, use the calculation rent amount if explicitly provided
   const rentAmount = calculationData?.rentAmount || formAmount || 0;
   
   // Determine if we have currency conversion
@@ -54,7 +54,7 @@ export const InvoiceSummary = ({
   // Log values for debugging
   console.log('InvoiceSummary debug:', {
     rentAmount,
-    formAmount: formAmount,
+    formAmount,
     calculationRentAmount: calculationData?.rentAmount,
     originalCurrency: calculationData?.currency,
     invoiceCurrency,
@@ -89,7 +89,7 @@ export const InvoiceSummary = ({
                     <span className="text-sm text-amber-600">Already invoiced</span>
                   ) : (
                     <>
-                      <span className="text-sm font-medium">
+                      <span className="text-sm font-medium" data-testid="rent-amount">
                         {formatAmount(rentAmount, invoiceCurrency)}
                       </span>
                       {hasOriginalCurrency && calculationData?.currency && (

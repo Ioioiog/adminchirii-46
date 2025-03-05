@@ -138,9 +138,10 @@ export function useCurrency() {
     const rates = exchangeRates?.rates;
 
     if (!rates) {
+      // If rates are not available, just format with the original currency
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: targetCurrency,
+        currency: fromCurrency || targetCurrency,
       }).format(amount);
     }
 
