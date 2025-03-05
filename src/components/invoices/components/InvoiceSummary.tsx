@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { formatAmount } from "@/lib/utils";
 import { CalculationData, UtilityForInvoice } from "@/types/invoice";
 import { format } from "date-fns";
-import { Calculator, Clock, Euro, FileText, Tag } from "lucide-react";
+import { Calculator, Clock, Euro, FileText, Tag, Home, Calendar } from "lucide-react";
 import { UtilitiesSection } from "./UtilitiesSection";
 import { useCurrency } from "@/hooks/useCurrency";
 
@@ -63,6 +63,11 @@ export const InvoiceSummary = ({
   // Determine if we have currency conversion
   const hasOriginalCurrency = propertyCurrency !== invoiceCurrency;
   
+  // Check if we have partial period rent calculation
+  const hasPartialPeriod = calculationData?.dateRange && 
+    (calculationData.dateRange.from > new Date(new Date().getFullYear(), new Date().getMonth(), 1) || 
+     calculationData.dateRange.to < new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0));
+  
   // Log values for debugging
   console.log('InvoiceSummary debug:', {
     displayRentAmount,
@@ -73,7 +78,8 @@ export const InvoiceSummary = ({
     hasOriginalCurrency,
     totalAmount,
     vatAmount,
-    convertedAmount: hasOriginalCurrency ? displayRentAmount : baseRentAmount
+    convertedAmount: hasOriginalCurrency ? displayRentAmount : baseRentAmount,
+    hasPartialPeriod
   });
   
   return (
@@ -102,7 +108,7 @@ export const InvoiceSummary = ({
               
               <div className="flex justify-between items-center py-1.5 border-b border-slate-100">
                 <span className="text-sm flex items-center gap-1.5 text-slate-600">
-                  <FileText className="h-4 w-4 text-slate-400" />
+                  <Home className="h-4 w-4 text-slate-400" />
                   Rent Amount:
                 </span>
                 <div className="text-right">
@@ -136,6 +142,68 @@ export const InvoiceSummary = ({
                   )}
                 </div>
               </div>
+
+              {/* Detailed Rent Calculation Section */}
+              {!rentAlreadyInvoiced && hasPartialPeriod && (
+                <div className="bg-blue-50 p-3 rounded-md my-2 border border-blue-100">
+                  <h4 className="text-sm font-medium text-blue-700 flex items-center mb-2">
+                    <Calendar className="h-4 w-4 mr-1" />
+                    Rent Calculation Details
+                  </h4>
+                  
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between text-blue-800">
+                      <span>Monthly base rent:</span>
+                      <span className="font-medium">
+                        {formatCurrencyAmount(baseRentAmount, propertyCurrency)}
+                      </span>
+                    </div>
+                    
+                    {calculationData?.dateRange && (
+                      <div className="flex justify-between text-blue-800">
+                        <span>Period duration:</span>
+                        <span>
+                          {Math.ceil((calculationData.dateRange.to.getTime() - calculationData.dateRange.from.getTime()) / (1000 * 60 * 60 * 24))} days
+                        </span>
+                      </div>
+                    )}
+                    
+                    {calculationData?.metadata?.daily_rate && (
+                      <div className="flex justify-between text-blue-800">
+                        <span>Daily rate:</span>
+                        <span>
+                          {formatCurrencyAmount(calculationData.metadata.daily_rate, propertyCurrency)}/day
+                        </span>
+                      </div>
+                    )}
+                    
+                    {calculationData?.metadata?.calculation_method && (
+                      <div className="flex justify-between text-blue-800">
+                        <span>Calculation method:</span>
+                        <span className="capitalize">
+                          {calculationData.metadata.calculation_method}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {calculationData?.metadata?.percentage !== undefined && (
+                      <div className="flex justify-between text-blue-800">
+                        <span>Pro-rated percentage:</span>
+                        <span>
+                          {calculationData.metadata.percentage}%
+                        </span>
+                      </div>
+                    )}
+                    
+                    <div className="pt-1 mt-1 border-t border-blue-200 flex justify-between font-medium text-blue-800">
+                      <span>Calculated rent:</span>
+                      <span>
+                        {formatCurrencyAmount(displayRentAmount, invoiceCurrency)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {applyVat && !rentAlreadyInvoiced && (
                 <div className="flex justify-between items-center py-1.5 border-b border-slate-100">
