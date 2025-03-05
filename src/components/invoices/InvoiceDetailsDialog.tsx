@@ -38,9 +38,19 @@ export function InvoiceDetailsDialog({
     }
     
     // Fall back to calculation if not stored
-    return invoice.vat_rate > 0 
-      ? invoice.amount / (1 + invoice.vat_rate / 100) 
-      : invoice.amount;
+    const utilities = invoice.metadata?.utilities_included || [];
+    const utilitiesTotal = utilities.reduce((sum, util) => sum + (util.amount || 0), 0);
+    
+    // If VAT is applied, calculate subtotal by removing VAT from total
+    if (invoice.vat_rate && invoice.vat_rate > 0) {
+      // Subtract utilities first as they typically don't have VAT
+      const rentWithVat = invoice.amount - utilitiesTotal;
+      const rentWithoutVat = rentWithVat / (1 + invoice.vat_rate / 100);
+      return rentWithoutVat + utilitiesTotal;
+    }
+    
+    // If no VAT, subtotal equals total amount
+    return invoice.amount;
   };
 
   const calculateVatAmount = (invoice: Invoice): number => {
@@ -50,9 +60,27 @@ export function InvoiceDetailsDialog({
     }
     
     // Fall back to calculation if not stored
-    return invoice.vat_rate > 0 
-      ? invoice.amount - calculateSubtotal(invoice)
-      : 0;
+    if (invoice.vat_rate && invoice.vat_rate > 0) {
+      const subtotal = calculateSubtotal(invoice);
+      const utilities = invoice.metadata?.utilities_included || [];
+      const utilitiesTotal = utilities.reduce((sum, util) => sum + (util.amount || 0), 0);
+      
+      // VAT is typically only applied to rent, not utilities
+      const rentAmount = subtotal - utilitiesTotal;
+      return rentAmount * (invoice.vat_rate / 100);
+    }
+    
+    return 0;
+  };
+
+  const calculateRentAmount = (invoice: Invoice): number => {
+    // If we have subtotal in metadata and utilities, we can calculate rent
+    const subtotal = calculateSubtotal(invoice);
+    const utilities = invoice.metadata?.utilities_included || [];
+    const utilitiesTotal = utilities.reduce((sum, util) => sum + (util.amount || 0), 0);
+    
+    // Rent is subtotal minus utilities
+    return subtotal - utilitiesTotal;
   };
   
   // Helper function to get actual utility amount
@@ -252,13 +280,13 @@ export function InvoiceDetailsDialog({
                         )}
                       </div>
                       <div className="col-span-2 text-right">
-                        {formatAmount(calculateSubtotal(invoice), invoice.currency)}
+                        {formatAmount(calculateRentAmount(invoice), invoice.currency)}
                       </div>
                       <div className="col-span-2 text-right">
                         {formatAmount(calculateVatAmount(invoice), invoice.currency)}
                       </div>
                       <div className="col-span-2 text-right font-medium">
-                        {formatAmount(calculateSubtotal(invoice) + calculateVatAmount(invoice), invoice.currency)}
+                        {formatAmount(calculateRentAmount(invoice) + calculateVatAmount(invoice), invoice.currency)}
                       </div>
                     </div>
                     
