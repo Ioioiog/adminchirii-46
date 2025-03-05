@@ -46,25 +46,31 @@ export const InvoiceSummary = ({
   const { convertCurrency } = useCurrency();
   const totalAmount = calculationData?.grandTotal || calculateTotal();
   
-  // For display purposes, use the calculation rent amount if explicitly provided
-  const rentAmount = calculationData?.rentAmount || formAmount || 0;
-  
-  // Determine if we have currency conversion
-  const hasOriginalCurrency = calculationData?.currency && 
-                             calculationData.currency !== invoiceCurrency;
-  
   // Original property currency (from calculationData or property)
   const propertyCurrency = calculationData?.currency || invoiceCurrency;
   
+  // For display purposes, convert the rent amount if currencies differ
+  let displayRentAmount = calculationData?.rentAmount || formAmount || 0;
+  
+  // If the currencies are different, convert the amount to invoice currency
+  if (propertyCurrency !== invoiceCurrency) {
+    displayRentAmount = convertCurrency(displayRentAmount, propertyCurrency, invoiceCurrency);
+  }
+  
+  // Determine if we have currency conversion
+  const hasOriginalCurrency = propertyCurrency !== invoiceCurrency;
+  
   // Log values for debugging
   console.log('InvoiceSummary debug:', {
-    rentAmount,
+    displayRentAmount,
     formAmount,
     calculationRentAmount: calculationData?.rentAmount,
     originalCurrency: propertyCurrency,
     invoiceCurrency,
     hasOriginalCurrency,
-    totalAmount
+    totalAmount,
+    convertedAmount: propertyCurrency !== invoiceCurrency ? 
+      convertCurrency(formAmount, propertyCurrency, invoiceCurrency) : formAmount
   });
   
   return (
@@ -95,9 +101,9 @@ export const InvoiceSummary = ({
                   ) : (
                     <>
                       <span className="text-sm font-medium" data-testid="rent-amount">
-                        {formatAmount(rentAmount, invoiceCurrency)}
+                        {formatAmount(displayRentAmount, invoiceCurrency)}
                       </span>
-                      {hasOriginalCurrency && propertyCurrency && (
+                      {hasOriginalCurrency && (
                         <div className="text-xs text-gray-500">
                           Originally {formatAmount(formAmount, propertyCurrency)}
                         </div>
