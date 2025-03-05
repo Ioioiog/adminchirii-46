@@ -378,7 +378,9 @@ const CostCalculator = () => {
 
     const formattedUtilities = utilitiesData
       ?.filter(utility => {
-        const isFullyInvoiced = utility.invoiced_amount === utility.amount;
+        const isFullyInvoiced = utility.invoiced && 
+                              utility.invoiced_amount != null && 
+                              utility.invoiced_amount >= utility.amount;
         return !isFullyInvoiced;
       })
       .map(utility => {
