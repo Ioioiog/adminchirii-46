@@ -45,6 +45,10 @@ export const InvoiceSummary = ({
   const totalAmount = calculationData?.grandTotal || calculateTotal();
   const rentAmount = calculationData?.rentAmount || formAmount || 0;
   
+  // Determine if we have currency conversion
+  const hasOriginalCurrency = calculationData?.currency && 
+                             calculationData.currency !== invoiceCurrency;
+  
   return (
     <>
       <Card className="border bg-slate-100">
@@ -67,13 +71,22 @@ export const InvoiceSummary = ({
               
               <div className="flex justify-between items-center py-1">
                 <span className="text-sm">Rent Amount:</span>
-                <span className="text-sm font-medium">
+                <div className="text-right">
                   {rentAlreadyInvoiced ? (
-                    <span className="text-amber-600">Already invoiced</span>
+                    <span className="text-sm text-amber-600">Already invoiced</span>
                   ) : (
-                    formatAmount(rentAmount, invoiceCurrency)
+                    <>
+                      <span className="text-sm font-medium">
+                        {formatAmount(rentAmount, invoiceCurrency)}
+                      </span>
+                      {hasOriginalCurrency && (
+                        <div className="text-xs text-gray-500">
+                          Originally {formatAmount(rentAmount, calculationData?.currency || '')}
+                        </div>
+                      )}
+                    </>
                   )}
-                </span>
+                </div>
               </div>
 
               {applyVat && !rentAlreadyInvoiced && (
