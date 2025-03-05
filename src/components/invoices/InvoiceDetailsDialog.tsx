@@ -64,6 +64,11 @@ export function InvoiceDetailsDialog({
     return util.original_amount || 0;
   };
 
+  // Helper function to check if utility is partially invoiced
+  const isPartiallyInvoiced = (util: any): boolean => {
+    return util.original_amount && util.amount && util.original_amount > util.amount;
+  };
+
   useEffect(() => {
     const fetchInvoiceDetails = async () => {
       if (!open || !invoiceId) return;
@@ -263,6 +268,14 @@ export function InvoiceDetailsDialog({
                         <div key={idx} className="grid grid-cols-12 p-4 text-sm">
                           <div className="col-span-6">
                             <p className="font-medium">{util.type}</p>
+                            {isPartiallyInvoiced(util) && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Partial billing: {formatAmount(getUtilityAmount(util), invoice.currency)} of {formatAmount(util.original_amount || 0, invoice.currency)}
+                                {util.invoiced_amount > 0 && (
+                                  <span> (Previously invoiced: {formatAmount(util.invoiced_amount, invoice.currency)})</span>
+                                )}
+                              </p>
+                            )}
                             {util.percentage && util.percentage < 100 && (
                               <p className="text-xs text-gray-500 mt-1">
                                 {util.percentage}% of {formatAmount(util.original_amount || 0, invoice.currency)}
