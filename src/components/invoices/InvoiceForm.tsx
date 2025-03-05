@@ -418,7 +418,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       
       const formattedUtilities = data?.map(utility => {
         const remainingPercentage = utility.invoiced_percentage 
-          ? Math.min(100 - utility.invoiced_percentage, 100) 
+          ? Math.min(100 - (utility.invoiced_percentage || 0), 100) 
           : 100;
         
         return {
