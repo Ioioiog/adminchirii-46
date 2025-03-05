@@ -624,6 +624,28 @@ export const useInvoiceForm = (
       metadata.subtotal = baseAmount;
       metadata.vat_amount = vatAmount;
       
+      // Create the invoice first to get the ID
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from("invoices")
+        .insert({
+          property_id: values.property_id,
+          tenant_id: values.tenant_id || userId,
+          landlord_id: userRole === "landlord" ? userId : null,
+          amount: totalAmount,
+          due_date: values.due_date,
+          status: "pending",
+          currency: invoiceCurrency,
+          vat_rate: applyVat ? vatRate : 0,
+          metadata: metadata
+        })
+        .select('id')
+        .single();
+
+      if (invoiceError) throw invoiceError;
+      
+      const invoiceId = invoiceData.id;
+      
+      // Now update the utilities with the new invoiced amounts
       for (const util of processedUtils) {
         const currentInvoicedAmount = util.current_invoiced_amount || 0;
         const newInvoicedAmount = currentInvoicedAmount + util.amount;
@@ -655,22 +677,6 @@ export const useInvoiceForm = (
           console.log(`Updated utility ${util.id}: invoiced_amount set to ${newInvoicedAmount}, status set to ${isPaid ? 'paid' : 'pending'}`);  
         }
       }
-      
-      const { data, error } = await supabase
-        .from("invoices")
-        .insert({
-          property_id: values.property_id,
-          tenant_id: values.tenant_id || userId,
-          landlord_id: userRole === "landlord" ? userId : null,
-          amount: totalAmount,
-          due_date: values.due_date,
-          status: "pending",
-          currency: invoiceCurrency,
-          vat_rate: applyVat ? vatRate : 0,
-          metadata: metadata
-        });
-
-      if (error) throw error;
 
       toast({
         title: "Success",
