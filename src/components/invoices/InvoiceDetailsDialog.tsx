@@ -275,7 +275,7 @@ export function InvoiceDetailsDialog({
                                 )}
                               </p>
                             )}
-                            {util.percentage && util.percentage < 100 && (
+                            {util.percentage !== undefined && util.percentage < 100 && (
                               <p className="text-xs text-gray-500 mt-1">
                                 {util.percentage}% of {formatAmount(util.original_amount || 0, invoice.currency)}
                               </p>

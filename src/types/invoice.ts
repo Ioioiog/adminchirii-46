@@ -48,6 +48,7 @@ export interface InvoiceMetadata {
     invoiced_amount?: number;
     original_amount?: number;
     current_invoiced_amount?: number; // Track the previously invoiced amount
+    percentage?: number; // Keep for backward compatibility with existing invoices
   }>;
   subtotal?: number;
   vat_amount?: number;

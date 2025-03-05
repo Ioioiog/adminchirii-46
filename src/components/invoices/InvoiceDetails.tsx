@@ -1,3 +1,4 @@
+
 import { formatDistanceToNow } from "date-fns";
 import { Invoice } from "@/types/invoice";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -182,7 +183,7 @@ export function InvoiceDetails({ invoice, userRole, onStatusUpdate }: InvoiceDet
                 <div key={utility.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md border">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{utility.type}</span>
-                    {utility.percentage && utility.original_amount && (
+                    {utility.percentage !== undefined && utility.original_amount && (
                       <span className="text-xs text-gray-500">
                         ({utility.percentage}% of {formatAmount(utility.original_amount)})
                       </span>
