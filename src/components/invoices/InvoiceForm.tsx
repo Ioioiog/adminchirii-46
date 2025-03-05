@@ -36,6 +36,12 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     onSubmit
   } = useInvoiceForm(userId, userRole, calculationData, onSuccess);
 
+  // Ensure we always have default values for controlled inputs
+  const getFieldValue = (fieldName: string) => {
+    const value = form.getValues(fieldName);
+    return fieldName === "amount" ? (value ?? 0) : (value || "");
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -52,7 +58,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                     const prop = properties.find((p) => p.id === value);
                     setSelectedProperty(prop || null);
                   }}
-                  value={field.value}
+                  value={field.value || ""}
                   disabled={isLoading || !!calculationData?.propertyId}
                 >
                   <FormControl>
@@ -80,7 +86,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Tenant</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={isLoading || !propertyId}>
+                  <Select onValueChange={field.onChange} value={field.value || ""} disabled={isLoading || !propertyId}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select tenant" />
@@ -110,6 +116,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                   <Input 
                     type="date" 
                     {...field} 
+                    value={field.value || ""}
                     disabled={isLoading}
                     min={new Date().toISOString().split('T')[0]}
                   />
@@ -130,6 +137,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                     type="number"
                     step="0.01"
                     {...field}
+                    value={field.value ?? 0}
                     onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                     disabled={isLoading || !!calculationData?.rentAmount || rentAlreadyInvoiced}
                   />
@@ -169,7 +177,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
           onUtilitySelection={handleUtilitySelection}
           onUtilityPercentageChange={handleUtilityPercentageChange}
           getAdjustedUtilityAmount={(util) => getAdjustedUtilityAmount(util, calculationData)}
-          formAmount={form.getValues("amount")}
+          formAmount={form.getValues("amount") ?? 0}
           calculateTotal={calculateTotal}
           isSubmitting={isLoading}
           hasSelectedProperty={!!selectedProperty}
