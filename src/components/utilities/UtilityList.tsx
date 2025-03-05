@@ -222,6 +222,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
               <TableHead>Property</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Invoiced Amount</TableHead>
+              <TableHead>Invoice #</TableHead>
               <TableHead>Issued Date</TableHead>
               <TableHead>Due Date</TableHead>
               <TableHead>Status</TableHead>
@@ -270,6 +271,15 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
                             }).format(utility.amount - utility.invoiced_amount)})
                           </span>
                         )}
+                      </span>
+                    ) : (
+                      <span className="text-gray-500">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {utility.invoice_number ? (
+                      <span className="text-blue-600">
+                        {utility.invoice_number}
                       </span>
                     ) : (
                       <span className="text-gray-500">-</span>
@@ -366,7 +376,7 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={userRole === "landlord" ? 11 : 10} className="h-24 text-center">
+                <TableCell colSpan={userRole === "landlord" ? 12 : 11} className="h-24 text-center">
                   <Skeleton className="w-[800px] h-16 mx-auto" />
                 </TableCell>
               </TableRow>
