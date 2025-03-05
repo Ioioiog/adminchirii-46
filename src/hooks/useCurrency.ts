@@ -28,20 +28,26 @@ const availableCurrencies: Currency[] = [
 const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string, rates: ExchangeRates['rates']): number => {
   if (fromCurrency === toCurrency) return amount;
   
-  // All rates are in RON from BNR, so we need to:
-  // 1. Convert the amount to RON first (if not already in RON)
-  // 2. Then convert from RON to target currency
+  // For proper currency conversion, we need to understand the exchange rate format
+  // In this case, the rates are relative to RON (Romanian Leu as the base currency)
+  // So EUR rate means 1 EUR = X RON, and USD rate means 1 USD = Y RON
   
-  let amountInRON = amount;
-  if (fromCurrency !== 'RON') {
+  // Convert from source currency to RON first
+  let amountInRON: number;
+  if (fromCurrency === 'RON') {
+    amountInRON = amount;
+  } else {
+    // If from EUR or USD to RON, we multiply by the rate
     amountInRON = amount * rates[fromCurrency as keyof typeof rates];
   }
-
+  
+  // Then convert from RON to target currency
   if (toCurrency === 'RON') {
     return amountInRON;
+  } else {
+    // To convert from RON to EUR or USD, we divide by the rate
+    return amountInRON / rates[toCurrency as keyof typeof rates];
   }
-
-  return amountInRON / rates[toCurrency as keyof typeof rates];
 };
 
 export function useCurrency() {
