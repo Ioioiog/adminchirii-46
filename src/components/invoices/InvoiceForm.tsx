@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -407,11 +408,11 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
 
   const fetchUtilitiesForProperty = async (propertyId: string) => {
     try {
+      // Fetch all utilities for the property, including those that are already invoiced
       const { data, error } = await supabase
         .from('utilities')
         .select('*')
         .eq('property_id', propertyId)
-        .eq('status', 'pending')
         .order('due_date', { ascending: false });
         
       if (error) throw error;
@@ -421,6 +422,13 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         const originalAmount = utility.amount;
         const remainingAmount = originalAmount - invoicedAmount;
         const remainingPercentage = Math.min(Math.round((remainingAmount / originalAmount) * 100), 100);
+        
+        // Only include utilities with remaining amounts or those that come from the calculator
+        const shouldInclude = remainingAmount > 0 || utility.status === 'pending';
+        
+        if (!shouldInclude && !calculationData?.utilities?.some(u => u.id === utility.id)) {
+          return null;
+        }
         
         return {
           id: utility.id,
@@ -435,16 +443,17 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
           is_partially_invoiced: invoicedAmount > 0 && invoicedAmount < utility.amount,
           remaining_percentage: remainingPercentage
         };
-      });
+      }).filter(Boolean); // Remove null entries
       
       if (calculationData?.utilities && Array.isArray(calculationData.utilities)) {
+        // Combine calculator utilities with fetched utilities, prioritizing calculator ones
         setUtilities([
           ...calculationData.utilities.map(util => ({
             ...util,
             selected: true
           })),
           ...formattedUtilities.filter(util => 
-            !calculationData.utilities.some(calcUtil => calcUtil.id === util.id)
+            util && !calculationData.utilities.some(calcUtil => calcUtil.id === util.id)
           )
         ]);
       } else {
@@ -918,7 +927,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                     {rentAlreadyInvoiced ? (
                       <span className="text-amber-600">Already invoiced</span>
                     ) : (
-                      formatAmount(calculationData?.rentAmount || 0, invoiceCurrency)
+                      formatAmount(calculationData?.rentAmount || form.getValues("amount") || 0, invoiceCurrency)
                     )}
                   </span>
                 </div>
@@ -927,7 +936,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                   <div className="flex justify-between items-center py-1">
                     <span className="text-sm">VAT ({vatRate}%):</span>
                     <span className="text-sm font-medium">
-                      {formatAmount((calculationData?.rentAmount || 0) * vatRate / 100, invoiceCurrency)}
+                      {formatAmount(calculateVatAmount(), invoiceCurrency)}
                     </span>
                   </div>
                 )}
@@ -937,7 +946,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                 <div className="flex justify-between items-center pt-2 mt-2 border-t border-slate-200">
                   <span className="font-bold">Total Amount:</span>
                   <span className="text-lg font-bold">
-                    {formatAmount(grandTotal, invoiceCurrency)}
+                    {formatAmount(calculationData?.grandTotal || calculateTotal(), invoiceCurrency)}
                   </span>
                 </div>
               </div>
@@ -949,8 +958,8 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
           <Button 
             type="submit" 
             disabled={isLoading || !selectedProperty || (
-              grandTotal === 0 ||
-              !utilities.some(u => u.selected)
+              (calculationData?.grandTotal || calculateTotal()) === 0 ||
+              (!form.getValues("amount") && !utilities.some(u => u.selected))
             )}
           >
             Create Invoice
