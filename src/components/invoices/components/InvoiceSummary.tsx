@@ -155,7 +155,9 @@ export const InvoiceSummary = ({
                     <div className="flex justify-between text-blue-800">
                       <span>Monthly base rent:</span>
                       <span className="font-medium">
-                        {formatCurrencyAmount(baseRentAmount, propertyCurrency)}
+                        {propertyCurrency !== 'RON' 
+                          ? `${formatCurrencyAmount(baseRentAmount, propertyCurrency)} (${formatCurrencyAmount(convertCurrency(baseRentAmount, propertyCurrency, 'RON'), 'RON')})`
+                          : formatCurrencyAmount(baseRentAmount, 'RON')}
                       </span>
                     </div>
                     
@@ -172,7 +174,9 @@ export const InvoiceSummary = ({
                       <div className="flex justify-between text-blue-800">
                         <span>Daily rate:</span>
                         <span>
-                          {formatCurrencyAmount(calculationData.metadata.daily_rate, propertyCurrency)}/day
+                          {propertyCurrency !== 'RON'
+                            ? `${formatCurrencyAmount(calculationData.metadata.daily_rate, propertyCurrency)}/day (${formatCurrencyAmount(convertCurrency(calculationData.metadata.daily_rate, propertyCurrency, 'RON'), 'RON')}/day)`
+                            : `${formatCurrencyAmount(calculationData.metadata.daily_rate, 'RON')}/day`}
                         </span>
                       </div>
                     )}
