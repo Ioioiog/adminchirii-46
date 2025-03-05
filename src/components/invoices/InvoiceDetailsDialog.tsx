@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { FileText, Calendar, User, Building, CreditCard, Download, Printer, ClipboardCheck, Receipt } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { supabase } from "@/integrations/supabase/client";
-import { Invoice } from "@/types/invoice";
+import { Invoice, InvoiceMetadata } from "@/types/invoice";
 import {
   Dialog,
   DialogContent,
@@ -77,26 +77,29 @@ export function InvoiceDetailsDialog({
     console.log("Calculating rent amount for invoice:", invoice);
     
     // Check if the original rent amount is stored directly in metadata
-    if (invoice.metadata?.original_rent_amount && invoice.metadata?.original_rent_currency) {
+    if (invoice.metadata && typeof invoice.metadata === 'object' && 
+        'original_rent_amount' in invoice.metadata && 
+        'original_rent_currency' in invoice.metadata) {
       console.log("Using original rent amount from metadata:", 
         invoice.metadata.original_rent_amount, 
         invoice.metadata.original_rent_currency);
-      return invoice.metadata.original_rent_amount;
+      return Number(invoice.metadata.original_rent_amount);
     }
     
     // Directly use the stored subtotal if available since it represents the rent amount
     // before VAT but including utilities
-    if (invoice.metadata?.subtotal) {
-      const utilities = invoice.metadata?.utilities_included || [];
+    if (invoice.metadata && typeof invoice.metadata === 'object' && 'subtotal' in invoice.metadata) {
+      const utilities = invoice.metadata.utilities_included || [];
       const utilitiesTotal = utilities.reduce((sum, util) => sum + (util.amount || 0), 0);
-      const rentAmount = invoice.metadata.subtotal - utilitiesTotal;
+      const rentAmount = Number(invoice.metadata.subtotal) - utilitiesTotal;
       console.log("Calculated rent from subtotal:", rentAmount, "Subtotal:", invoice.metadata.subtotal, "Utilities total:", utilitiesTotal);
       return rentAmount;
     }
     
     // If no metadata, fall back to calculation
     const subtotal = calculateSubtotal(invoice);
-    const utilities = invoice.metadata?.utilities_included || [];
+    const utilities = invoice.metadata && typeof invoice.metadata === 'object' && 
+                     invoice.metadata.utilities_included ? invoice.metadata.utilities_included : [];
     const utilitiesTotal = utilities.reduce((sum, util) => sum + (util.amount || 0), 0);
     
     // Rent is subtotal minus utilities
@@ -146,16 +149,23 @@ export function InvoiceDetailsDialog({
         if (error) throw error;
         
         // Add property currency and rent to metadata if not present
-        if (data && data.property && data.property.monthly_rent && 
-            (!data.metadata || (typeof data.metadata === 'object' && !data.metadata.original_rent_amount))) {
-          // Ensure metadata is an object before spreading
-          const currentMetadata = typeof data.metadata === 'object' ? data.metadata || {} : {};
+        if (data && data.property && data.property.monthly_rent) {
+          // Create a new typed metadata object to ensure we have the right structure
+          let updatedMetadata: InvoiceMetadata = {};
           
-          data.metadata = {
-            ...currentMetadata,
-            original_rent_amount: data.property.monthly_rent,
-            original_rent_currency: data.property.currency
-          };
+          // If metadata exists and is an object, copy its values
+          if (data.metadata && typeof data.metadata === 'object' && !Array.isArray(data.metadata)) {
+            updatedMetadata = { ...data.metadata as Record<string, any> };
+          }
+          
+          // Only add rent information if it doesn't exist yet
+          if (!updatedMetadata.original_rent_amount) {
+            updatedMetadata.original_rent_amount = data.property.monthly_rent;
+            updatedMetadata.original_rent_currency = data.property.currency;
+          }
+          
+          // Update the data with our properly typed metadata
+          data.metadata = updatedMetadata;
         }
         
         setInvoice(data as Invoice);
