@@ -425,7 +425,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         return {
           id: utility.id,
           type: utility.type,
-          amount: utility.amount,
+          amount: remainingAmount,
           currency: utility.currency,
           due_date: utility.due_date,
           original_amount: utility.amount,
@@ -591,17 +591,20 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       for (const util of selectedUtils) {
         const currentInvoicedAmount = util.current_invoiced_amount || 0;
         const newInvoicedAmount = currentInvoicedAmount + util.amount;
+        const originalAmount = util.original_amount || util.amount;
+        const isPaid = newInvoicedAmount >= originalAmount;
         
         // Update the utility record with the invoiced amount and set invoiced flag
         await supabase
           .from('utilities')
           .update({
             invoiced: true,
-            invoiced_amount: newInvoicedAmount
+            invoiced_amount: newInvoicedAmount,
+            status: isPaid ? 'paid' : 'pending'
           })
           .eq('id', util.id);
           
-        console.log(`Updated utility ${util.id}: invoiced_amount set to ${newInvoicedAmount}`);  
+        console.log(`Updated utility ${util.id}: invoiced_amount set to ${newInvoicedAmount}, status set to ${isPaid ? 'paid' : 'pending'}`);  
       }
       
       const { data, error } = await supabase
@@ -691,7 +694,7 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         <div className="space-y-2 max-h-40 overflow-y-auto">
           {utilities.map((utility) => {
             const isFromCalculator = calculationData?.utilities?.some(u => u.id === utility.id);
-            const isPartiallyInvoiced = utility.invoiced_amount > 0 && utility.invoiced_amount < utility.amount;
+            const isPartiallyInvoiced = utility.invoiced_amount > 0 && utility.invoiced_amount < (utility.original_amount || utility.amount);
             const originalAmount = utility.original_amount || utility.amount;
             const remainingAmount = originalAmount - (utility.invoiced_amount || 0);
             const remainingPercentage = Math.round((remainingAmount / originalAmount) * 100);
