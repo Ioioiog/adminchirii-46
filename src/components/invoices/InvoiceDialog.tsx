@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FileText, Receipt } from "lucide-react";
+import { FilePlus, Receipt, CreditCard } from "lucide-react";
 import { InvoiceForm } from "./InvoiceForm";
 import { InvoiceDialogProps } from "@/types/invoice";
 
