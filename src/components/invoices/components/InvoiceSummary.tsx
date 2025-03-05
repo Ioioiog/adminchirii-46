@@ -110,13 +110,27 @@ export const InvoiceSummary = ({
                     <span className="text-sm text-amber-600 italic">Already invoiced</span>
                   ) : (
                     <>
-                      <span className="text-sm font-medium" data-testid="rent-amount">
-                        {formatCurrencyAmount(displayRentAmount, invoiceCurrency)}
-                      </span>
-                      {hasOriginalCurrency && (
-                        <div className="text-xs text-gray-500">
-                          Originally {formatCurrencyAmount(baseRentAmount, propertyCurrency)}
+                      {hasOriginalCurrency ? (
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm font-medium text-blue-600" data-testid="original-rent-amount">
+                              {formatCurrencyAmount(baseRentAmount, propertyCurrency)}
+                            </span>
+                            <span className="text-xs font-medium bg-blue-50 text-blue-600 px-2 py-0.5 rounded">
+                              {propertyCurrency}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                            <span>Invoiced as:</span>
+                            <span className="font-medium" data-testid="converted-rent-amount">
+                              {formatCurrencyAmount(displayRentAmount, invoiceCurrency)}
+                            </span>
+                          </div>
                         </div>
+                      ) : (
+                        <span className="text-sm font-medium" data-testid="rent-amount">
+                          {formatCurrencyAmount(displayRentAmount, invoiceCurrency)}
+                        </span>
                       )}
                     </>
                   )}
