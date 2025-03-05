@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { DateRange } from 'react-day-picker';
 import { format, addDays, differenceInDays, isSameDay, addMonths, isWithinInterval } from 'date-fns';
@@ -835,4 +836,22 @@ const CostCalculator = () => {
             currency: grandTotalCurrency,
             grandTotal: calculateGrandTotal(),
             utilities: utilities
-              .filter(util
+              .filter(utility => utility.selected)
+              .map(utility => ({
+                id: utility.id,
+                type: utility.type,
+                amount: getAdjustedUtilityAmount(utility),
+                original_amount: utility.amount,
+                currency: utility.currency,
+                due_date: utility.due_date,
+                invoiced_amount: utility.invoiced_amount || 0,
+                applied_amount: utility.applied_amount
+              }))
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+export default CostCalculator;
