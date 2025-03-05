@@ -6,6 +6,7 @@ import { CalculationData, UtilityForInvoice } from "@/types/invoice";
 import { format } from "date-fns";
 import { Calculator } from "lucide-react";
 import { UtilitiesSection } from "./UtilitiesSection";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface InvoiceSummaryProps {
   calculationData?: CalculationData;
@@ -42,6 +43,7 @@ export const InvoiceSummary = ({
   hasSelectedProperty,
   onSubmit
 }: InvoiceSummaryProps) => {
+  const { convertCurrency } = useCurrency();
   const totalAmount = calculationData?.grandTotal || calculateTotal();
   
   // For display purposes, use the calculation rent amount if explicitly provided

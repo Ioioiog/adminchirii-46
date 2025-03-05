@@ -133,19 +133,27 @@ export function useCurrency() {
     retry: 3,
   });
 
-  const formatAmount = (amount: number, fromCurrency: string = 'USD') => {
+  const formatAmount = (amount: number, currencyCode: string = 'USD') => {
     const targetCurrency = preference?.currency_preference || 'USD';
     const rates = exchangeRates?.rates;
 
     if (!rates) {
-      // If rates are not available, just format with the original currency
+      // If rates are not available, just format with the specified currency
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: fromCurrency || targetCurrency,
+        currency: currencyCode || targetCurrency,
       }).format(amount);
     }
 
-    const convertedAmount = convertCurrency(amount, fromCurrency, targetCurrency, rates);
+    // When a specific currency is provided, use it rather than converting
+    if (currencyCode && currencyCode !== targetCurrency) {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: currencyCode,
+      }).format(amount);
+    }
+
+    const convertedAmount = convertCurrency(amount, currencyCode, targetCurrency, rates);
 
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
