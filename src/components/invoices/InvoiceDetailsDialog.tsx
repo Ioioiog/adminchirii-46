@@ -54,6 +54,15 @@ export function InvoiceDetailsDialog({
       ? invoice.amount - calculateSubtotal(invoice)
       : 0;
   };
+  
+  // Helper function to get utility amount, using original_amount if amount is 0
+  const getUtilityAmount = (util: any): number => {
+    if (util.amount && util.amount > 0) {
+      return util.amount;
+    }
+    
+    return util.original_amount || 0;
+  };
 
   useEffect(() => {
     const fetchInvoiceDetails = async () => {
@@ -260,9 +269,13 @@ export function InvoiceDetailsDialog({
                               </p>
                             )}
                           </div>
-                          <div className="col-span-2 text-right">{formatAmount(util.amount, invoice.currency)}</div>
+                          <div className="col-span-2 text-right">
+                            {formatAmount(getUtilityAmount(util), invoice.currency)}
+                          </div>
                           <div className="col-span-2 text-right">{formatAmount(0, invoice.currency)}</div>
-                          <div className="col-span-2 text-right font-medium">{formatAmount(util.amount, invoice.currency)}</div>
+                          <div className="col-span-2 text-right font-medium">
+                            {formatAmount(getUtilityAmount(util), invoice.currency)}
+                          </div>
                         </div>
                       ))
                     )}
