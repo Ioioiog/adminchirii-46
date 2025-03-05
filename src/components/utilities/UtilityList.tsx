@@ -125,11 +125,9 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
 
   const toggleSelectAll = (checked: boolean) => {
     if (checked) {
-      // Only select unpaid utilities
-      const unpaidUtilityIds = utilities
-        .filter(utility => utility.status !== 'paid')
-        .map(utility => utility.id);
-      setSelectedUtilities(unpaidUtilityIds);
+      // Select all utilities, not just unpaid ones
+      const allUtilityIds = utilities.map(utility => utility.id);
+      setSelectedUtilities(allUtilityIds);
     } else {
       setSelectedUtilities([]);
     }
@@ -161,21 +159,21 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
     );
   }
 
-  // Count of unpaid utilities that are selected
-  const selectedUnpaidCount = selectedUtilities.length;
+  // Count of selected utilities
+  const selectedCount = selectedUtilities.length;
   
-  // All unpaid utilities are selected if selectedUtilities contains all unpaid utility IDs
-  const allUnpaidSelected = 
-    utilities.filter(u => u.status !== 'paid').length > 0 && 
-    utilities.filter(u => u.status !== 'paid').every(u => selectedUtilities.includes(u.id));
+  // All utilities are selected if selectedUtilities contains all utility IDs
+  const allSelected = 
+    utilities.length > 0 && 
+    utilities.every(u => selectedUtilities.includes(u.id));
 
   return (
     <div className="space-y-4">
-      {userRole === "landlord" && selectedUnpaidCount > 0 && (
+      {userRole === "landlord" && selectedCount > 0 && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">
-              {selectedUnpaidCount} {selectedUnpaidCount === 1 ? 'utility' : 'utilities'} selected
+              {selectedCount} {selectedCount === 1 ? 'utility' : 'utilities'} selected
             </span>
           </div>
           <div className="flex gap-2">
@@ -214,9 +212,9 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
               {userRole === "landlord" && (
                 <TableHead className="w-12">
                   <Checkbox 
-                    checked={allUnpaidSelected}
+                    checked={allSelected}
                     onCheckedChange={toggleSelectAll}
-                    aria-label="Select all unpaid utilities"
+                    aria-label="Select all utilities"
                   />
                 </TableHead>
               )}
@@ -238,15 +236,13 @@ export function UtilityList({ utilities, userRole, onStatusUpdate }: UtilityList
                 <TableRow key={utility.id}>
                   {userRole === "landlord" && (
                     <TableCell className="w-12">
-                      {utility.status !== 'paid' && (
-                        <Checkbox 
-                          checked={selectedUtilities.includes(utility.id)}
-                          onCheckedChange={(checked) => 
-                            toggleSelectUtility(utility.id, checked === true)
-                          }
-                          aria-label={`Select ${utility.type} utility`}
-                        />
-                      )}
+                      <Checkbox 
+                        checked={selectedUtilities.includes(utility.id)}
+                        onCheckedChange={(checked) => 
+                          toggleSelectUtility(utility.id, checked === true)
+                        }
+                        aria-label={`Select ${utility.type} utility`}
+                      />
                     </TableCell>
                   )}
                   <TableCell className="font-medium capitalize">
