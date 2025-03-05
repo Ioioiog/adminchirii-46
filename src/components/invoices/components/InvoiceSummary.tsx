@@ -43,7 +43,7 @@ export const InvoiceSummary = ({
   hasSelectedProperty,
   onSubmit
 }: InvoiceSummaryProps) => {
-  const { convertCurrency } = useCurrency();
+  const { convertCurrency, formatAmount: formatCurrencyAmount } = useCurrency();
   const totalAmount = calculationData?.grandTotal || calculateTotal();
   
   // Original property currency (from calculationData or property)
@@ -57,7 +57,7 @@ export const InvoiceSummary = ({
   let displayRentAmount = baseRentAmount;
   if (propertyCurrency !== invoiceCurrency) {
     displayRentAmount = convertCurrency(baseRentAmount, propertyCurrency, invoiceCurrency);
-    console.log(`Converting rent for display: ${baseRentAmount} ${propertyCurrency} → ${displayRentAmount} ${invoiceCurrency}`);
+    console.log(`Converting rent for display: ${baseRentAmount} ${propertyCurrency} → ${displayRentAmount.toFixed(2)} ${invoiceCurrency}`);
   }
   
   // Determine if we have currency conversion
@@ -72,6 +72,7 @@ export const InvoiceSummary = ({
     invoiceCurrency,
     hasOriginalCurrency,
     totalAmount,
+    vatAmount,
     convertedAmount: hasOriginalCurrency ? displayRentAmount : baseRentAmount
   });
   
@@ -103,11 +104,11 @@ export const InvoiceSummary = ({
                   ) : (
                     <>
                       <span className="text-sm font-medium" data-testid="rent-amount">
-                        {formatAmount(displayRentAmount, invoiceCurrency)}
+                        {formatCurrencyAmount(displayRentAmount, invoiceCurrency)}
                       </span>
                       {hasOriginalCurrency && (
                         <div className="text-xs text-gray-500">
-                          Originally {formatAmount(baseRentAmount, propertyCurrency)}
+                          Originally {formatCurrencyAmount(baseRentAmount, propertyCurrency)}
                         </div>
                       )}
                     </>
@@ -119,7 +120,7 @@ export const InvoiceSummary = ({
                 <div className="flex justify-between items-center py-1">
                   <span className="text-sm">VAT ({vatRate}%):</span>
                   <span className="text-sm font-medium">
-                    {formatAmount(vatAmount, invoiceCurrency)}
+                    {formatCurrencyAmount(vatAmount, invoiceCurrency)}
                   </span>
                 </div>
               )}
@@ -135,7 +136,7 @@ export const InvoiceSummary = ({
               <div className="flex justify-between items-center pt-2 mt-2 border-t border-slate-200">
                 <span className="font-bold">Total Amount:</span>
                 <span className="text-lg font-bold">
-                  {formatAmount(totalAmount, invoiceCurrency)}
+                  {formatCurrencyAmount(totalAmount, invoiceCurrency)}
                 </span>
               </div>
             </div>

@@ -43,22 +43,38 @@ const convertCurrency = (amount: number, fromCurrency: string, toCurrency: strin
   // In this case, the rates are relative to RON (Romanian Leu as the base currency)
   // So EUR rate means 1 EUR = X RON, and USD rate means 1 USD = Y RON
   
-  // First convert to RON (base currency in our system)
-  let amountInRON = amount;
-  if (fromCurrency !== 'RON') {
-    amountInRON = amount * (rates[fromCurrency as keyof typeof rates] || 1);
-    console.log(`Step 1: Converted to RON: ${amountInRON}`);
+  try {
+    // First convert to RON (base currency in our system)
+    let amountInRON = amount;
+    if (fromCurrency !== 'RON') {
+      const fromRate = rates[fromCurrency as keyof typeof rates];
+      if (!fromRate) {
+        console.error(`Exchange rate for ${fromCurrency} not found`);
+        return amount;
+      }
+      amountInRON = amount * fromRate;
+      console.log(`Step 1: Converted ${amount} ${fromCurrency} to ${amountInRON.toFixed(2)} RON (rate: ${fromRate})`);
+    }
+    
+    // Then convert from RON to target currency
+    if (toCurrency === 'RON') {
+      console.log(`Final amount in RON: ${amountInRON.toFixed(2)}`);
+      return amountInRON;
+    }
+    
+    const toRate = rates[toCurrency as keyof typeof rates];
+    if (!toRate) {
+      console.error(`Exchange rate for ${toCurrency} not found`);
+      return amountInRON; // Return RON amount if target rate not found
+    }
+    
+    const result = amountInRON / toRate;
+    console.log(`Step 2: Converted ${amountInRON.toFixed(2)} RON to ${result.toFixed(2)} ${toCurrency} (rate: ${toRate})`);
+    return result;
+  } catch (error) {
+    console.error("Error in currency conversion:", error);
+    return amount; // Return original amount in case of error
   }
-  
-  // Then convert from RON to target currency
-  if (toCurrency === 'RON') {
-    console.log(`Final amount in RON: ${amountInRON}`);
-    return amountInRON;
-  }
-  
-  const result = amountInRON / (rates[toCurrency as keyof typeof rates] || 1);
-  console.log(`Step 2: Converted from RON to ${toCurrency}: ${result}`);
-  return result;
 };
 
 export function useCurrency() {
@@ -121,7 +137,7 @@ export function useCurrency() {
     queryKey: ["exchange-rates"],
     queryFn: async () => {
       console.log('Fetching exchange rates...');
-      const { data: { rates }, error } = await supabase.functions.invoke('get-exchange-rates');
+      const { data, error } = await supabase.functions.invoke('get-exchange-rates');
       
       if (error) {
         console.error('Error fetching exchange rates:', error);
@@ -135,8 +151,8 @@ export function useCurrency() {
         };
       }
 
-      console.log('Received exchange rates:', rates);
-      return { rates };
+      console.log('Received exchange rates:', data.rates);
+      return { rates: data.rates };
     },
     // Cache for 24 hours since rates don't change frequently
     staleTime: 24 * 60 * 60 * 1000,

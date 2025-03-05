@@ -558,15 +558,23 @@ export const useInvoiceForm = (
   };
 
   const calculateVatAmount = () => {
-    const baseAmount = rentAlreadyInvoiced ? 0 : (form.getValues("amount") || 0);
+    if (rentAlreadyInvoiced) return 0;
+    
+    const baseAmount = form.getValues("amount") || 0;
     const rentCurrency = selectedProperty?.currency || 'EUR';
     
+    // First convert base amount to invoice currency if needed
     let convertedBaseAmount = baseAmount;
     if (rentCurrency !== invoiceCurrency) {
       convertedBaseAmount = convertCurrency(baseAmount, rentCurrency, invoiceCurrency);
+      console.log(`VAT calculation: Converted ${baseAmount} ${rentCurrency} to ${convertedBaseAmount.toFixed(2)} ${invoiceCurrency}`);
     }
     
-    return convertedBaseAmount * (vatRate / 100);
+    // Then calculate VAT on the converted amount
+    const vatAmount = convertedBaseAmount * (vatRate / 100);
+    console.log(`VAT calculation: ${convertedBaseAmount.toFixed(2)} × ${vatRate}% = ${vatAmount.toFixed(2)}`);
+    
+    return vatAmount;
   };
 
   const calculateTotal = () => {

@@ -11,12 +11,18 @@ export const calculateVatAmount = (
 ): number => {
   if (rentAlreadyInvoiced) return 0;
   
+  // First convert base amount to invoice currency
   let convertedBaseAmount = baseAmount;
   if (rentCurrency !== invoiceCurrency) {
     convertedBaseAmount = convertCurrency(baseAmount, rentCurrency, invoiceCurrency);
+    console.log(`VAT calculation: Converted ${baseAmount} ${rentCurrency} to ${convertedBaseAmount} ${invoiceCurrency}`);
   }
   
-  return convertedBaseAmount * (vatRate / 100);
+  // Then calculate VAT on the converted amount
+  const vatAmount = convertedBaseAmount * (vatRate / 100);
+  console.log(`VAT calculation: ${convertedBaseAmount} × ${vatRate}% = ${vatAmount}`);
+  
+  return vatAmount;
 };
 
 export const getAdjustedUtilityAmount = (
