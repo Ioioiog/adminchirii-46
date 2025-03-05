@@ -74,7 +74,15 @@ export function InvoiceDetailsDialog({
   };
 
   const calculateRentAmount = (invoice: Invoice): number => {
-    // If we have subtotal in metadata and utilities, we can calculate rent
+    // Directly use the stored subtotal if available since it represents the rent amount
+    // before VAT but including utilities
+    if (invoice.metadata?.subtotal) {
+      const utilities = invoice.metadata?.utilities_included || [];
+      const utilitiesTotal = utilities.reduce((sum, util) => sum + (util.amount || 0), 0);
+      return invoice.metadata.subtotal - utilitiesTotal;
+    }
+    
+    // If no metadata, fall back to calculation
     const subtotal = calculateSubtotal(invoice);
     const utilities = invoice.metadata?.utilities_included || [];
     const utilitiesTotal = utilities.reduce((sum, util) => sum + (util.amount || 0), 0);
@@ -297,24 +305,24 @@ export function InvoiceDetailsDialog({
                             <p className="font-medium">{util.type}</p>
                             {isPartiallyInvoiced(util) && (
                               <p className="text-xs text-gray-500 mt-1">
-                                Partial billing: {formatAmount(getUtilityAmount(util), invoice.currency)} of {formatAmount(util.original_amount || 0, invoice.currency)}
+                                Partial billing: {formatAmount(getUtilityAmount(util), util.currency || invoice.currency)} of {formatAmount(util.original_amount || 0, util.currency || invoice.currency)}
                                 {util.invoiced_amount > 0 && (
-                                  <span> (Previously invoiced: {formatAmount(util.invoiced_amount, invoice.currency)})</span>
+                                  <span> (Previously invoiced: {formatAmount(util.invoiced_amount, util.currency || invoice.currency)})</span>
                                 )}
                               </p>
                             )}
                             {util.percentage !== undefined && util.percentage < 100 && (
                               <p className="text-xs text-gray-500 mt-1">
-                                {util.percentage}% of {formatAmount(util.original_amount || 0, invoice.currency)}
+                                {util.percentage}% of {formatAmount(util.original_amount || 0, util.currency || invoice.currency)}
                               </p>
                             )}
                           </div>
                           <div className="col-span-2 text-right">
-                            {formatAmount(getUtilityAmount(util), invoice.currency)}
+                            {formatAmount(getUtilityAmount(util), util.currency || invoice.currency)}
                           </div>
-                          <div className="col-span-2 text-right">{formatAmount(0, invoice.currency)}</div>
+                          <div className="col-span-2 text-right">{formatAmount(0, util.currency || invoice.currency)}</div>
                           <div className="col-span-2 text-right font-medium">
-                            {formatAmount(getUtilityAmount(util), invoice.currency)}
+                            {formatAmount(getUtilityAmount(util), util.currency || invoice.currency)}
                           </div>
                         </div>
                       ))
