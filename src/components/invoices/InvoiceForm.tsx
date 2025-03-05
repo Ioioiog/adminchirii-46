@@ -417,9 +417,10 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
       if (error) throw error;
       
       const formattedUtilities = data?.map(utility => {
-        const remainingPercentage = utility.invoiced_percentage 
-          ? Math.min(100 - (utility.invoiced_percentage || 0), 100) 
-          : 100;
+        const invoicedAmount = utility.invoiced_amount || 0;
+        const originalAmount = utility.amount;
+        const remainingAmount = originalAmount - invoicedAmount;
+        const remainingPercentage = Math.min(Math.round((remainingAmount / originalAmount) * 100), 100);
         
         return {
           id: utility.id,
@@ -430,8 +431,8 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
           original_amount: utility.amount,
           selected: false,
           percentage: remainingPercentage,
-          invoiced_percentage: utility.invoiced_percentage || 0,
-          is_partially_invoiced: utility.invoiced_percentage && utility.invoiced_percentage < 100,
+          invoiced_amount: invoicedAmount,
+          is_partially_invoiced: invoicedAmount > 0 && invoicedAmount < utility.amount,
           remaining_percentage: remainingPercentage
         };
       });

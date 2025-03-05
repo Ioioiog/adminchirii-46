@@ -13,7 +13,6 @@ export interface Utility {
     created_at: string;
     updated_at: string;
     invoiced_amount: number | null;
-    invoiced_percentage: number | null;
   };
   Insert: {
     id?: string;
@@ -26,7 +25,6 @@ export interface Utility {
     invoice_number?: string | null;
     status?: string;
     invoiced_amount?: number | null;
-    invoiced_percentage?: number | null;
   };
   Update: {
     type?: string;
@@ -37,7 +35,6 @@ export interface Utility {
     invoice_number?: string | null;
     status?: string;
     invoiced_amount?: number | null;
-    invoiced_percentage?: number | null;
   };
 }
 
