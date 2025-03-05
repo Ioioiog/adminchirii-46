@@ -17,7 +17,6 @@ interface InvoiceSummaryProps {
   grandTotal: number;
   utilities: UtilityForInvoice[];
   onUtilitySelection: (id: string, selected: boolean) => void;
-  onUtilityPercentageChange: (id: string, percentage: number) => void;
   getAdjustedUtilityAmount: (utility: UtilityForInvoice) => number;
   formAmount: number;
   calculateTotal: () => number;
@@ -36,7 +35,6 @@ export const InvoiceSummary = ({
   grandTotal,
   utilities,
   onUtilitySelection,
-  onUtilityPercentageChange,
   getAdjustedUtilityAmount,
   formAmount,
   calculateTotal,
@@ -90,7 +88,6 @@ export const InvoiceSummary = ({
                 utilities={utilities}
                 calculationData={calculationData}
                 onUtilitySelection={onUtilitySelection}
-                onUtilityPercentageChange={onUtilityPercentageChange}
                 getAdjustedUtilityAmount={getAdjustedUtilityAmount}
                 invoiceCurrency={invoiceCurrency}
               />

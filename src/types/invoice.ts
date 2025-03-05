@@ -1,3 +1,4 @@
+
 import { DateRange } from "react-day-picker";
 
 export interface InvoiceSettings {
@@ -44,11 +45,12 @@ export interface InvoiceMetadata {
     id: string;
     amount: number;
     type: string;
-    percentage?: number; // Added back for backwards compatibility
     invoiced_amount?: number;
     original_amount?: number;
     current_invoiced_amount?: number; // Track the previously invoiced amount
   }>;
+  subtotal?: number;
+  vat_amount?: number;
   [key: string]: any; // Add index signature to make it compatible with Json
 }
 
@@ -125,5 +127,4 @@ export interface UtilityForInvoice {
   is_partially_invoiced?: boolean;
   due_date?: string;
   remaining_amount?: number;
-  percentage?: number; // Keep this for UI calculations only
 }

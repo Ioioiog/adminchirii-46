@@ -29,7 +29,6 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     rentAlreadyInvoiced,
     invoicedPeriod,
     handleUtilitySelection,
-    handleUtilityPercentageChange,
     getAdjustedAmount,
     calculateVatAmount,
     calculateTotal,
@@ -169,7 +168,6 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
           grandTotal={calculationData?.grandTotal || 0}
           utilities={utilities}
           onUtilitySelection={handleUtilitySelection}
-          onUtilityPercentageChange={handleUtilityPercentageChange}
           getAdjustedUtilityAmount={(util) => getAdjustedUtilityAmount(util, calculationData)}
           formAmount={form.getValues("amount") ?? 0}
           calculateTotal={calculateTotal}
