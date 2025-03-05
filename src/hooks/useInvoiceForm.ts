@@ -605,6 +605,12 @@ export const useInvoiceForm = (
         selectedUtils
       });
       
+      const baseAmount = rentAlreadyInvoiced ? 0 : (form.getValues("amount") || 0);
+      const vatAmount = applyVat ? calculateVatAmount() : 0;
+      
+      metadata.subtotal = baseAmount;
+      metadata.vat_amount = vatAmount;
+      
       for (const util of selectedUtils) {
         const currentInvoicedAmount = util.current_invoiced_amount || 0;
         const newInvoicedAmount = currentInvoicedAmount + util.amount;
