@@ -36,12 +36,6 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
     onSubmit
   } = useInvoiceForm(userId, userRole, calculationData, onSuccess);
 
-  // Ensure we always have default values for controlled inputs
-  const getFieldValue = (fieldName: string) => {
-    const value = form.getValues(fieldName);
-    return fieldName === "amount" ? (value ?? 0) : (value || "");
-  };
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
