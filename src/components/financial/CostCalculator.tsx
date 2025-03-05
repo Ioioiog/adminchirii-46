@@ -312,7 +312,7 @@ const CostCalculator = ({
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="range"
-                          selected={field.value || { from: new Date(), to: new Date() }}
+                          selected={field.value && field.value.from ? field.value : { from: new Date(), to: new Date() }}
                           onSelect={field.onChange}
                           initialFocus
                         />
