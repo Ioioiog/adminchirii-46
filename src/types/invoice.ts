@@ -1,3 +1,4 @@
+
 import { DateRange } from "react-day-picker";
 
 export interface InvoiceSettings {
@@ -48,6 +49,7 @@ export interface InvoiceMetadata {
     original_amount?: number;
     current_invoiced_amount?: number; // Track the previously invoiced amount
     percentage?: number; // Keep for backward compatibility with existing invoices
+    currency?: string; // Add currency to match the UtilityForInvoice interface
   }>;
   subtotal?: number;
   vat_amount?: number;
