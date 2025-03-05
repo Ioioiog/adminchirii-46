@@ -2142,7 +2142,6 @@ export type Database = {
           invoice_number: string | null
           invoiced: boolean | null
           invoiced_amount: number | null
-          invoiced_percentage: number | null
           issued_date: string | null
           metadata_amount: number | null
           property_id: string
@@ -2162,7 +2161,6 @@ export type Database = {
           invoice_number?: string | null
           invoiced?: boolean | null
           invoiced_amount?: number | null
-          invoiced_percentage?: number | null
           issued_date?: string | null
           metadata_amount?: number | null
           property_id: string
@@ -2182,7 +2180,6 @@ export type Database = {
           invoice_number?: string | null
           invoiced?: boolean | null
           invoiced_amount?: number | null
-          invoiced_percentage?: number | null
           issued_date?: string | null
           metadata_amount?: number | null
           property_id?: string
