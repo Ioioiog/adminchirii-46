@@ -166,6 +166,9 @@ const UtilityRow = ({
             '-'
           )}
         </td>
+        <td className="p-3 text-right font-medium">
+          {utility.invoiced_amount ? formatCurrency(utility.invoiced_amount, utility.currency) : '-'}
+        </td>
       </tr>
     </>
   );
@@ -775,6 +778,7 @@ const CostCalculator = () => {
                         <th className="text-center p-3 text-gray-600">INCLUDED</th>
                         <th className="text-right p-3 text-gray-600">ORIGINAL AMOUNT</th>
                         <th className="text-right p-3 text-gray-600">APPLIED AMOUNT</th>
+                        <th className="text-right p-3 text-gray-600">INVOICED AMOUNT</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -831,22 +835,4 @@ const CostCalculator = () => {
             currency: grandTotalCurrency,
             grandTotal: calculateGrandTotal(),
             utilities: utilities
-              .filter(util => util.selected)
-              .map(util => ({
-                id: util.id,
-                type: util.type,
-                amount: getAdjustedUtilityAmount(util),
-                original_amount: util.amount,
-                currency: util.currency,
-                due_date: util.due_date,
-                invoiced_amount: util.invoiced_amount || 0,
-                applied_amount: util.applied_amount
-              }))
-          }}
-        />
-      )}
-    </div>
-  );
-};
-
-export default CostCalculator;
+              .filter(util
