@@ -55,18 +55,17 @@ export function InvoiceDetailsDialog({
       : 0;
   };
   
-  // Helper function to get utility amount, using original_amount if amount is 0
+  // Helper function to get actual utility amount
   const getUtilityAmount = (util: any): number => {
-    if (util.amount && util.amount > 0) {
-      return util.amount;
-    }
-    
-    return util.original_amount || 0;
+    // If it's a partial utility, we should display the current amount being billed
+    // not the original amount
+    return util.amount || 0;
   };
 
   // Helper function to check if utility is partially invoiced
   const isPartiallyInvoiced = (util: any): boolean => {
-    return util.original_amount && util.amount && util.original_amount > util.amount;
+    return (util.original_amount && util.original_amount > util.amount) || 
+           (util.invoiced_amount && util.invoiced_amount > 0);
   };
 
   useEffect(() => {
