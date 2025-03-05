@@ -57,7 +57,7 @@ export const UtilityItem = ({
       <div className="text-right">
         <span className="text-sm font-medium">
           {formatAmount(
-            isFromCalculator ? utility.amount : getAdjustedUtilityAmount(utility),
+            isFromCalculator ? (utility.applied_amount !== undefined ? utility.applied_amount : utility.amount) : getAdjustedUtilityAmount(utility),
             utility.currency || invoiceCurrency
           )}
         </span>

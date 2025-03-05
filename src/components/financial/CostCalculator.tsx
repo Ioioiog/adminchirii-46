@@ -524,7 +524,8 @@ const CostCalculator = () => {
         original_amount: utility.amount,
         currency: utility.currency,
         due_date: utility.due_date,
-        invoiced_amount: utility.invoiced_amount || 0
+        invoiced_amount: utility.invoiced_amount || 0,
+        applied_amount: utility.applied_amount
       }));
 
     const dateRangeForInvoice = selectedDateRange && 
@@ -838,7 +839,8 @@ const CostCalculator = () => {
                 original_amount: util.amount,
                 currency: util.currency,
                 due_date: util.due_date,
-                invoiced_amount: util.invoiced_amount || 0
+                invoiced_amount: util.invoiced_amount || 0,
+                applied_amount: util.applied_amount
               }))
           }}
         />

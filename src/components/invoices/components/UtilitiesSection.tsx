@@ -25,6 +25,12 @@ export const UtilitiesSection = ({
       <div className="space-y-2 max-h-40 overflow-y-auto">
         {utilities.map((utility) => {
           const isFromCalculator = calculationData?.utilities?.some(u => u.id === utility.id);
+          const calculatorUtility = calculationData?.utilities?.find(u => u.id === utility.id);
+          
+          // Use the applied_amount from calculator if it exists
+          if (isFromCalculator && calculatorUtility && calculatorUtility.applied_amount !== undefined) {
+            utility.applied_amount = calculatorUtility.applied_amount;
+          }
           
           return (
             <UtilityItem

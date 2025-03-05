@@ -479,6 +479,9 @@ export const useInvoiceForm = (
   };
 
   const getAdjustedAmount = (utility: UtilityForInvoice): number => {
+    if (utility.applied_amount !== undefined) {
+      return utility.applied_amount;
+    }
     return getAdjustedUtilityAmount(utility, calculationData);
   };
 
