@@ -594,15 +594,28 @@ export const useInvoiceForm = (
       }
 
       const selectedUtils = getSelectedUtilities();
-      if (selectedUtils.length > 0) {
-        metadata.utilities_included = selectedUtils;
+      
+      const processedUtils = selectedUtils.map(util => {
+        const adjustedAmount = getAdjustedAmount({
+          ...util,
+          selected: true
+        });
+        
+        return {
+          ...util,
+          amount: adjustedAmount
+        };
+      });
+      
+      if (processedUtils.length > 0) {
+        metadata.utilities_included = processedUtils;
       }
       
       const totalAmount = calculationData?.grandTotal || calculateTotal();
       
       console.log('Saving invoice with total amount:', totalAmount, 'breakdown:', {
         calculationData,
-        selectedUtils
+        selectedUtils: processedUtils
       });
       
       const baseAmount = rentAlreadyInvoiced ? 0 : (form.getValues("amount") || 0);
@@ -611,7 +624,7 @@ export const useInvoiceForm = (
       metadata.subtotal = baseAmount;
       metadata.vat_amount = vatAmount;
       
-      for (const util of selectedUtils) {
+      for (const util of processedUtils) {
         const currentInvoicedAmount = util.current_invoiced_amount || 0;
         const newInvoicedAmount = currentInvoicedAmount + util.amount;
         const originalAmount = util.original_amount || util.amount;
