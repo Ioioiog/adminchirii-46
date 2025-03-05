@@ -42,7 +42,7 @@ export function InvoiceList({ invoices, userRole, onStatusUpdate }: InvoiceListP
     if (!metadata) return null;
     
     if (metadata.utilities_included && metadata.utilities_included.length > 0) {
-      // Check if it contains any utilities
+      // Only show "Utilities Only" if there's no rent amount (subtotal is 0 or not set)
       const utilitiesOnly = metadata.subtotal === 0 || !metadata.subtotal;
       if (utilitiesOnly) {
         return (
