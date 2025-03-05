@@ -1,0 +1,123 @@
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { formatAmount } from "@/lib/utils";
+import { CalculationData, UtilityForInvoice } from "@/types/invoice";
+import { format } from "date-fns";
+import { Calculator } from "lucide-react";
+import { UtilitiesSection } from "./UtilitiesSection";
+
+interface InvoiceSummaryProps {
+  calculationData?: CalculationData;
+  invoiceCurrency: string;
+  rentAlreadyInvoiced: boolean;
+  applyVat: boolean;
+  vatRate: number;
+  vatAmount: number;
+  grandTotal: number;
+  utilities: UtilityForInvoice[];
+  onUtilitySelection: (id: string, selected: boolean) => void;
+  onUtilityPercentageChange: (id: string, percentage: number) => void;
+  getAdjustedUtilityAmount: (utility: UtilityForInvoice) => number;
+  formAmount: number;
+  calculateTotal: () => number;
+  isSubmitting: boolean;
+  hasSelectedProperty: boolean;
+  onSubmit: () => void;
+}
+
+export const InvoiceSummary = ({
+  calculationData,
+  invoiceCurrency,
+  rentAlreadyInvoiced,
+  applyVat,
+  vatRate,
+  vatAmount,
+  grandTotal,
+  utilities,
+  onUtilitySelection,
+  onUtilityPercentageChange,
+  getAdjustedUtilityAmount,
+  formAmount,
+  calculateTotal,
+  isSubmitting,
+  hasSelectedProperty,
+  onSubmit
+}: InvoiceSummaryProps) => {
+  const totalAmount = calculationData?.grandTotal || calculateTotal();
+  
+  return (
+    <>
+      <Card className="border bg-slate-100">
+        <CardContent className="pt-6">
+          <div className="flex flex-col gap-3">
+            <h3 className="text-md font-medium flex items-center gap-2">
+              <Calculator className="h-5 w-5 text-slate-500" />
+              Invoice Summary ({invoiceCurrency})
+            </h3>
+
+            <div className="space-y-2 bg-white p-4 rounded-md border">
+              {calculationData?.dateRange && (
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-sm">Period:</span>
+                  <span className="text-sm font-medium">
+                    {format(calculationData.dateRange.from, 'MMM d, yyyy')} to {format(calculationData.dateRange.to, 'MMM d, yyyy')}
+                  </span>
+                </div>
+              )}
+              
+              <div className="flex justify-between items-center py-1">
+                <span className="text-sm">Rent Amount:</span>
+                <span className="text-sm font-medium">
+                  {rentAlreadyInvoiced ? (
+                    <span className="text-amber-600">Already invoiced</span>
+                  ) : (
+                    formatAmount(calculationData?.rentAmount || formAmount || 0, invoiceCurrency)
+                  )}
+                </span>
+              </div>
+
+              {applyVat && !rentAlreadyInvoiced && (
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-sm">VAT ({vatRate}%):</span>
+                  <span className="text-sm font-medium">
+                    {formatAmount(vatAmount, invoiceCurrency)}
+                  </span>
+                </div>
+              )}
+
+              <UtilitiesSection
+                utilities={utilities}
+                calculationData={calculationData}
+                onUtilitySelection={onUtilitySelection}
+                onUtilityPercentageChange={onUtilityPercentageChange}
+                getAdjustedUtilityAmount={getAdjustedUtilityAmount}
+                invoiceCurrency={invoiceCurrency}
+              />
+
+              <div className="flex justify-between items-center pt-2 mt-2 border-t border-slate-200">
+                <span className="font-bold">Total Amount:</span>
+                <span className="text-lg font-bold">
+                  {formatAmount(totalAmount, invoiceCurrency)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end">
+        <Button 
+          type="submit" 
+          disabled={isSubmitting || !hasSelectedProperty || (
+            totalAmount === 0 ||
+            (!formAmount && !utilities.some(u => u.selected))
+          )}
+          onClick={onSubmit}
+        >
+          Create Invoice
+        </Button>
+      </div>
+    </>
+  );
+};
