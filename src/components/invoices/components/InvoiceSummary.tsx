@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatAmount } from "@/lib/utils";
@@ -156,7 +155,7 @@ export const InvoiceSummary = ({
                       <span>Monthly base rent:</span>
                       <span className="font-medium">
                         {propertyCurrency !== 'RON' 
-                          ? `${formatCurrencyAmount(baseRentAmount, propertyCurrency)} (${formatCurrencyAmount(convertCurrency(baseRentAmount, propertyCurrency, 'RON'), 'RON')})`
+                          ? `${formatCurrencyAmount(baseRentAmount, propertyCurrency)}`
                           : formatCurrencyAmount(baseRentAmount, 'RON')}
                       </span>
                     </div>
@@ -175,7 +174,7 @@ export const InvoiceSummary = ({
                         <span>Daily rate:</span>
                         <span>
                           {propertyCurrency !== 'RON'
-                            ? `${formatCurrencyAmount(calculationData.metadata.daily_rate, propertyCurrency)}/day (${formatCurrencyAmount(convertCurrency(calculationData.metadata.daily_rate, propertyCurrency, 'RON'), 'RON')}/day)`
+                            ? `${formatCurrencyAmount(calculationData.metadata.daily_rate, propertyCurrency)}/day`
                             : `${formatCurrencyAmount(calculationData.metadata.daily_rate, 'RON')}/day`}
                         </span>
                       </div>
