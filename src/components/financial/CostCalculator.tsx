@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,13 +8,14 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from 'date-fns';
 import { DateRange } from "react-day-picker";
 import { useToast } from "@/hooks/use-toast";
-import { useForm } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useUserRole } from "@/hooks/use-user-role";
 import { useCurrency } from "@/hooks/useCurrency";
 import { InvoiceDialog } from "@/components/invoices/InvoiceDialog";
 import { FileText } from "lucide-react";
+import { CalculationData } from "@/types/invoice";
 
 const formSchema = z.object({
   rentAmount: z.string().refine(value => !isNaN(parseFloat(value)), {
@@ -29,13 +31,13 @@ const formSchema = z.object({
   }),
   utilities: z.array(
     z.object({
-      type: z.string(),
+      type: z.string().min(1, "Type is required"),
       amount: z.string().refine(value => !isNaN(parseFloat(value)), {
         message: "Utility amount must be a number.",
       }).refine(value => parseFloat(value) >= 0, {
         message: "Utility amount cannot be negative.",
       }),
-      id: z.string().optional(),
+      id: z.string(),
     })
   ).optional(),
 });
@@ -46,7 +48,7 @@ interface CostCalculatorProps {
 
 interface Calculations {
   rentAmount: number;
-  dateRange: DateRange | undefined;
+  dateRange: DateRange;
   utilities: Array<{ type: string; amount: number; id: string }>;
   utilitiesTotal: number;
   grandTotal: number;
@@ -65,7 +67,7 @@ const CostCalculator: React.FC<CostCalculatorProps> = ({ onInvoiceCreated }) => 
       rentAmount: '',
       startDate: undefined,
       endDate: undefined,
-      utilities: [{ type: '', amount: '' }],
+      utilities: [{ type: '', amount: '', id: `utility-${Date.now()}-${Math.random()}` }],
     },
   });
 
@@ -113,11 +115,19 @@ const CostCalculator: React.FC<CostCalculatorProps> = ({ onInvoiceCreated }) => 
     const proratedRent = (parseFloat(rentAmount) / 30) * dayDiff;
 
     let utilitiesTotal = 0;
+    let formattedUtilities: Array<{ type: string; amount: number; id: string }> = [];
+    
     if (utilities && utilities.length > 0) {
       utilitiesTotal = utilities.reduce((acc, utility) => {
         const amount = parseFloat(utility.amount || '0');
         return acc + amount;
       }, 0);
+      
+      formattedUtilities = utilities.map(utility => ({
+        type: utility.type || '',
+        amount: parseFloat(utility.amount || '0'),
+        id: utility.id || `utility-${Date.now()}-${Math.random()}`
+      }));
     }
 
     const grandTotal = proratedRent + utilitiesTotal;
@@ -125,7 +135,7 @@ const CostCalculator: React.FC<CostCalculatorProps> = ({ onInvoiceCreated }) => 
     setCalculations({
       rentAmount: proratedRent,
       dateRange: { from: start, to: end },
-      utilities: utilities || [],
+      utilities: formattedUtilities,
       utilitiesTotal: utilitiesTotal,
       grandTotal: grandTotal,
     });
@@ -137,11 +147,14 @@ const CostCalculator: React.FC<CostCalculatorProps> = ({ onInvoiceCreated }) => 
   };
 
   const addUtility = () => {
-    setValue("utilities", [...utilities, { type: '', amount: '' }], { shouldDirty: true });
+    setValue("utilities", [
+      ...(utilities || []), 
+      { type: '', amount: '', id: `utility-${Date.now()}-${Math.random()}` }
+    ], { shouldDirty: true });
   };
 
   const removeUtility = (index: number) => {
-    const updatedUtilities = [...utilities];
+    const updatedUtilities = [...(utilities || [])];
     updatedUtilities.splice(index, 1);
     setValue("utilities", updatedUtilities, { shouldDirty: true });
   };
@@ -158,6 +171,34 @@ const CostCalculator: React.FC<CostCalculatorProps> = ({ onInvoiceCreated }) => 
     }
   };
 
+  // Convert Calculations to CalculationData for InvoiceDialog
+  const getCalculationData = (): CalculationData => {
+    if (!calculations) return {};
+    
+    return {
+      rentAmount: calculations.rentAmount,
+      dateRange: {
+        from: calculations.dateRange.from,
+        to: calculations.dateRange.to as Date, // Force type as Date since it's required
+      },
+      grandTotal: calculations.grandTotal,
+      utilities: calculations.utilities.map(util => ({
+        id: util.id,
+        type: util.type,
+        amount: util.amount,
+        selected: true
+      }))
+    };
+  };
+
+  // Create a Promise-returning function for onInvoiceCreated
+  const handleInvoiceCreated = async (): Promise<void> => {
+    if (onInvoiceCreated) {
+      onInvoiceCreated();
+    }
+    return Promise.resolve();
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-6 flex items-center justify-center">
       <div className="container max-w-3xl mx-auto shadow-md rounded-lg overflow-hidden">
@@ -166,7 +207,7 @@ const CostCalculator: React.FC<CostCalculatorProps> = ({ onInvoiceCreated }) => 
             <CardTitle className="text-lg font-semibold text-gray-800">Cost Calculator</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <Form {...form}>
+            <FormProvider {...form}>
               <form onSubmit={handleSubmit(calculateCosts)} className="space-y-4">
                 {/* Rent Amount Input */}
                 <div>
@@ -244,7 +285,7 @@ const CostCalculator: React.FC<CostCalculatorProps> = ({ onInvoiceCreated }) => 
                     Add Utility
                   </Button>
                   {errors.utilities && (
-                    <p className="text-red-500 text-sm mt-1">{errors.utilities[0].message?.toString()}</p>
+                    <p className="text-red-500 text-sm mt-1">{errors.utilities[0]?.message?.toString()}</p>
                   )}
                 </div>
 
@@ -313,18 +354,13 @@ const CostCalculator: React.FC<CostCalculatorProps> = ({ onInvoiceCreated }) => 
                     open={showInvoiceDialog}
                     onOpenChange={setShowInvoiceDialog}
                     userId={userId}
-                    userRole={userRole}
-                    calculationData={calculations}
-                    onInvoiceCreated={() => {
-                      setShowInvoiceDialog(false);
-                      if (onInvoiceCreated) {
-                        onInvoiceCreated();
-                      }
-                    }}
+                    userRole={userRole === "service_provider" ? "landlord" : userRole}
+                    calculationData={getCalculationData()}
+                    onInvoiceCreated={handleInvoiceCreated}
                   />
                 )}
               </form>
-            </Form>
+            </FormProvider>
           </CardContent>
         </Card>
       </div>
