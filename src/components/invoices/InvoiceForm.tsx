@@ -587,9 +587,12 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         selectedUtils
       });
       
+      // Update utility records with invoiced amount before creating the invoice
       for (const util of selectedUtils) {
-        const newInvoicedAmount = (util.current_invoiced_amount || 0) + util.amount;
+        const currentInvoicedAmount = util.current_invoiced_amount || 0;
+        const newInvoicedAmount = currentInvoicedAmount + util.amount;
         
+        // Update the utility record with the invoiced amount and set invoiced flag
         await supabase
           .from('utilities')
           .update({
