@@ -53,12 +53,15 @@ export const InvoiceSummary = ({
   const hasOriginalCurrency = calculationData?.currency && 
                              calculationData.currency !== invoiceCurrency;
   
+  // Original property currency (from calculationData or property)
+  const propertyCurrency = calculationData?.currency || invoiceCurrency;
+  
   // Log values for debugging
   console.log('InvoiceSummary debug:', {
     rentAmount,
     formAmount,
     calculationRentAmount: calculationData?.rentAmount,
-    originalCurrency: calculationData?.currency,
+    originalCurrency: propertyCurrency,
     invoiceCurrency,
     hasOriginalCurrency,
     totalAmount
@@ -94,9 +97,9 @@ export const InvoiceSummary = ({
                       <span className="text-sm font-medium" data-testid="rent-amount">
                         {formatAmount(rentAmount, invoiceCurrency)}
                       </span>
-                      {hasOriginalCurrency && calculationData?.currency && (
+                      {hasOriginalCurrency && propertyCurrency && (
                         <div className="text-xs text-gray-500">
-                          Originally {formatAmount(formAmount, calculationData.currency)}
+                          Originally {formatAmount(formAmount, propertyCurrency)}
                         </div>
                       )}
                     </>
