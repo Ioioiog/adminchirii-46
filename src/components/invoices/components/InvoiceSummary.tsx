@@ -43,6 +43,7 @@ export const InvoiceSummary = ({
   onSubmit
 }: InvoiceSummaryProps) => {
   const totalAmount = calculationData?.grandTotal || calculateTotal();
+  const rentAmount = calculationData?.rentAmount || formAmount || 0;
   
   return (
     <>
@@ -70,7 +71,7 @@ export const InvoiceSummary = ({
                   {rentAlreadyInvoiced ? (
                     <span className="text-amber-600">Already invoiced</span>
                   ) : (
-                    formatAmount(calculationData?.rentAmount || formAmount || 0, invoiceCurrency)
+                    formatAmount(rentAmount, invoiceCurrency)
                   )}
                 </span>
               </div>

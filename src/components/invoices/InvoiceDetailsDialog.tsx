@@ -33,12 +33,13 @@ export function InvoiceDetailsDialog({
   // Helper functions for amount calculations
   const calculateSubtotal = (invoice: Invoice): number => {
     // First check if subtotal is stored in metadata
-    if (invoice.metadata?.subtotal) {
-      return invoice.metadata.subtotal;
+    if (invoice.metadata && typeof invoice.metadata === 'object' && 'subtotal' in invoice.metadata) {
+      return Number(invoice.metadata.subtotal);
     }
     
     // Fall back to calculation if not stored
-    const utilities = invoice.metadata?.utilities_included || [];
+    const utilities = invoice.metadata && typeof invoice.metadata === 'object' && 
+                      invoice.metadata.utilities_included ? invoice.metadata.utilities_included : [];
     const utilitiesTotal = utilities.reduce((sum, util) => sum + (util.amount || 0), 0);
     
     // If VAT is applied, calculate subtotal by removing VAT from total
@@ -55,14 +56,15 @@ export function InvoiceDetailsDialog({
 
   const calculateVatAmount = (invoice: Invoice): number => {
     // First check if VAT amount is stored in metadata
-    if (invoice.metadata?.vat_amount) {
-      return invoice.metadata.vat_amount;
+    if (invoice.metadata && typeof invoice.metadata === 'object' && 'vat_amount' in invoice.metadata) {
+      return Number(invoice.metadata.vat_amount);
     }
     
     // Fall back to calculation if not stored
     if (invoice.vat_rate && invoice.vat_rate > 0) {
       const subtotal = calculateSubtotal(invoice);
-      const utilities = invoice.metadata?.utilities_included || [];
+      const utilities = invoice.metadata && typeof invoice.metadata === 'object' && 
+                       invoice.metadata.utilities_included ? invoice.metadata.utilities_included : [];
       const utilitiesTotal = utilities.reduce((sum, util) => sum + (util.amount || 0), 0);
       
       // VAT is typically only applied to rent, not utilities
@@ -78,8 +80,7 @@ export function InvoiceDetailsDialog({
     
     // Check if the original rent amount is stored directly in metadata
     if (invoice.metadata && typeof invoice.metadata === 'object' && 
-        'original_rent_amount' in invoice.metadata && 
-        'original_rent_currency' in invoice.metadata) {
+        'original_rent_amount' in invoice.metadata) {
       console.log("Using original rent amount from metadata:", 
         invoice.metadata.original_rent_amount, 
         invoice.metadata.original_rent_currency);
@@ -321,14 +322,17 @@ export function InvoiceDetailsDialog({
                     <div className="grid grid-cols-12 p-4 text-sm">
                       <div className="col-span-6">
                         <p className="font-medium">Rent</p>
-                        {invoice.metadata?.original_rent_currency && invoice.metadata.original_rent_currency !== invoice.currency && (
+                        {invoice.metadata && typeof invoice.metadata === 'object' && 
+                         'original_rent_currency' in invoice.metadata && 
+                         invoice.metadata.original_rent_currency !== invoice.currency && (
                           <p className="text-xs text-gray-500 mt-1">
-                            {formatAmount(invoice.metadata.original_rent_amount || 0, invoice.metadata.original_rent_currency)} converted to {invoice.currency}
+                            {formatAmount(Number(invoice.metadata.original_rent_amount) || 0, invoice.metadata.original_rent_currency as string)} converted to {invoice.currency}
                           </p>
                         )}
-                        {invoice.metadata?.is_partial && (
+                        {invoice.metadata && typeof invoice.metadata === 'object' && 
+                         'is_partial' in invoice.metadata && invoice.metadata.is_partial && (
                           <p className="text-xs text-gray-500 mt-1">
-                            {invoice.metadata.partial_percentage}% of {formatAmount(invoice.metadata.full_amount || 0, invoice.currency)}
+                            {invoice.metadata.partial_percentage}% of {formatAmount(Number(invoice.metadata.full_amount) || 0, invoice.currency)}
                           </p>
                         )}
                       </div>
@@ -343,8 +347,11 @@ export function InvoiceDetailsDialog({
                       </div>
                     </div>
                     
-                    {invoice.metadata?.utilities_included && invoice.metadata.utilities_included.length > 0 && (
-                      invoice.metadata.utilities_included.map((util, idx) => (
+                    {invoice.metadata && typeof invoice.metadata === 'object' && 
+                     'utilities_included' in invoice.metadata && 
+                     invoice.metadata.utilities_included && 
+                     invoice.metadata.utilities_included.length > 0 && (
+                      invoice.metadata.utilities_included.map((util: any, idx: number) => (
                         <div key={idx} className="grid grid-cols-12 p-4 text-sm">
                           <div className="col-span-6">
                             <p className="font-medium">{util.type}</p>
