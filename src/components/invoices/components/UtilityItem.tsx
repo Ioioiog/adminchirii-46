@@ -1,7 +1,6 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Slider } from "@/components/ui/slider";
 import { formatAmount } from "@/lib/utils";
 import { UtilityForInvoice } from "@/types/invoice";
 
@@ -9,7 +8,6 @@ interface UtilityItemProps {
   utility: UtilityForInvoice;
   isFromCalculator: boolean;
   onSelect: (id: string, selected: boolean) => void;
-  onPercentageChange: (id: string, percentage: number) => void;
   getAdjustedUtilityAmount: (utility: UtilityForInvoice) => number;
   invoiceCurrency: string;
 }
@@ -18,14 +16,12 @@ export const UtilityItem = ({
   utility,
   isFromCalculator,
   onSelect,
-  onPercentageChange,
   getAdjustedUtilityAmount,
   invoiceCurrency
 }: UtilityItemProps) => {
   const isPartiallyInvoiced = utility.invoiced_amount > 0 && utility.invoiced_amount < (utility.original_amount || utility.amount);
   const originalAmount = utility.original_amount || utility.amount;
   const remainingAmount = originalAmount - (utility.invoiced_amount || 0);
-  const remainingPercentage = Math.round((remainingAmount / originalAmount) * 100);
   
   return (
     <div className="flex items-center justify-between">
@@ -52,20 +48,8 @@ export const UtilityItem = ({
             )}
           </label>
           {utility.selected && !isFromCalculator && (
-            <div className="mt-1 w-48">
-              <Slider
-                value={[utility.percentage || 100]}
-                min={1}
-                max={100}
-                step={1}
-                onValueChange={([value]) => onPercentageChange(utility.id, value)}
-              />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>{utility.percentage || 100}% applied</span>
-                <span>
-                  {formatAmount(getAdjustedUtilityAmount(utility), utility.currency || invoiceCurrency)}
-                </span>
-              </div>
+            <div className="mt-1 text-xs text-gray-500">
+              Amount: {formatAmount(getAdjustedUtilityAmount(utility), utility.currency || invoiceCurrency)}
             </div>
           )}
         </div>

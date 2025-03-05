@@ -460,24 +460,6 @@ export const useInvoiceForm = (
     updateGrandTotal(updatedUtilities);
   };
 
-  const handleUtilityPercentageChange = (id: string, percentage: number) => {
-    const updatedUtilities = utilities.map(util => {
-      if (util.id === id) {
-        const adjustableAmount = (util.original_amount || util.amount);
-        const newAmount = (adjustableAmount * percentage) / 100;
-        return { 
-          ...util, 
-          percentage, 
-          amount: newAmount 
-        };
-      }
-      return util;
-    });
-    
-    setUtilities(updatedUtilities);
-    updateGrandTotal(updatedUtilities);
-  };
-
   const updateGrandTotal = (updatedUtilities: UtilityForInvoice[]) => {
     if (calculationData?.grandTotal) {
       return;
@@ -506,7 +488,6 @@ export const useInvoiceForm = (
         id: util.id,
         amount: getAdjustedAmount(util),
         type: util.type,
-        percentage: util.percentage || 100,
         original_amount: util.original_amount || util.amount,
         currency: util.currency,
         current_invoiced_amount: util.invoiced_amount || 0
@@ -517,7 +498,6 @@ export const useInvoiceForm = (
       id: util.id,
       amount: getAdjustedAmount(util),
       type: util.type,
-      percentage: util.percentage || 100,
       original_amount: util.original_amount || util.amount,
       currency: util.currency,
       current_invoiced_amount: util.invoiced_amount || 0
@@ -717,7 +697,6 @@ export const useInvoiceForm = (
     grandTotal,
     exchangeRates,
     handleUtilitySelection,
-    handleUtilityPercentageChange,
     getAdjustedAmount,
     convertCurrency,
     calculateVatAmount,

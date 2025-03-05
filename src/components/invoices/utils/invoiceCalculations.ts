@@ -30,14 +30,12 @@ export const getAdjustedUtilityAmount = (
     return utility.amount;
   }
   
-  // Apply percentage to the remaining amount
-  const percentage = utility.percentage || 100;
+  // Simply use the remaining amount
   const originalAmount = utility.original_amount || utility.amount;
   const remainingAmount = originalAmount - (utility.invoiced_amount || 0);
   
   // Ensure we're not returning 0
-  const calculatedAmount = (remainingAmount * percentage) / 100;
-  return calculatedAmount > 0 ? calculatedAmount : remainingAmount;
+  return remainingAmount > 0 ? remainingAmount : originalAmount;
 };
 
 export const calculateTotal = (

@@ -6,7 +6,6 @@ interface UtilitiesSectionProps {
   utilities: UtilityForInvoice[];
   calculationData?: { utilities?: UtilityForInvoice[] };
   onUtilitySelection: (id: string, selected: boolean) => void;
-  onUtilityPercentageChange: (id: string, percentage: number) => void;
   getAdjustedUtilityAmount: (utility: UtilityForInvoice) => number;
   invoiceCurrency: string;
 }
@@ -15,7 +14,6 @@ export const UtilitiesSection = ({
   utilities,
   calculationData,
   onUtilitySelection,
-  onUtilityPercentageChange,
   getAdjustedUtilityAmount,
   invoiceCurrency
 }: UtilitiesSectionProps) => {
@@ -34,7 +32,6 @@ export const UtilitiesSection = ({
               utility={utility}
               isFromCalculator={!!isFromCalculator}
               onSelect={onUtilitySelection}
-              onPercentageChange={onUtilityPercentageChange}
               getAdjustedUtilityAmount={getAdjustedUtilityAmount}
               invoiceCurrency={invoiceCurrency}
             />
