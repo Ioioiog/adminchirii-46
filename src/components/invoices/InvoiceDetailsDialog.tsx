@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { FileText, Calendar, User, Building, CreditCard, Download, Printer, ClipboardCheck, Receipt } from "lucide-react";
@@ -145,9 +146,13 @@ export function InvoiceDetailsDialog({
         if (error) throw error;
         
         // Add property currency and rent to metadata if not present
-        if (data && data.property && data.property.monthly_rent && !data.metadata?.original_rent_amount) {
+        if (data && data.property && data.property.monthly_rent && 
+            (!data.metadata || (typeof data.metadata === 'object' && !data.metadata.original_rent_amount))) {
+          // Ensure metadata is an object before spreading
+          const currentMetadata = typeof data.metadata === 'object' ? data.metadata || {} : {};
+          
           data.metadata = {
-            ...data.metadata,
+            ...currentMetadata,
             original_rent_amount: data.property.monthly_rent,
             original_rent_currency: data.property.currency
           };
