@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -28,26 +27,37 @@ const availableCurrencies: Currency[] = [
 const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string, rates: ExchangeRates['rates']): number => {
   if (fromCurrency === toCurrency) return amount;
   
+  if (!rates || Object.keys(rates).length === 0) {
+    console.warn('No exchange rates available, returning original amount:', amount);
+    return amount;
+  }
+  
+  console.log(`Converting ${amount} from ${fromCurrency} to ${toCurrency}`, {
+    rates,
+    fromRate: rates[fromCurrency],
+    toRate: rates[toCurrency]
+  });
+  
   // For proper currency conversion, we need to understand the exchange rate format
   // In this case, the rates are relative to RON (Romanian Leu as the base currency)
   // So EUR rate means 1 EUR = X RON, and USD rate means 1 USD = Y RON
   
-  // Convert from source currency to RON first
-  let amountInRON: number;
-  if (fromCurrency === 'RON') {
-    amountInRON = amount;
-  } else {
-    // If from EUR or USD to RON, we multiply by the rate
-    amountInRON = amount * rates[fromCurrency as keyof typeof rates];
+  // First convert to RON (base currency in our system)
+  let amountInRON = amount;
+  if (fromCurrency !== 'RON') {
+    amountInRON = amount * (rates[fromCurrency] || 1);
+    console.log(`Step 1: Converted to RON: ${amountInRON}`);
   }
   
   // Then convert from RON to target currency
   if (toCurrency === 'RON') {
+    console.log(`Final amount in RON: ${amountInRON}`);
     return amountInRON;
-  } else {
-    // To convert from RON to EUR or USD, we divide by the rate
-    return amountInRON / rates[toCurrency as keyof typeof rates];
   }
+  
+  const result = amountInRON / (rates[toCurrency] || 1);
+  console.log(`Step 2: Converted from RON to ${toCurrency}: ${result}`);
+  return result;
 };
 
 export function useCurrency() {

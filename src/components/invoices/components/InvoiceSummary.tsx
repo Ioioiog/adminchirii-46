@@ -49,12 +49,15 @@ export const InvoiceSummary = ({
   // Original property currency (from calculationData or property)
   const propertyCurrency = calculationData?.currency || invoiceCurrency;
   
-  // For display purposes, convert the rent amount if currencies differ
-  let displayRentAmount = calculationData?.rentAmount || formAmount || 0;
+  // For display purposes, get the base rent amount (before any conversion)
+  const baseRentAmount = calculationData?.rentAmount || formAmount || 0;
   
   // If the currencies are different, convert the amount to invoice currency
+  // This is the amount that will be displayed as the primary amount
+  let displayRentAmount = baseRentAmount;
   if (propertyCurrency !== invoiceCurrency) {
-    displayRentAmount = convertCurrency(displayRentAmount, propertyCurrency, invoiceCurrency);
+    displayRentAmount = convertCurrency(baseRentAmount, propertyCurrency, invoiceCurrency);
+    console.log(`Converting rent for display: ${baseRentAmount} ${propertyCurrency} → ${displayRentAmount} ${invoiceCurrency}`);
   }
   
   // Determine if we have currency conversion
@@ -63,14 +66,13 @@ export const InvoiceSummary = ({
   // Log values for debugging
   console.log('InvoiceSummary debug:', {
     displayRentAmount,
-    formAmount,
+    baseRentAmount,
     calculationRentAmount: calculationData?.rentAmount,
     originalCurrency: propertyCurrency,
     invoiceCurrency,
     hasOriginalCurrency,
     totalAmount,
-    convertedAmount: propertyCurrency !== invoiceCurrency ? 
-      convertCurrency(formAmount, propertyCurrency, invoiceCurrency) : formAmount
+    convertedAmount: hasOriginalCurrency ? displayRentAmount : baseRentAmount
   });
   
   return (
@@ -105,7 +107,7 @@ export const InvoiceSummary = ({
                       </span>
                       {hasOriginalCurrency && (
                         <div className="text-xs text-gray-500">
-                          Originally {formatAmount(formAmount, propertyCurrency)}
+                          Originally {formatAmount(baseRentAmount, propertyCurrency)}
                         </div>
                       )}
                     </>
