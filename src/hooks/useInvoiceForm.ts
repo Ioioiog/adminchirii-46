@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { CalculationData, InvoiceMetadata, UtilityForInvoice } from "@/types/invoice";
@@ -78,7 +77,6 @@ export const useInvoiceForm = (
   }, []);
 
   useEffect(() => {
-    // Initial form setup from calculation data
     if (calculationData?.propertyId) {
       form.setValue("property_id", calculationData.propertyId);
     }
@@ -95,12 +93,10 @@ export const useInvoiceForm = (
       setGrandTotal(calculationData.grandTotal);
     }
     
-    // Set default due date (14 days from now)
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 14);
     form.setValue("due_date", dueDate.toISOString().split('T')[0]);
 
-    // Setup utilities from calculation data
     if (calculationData?.utilities && Array.isArray(calculationData.utilities)) {
       setUtilities(calculationData.utilities.map(util => ({
         ...util,
@@ -109,7 +105,6 @@ export const useInvoiceForm = (
     }
   }, [calculationData, form]);
 
-  // Fetch properties based on user role
   useEffect(() => {
     const fetchProperties = async () => {
       try {
@@ -198,7 +193,6 @@ export const useInvoiceForm = (
     fetchProperties();
   }, [userId, userRole, toast, form, calculationData?.propertyId, calculationData?.currency]);
 
-  // Check for existing invoices to avoid double-billing
   useEffect(() => {
     const checkExistingInvoices = async () => {
       if (!propertyId) return;
@@ -282,7 +276,6 @@ export const useInvoiceForm = (
     checkExistingInvoices();
   }, [propertyId, calculationData, form]);
 
-  // Fetch tenants for landlord user
   useEffect(() => {
     const fetchTenants = async () => {
       if (!propertyId || userRole !== "landlord") return;
@@ -331,7 +324,6 @@ export const useInvoiceForm = (
     fetchTenants();
   }, [propertyId, userRole, toast, form]);
 
-  // Fetch landlord VAT settings
   useEffect(() => {
     const fetchLandlordVatSettings = async () => {
       if (!selectedProperty || !propertyId) return;
@@ -377,7 +369,6 @@ export const useInvoiceForm = (
     fetchLandlordVatSettings();
   }, [propertyId, selectedProperty]);
 
-  // Handle setting default property amount and currency
   useEffect(() => {
     if (selectedProperty && !rentAlreadyInvoiced) {
       form.setValue("amount", selectedProperty.monthly_rent);
@@ -391,17 +382,14 @@ export const useInvoiceForm = (
     }
   }, [selectedProperty, form, calculationData?.currency, rentAlreadyInvoiced, calculationData?.rentAmount]);
 
-  // Set default tenant if only one
   useEffect(() => {
     if (defaultTenantId && userRole === "landlord") {
       form.setValue("tenant_id", defaultTenantId);
     }
   }, [defaultTenantId, form, userRole]);
 
-  // Fetch utilities for selected property
   const fetchUtilitiesForProperty = async (propertyId: string) => {
     try {
-      // Fetch all utilities for the property, including those that are already invoiced
       const { data, error } = await supabase
         .from('utilities')
         .select('*')
@@ -416,7 +404,6 @@ export const useInvoiceForm = (
         const remainingAmount = originalAmount - invoicedAmount;
         const remainingPercentage = Math.min(Math.round((remainingAmount / originalAmount) * 100), 100);
         
-        // Only include utilities with remaining amounts or those that come from the calculator
         const shouldInclude = remainingAmount > 0 || utility.status === 'pending';
         
         if (!shouldInclude && !calculationData?.utilities?.some(u => u.id === utility.id)) {
@@ -436,10 +423,9 @@ export const useInvoiceForm = (
           is_partially_invoiced: invoicedAmount > 0 && invoicedAmount < utility.amount,
           remaining_percentage: remainingPercentage
         };
-      }).filter(Boolean); // Remove null entries
+      }).filter(Boolean);
       
       if (calculationData?.utilities && Array.isArray(calculationData.utilities)) {
-        // Combine calculator utilities with fetched utilities, prioritizing calculator ones
         setUtilities([
           ...calculationData.utilities.map(util => ({
             ...util,
@@ -619,7 +605,6 @@ export const useInvoiceForm = (
         selectedUtils
       });
       
-      // Update utility records with invoiced amount before creating the invoice
       for (const util of selectedUtils) {
         const currentInvoicedAmount = util.current_invoiced_amount || 0;
         const newInvoicedAmount = currentInvoicedAmount + util.amount;
@@ -635,7 +620,6 @@ export const useInvoiceForm = (
           amount: util.amount
         });
 
-        // Update the utility record with the invoiced amount and set invoiced flag
         const { error: updateError } = await supabase
           .from('utilities')
           .update({

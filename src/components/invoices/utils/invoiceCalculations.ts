@@ -25,15 +25,16 @@ export const getAdjustedUtilityAmount = (
 ): number => {
   if (!utility.selected) return 0;
   
+  // If this utility comes from the calculator, use its amount directly
   if (calculationData?.utilities?.some(u => u.id === utility.id)) {
     return utility.amount;
   }
   
+  // Apply percentage to the remaining amount
   const percentage = utility.percentage || 100;
   const originalAmount = utility.original_amount || utility.amount;
   const remainingAmount = originalAmount - (utility.invoiced_amount || 0);
-  const adjustableAmount = remainingAmount;
-  return (adjustableAmount * percentage) / 100;
+  return (remainingAmount * percentage) / 100;
 };
 
 export const calculateTotal = (
