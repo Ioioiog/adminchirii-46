@@ -12,7 +12,7 @@ import { InvoiceForm } from "./InvoiceForm";
 import { InvoiceDialogProps } from "@/types/invoice";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CostCalculator } from "@/components/financial/CostCalculator";
+import CostCalculator from "@/components/financial/CostCalculator";
 
 export function InvoiceDialog({ 
   open, 

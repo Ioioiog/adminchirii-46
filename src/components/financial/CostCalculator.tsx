@@ -12,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { CalendarIcon, Calculator, Plus, Trash2, ChevronDown } from "lucide-react";
+import { CalendarIcon, Calculator, Plus, Trash2, ChevronDown, FileText } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useProperties } from "@/hooks/useProperties";
@@ -22,9 +22,9 @@ import { InvoiceDialog } from "@/components/invoices/InvoiceDialog";
 import { CalculationData } from "@/types/invoice";
 
 interface UtilityInput {
-  id?: string;
-  type?: string;
-  amount?: string;
+  id: string;
+  type: string;
+  amount: string;
 }
 
 interface Calculations {
@@ -53,11 +53,11 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export default function CostCalculator({ 
+const CostCalculator = ({ 
   onCalculate, 
   hideCreateInvoiceButton = false, 
   initialCalculationData 
-}: CostCalculatorProps) {
+}: CostCalculatorProps) => {
   const { userRole, userId } = useUserRole();
   const { properties, isLoading } = useProperties({ userRole: userRole || "tenant" });
   const { formatAmount, convertCurrency } = useCurrency();
@@ -177,11 +177,21 @@ export default function CostCalculator({
         amount: parseFloat(util.amount || "0"),
       }));
     
-    const calculationsData = {
+    // Ensure dateRange has required properties before setting calculations
+    const dateRangeValue = values.dateRange || { from: new Date(), to: new Date() };
+    const safeFrom = dateRangeValue.from || new Date();
+    const safeTo = dateRangeValue.to || new Date();
+    const safeRange: DateRange = { from: safeFrom, to: safeTo };
+    
+    const calculationsData: Calculations = {
       propertyId: values.propertyId,
-      dateRange: values.dateRange,
+      dateRange: safeRange,
       rentAmount,
-      utilities: formattedUtilities,
+      utilities: formattedUtilities.map(util => ({
+        id: util.id,
+        type: util.type,
+        amount: String(util.amount)
+      })),
       grandTotal,
       currency: propertyCurrency
     };
@@ -194,12 +204,15 @@ export default function CostCalculator({
   };
 
   const getCalculationData = (calculationsData: Calculations): CalculationData => {
+    // Ensure dateRange has required properties
+    const dateRange = calculationsData.dateRange ? {
+      from: calculationsData.dateRange.from || new Date(),
+      to: calculationsData.dateRange.to || new Date()
+    } : undefined;
+    
     return {
       propertyId: calculationsData.propertyId,
-      dateRange: calculationsData.dateRange ? {
-        from: calculationsData.dateRange.from as Date,
-        to: calculationsData.dateRange.to as Date
-      } : undefined,
+      dateRange,
       rentAmount: calculationsData.rentAmount,
       utilities: calculationsData.utilities?.map(util => ({
         id: util.id || `util-${Date.now()}`,
@@ -299,7 +312,7 @@ export default function CostCalculator({
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="range"
-                          selected={field.value}
+                          selected={field.value || { from: new Date(), to: new Date() }}
                           onSelect={field.onChange}
                           initialFocus
                         />
@@ -489,4 +502,6 @@ export default function CostCalculator({
       )}
     </div>
   );
-}
+};
+
+export default CostCalculator;
