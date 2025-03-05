@@ -42,9 +42,16 @@ export function InvoiceList({ invoices, userRole, onStatusUpdate }: InvoiceListP
     if (!metadata) return null;
     
     if (metadata.utilities_included && metadata.utilities_included.length > 0) {
-      // Only show "Utilities Only" if there's no rent amount (subtotal is 0 or not set)
-      const utilitiesOnly = metadata.subtotal === 0 || !metadata.subtotal;
-      if (utilitiesOnly) {
+      // Check if this is a utilities-only invoice by seeing if the utilities amounts sum up to the total invoice amount
+      // with a small margin for rounding errors
+      const utilitiesTotalAmount = metadata.utilities_included.reduce((sum, util) => 
+        sum + (util.original_amount || 0), 0);
+      
+      // If the invoice amount minus utilities total is significant, it includes rent
+      // Allow for a small margin of error (e.g., 1 unit) for rounding differences
+      const hasRent = Math.abs(invoice.amount - utilitiesTotalAmount) > 1;
+      
+      if (!hasRent) {
         return (
           <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-800 border-blue-200">
             Utilities Only
