@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -149,6 +150,10 @@ export function useCurrency() {
     formatAmount,
     currency: preference?.currency_preference || 'USD',
     isLoading: !exchangeRates,
-    availableCurrencies
+    availableCurrencies,
+    convertCurrency: (amount: number, fromCurrency: string, toCurrency: string) => {
+      if (!exchangeRates?.rates) return amount;
+      return convertCurrency(amount, fromCurrency, toCurrency, exchangeRates.rates);
+    }
   };
 }

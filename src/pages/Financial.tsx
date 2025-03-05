@@ -274,7 +274,15 @@ const Financial = () => {
             {showInvoiceDialog && userId && filteredUserRole && (
               <InvoiceDialog 
                 open={showInvoiceDialog}
-                onOpenChange={setShowInvoiceDialog}
+                onOpenChange={(open) => {
+                  if (open) {
+                    console.log('Opening invoice dialog. User currency settings:', {
+                      userRole,
+                      userId,
+                    });
+                  }
+                  setShowInvoiceDialog(open);
+                }}
                 userId={userId}
                 userRole={filteredUserRole}
                 onInvoiceCreated={fetchInvoices}

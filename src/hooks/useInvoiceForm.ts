@@ -507,20 +507,54 @@ export const useInvoiceForm = (
     }));
   };
 
+  useEffect(() => {
+    if (exchangeRates && Object.keys(exchangeRates).length > 0) {
+      console.log('Exchange rates loaded:', exchangeRates);
+      
+      if (selectedProperty) {
+        const propertyRent = selectedProperty.monthly_rent;
+        const propertyCurrency = selectedProperty.currency || 'EUR';
+        
+        // Log currency conversion examples
+        if (propertyCurrency !== 'RON') {
+          const convertedRent = convertCurrency(propertyRent, propertyCurrency, 'RON');
+          console.log(`Currency conversion example: ${propertyRent} ${propertyCurrency} = ${convertedRent.toFixed(2)} RON`);
+        }
+        
+        // Log the actual conversion that would be used for the invoice
+        const actualConvertedRent = convertCurrency(propertyRent, propertyCurrency, invoiceCurrency);
+        console.log(`Actual conversion for invoice: ${propertyRent} ${propertyCurrency} = ${actualConvertedRent.toFixed(2)} ${invoiceCurrency}`);
+      }
+    }
+  }, [exchangeRates, selectedProperty, invoiceCurrency]);
+
   const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string): number => {
     if (fromCurrency === toCurrency) return amount;
-    if (!exchangeRates || Object.keys(exchangeRates).length === 0) return amount;
+    if (!exchangeRates || Object.keys(exchangeRates).length === 0) {
+      console.warn('No exchange rates available, returning original amount:', amount);
+      return amount;
+    }
+    
+    console.log(`Converting ${amount} from ${fromCurrency} to ${toCurrency}`, {
+      rates: exchangeRates,
+      fromRate: exchangeRates[fromCurrency],
+      toRate: exchangeRates[toCurrency]
+    });
     
     let amountInRON = amount;
     if (fromCurrency !== 'RON') {
       amountInRON = amount * (exchangeRates[fromCurrency] || 1);
+      console.log(`Step 1: Converted to RON: ${amountInRON}`);
     }
     
     if (toCurrency === 'RON') {
+      console.log(`Final amount in RON: ${amountInRON}`);
       return amountInRON;
     }
     
-    return amountInRON / (exchangeRates[toCurrency] || 1);
+    const result = amountInRON / (exchangeRates[toCurrency] || 1);
+    console.log(`Step 2: Converted from RON to ${toCurrency}: ${result}`);
+    return result;
   };
 
   const calculateVatAmount = () => {

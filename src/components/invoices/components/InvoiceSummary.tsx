@@ -49,6 +49,17 @@ export const InvoiceSummary = ({
   const hasOriginalCurrency = calculationData?.currency && 
                              calculationData.currency !== invoiceCurrency;
   
+  // Log values for debugging
+  console.log('InvoiceSummary debug:', {
+    rentAmount,
+    formAmount: formAmount,
+    calculationRentAmount: calculationData?.rentAmount,
+    originalCurrency: calculationData?.currency,
+    invoiceCurrency,
+    hasOriginalCurrency,
+    totalAmount
+  });
+  
   return (
     <>
       <Card className="border bg-slate-100">
