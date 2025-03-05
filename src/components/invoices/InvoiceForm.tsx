@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -603,8 +602,17 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
         const originalAmount = util.original_amount || util.amount;
         const isPaid = newInvoicedAmount >= originalAmount;
         
+        console.log(`Updating utility ${util.id}:`, {
+          id: util.id,
+          currentInvoicedAmount,
+          newInvoicedAmount,
+          originalAmount,
+          isPaid,
+          amount: util.amount
+        });
+
         // Update the utility record with the invoiced amount and set invoiced flag
-        await supabase
+        const { error: updateError } = await supabase
           .from('utilities')
           .update({
             invoiced: true,
@@ -613,7 +621,12 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
           })
           .eq('id', util.id);
           
-        console.log(`Updated utility ${util.id}: invoiced_amount set to ${newInvoicedAmount}, status set to ${isPaid ? 'paid' : 'pending'}`);  
+        if (updateError) {
+          console.error(`Error updating utility ${util.id}:`, updateError);
+          throw new Error(`Failed to update utility: ${updateError.message}`);
+        } else {
+          console.log(`Updated utility ${util.id}: invoiced_amount set to ${newInvoicedAmount}, status set to ${isPaid ? 'paid' : 'pending'}`);  
+        }
       }
       
       const { data, error } = await supabase
@@ -911,61 +924,4 @@ export function InvoiceForm({ onSuccess, userId, userRole, calculationData }: In
                 Invoice Summary ({invoiceCurrency})
               </h3>
 
-              <div className="space-y-2 bg-white p-4 rounded-md border">
-                {calculationData?.dateRange && (
-                  <div className="flex justify-between items-center py-1">
-                    <span className="text-sm">Period:</span>
-                    <span className="text-sm font-medium">
-                      {format(calculationData.dateRange.from, 'MMM d, yyyy')} to {format(calculationData.dateRange.to, 'MMM d, yyyy')}
-                    </span>
-                  </div>
-                )}
-                
-                <div className="flex justify-between items-center py-1">
-                  <span className="text-sm">Rent Amount:</span>
-                  <span className="text-sm font-medium">
-                    {rentAlreadyInvoiced ? (
-                      <span className="text-amber-600">Already invoiced</span>
-                    ) : (
-                      formatAmount(calculationData?.rentAmount || form.getValues("amount") || 0, invoiceCurrency)
-                    )}
-                  </span>
-                </div>
-
-                {applyVat && !rentAlreadyInvoiced && (
-                  <div className="flex justify-between items-center py-1">
-                    <span className="text-sm">VAT ({vatRate}%):</span>
-                    <span className="text-sm font-medium">
-                      {formatAmount(calculateVatAmount(), invoiceCurrency)}
-                    </span>
-                  </div>
-                )}
-
-                {utilities.length > 0 && renderUtilitiesSection()}
-
-                <div className="flex justify-between items-center pt-2 mt-2 border-t border-slate-200">
-                  <span className="font-bold">Total Amount:</span>
-                  <span className="text-lg font-bold">
-                    {formatAmount(calculationData?.grandTotal || calculateTotal(), invoiceCurrency)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="flex justify-end">
-          <Button 
-            type="submit" 
-            disabled={isLoading || !selectedProperty || (
-              (calculationData?.grandTotal || calculateTotal()) === 0 ||
-              (!form.getValues("amount") && !utilities.some(u => u.selected))
-            )}
-          >
-            Create Invoice
-          </Button>
-        </div>
-      </form>
-    </Form>
-  );
-}
+              <div className="space-
