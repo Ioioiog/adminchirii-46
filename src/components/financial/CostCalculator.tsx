@@ -1,12 +1,22 @@
-
 import React, { useState, useEffect } from 'react';
 import { DateRange } from 'react-day-picker';
 import { format, addDays, differenceInDays, isSameDay, addMonths, isWithinInterval } from 'date-fns';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Calculator, DollarSign, Info, CheckSquare, FileText, AlertCircle, Edit2 } from 'lucide-react';
+import { 
+  Calendar, 
+  Calculator, 
+  DollarSign, 
+  Info, 
+  CheckSquare, 
+  FileText, 
+  AlertCircle, 
+  Edit2,
+  Building,
+  CalendarRange
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProperties } from '@/hooks/useProperties';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -19,6 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { InvoiceMetadata } from '@/types/invoice';
 import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
 
 interface UtilityItem {
   id: string;
@@ -110,7 +121,7 @@ const UtilityRow = ({
 
   return (
     <>
-      <tr className={`border-t ${!utility.selected ? 'bg-gray-50 text-gray-400' : ''}`}>
+      <tr className={`border-t hover:bg-slate-50 transition-colors ${!utility.selected ? 'bg-gray-50 text-gray-400' : ''}`}>
         <td className="p-3">{utility.type}</td>
         <td className="p-3">{utility.invoice_number}</td>
         <td className="p-3">{utility.issued_date}</td>
@@ -559,56 +570,113 @@ const CostCalculator = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-2 mb-2">
-        <Calendar className="h-8 w-8" />
-        <h3 className="text-2xl font-bold">Cost Calculator</h3>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-3">
+          <div className="h-10 w-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+            <Calculator className="h-6 w-6" />
+          </div>
+          <h3 className="text-2xl font-bold text-slate-800">Cost Calculator</h3>
+        </div>
+        
+        {hasCalculated && userRole === 'landlord' && (
+          <Button 
+            onClick={createInvoiceFromCalculation}
+            className="bg-green-600 hover:bg-green-700 shadow-sm"
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            Create Invoice
+          </Button>
+        )}
       </div>
       
-      <p className="text-gray-600">
-        Select a property and date range to calculate your total expenses (rent + utilities)
+      <p className="text-slate-600">
+        Calculate rent and utilities costs for a specific property and date range
       </p>
       
-      <div className="space-y-4">
-        <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select a property" />
-          </SelectTrigger>
-          <SelectContent>
-            {properties.map((property) => (
-              <SelectItem key={property.id} value={property.id}>
-                {property.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        
-        <div className="flex flex-col sm:flex-row gap-4 items-center">
-          <div className="w-full sm:w-3/4">
-            <DatePickerWithRange
-              date={selectedDateRange}
-              onDateChange={setSelectedDateRange}
-            />
+      <Card className="shadow-sm border-slate-200">
+        <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <CardTitle className="flex items-center gap-2 text-slate-800">
+            <Building className="h-5 w-5 text-blue-500" />
+            Property Details
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="col-span-1 md:col-span-2">
+                <label className="text-sm font-medium text-slate-700 mb-1.5 block">Property</label>
+                <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a property" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {properties.map((property) => (
+                      <SelectItem key={property.id} value={property.id}>
+                        {property.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium text-slate-700 mb-1.5 block">Currency</label>
+                <Select value={grandTotalCurrency} onValueChange={setGrandTotalCurrency} disabled={!selectedPropertyId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableCurrencies?.map((curr) => (
+                      <SelectItem key={curr.code} value={curr.code}>
+                        {curr.code} - {curr.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-1.5 block flex items-center gap-2">
+                <CalendarRange className="h-4 w-4 text-blue-500" />
+                Date Range
+              </label>
+              <DatePickerWithRange
+                date={selectedDateRange}
+                onDateChange={setSelectedDateRange}
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Select the period for which you want to calculate costs
+              </p>
+            </div>
+            
+            <div className="pt-2">
+              <Button 
+                onClick={calculateCosts} 
+                disabled={!selectedPropertyId || !selectedDateRange?.from || !selectedDateRange?.to}
+                className="w-full sm:w-auto"
+                size="lg"
+              >
+                <Calculator className="mr-2 h-4 w-4" />
+                Calculate Costs
+              </Button>
+            </div>
           </div>
-          <Button 
-            onClick={calculateCosts} 
-            disabled={!selectedPropertyId || !selectedDateRange?.from || !selectedDateRange?.to}
-            className="w-full sm:w-1/4"
-            size="lg"
-          >
-            <Calculator className="mr-2 h-4 w-4" />
-            Calculate
-          </Button>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
       
       {hasCalculated && (
-        <div>
-          <Card className="bg-blue-50 border-blue-100">
-            <CardContent className="p-6">
-              <h4 className="text-xl font-semibold text-center mb-4">
+        <div className="space-y-6">
+          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xl font-semibold text-center">
                 Cost Summary for {format(selectedDateRange?.from || new Date(), "MMM d, yyyy")} to {format(selectedDateRange?.to || addDays(new Date(), 1), "MMM d, yyyy")}
-              </h4>
-              
+                <p className="text-sm font-normal mt-1 text-slate-600">
+                  {daysInPeriod} days period
+                </p>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4">
               {rentAlreadyInvoiced && invoicedPeriod && (
                 <Alert className="mb-4 bg-amber-50 border-amber-200">
                   <AlertCircle className="h-4 w-4 text-amber-600" />
@@ -620,17 +688,20 @@ const CostCalculator = () => {
                 </Alert>
               )}
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <p className="text-gray-600">Rent</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <DollarSign className="h-4 w-4 text-blue-500" />
+                      <p className="font-medium text-slate-700">Rent</p>
+                    </div>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger>
-                          <Info className="h-4 w-4 text-gray-400" />
+                          <Info className="h-4 w-4 text-slate-400" />
                         </TooltipTrigger>
-                        <TooltipContent>
-                          <div className="p-2 max-w-xs">
+                        <TooltipContent side="top" className="max-w-xs">
+                          <div className="p-2">
                             {rentAlreadyInvoiced ? (
                               <p className="font-semibold text-amber-600">Rent already invoiced for this period</p>
                             ) : (
@@ -658,128 +729,131 @@ const CostCalculator = () => {
                       </Tooltip>
                     </TooltipProvider>
                   </div>
-                  <p className="text-xl font-bold">
+                  <div className="mt-2">
                     {rentAlreadyInvoiced ? (
-                      <span className="text-amber-600">Already invoiced</span>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">Already invoiced</Badge>
+                      </div>
                     ) : (
-                      <>
-                        {formatCurrency(rentAmount, rentCurrency)}
+                      <div className="space-y-1">
+                        <p className="text-2xl font-bold text-slate-800">
+                          {formatCurrency(rentAmount, rentCurrency)}
+                        </p>
                         {applyVat && (
-                          <span className="block text-sm text-gray-600">
-                            + {formatCurrency(vatAmount, rentCurrency)} VAT
-                          </span>
-                        )}
-                      </>
-                    )}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {rentAlreadyInvoiced ? 
-                      'Excluded from calculation' : 
-                      (rentCalculationType === 'full' 
-                        ? 'Full monthly rent' 
-                        : `${daysInPeriod} days period`)}
-                  </p>
-                </div>
-                
-                <div className="text-center">
-                  <p className="text-gray-600">Utilities</p>
-                  <div>
-                    {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
-                      <p key={currency} className="text-xl font-bold">
-                        {formatCurrency(amount, currency)}
-                      </p>
-                    ))}
-                    {Object.keys(totalUtilitiesByCurrency).length === 0 && (
-                      <p className="text-xl font-bold">{formatCurrency(0, rentCurrency)}</p>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="text-center">
-                  <p className="text-gray-600">Total</p>
-                  <div>
-                    {!rentAlreadyInvoiced ? (
-                      <p className="text-xl font-bold text-blue-600">
-                        {applyVat
-                          ? formatCurrency(getRentWithVat(), rentCurrency)
-                          : formatCurrency(rentAmount, rentCurrency)}
-                      </p>
-                    ) : (
-                      <p className="text-xl font-bold text-blue-600">
-                        {formatCurrency(0, rentCurrency)}
-                        <span className="block text-xs text-amber-600">(Rent excluded)</span>
-                      </p>
-                    )}
-                    {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
-                      <div key={currency}>
-                        {currency === rentCurrency ? (
-                          <p className="text-lg font-bold text-blue-600">
-                            = {formatCurrency(rentAlreadyInvoiced ? amount : amount + (applyVat ? getRentWithVat() : rentAmount), currency)}
-                          </p>
-                        ) : (
-                          <p className="text-sm text-gray-500">
-                            + {formatCurrency(amount, currency)} <span className="text-xs">(different currency)</span>
-                          </p>
+                          <div className="flex items-center gap-1 text-sm text-slate-600">
+                            <span>+</span>
+                            <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">
+                              {formatCurrency(vatAmount, rentCurrency)} VAT
+                            </Badge>
+                          </div>
                         )}
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
-              </div>
-              
-              <div className="mt-6 pt-4 border-t border-blue-200">
-                <div className="flex flex-col items-center space-y-3">
-                  <div className="flex items-center gap-3">
-                    <h5 className="text-lg font-bold text-gray-800">Grand Total in:</h5>
-                    <Select value={grandTotalCurrency} onValueChange={setGrandTotalCurrency}>
-                      <SelectTrigger className="w-[140px]">
-                        <SelectValue placeholder="Select currency" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableCurrencies?.map((curr) => (
-                          <SelectItem key={curr.code} value={curr.code}>
-                            {curr.code} - {curr.name}
-                          </SelectItem>
+                
+                <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <CheckSquare className="h-4 w-4 text-green-500" />
+                      <p className="font-medium text-slate-700">Utilities</p>
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    {Object.entries(totalUtilitiesByCurrency).length > 0 ? (
+                      <div className="space-y-2">
+                        {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
+                          <div key={currency} className="flex items-center justify-between">
+                            <Badge variant="outline" className="text-slate-600">{currency}</Badge>
+                            <p className="text-xl font-bold text-slate-800">
+                              {formatCurrency(amount, currency)}
+                            </p>
+                          </div>
                         ))}
-                      </SelectContent>
-                    </Select>
+                      </div>
+                    ) : (
+                      <p className="text-xl font-bold text-slate-800">{formatCurrency(0, rentCurrency)}</p>
+                    )}
                   </div>
-                  <div className="text-2xl font-bold text-blue-700 bg-blue-100 px-6 py-2 rounded-lg shadow-sm">
-                    {formatCurrency(calculateGrandTotal(), grandTotalCurrency)}
+                </div>
+                
+                <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <Calculator className="h-4 w-4 text-indigo-500" />
+                      <p className="font-medium text-slate-700">Total</p>
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-500">
-                    Converted using current exchange rates from BNR (National Bank of Romania)
-                  </p>
-                  {userRole === 'landlord' && (
-                    <Button 
-                      onClick={createInvoiceFromCalculation}
-                      className="mt-4 bg-green-600 hover:bg-green-700"
-                    >
-                      <FileText className="mr-2 h-4 w-4" />
-                      Create Invoice
-                    </Button>
-                  )}
+                  <div className="mt-2 space-y-1">
+                    <div className="flex flex-col">
+                      {!rentAlreadyInvoiced && (
+                        <p className="text-lg font-semibold text-slate-700">
+                          {applyVat
+                            ? formatCurrency(getRentWithVat(), rentCurrency)
+                            : formatCurrency(rentAmount, rentCurrency)}
+                        </p>
+                      )}
+                      
+                      {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
+                        <div key={currency} className="mt-1">
+                          {currency === rentCurrency ? (
+                            <div className="flex items-center gap-1">
+                              <span className="text-sm text-slate-500">+</span>
+                              <p className="text-lg font-semibold text-slate-700">
+                                {formatCurrency(amount, currency)}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <span className="text-sm text-slate-500">+</span>
+                              <p className="text-lg font-semibold text-slate-700">
+                                {formatCurrency(amount, currency)}
+                              </p>
+                              <Badge variant="outline" className="ml-1 text-xs">different currency</Badge>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <Separator className="my-2" />
+                    
+                    <div className="flex items-center justify-between pt-1">
+                      <p className="font-medium text-slate-700">Grand Total:</p>
+                      <p className="text-xl font-bold text-blue-700">
+                        {formatCurrency(calculateGrandTotal(), grandTotalCurrency)}
+                      </p>
+                    </div>
+                    <p className="text-xs text-slate-500 text-right">
+                      Converted using exchange rates from BNR
+                    </p>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
           
           {utilities.length > 0 && (
-            <Card>
-              <CardContent className="p-6">
-                <h4 className="text-xl font-semibold mb-4">Utility Details & Customization</h4>
+            <Card className="shadow-sm border-slate-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-slate-800">
+                  <CheckSquare className="h-5 w-5 text-green-500" />
+                  Utility Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
-                      <tr className="bg-gray-50">
-                        <th className="text-left p-3 text-gray-600">TYPE</th>
-                        <th className="text-left p-3 text-gray-600">INVOICE #</th>
-                        <th className="text-left p-3 text-gray-600">ISSUED DATE</th>
-                        <th className="text-left p-3 text-gray-600">DUE DATE</th>
-                        <th className="text-center p-3 text-gray-600">INCLUDED</th>
-                        <th className="text-right p-3 text-gray-600">ORIGINAL AMOUNT</th>
-                        <th className="text-right p-3 text-gray-600">APPLIED AMOUNT</th>
-                        <th className="text-right p-3 text-gray-600">INVOICED AMOUNT</th>
+                      <tr className="bg-slate-50 border-b border-slate-200">
+                        <th className="text-left p-3 text-slate-600 text-sm font-medium">TYPE</th>
+                        <th className="text-left p-3 text-slate-600 text-sm font-medium">INVOICE #</th>
+                        <th className="text-left p-3 text-slate-600 text-sm font-medium">ISSUED DATE</th>
+                        <th className="text-left p-3 text-slate-600 text-sm font-medium">DUE DATE</th>
+                        <th className="text-center p-3 text-slate-600 text-sm font-medium">INCLUDED</th>
+                        <th className="text-right p-3 text-slate-600 text-sm font-medium">ORIGINAL AMOUNT</th>
+                        <th className="text-right p-3 text-slate-600 text-sm font-medium">APPLIED AMOUNT</th>
+                        <th className="text-right p-3 text-slate-600 text-sm font-medium">INVOICED AMOUNT</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -795,11 +869,11 @@ const CostCalculator = () => {
                         />
                       ))}
                       {Object.entries(totalUtilitiesByCurrency).map(([currency, amount]) => (
-                        <tr key={currency} className="border-t font-bold">
-                          <td colSpan={5} className="p-3 text-right">
+                        <tr key={currency} className="border-t font-bold bg-slate-50">
+                          <td colSpan={5} className="p-3 text-right text-slate-700">
                             Total Utilities ({currency}):
                           </td>
-                          <td colSpan={2} className="p-3 text-right">{formatCurrency(amount, currency)}</td>
+                          <td colSpan={2} className="p-3 text-right text-slate-800">{formatCurrency(amount, currency)}</td>
                         </tr>
                       ))}
                     </tbody>

@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, FileText } from "lucide-react";
+import { FileText, Receipt } from "lucide-react";
 import { InvoiceForm } from "./InvoiceForm";
 import { InvoiceDialogProps } from "@/types/invoice";
 
@@ -33,7 +33,7 @@ export function InvoiceDialog({
           <DialogHeader className="px-6 pt-6 pb-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-full bg-blue-100 text-blue-600">
-                <FileText size={20} />
+                <Receipt size={20} />
               </div>
               <DialogTitle className="text-xl font-semibold text-gray-800">Create Invoice</DialogTitle>
             </div>
