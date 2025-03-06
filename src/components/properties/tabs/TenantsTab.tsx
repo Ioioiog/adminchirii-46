@@ -2,7 +2,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { User } from "lucide-react";
+import { User, Mail, Phone, Calendar, Key } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
@@ -33,7 +33,8 @@ export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
           tenant:profiles(
             first_name,
             last_name,
-            email
+            email,
+            phone
           )
         `)
         .eq('property_id', property.id)
@@ -72,6 +73,7 @@ export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
     // Determine tenant name and email based on source
     let tenantName;
     let tenantEmail;
+    let tenantPhone;
     let startDate;
     let endDate;
     let cardKey;
@@ -81,6 +83,7 @@ export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
     if (source === 'tenancy') {
       tenantName = `${tenant.tenant.first_name} ${tenant.tenant.last_name}`;
       tenantEmail = tenant.tenant.email;
+      tenantPhone = tenant.tenant.phone || 'Not provided';
       startDate = tenant.start_date ? format(new Date(tenant.start_date), 'PPP') : 'Not specified';
       endDate = tenant.end_date ? format(new Date(tenant.end_date), 'PPP') : 'Ongoing';
       cardKey = tenant.id;
@@ -91,6 +94,7 @@ export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
         ? `${tenant.tenant.first_name} ${tenant.tenant.last_name}`
         : tenant.metadata?.tenantSignatureName || 'Not specified';
       tenantEmail = tenant.tenant?.email || tenant.invitation_email || 'Not specified';
+      tenantPhone = tenant.tenant?.phone || 'Not provided';
       startDate = tenant.valid_from ? format(new Date(tenant.valid_from), 'PPP') : 'Not specified';
       endDate = tenant.valid_until ? format(new Date(tenant.valid_until), 'PPP') : 'Ongoing';
       cardKey = tenant.id;
@@ -108,23 +112,43 @@ export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
               </div>
               <div>
                 <h3 className="font-medium text-gray-900">{tenantName}</h3>
-                <p className="text-sm text-gray-500">{tenantEmail}</p>
+                <div className="flex items-center text-sm text-gray-500 mt-1">
+                  <Mail className="h-3.5 w-3.5 mr-1" />
+                  <span>{tenantEmail}</span>
+                </div>
+                {tenantPhone && (
+                  <div className="flex items-center text-sm text-gray-500 mt-1">
+                    <Phone className="h-3.5 w-3.5 mr-1" />
+                    <span>{tenantPhone}</span>
+                  </div>
+                )}
               </div>
             </div>
             <Badge variant="secondary" className="rounded-full">
               {statusLabel}
             </Badge>
           </div>
-          <div className="mt-6 grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Start Date</p>
-              <p className="mt-1 text-sm text-gray-900">{startDate}</p>
+          
+          <div className="mt-4 space-y-3 border-t border-gray-100 pt-4">
+            <div className="flex items-center text-sm">
+              <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+              <div>
+                <span className="font-medium text-gray-600">Lease Period: </span>
+                <span className="text-gray-800">{startDate} - {endDate === 'Ongoing' ? 'Ongoing' : endDate}</span>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">End Date</p>
-              <p className="mt-1 text-sm text-gray-900">{endDate}</p>
-            </div>
+            
+            {source === 'contract' && (
+              <div className="flex items-center text-sm">
+                <Key className="h-4 w-4 mr-2 text-gray-500" />
+                <div>
+                  <span className="font-medium text-gray-600">Contract Type: </span>
+                  <span className="text-gray-800">{tenant.contract_type || 'Standard Lease'}</span>
+                </div>
+              </div>
+            )}
           </div>
+          
           <div className="mt-6 flex gap-3">
             <Button
               variant="outline"
