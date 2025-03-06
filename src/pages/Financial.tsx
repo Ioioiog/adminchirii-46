@@ -20,6 +20,7 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useCurrency } from "@/hooks/useCurrency";
 import { startOfMonth, endOfMonth } from "date-fns";
 import CostCalculator from "@/components/financial/CostCalculator";
+import FinancialSummaryCard from "@/components/financial/FinancialSummaryCard";
 
 type FinancialSection = 'invoices' | 'payments' | 'overview';
 
@@ -135,66 +136,38 @@ const Financial = () => {
           </Card>
         )}
         
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <h3 className="text-sm font-medium">This Month's Total</h3>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatAmount(financialSummary.totalInvoiced, userRole === 'tenant' ? 'RON' : undefined)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Total invoiced this month
-              </p>
-            </CardContent>
-          </Card>
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          <FinancialSummaryCard
+            title="This Month's Total"
+            amount={formatAmount(financialSummary.totalInvoiced, userRole === 'tenant' ? 'RON' : undefined)}
+            description="Total invoiced this month"
+            icon={DollarSign}
+            color="default"
+          />
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <h3 className="text-sm font-medium">Month's Paid Amount</h3>
-              <DollarSign className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {formatAmount(financialSummary.totalPaid, userRole === 'tenant' ? 'RON' : undefined)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Total paid this month
-              </p>
-            </CardContent>
-          </Card>
+          <FinancialSummaryCard
+            title="Month's Paid Amount"
+            amount={formatAmount(financialSummary.totalPaid, userRole === 'tenant' ? 'RON' : undefined)}
+            description="Total paid this month"
+            icon={DollarSign}
+            color="green"
+          />
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <h3 className="text-sm font-medium">Month's Outstanding</h3>
-              <DollarSign className="h-4 w-4 text-yellow-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">
-                {formatAmount(financialSummary.outstandingAmount, userRole === 'tenant' ? 'RON' : undefined)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Pending payments this month
-              </p>
-            </CardContent>
-          </Card>
+          <FinancialSummaryCard
+            title="Month's Outstanding"
+            amount={formatAmount(financialSummary.outstandingAmount, userRole === 'tenant' ? 'RON' : undefined)}
+            description="Pending payments this month"
+            icon={DollarSign}
+            color="yellow"
+          />
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <h3 className="text-sm font-medium">Month's Overdue</h3>
-              <DollarSign className="h-4 w-4 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                {formatAmount(financialSummary.overduePendingAmount, userRole === 'tenant' ? 'RON' : undefined)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Overdue payments this month
-              </p>
-            </CardContent>
-          </Card>
+          <FinancialSummaryCard
+            title="Month's Overdue"
+            amount={formatAmount(financialSummary.overduePendingAmount, userRole === 'tenant' ? 'RON' : undefined)}
+            description="Overdue payments this month"
+            icon={DollarSign}
+            color="red"
+          />
         </div>
 
         {userRole === 'tenant' && (
