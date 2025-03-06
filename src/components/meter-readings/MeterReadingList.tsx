@@ -172,7 +172,16 @@ export function MeterReadingList({ readings, userRole, onUpdate }: MeterReadingL
               properties={[{ 
                 id: editReading.property_id,
                 name: editReading.property?.name || '',
-                address: editReading.property?.address || ''
+                address: editReading.property?.address || '',
+                monthly_rent: 0,
+                currency: 'USD',
+                type: 'Apartment',
+                description: '',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                status: 'occupied',
+                tenant_count: 1,
+                landlord_id: ''
               }]}
               onSuccess={handleEditSuccess}
               userRole={userRole}
@@ -180,7 +189,11 @@ export function MeterReadingList({ readings, userRole, onUpdate }: MeterReadingL
               initialData={{
                 id: editReading.id,
                 property_id: editReading.property_id,
-                reading_type: editReading.reading_type,
+                reading_type: (editReading.reading_type === 'electricity' || 
+                              editReading.reading_type === 'water' || 
+                              editReading.reading_type === 'gas') 
+                              ? editReading.reading_type 
+                              : 'water',
                 reading_value: editReading.reading_value,
                 reading_date: editReading.reading_date,
                 notes: editReading.notes || ""
