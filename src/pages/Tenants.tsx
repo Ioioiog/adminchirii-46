@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Users, UserPlus } from "lucide-react";
+import { Users, UserPlus, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useTenants } from "@/hooks/useTenants";
@@ -65,6 +66,11 @@ const Tenants = () => {
   const handleInviteTenant = () => {
     // Navigate to the contract generation page instead
     navigate("/generate-contract");
+  };
+
+  // Function to handle inviting a co-tenant
+  const handleInviteCoTenant = (tenantId: string, propertyId: string) => {
+    navigate(`/properties/${propertyId}/invite-tenant?coTenantFor=${tenantId}`);
   };
 
   // Function to handle View Details button click
@@ -144,6 +150,14 @@ const Tenants = () => {
                           </div>
                         </div>
                         <div className="flex gap-2 mt-3 md:mt-0">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleInviteCoTenant(tenant.id, tenant.property.id)}
+                          >
+                            <UsersRound className="h-4 w-4 mr-1" />
+                            Invite Co-Tenant
+                          </Button>
                           <Button 
                             variant="outline" 
                             size="sm" 
