@@ -1,3 +1,4 @@
+
 {
   "pageTitle": "Platform Guide",
   "pageDescription": "Learn how to use the platform based on your role",
@@ -232,6 +233,8 @@
     "welcomeMessage": "👋 Hello! I'm your AI platform assistant. How can I help you today? Feel free to ask about any feature or functionality of the platform.",
     "inputPlaceholder": "Type your question here...",
     "errorMessage": "I'm sorry, I encountered an error processing your request. Please try again later.",
+    "errorTitle": "Connection Error",
+    "thinkingMessage": "Thinking...",
     "responses": {
       "properties": "The Properties section allows you to manage your rental properties. You can view property details, upload photos, track maintenance issues, and manage lease information. Property owners can add new properties, while tenants can view details about their rented properties.",
       "maintenance": "The Maintenance section helps manage repair requests. Tenants can submit new maintenance tickets with photos and descriptions. Landlords can review these requests, assign them to service providers, track status updates, and manage repair costs. The platform keeps a history of all maintenance activities for each property.",

@@ -1,26 +1,22 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Send, Bot, User, ArrowDown } from "lucide-react";
+import { Send, Bot, User, ArrowDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
 }
 
-// Add structure to organize topics and their related keywords
-interface TopicMapping {
-  topic: string;
-  keywords: string[];
-  responseKey: string;
-}
-
 export function AiGuide() {
-  const { t } = useTranslation('learn');
+  const { t, i18n } = useTranslation('learn');
+  const { toast } = useToast();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: t('aiGuide.welcomeMessage') }
@@ -30,106 +26,21 @@ export function AiGuide() {
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
-  // Define keyword mappings for more sophisticated matching
-  const topicMappings: TopicMapping[] = [
-    {
-      topic: "properties",
-      keywords: ["property", "properties", "apartment", "house", "rental", "real estate", "listing"],
-      responseKey: 'aiGuide.responses.properties'
-    },
-    {
-      topic: "maintenance",
-      keywords: ["maintenance", "repair", "fix", "broken", "issue", "problem", "service request"],
-      responseKey: 'aiGuide.responses.maintenance'
-    },
-    {
-      topic: "payments",
-      keywords: ["payment", "rent", "invoice", "bill", "pay", "money", "fee", "transaction", "deposit"],
-      responseKey: 'aiGuide.responses.payments'
-    },
-    {
-      topic: "tenants",
-      keywords: ["tenant", "renter", "occupant", "resident", "lease holder"],
-      responseKey: 'aiGuide.responses.tenants'
-    },
-    {
-      topic: "landlords",
-      keywords: ["landlord", "owner", "property manager", "lessor", "host"],
-      responseKey: 'aiGuide.responses.landlords'
-    },
-    {
-      topic: "documents",
-      keywords: ["document", "contract", "lease", "agreement", "form", "paper", "file", "pdf"],
-      responseKey: 'aiGuide.responses.documents'
-    },
-    {
-      topic: "service_providers",
-      keywords: ["service", "provider", "contractor", "vendor", "plumber", "electrician", "handyman"],
-      responseKey: 'aiGuide.responses.serviceProviders'
-    },
-    {
-      topic: "settings",
-      keywords: ["setting", "profile", "account", "preference", "configuration", "setup"],
-      responseKey: 'aiGuide.responses.settings'
-    },
-    {
-      topic: "platform",
-      keywords: ["app", "platform", "website", "system", "software", "interface", "dashboard"],
-      responseKey: 'aiGuide.responses.platform'
-    },
-    {
-      topic: "help",
-      keywords: ["help", "support", "assistance", "contact", "guide", "faq", "question"],
-      responseKey: 'aiGuide.responses.help'
-    }
-  ];
-
-  // Function to get response based on context analysis
-  const generateResponse = (query: string) => {
+  // Define fallback responses for when the AI API is unavailable
+  const getFallbackResponse = (query: string) => {
     const lowerQuery = query.toLowerCase();
     
-    // 1. Check for exact phrases that might override topic detection
-    if (lowerQuery.includes("how to use")) {
-      if (lowerQuery.includes("payment") || lowerQuery.includes("pay"))
-        return t('aiGuide.responses.paymentHowTo');
-      if (lowerQuery.includes("maintenance"))
-        return t('aiGuide.responses.maintenanceHowTo');
-    }
-    
-    // 2. Score-based topic matching
-    const topicScores = topicMappings.map(mapping => {
-      // Calculate how many keywords match
-      const matchCount = mapping.keywords.filter(keyword => 
-        lowerQuery.includes(keyword)
-      ).length;
-      
-      return {
-        topic: mapping.topic,
-        score: matchCount,
-        responseKey: mapping.responseKey
-      };
-    });
-    
-    // 3. Get the topic with the highest score
-    const bestMatch = topicScores.reduce((best, current) => 
-      current.score > best.score ? current : best, 
-      { topic: "", score: 0, responseKey: "" }
-    );
-    
-    // 4. If we have a match, return the appropriate response
-    if (bestMatch.score > 0) {
-      return t(bestMatch.responseKey);
-    }
-    
-    // 5. Context-aware default responses
+    // Check common greetings
     if (lowerQuery.includes("hello") || lowerQuery.includes("hi") || lowerQuery.includes("hey")) {
       return t('aiGuide.responses.greeting');
     }
     
+    // Check for thanks
     if (lowerQuery.includes("thank")) {
       return t('aiGuide.responses.thanks');
     }
     
+    // Check for question format
     if (
       lowerQuery.includes("?") || 
       lowerQuery.startsWith("what") || 
@@ -142,8 +53,29 @@ export function AiGuide() {
       return t('aiGuide.responses.question');
     }
     
-    // 6. Fallback to default response
+    // Default fallback
     return t('aiGuide.responses.default');
+  };
+
+  const callAiAssistant = async (userMessage: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-guide-assistant', {
+        body: { 
+          message: userMessage,
+          language: i18n.language
+        }
+      });
+
+      if (error) {
+        console.error("Error calling AI assistant:", error);
+        throw new Error(`Failed to get AI response: ${error.message}`);
+      }
+
+      return data.response;
+    } catch (error) {
+      console.error("Error in AI assistant call:", error);
+      throw error;
+    }
   };
 
   const handleSend = async () => {
@@ -157,20 +89,29 @@ export function AiGuide() {
     setIsLoading(true);
     
     try {
-      // Simulate AI response delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Generate response based on user query
-      let response = generateResponse(userMessage);
+      // Call the AI assistant function
+      const aiResponse = await callAiAssistant(userMessage);
       
       // Add AI response to chat
-      setMessages(prev => [...prev, { role: "assistant", content: response }]);
+      setMessages(prev => [...prev, { role: "assistant", content: aiResponse }]);
     } catch (error) {
       console.error("Error in AI response:", error);
+      
+      // Use fallback response mechanism
+      const fallbackResponse = getFallbackResponse(userMessage);
+      
+      // Add fallback response to chat
       setMessages(prev => [...prev, { 
         role: "assistant", 
-        content: t('aiGuide.errorMessage') 
+        content: fallbackResponse
       }]);
+      
+      // Show error toast
+      toast({
+        title: t('aiGuide.errorTitle'),
+        description: t('aiGuide.errorMessage'),
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -255,10 +196,9 @@ export function AiGuide() {
                         <Bot className="h-4 w-4 text-gray-600" />
                       </div>
                       <div className="rounded-lg px-4 py-2 bg-gray-100 text-gray-800">
-                        <div className="flex items-center gap-1">
-                          <div className="h-2 w-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
-                          <div className="h-2 w-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
-                          <div className="h-2 w-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+                          <span>{t('aiGuide.thinkingMessage')}</span>
                         </div>
                       </div>
                     </div>
@@ -283,7 +223,11 @@ export function AiGuide() {
                 disabled={input.trim() === "" || isLoading}
                 className="bg-blue-500 hover:bg-blue-600"
               >
-                <Send className="h-4 w-4" />
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
                 <span className="sr-only">Send</span>
               </Button>
             </div>
