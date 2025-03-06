@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import { ContractStatus } from "@/types/contract";
+import { ContractStatusBadge } from "@/components/contracts/ContractStatusBadge";
 
 interface TenantContract {
   id: string;
@@ -121,15 +122,34 @@ const TenantDetails = () => {
         }
         
         if (data && data.length > 0) {
-          // Format contract data
-          const formattedContracts: TenantContract[] = data.map(contract => ({
-            id: contract.id,
-            contract_type: contract.contract_type,
-            status: contract.status,
-            valid_from: contract.valid_from,
-            valid_until: contract.valid_until,
-            property_name: contract.properties?.name || 'Unknown property'
-          }));
+          // Format contract data and ensure status is a valid ContractStatus
+          const formattedContracts: TenantContract[] = data.map(contract => {
+            // Map any non-standard status to a valid ContractStatus
+            let validStatus: ContractStatus = 'draft';
+            
+            // Check if the status is already a valid ContractStatus
+            if (
+              contract.status === 'draft' || 
+              contract.status === 'pending_signature' || 
+              contract.status === 'signed' || 
+              contract.status === 'expired' || 
+              contract.status === 'cancelled'
+            ) {
+              validStatus = contract.status as ContractStatus;
+            } else if (contract.status === 'pending') {
+              // Map 'pending' to 'pending_signature'
+              validStatus = 'pending_signature';
+            }
+            
+            return {
+              id: contract.id,
+              contract_type: contract.contract_type,
+              status: validStatus,
+              valid_from: contract.valid_from,
+              valid_until: contract.valid_until,
+              property_name: contract.properties?.name || 'Unknown property'
+            };
+          });
           
           setContracts(formattedContracts);
         }
@@ -149,22 +169,9 @@ const TenantDetails = () => {
     fetchTenantContracts();
   }, [id, toast]);
 
-  // Function to render the status badge for contracts
+  // Use the ContractStatusBadge component for rendering status badges
   const renderContractStatusBadge = (status: ContractStatus) => {
-    switch (status) {
-      case 'signed':
-        return <Badge className="bg-green-500 hover:bg-green-600">Signed</Badge>;
-      case 'pending_signature':
-        return <Badge variant="warning">Pending Signature</Badge>;
-      case 'draft':
-        return <Badge variant="outline">Draft</Badge>;
-      case 'expired':
-        return <Badge variant="destructive">Expired</Badge>;
-      case 'cancelled':
-        return <Badge variant="secondary">Cancelled</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
+    return <ContractStatusBadge status={status} />;
   };
 
   return (
