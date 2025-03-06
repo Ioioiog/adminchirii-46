@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { ArrowLeft, User, Home, Calendar, Mail, Phone } from "lucide-react";
+import { ArrowLeft, User, Home, Calendar, Mail, Phone, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Tenant } from "@/types/tenant";
@@ -12,13 +12,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
+import { ContractStatus } from "@/types/contract";
+
+interface TenantContract {
+  id: string;
+  contract_type: string;
+  status: ContractStatus;
+  valid_from: string | null;
+  valid_until: string | null;
+  property_name: string;
+}
 
 const TenantDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [tenant, setTenant] = useState<Tenant | null>(null);
+  const [contracts, setContracts] = useState<TenantContract[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingContracts, setIsLoadingContracts] = useState(true);
 
   useEffect(() => {
     const fetchTenantDetails = async () => {
@@ -85,8 +97,75 @@ const TenantDetails = () => {
       }
     };
 
+    const fetchTenantContracts = async () => {
+      if (!id) return;
+      
+      try {
+        setIsLoadingContracts(true);
+        
+        // Fetch contracts associated with this tenant
+        const { data, error } = await supabase
+          .from('contracts')
+          .select(`
+            id, 
+            contract_type, 
+            status, 
+            valid_from, 
+            valid_until,
+            properties:property_id (name)
+          `)
+          .eq('tenant_id', id);
+          
+        if (error) {
+          throw error;
+        }
+        
+        if (data && data.length > 0) {
+          // Format contract data
+          const formattedContracts: TenantContract[] = data.map(contract => ({
+            id: contract.id,
+            contract_type: contract.contract_type,
+            status: contract.status,
+            valid_from: contract.valid_from,
+            valid_until: contract.valid_until,
+            property_name: contract.properties?.name || 'Unknown property'
+          }));
+          
+          setContracts(formattedContracts);
+        }
+      } catch (error: any) {
+        console.error("Error fetching tenant contracts:", error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to fetch tenant contracts.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingContracts(false);
+      }
+    };
+
     fetchTenantDetails();
+    fetchTenantContracts();
   }, [id, toast]);
+
+  // Function to render the status badge for contracts
+  const renderContractStatusBadge = (status: ContractStatus) => {
+    switch (status) {
+      case 'signed':
+        return <Badge className="bg-green-500 hover:bg-green-600">Signed</Badge>;
+      case 'pending_signature':
+        return <Badge variant="warning">Pending Signature</Badge>;
+      case 'draft':
+        return <Badge variant="outline">Draft</Badge>;
+      case 'expired':
+        return <Badge variant="destructive">Expired</Badge>;
+      case 'cancelled':
+        return <Badge variant="secondary">Cancelled</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
 
   return (
     <div className="flex bg-dashboard-background min-h-screen">
@@ -188,6 +267,85 @@ const TenantDetails = () => {
                       </p>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Contracts Card */}
+              <Card>
+                <CardHeader className="flex flex-row items-start justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Contracts
+                    </CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingContracts ? (
+                    <div className="flex justify-center p-4">
+                      <div className="w-6 h-6 border-4 border-t-blue-500 border-b-blue-700 rounded-full animate-spin"></div>
+                    </div>
+                  ) : contracts.length > 0 ? (
+                    <div className="space-y-4">
+                      {contracts.map((contract) => (
+                        <div 
+                          key={contract.id} 
+                          className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                          onClick={() => navigate(`/documents/contracts/${contract.id}`)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-semibold capitalize">
+                                  {contract.contract_type.replace('_', ' ')}
+                                </h3>
+                                {renderContractStatusBadge(contract.status)}
+                              </div>
+                              <p className="text-sm text-gray-600">Property: {contract.property_name}</p>
+                              <div className="flex items-center gap-4 text-sm text-gray-500">
+                                {contract.valid_from && (
+                                  <span>
+                                    <span className="font-medium">From:</span> {format(new Date(contract.valid_from), 'MMM d, yyyy')}
+                                  </span>
+                                )}
+                                {contract.valid_until && (
+                                  <span>
+                                    <span className="font-medium">To:</span> {format(new Date(contract.valid_until), 'MMM d, yyyy')}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="mt-3 md:mt-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/documents/contracts/${contract.id}`);
+                              }}
+                            >
+                              View Contract
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 border border-dashed rounded-lg">
+                      <FileText className="h-10 w-10 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium">No Contracts</h3>
+                      <p className="text-gray-500 mt-2 mb-4">
+                        This tenant doesn't have any contracts yet.
+                      </p>
+                      <Button 
+                        variant="outline"
+                        onClick={() => navigate(`/generate-contract?tenantId=${tenant.id}`)}
+                      >
+                        Generate Contract
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
