@@ -44,13 +44,7 @@ export default function Maintenance() {
             first_name,
             last_name
           ),
-          service_provider:service_provider_profiles(
-            business_name,
-            profiles(
-              first_name,
-              last_name
-            )
-          )
+          assigned_to
         `);
       if (priority !== "all") {
         query = query.eq("priority", priority);
@@ -62,40 +56,52 @@ export default function Maintenance() {
         console.log('Adding service provider filter:', currentUserId);
         query = query.eq('assigned_to', currentUserId);
       }
-      const {
-        data,
-        error
-      } = await query;
+
+      const { data, error } = await query;
+      
       if (error) {
         console.error("Error fetching maintenance requests:", error);
         throw error;
       }
       console.log("Fetched maintenance requests:", data);
       
-      // Transform the data to make it more accessible for the component
-      return data.map(request => {
+      // For assigned service providers, fetch their profile information
+      const enhancedData = await Promise.all(data.map(async (request) => {
         let serviceProvider = null;
         
-        if (request.service_provider && request.service_provider.length > 0) {
-          const provider = request.service_provider[0];
-          serviceProvider = {
-            business_name: provider.business_name,
-            first_name: provider.profiles?.first_name || null,
-            last_name: provider.profiles?.last_name || null
-          };
+        if (request.assigned_to) {
+          // Fetch service provider profile data
+          const { data: providerData, error: providerError } = await supabase
+            .from("profiles")
+            .select("first_name, last_name")
+            .eq("id", request.assigned_to)
+            .single();
+            
+          if (!providerError && providerData) {
+            serviceProvider = {
+              id: request.assigned_to,
+              first_name: providerData.first_name,
+              last_name: providerData.last_name
+            };
+          }
         }
         
         return {
           ...request,
           service_provider: serviceProvider
         };
-      });
+      }));
+      
+      return enhancedData;
     }
   });
 
   const filteredRequests = React.useMemo(() => {
     if (!maintenanceRequests) return [];
-    return maintenanceRequests.filter(request => request.title.toLowerCase().includes(searchQuery.toLowerCase()) || request.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    return maintenanceRequests.filter(request => 
+      request.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      request.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
   }, [maintenanceRequests, searchQuery]);
 
   const handleRequestClick = (requestId: string) => {

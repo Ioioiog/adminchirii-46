@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card } from "@/components/ui/card";
 import { NoDataCard } from "@/components/dashboard/charts/NoDataCard";
@@ -21,9 +22,10 @@ interface MaintenanceRequest {
     name: string;
   };
   service_provider?: {
-    business_name?: string | null;
+    id?: string;
     first_name?: string | null;
     last_name?: string | null;
+    business_name?: string | null;
   } | null;
 }
 
