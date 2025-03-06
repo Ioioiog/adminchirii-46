@@ -143,6 +143,7 @@ const Financial = () => {
             description="Total invoiced this month"
             icon={DollarSign}
             color="default"
+            currencyCode={userRole === 'tenant' ? 'RON' : undefined}
           />
 
           <FinancialSummaryCard
@@ -151,6 +152,7 @@ const Financial = () => {
             description="Total paid this month"
             icon={DollarSign}
             color="green"
+            currencyCode={userRole === 'tenant' ? 'RON' : undefined}
           />
 
           <FinancialSummaryCard
@@ -159,6 +161,7 @@ const Financial = () => {
             description="Pending payments this month"
             icon={DollarSign}
             color="yellow"
+            currencyCode={userRole === 'tenant' ? 'RON' : undefined}
           />
 
           <FinancialSummaryCard
@@ -167,6 +170,7 @@ const Financial = () => {
             description="Overdue payments this month"
             icon={DollarSign}
             color="red"
+            currencyCode={userRole === 'tenant' ? 'RON' : undefined}
           />
         </div>
 
