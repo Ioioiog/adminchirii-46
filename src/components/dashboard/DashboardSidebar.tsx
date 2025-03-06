@@ -31,9 +31,9 @@ export const DashboardSidebar = () => {
     navigate("/dashboard");
   };
 
-  // Separate the "Learn" menu item for special rendering
-  const mainMenuItems = filteredMenuItems.filter(item => item.title !== "Learn");
-  const learnMenuItem = filteredMenuItems.find(item => item.title === "Learn");
+  // Separate the "Platform Guide" menu item for special rendering
+  const mainMenuItems = filteredMenuItems.filter(item => item.title !== "Platform Guide");
+  const platformGuideMenuItem = filteredMenuItems.find(item => item.title === "Platform Guide");
 
   return (
     <Collapsible
@@ -89,16 +89,16 @@ export const DashboardSidebar = () => {
           })}
         </nav>
 
-        {/* Render Learn item with separator */}
-        {learnMenuItem && (
+        {/* Render Platform Guide item with separator */}
+        {platformGuideMenuItem && (
           <div className="mt-auto pt-4">
             <div className={cn("mb-4", isExpanded ? "px-2" : "")}>
               <div className="h-px bg-gray-200 dark:bg-gray-800" />
             </div>
             <SidebarMenuItem
-              key={learnMenuItem.href}
-              item={learnMenuItem}
-              isActive={isActive(learnMenuItem.href)}
+              key={platformGuideMenuItem.href}
+              item={platformGuideMenuItem}
+              isActive={isActive(platformGuideMenuItem.href)}
               isExpanded={isExpanded}
               notifications={notifications}
               onNotificationClick={handleNotificationClick}

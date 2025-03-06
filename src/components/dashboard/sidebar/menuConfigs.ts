@@ -51,9 +51,9 @@ export const serviceProviderMenuItems = [
     href: "/settings",
     roles: ["service_provider"],
   },
-  // Learn menu item moved to the bottom before Settings
+  // Platform Guide menu item at the bottom
   {
-    title: "Learn",
+    title: "Platform Guide",
     icon: Book,
     href: "/learn",
     roles: ["service_provider"],
@@ -118,9 +118,9 @@ export const standardMenuItems = [
     href: "/settings",
     roles: ["landlord", "tenant"],
   },
-  // Learn menu item moved to the bottom after Settings
+  // Platform Guide menu item at the bottom
   {
-    title: "Learn",
+    title: "Platform Guide",
     icon: Book,
     href: "/learn",
     roles: ["landlord", "tenant"],
