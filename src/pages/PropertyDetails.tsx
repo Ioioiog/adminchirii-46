@@ -12,11 +12,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PropertyTab } from "@/components/properties/tabs/PropertyTab";
 import { TenantsTab } from "@/components/properties/tabs/TenantsTab";
 import { InvoiceSettingsTab } from "@/components/properties/tabs/InvoiceSettingsTab";
+import { NavigationTabs } from "@/components/layout/NavigationTabs";
 import { LandlordTab } from "@/components/properties/tabs/LandlordTab";
 import { UtilityCostAnalysis } from "@/components/utilities/UtilityCostAnalysis";
 import { TenantHandbookTab } from "@/components/properties/tabs/TenantHandbookTab";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 
 const PropertyDetails = () => {
   const { id } = useParams();
@@ -25,7 +24,7 @@ const PropertyDetails = () => {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState("invoice");
+  const [activeTab, setActiveTab] = useState("property");
   const [userId, setUserId] = useState<string | null>(null);
   const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>({
     apply_vat: false,
@@ -248,6 +247,15 @@ const PropertyDetails = () => {
     );
   }
 
+  const tabs = [
+    { id: "property", label: "Property Details", icon: Home, showForTenant: true },
+    { id: "tenants", label: "Tenants", icon: User, showForTenant: false },
+    { id: "invoice", label: "Invoice Settings", icon: Receipt, showForTenant: false },
+    { id: "utilities", label: "Utility Costs", icon: BarChart2, showForTenant: true },
+    { id: "landlord", label: "Landlord", icon: UserCircle, showForTenant: true },
+    { id: "handbook", label: "Tenant Handbook", icon: BookOpen, showForTenant: true },
+  ];
+
   const activeTenants = property.tenancies?.filter((t: any) => t.status === 'active') || [];
 
   if (!userId) {
@@ -271,103 +279,55 @@ const PropertyDetails = () => {
             </Button>
           </div>
 
-          {/* Property Main Details */}
-          <Card className="bg-white rounded-xl shadow-soft-xl">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-2xl font-semibold flex items-center gap-2">
-                <Home className="h-5 w-5" /> 
-                Property Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <PropertyTab
-                property={property}
-                isEditing={isEditing}
-                editedData={editedData}
-                setEditedData={setEditedData}
-                handleEdit={handleEdit}
-                handleCancel={handleCancel}
-                handleSave={handleSave}
-                getStatusColor={getStatusColor}
-              />
-            </CardContent>
-          </Card>
+          <div className="bg-white rounded-xl shadow-soft-xl">
+            <NavigationTabs
+              tabs={tabs}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+            />
 
-          {/* Landlord Information Section */}
-          <Card className="bg-white rounded-xl shadow-soft-xl">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-2xl font-semibold flex items-center gap-2">
-                <UserCircle className="h-5 w-5" /> 
-                Landlord Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <LandlordTab propertyId={id || ''} />
-            </CardContent>
-          </Card>
-
-          {/* Tenants Section */}
-          <Card className="bg-white rounded-xl shadow-soft-xl">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-2xl font-semibold flex items-center gap-2">
-                <User className="h-5 w-5" /> 
-                Tenants
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <TenantsTab
-                property={property}
-                activeTenants={activeTenants}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Tabbed Content for Invoice, Utilities, and Handbook */}
-          <Card className="bg-white rounded-xl shadow-soft-xl">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-2xl font-semibold">
-                Additional Property Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="invoice" value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid grid-cols-3 mb-6">
-                  <TabsTrigger value="invoice" className="flex items-center gap-2">
-                    <Receipt className="h-4 w-4" />
-                    Invoice Settings
-                  </TabsTrigger>
-                  <TabsTrigger value="utilities" className="flex items-center gap-2">
-                    <BarChart2 className="h-4 w-4" />
-                    Utility Costs
-                  </TabsTrigger>
-                  <TabsTrigger value="handbook" className="flex items-center gap-2">
-                    <BookOpen className="h-4 w-4" />
-                    Tenant Handbook
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="invoice" className="pt-2">
-                  <InvoiceSettingsTab
-                    propertyId={id || ''}
-                    userId={userId}
-                  />
-                </TabsContent>
-                
-                <TabsContent value="utilities" className="pt-2">
-                  <div className="space-y-6">
-                    <p className="text-gray-600">
-                      Monthly breakdown of utility costs for this property based on recorded utility bills.
-                    </p>
-                    <UtilityCostAnalysis propertyId={id || ''} />
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="handbook" className="pt-2">
-                  <TenantHandbookTab propertyId={id || ''} />
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
+            <div className="p-8">
+              {activeTab === "property" && (
+                <PropertyTab
+                  property={property}
+                  isEditing={isEditing}
+                  editedData={editedData}
+                  setEditedData={setEditedData}
+                  handleEdit={handleEdit}
+                  handleCancel={handleCancel}
+                  handleSave={handleSave}
+                  getStatusColor={getStatusColor}
+                />
+              )}
+              {activeTab === "tenants" && (
+                <TenantsTab
+                  property={property}
+                  activeTenants={activeTenants}
+                />
+              )}
+              {activeTab === "invoice" && (
+                <InvoiceSettingsTab
+                  propertyId={id || ''}
+                  userId={userId}
+                />
+              )}
+              {activeTab === "utilities" && (
+                <div className="space-y-6">
+                  <h3 className="text-xl font-medium">Utility Cost Analysis</h3>
+                  <p className="text-gray-600">
+                    Monthly breakdown of utility costs for this property based on recorded utility bills.
+                  </p>
+                  <UtilityCostAnalysis propertyId={id || ''} />
+                </div>
+              )}
+              {activeTab === "landlord" && (
+                <LandlordTab propertyId={id || ''} />
+              )}
+              {activeTab === "handbook" && (
+                <TenantHandbookTab propertyId={id || ''} />
+              )}
+            </div>
+          </div>
         </div>
       </main>
     </div>
