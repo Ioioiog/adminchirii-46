@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Payment } from "@/integrations/supabase/types/payment";
+import { FileText } from "lucide-react";
 
 export interface PaymentListProps {
   payments: Payment[];
@@ -29,7 +30,19 @@ export function PaymentList({
   }
 
   if (!payments || payments.length === 0) {
-    return <p>No payments found.</p>;
+    return (
+      <div className="text-center py-8 border rounded-md">
+        <div className="flex flex-col items-center space-y-3">
+          <FileText className="h-10 w-10 text-gray-400" />
+          <p className="text-gray-500">No payments found.</p>
+          {userRole === "landlord" && (
+            <p className="text-sm text-gray-400">
+              Payments will appear here when you mark invoices as paid.
+            </p>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (

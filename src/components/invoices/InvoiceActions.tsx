@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FileText, CheckCircle, XCircle, Trash } from "lucide-react";
@@ -48,12 +49,67 @@ export function InvoiceActions({
   const handleStatusUpdate = async (newStatus: 'pending' | 'paid' | 'overdue') => {
     try {
       setIsUpdating(true);
+      
+      // Get the invoice details to have all needed data
+      const { data: invoiceData, error: fetchError } = await supabase
+        .from("invoices")
+        .select(`
+          id, 
+          amount, 
+          due_date, 
+          tenant_id, 
+          property_id, 
+          currency
+        `)
+        .eq("id", invoiceId)
+        .single();
+        
+      if (fetchError) throw fetchError;
+
+      // Update the invoice status
       const { error } = await supabase
         .from("invoices")
-        .update({ status: newStatus, ...(newStatus === "paid" ? { paid_at: new Date().toISOString() } : {}) })
+        .update({ 
+          status: newStatus, 
+          ...(newStatus === "paid" ? { paid_at: new Date().toISOString() } : {}) 
+        })
         .eq("id", invoiceId);
 
       if (error) throw error;
+
+      // If marking as paid, create a corresponding payment record
+      if (newStatus === "paid") {
+        // First get the tenancy ID for this property and tenant
+        const { data: tenancyData, error: tenancyError } = await supabase
+          .from("tenancies")
+          .select("id")
+          .eq("property_id", invoiceData.property_id)
+          .eq("tenant_id", invoiceData.tenant_id)
+          .eq("status", "active")
+          .single();
+        
+        if (tenancyError) {
+          console.error("Error fetching tenancy:", tenancyError);
+          // We'll continue even if there's an error - the invoice will be marked as paid
+          // but no payment record will be created
+        } else if (tenancyData) {
+          // Create payment record linked to this tenancy
+          const { error: paymentError } = await supabase
+            .from("payments")
+            .insert({
+              tenancy_id: tenancyData.id,
+              amount: invoiceData.amount,
+              due_date: invoiceData.due_date,
+              paid_date: new Date().toISOString().split('T')[0], // Just use the date part
+              status: "paid",
+              currency: invoiceData.currency
+            });
+            
+          if (paymentError) {
+            console.error("Error creating payment record:", paymentError);
+          }
+        }
+      }
 
       toast({
         title: "Success",
