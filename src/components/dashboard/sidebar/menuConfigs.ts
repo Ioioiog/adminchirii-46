@@ -13,6 +13,7 @@ import {
   UserCog,
   Building2,
   Wallet,
+  BookOpen,
 } from "lucide-react";
 import { NotificationType } from "@/types/notifications";
 
@@ -43,6 +44,12 @@ export const serviceProviderMenuItems = [
     href: "/earnings",
     roles: ["service_provider"],
     notificationType: "payments" as NotificationType
+  },
+  {
+    title: "Documentation",
+    icon: BookOpen,
+    href: "/documentation",
+    roles: ["service_provider"],
   },
   {
     title: "Settings",
@@ -103,6 +110,12 @@ export const standardMenuItems = [
     href: "/chat",
     roles: ["landlord", "tenant"],
     notificationType: "messages" as NotificationType
+  },
+  {
+    title: "Documentation",
+    icon: BookOpen,
+    href: "/documentation",
+    roles: ["landlord", "tenant"],
   },
   {
     title: "Settings",
