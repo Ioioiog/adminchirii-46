@@ -9,13 +9,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { PropertyStatus } from "@/utils/propertyUtils";
 import { useToast } from "@/hooks/use-toast";
 import { InvoiceSettings } from "@/types/invoice";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PropertyTab } from "@/components/properties/tabs/PropertyTab";
 import { TenantsTab } from "@/components/properties/tabs/TenantsTab";
 import { InvoiceSettingsTab } from "@/components/properties/tabs/InvoiceSettingsTab";
+import { NavigationTabs } from "@/components/layout/NavigationTabs";
 import { LandlordTab } from "@/components/properties/tabs/LandlordTab";
 import { UtilityCostAnalysis } from "@/components/utilities/UtilityCostAnalysis";
 import { TenantHandbookTab } from "@/components/properties/tabs/TenantHandbookTab";
-import { Separator } from "@/components/ui/separator";
 
 const PropertyDetails = () => {
   const { id } = useParams();
@@ -24,6 +25,7 @@ const PropertyDetails = () => {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState("property");
   const [userId, setUserId] = useState<string | null>(null);
   const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>({
     apply_vat: false,
@@ -246,6 +248,15 @@ const PropertyDetails = () => {
     );
   }
 
+  const tabs = [
+    { id: "property", label: "Property Details", icon: Home, showForTenant: true },
+    { id: "landlord", label: "Landlord", icon: UserCircle, showForTenant: true },
+    { id: "tenants", label: "Tenants", icon: User, showForTenant: false },
+    { id: "invoice", label: "Invoice Settings", icon: Receipt, showForTenant: false },
+    { id: "utilities", label: "Utility Costs", icon: BarChart2, showForTenant: true },
+    { id: "handbook", label: "Tenant Handbook", icon: BookOpen, showForTenant: true },
+  ];
+
   const activeTenants = property.tenancies?.filter((t: any) => t.status === 'active') || [];
 
   if (!userId) {
@@ -269,79 +280,54 @@ const PropertyDetails = () => {
             </Button>
           </div>
 
-          <div className="bg-white rounded-xl shadow-soft-xl p-8">
-            <h2 className="text-2xl font-bold flex items-center gap-2 mb-6">
-              <Home className="h-6 w-6" />
-              Property Details
-            </h2>
-            
-            <PropertyTab
-              property={property}
-              isEditing={isEditing}
-              editedData={editedData}
-              setEditedData={setEditedData}
-              handleEdit={handleEdit}
-              handleCancel={handleCancel}
-              handleSave={handleSave}
-              getStatusColor={getStatusColor}
+          <div className="bg-white rounded-xl shadow-soft-xl">
+            <NavigationTabs
+              tabs={tabs}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
             />
-          </div>
 
-          <div className="bg-white rounded-xl shadow-soft-xl p-8">
-            <h2 className="text-2xl font-bold flex items-center gap-2 mb-6">
-              <UserCircle className="h-6 w-6" />
-              Landlord Information
-            </h2>
-            
-            <LandlordTab propertyId={id || ''} />
-          </div>
-
-          {activeTenants.length > 0 && (
-            <div className="bg-white rounded-xl shadow-soft-xl p-8">
-              <h2 className="text-2xl font-bold flex items-center gap-2 mb-6">
-                <User className="h-6 w-6" />
-                Tenants
-              </h2>
-              
-              <TenantsTab
-                property={property}
-                activeTenants={activeTenants}
-              />
+            <div className="p-8">
+              {activeTab === "property" && (
+                <PropertyTab
+                  property={property}
+                  isEditing={isEditing}
+                  editedData={editedData}
+                  setEditedData={setEditedData}
+                  handleEdit={handleEdit}
+                  handleCancel={handleCancel}
+                  handleSave={handleSave}
+                  getStatusColor={getStatusColor}
+                />
+              )}
+              {activeTab === "tenants" && (
+                <TenantsTab
+                  property={property}
+                  activeTenants={activeTenants}
+                />
+              )}
+              {activeTab === "invoice" && (
+                <InvoiceSettingsTab
+                  propertyId={id || ''}
+                  userId={userId}
+                />
+              )}
+              {activeTab === "utilities" && (
+                <div className="space-y-6">
+                  <h3 className="text-xl font-medium">Utility Cost Analysis</h3>
+                  <p className="text-gray-600">
+                    Monthly breakdown of utility costs for this property based on recorded utility bills.
+                  </p>
+                  <UtilityCostAnalysis propertyId={id || ''} />
+                </div>
+              )}
+              {activeTab === "landlord" && (
+                <LandlordTab propertyId={id || ''} />
+              )}
+              {activeTab === "handbook" && (
+                <TenantHandbookTab propertyId={id || ''} />
+              )}
             </div>
-          )}
-
-          <div className="bg-white rounded-xl shadow-soft-xl p-8">
-            <h2 className="text-2xl font-bold flex items-center gap-2 mb-6">
-              <Receipt className="h-6 w-6" />
-              Invoice Settings
-            </h2>
-            
-            <InvoiceSettingsTab
-              propertyId={id || ''}
-              userId={userId}
-            />
-          </div>
-
-          <div className="bg-white rounded-xl shadow-soft-xl p-8">
-            <h2 className="text-2xl font-bold flex items-center gap-2 mb-6">
-              <BarChart2 className="h-6 w-6" />
-              Utility Cost Analysis
-            </h2>
-            
-            <p className="text-gray-600 mb-6">
-              Monthly breakdown of utility costs for this property based on recorded utility bills.
-            </p>
-            
-            <UtilityCostAnalysis propertyId={id || ''} />
-          </div>
-
-          <div className="bg-white rounded-xl shadow-soft-xl p-8">
-            <h2 className="text-2xl font-bold flex items-center gap-2 mb-6">
-              <BookOpen className="h-6 w-6" />
-              Tenant Handbook
-            </h2>
-            
-            <TenantHandbookTab propertyId={id || ''} />
           </div>
         </div>
       </main>
