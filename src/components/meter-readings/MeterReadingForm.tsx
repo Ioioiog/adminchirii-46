@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -114,9 +115,11 @@ export function MeterReadingForm({
       console.log("Current user ID:", currentUserId);
       console.log("User role:", userRole);
 
-      // For tenants, use their own ID. For landlords, get the tenant ID from active tenancy
+      // For tenants, use their own ID. For landlords, try to get the tenant ID from active tenancy or null if none
       let tenant_id = currentUserId;
+      
       if (userRole === 'landlord') {
+        // Try to find an active tenant for this property
         const { data: tenancy, error: tenancyError } = await supabase
           .from('tenancies')
           .select('tenant_id')
@@ -125,10 +128,12 @@ export function MeterReadingForm({
           .single();
 
         if (tenancyError) {
-          console.error("Error fetching tenant:", tenancyError);
-          throw new Error("Could not find active tenant for this property");
+          console.log("No active tenant found for this property or other error:", tenancyError);
+          // If no active tenant is found, we'll use null for tenant_id
+          tenant_id = null;
+        } else {
+          tenant_id = tenancy.tenant_id;
         }
-        tenant_id = tenancy.tenant_id;
       }
 
       // Prepare the data object with all required fields
