@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { DollarSign, FileText, CreditCard, BarChart2, Building, Calculator } from "lucide-react";
 import { InvoiceList } from "@/components/invoices/InvoiceList";
@@ -34,7 +35,7 @@ interface FinancialSummary {
 const Financial = () => {
   const [activeSection, setActiveSection] = useState<FinancialSection>('overview');
   const { userRole, userId } = useUserRole();
-  const { formatAmount } = useCurrency();
+  const { formatAmount, currency } = useCurrency();
   const { properties } = useProperties({ userRole: userRole || 'tenant' });
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
 
@@ -139,38 +140,38 @@ const Financial = () => {
         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <FinancialSummaryCard
             title="This Month's Total"
-            amount={formatAmount(financialSummary.totalInvoiced, userRole === 'tenant' ? 'RON' : undefined)}
+            amount={formatAmount(financialSummary.totalInvoiced, currency)}
             description="Total invoiced this month"
             icon={DollarSign}
             color="default"
-            currencyCode={userRole === 'tenant' ? 'RON' : undefined}
+            currencyCode={currency}
           />
 
           <FinancialSummaryCard
             title="Month's Paid Amount"
-            amount={formatAmount(financialSummary.totalPaid, userRole === 'tenant' ? 'RON' : undefined)}
+            amount={formatAmount(financialSummary.totalPaid, currency)}
             description="Total paid this month"
             icon={DollarSign}
             color="green"
-            currencyCode={userRole === 'tenant' ? 'RON' : undefined}
+            currencyCode={currency}
           />
 
           <FinancialSummaryCard
             title="Month's Outstanding"
-            amount={formatAmount(financialSummary.outstandingAmount, userRole === 'tenant' ? 'RON' : undefined)}
+            amount={formatAmount(financialSummary.outstandingAmount, currency)}
             description="Pending payments this month"
             icon={DollarSign}
             color="yellow"
-            currencyCode={userRole === 'tenant' ? 'RON' : undefined}
+            currencyCode={currency}
           />
 
           <FinancialSummaryCard
             title="Month's Overdue"
-            amount={formatAmount(financialSummary.overduePendingAmount, userRole === 'tenant' ? 'RON' : undefined)}
+            amount={formatAmount(financialSummary.overduePendingAmount, currency)}
             description="Overdue payments this month"
             icon={DollarSign}
             color="red"
-            currencyCode={userRole === 'tenant' ? 'RON' : undefined}
+            currencyCode={currency}
           />
         </div>
 
