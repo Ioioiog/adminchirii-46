@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from "react";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { ChatHeader } from "@/components/chat/ChatHeader";
@@ -26,6 +27,7 @@ const Chat = () => {
   const [newMessage, setNewMessage] = useState("");
   const [isVideoCallActive, setIsVideoCallActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLandlordLoading, setIsLandlordLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { currentUserId } = useAuthState();
   const { conversationId, isLoading: isConversationLoading } = useConversation(currentUserId, selectedTenantId);
@@ -70,6 +72,79 @@ const Chat = () => {
     console.log("Selected tenant:", tenantId);
     setSelectedTenantId(tenantId);
   };
+
+  // Function to find the landlord for the current tenant
+  const findLandlordForTenant = async () => {
+    if (!currentUserId || userRole !== 'tenant') return;
+    
+    setIsLandlordLoading(true);
+    try {
+      // First check if there's a landlord in the tenants list
+      const landlord = uniqueTenants.find(t => t.role === "landlord");
+      if (landlord) {
+        console.log("Found landlord in tenants list:", landlord.id);
+        handleTenantSelect(landlord.id);
+        return;
+      }
+      
+      console.log("No landlord found in tenants list, trying to find via property");
+      
+      // Get the tenant's property
+      const { data: tenancy, error: tenancyError } = await supabase
+        .from('tenancies')
+        .select('property_id')
+        .eq('tenant_id', currentUserId)
+        .eq('status', 'active')
+        .maybeSingle();
+      
+      if (tenancyError) {
+        console.error("Error finding tenancy:", tenancyError);
+        throw tenancyError;
+      }
+      
+      if (!tenancy?.property_id) {
+        console.error("No active tenancy found for tenant");
+        throw new Error("No active tenancy found");
+      }
+      
+      // Get the landlord for this property
+      const { data: property, error: propertyError } = await supabase
+        .from('properties')
+        .select('landlord_id')
+        .eq('id', tenancy.property_id)
+        .maybeSingle();
+      
+      if (propertyError) {
+        console.error("Error finding property:", propertyError);
+        throw propertyError;
+      }
+      
+      if (!property?.landlord_id) {
+        console.error("No landlord found for property");
+        throw new Error("No landlord found for property");
+      }
+      
+      console.log("Found landlord via property:", property.landlord_id);
+      handleTenantSelect(property.landlord_id);
+      
+    } catch (error) {
+      console.error("Error finding landlord:", error);
+      toast({
+        title: "Error",
+        description: "Could not find your landlord. Please contact support.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLandlordLoading(false);
+    }
+  };
+
+  // Auto-connect tenants to their landlord when they open the chat
+  useEffect(() => {
+    if (userRole === 'tenant' && currentUserId && !selectedTenantId && !isTenantsLoading) {
+      findLandlordForTenant();
+    }
+  }, [userRole, currentUserId, selectedTenantId, isTenantsLoading]);
 
   const handleStartVideoCall = () => {
     if (selectedTenantId) {
@@ -130,11 +205,12 @@ const Chat = () => {
   }, [messages, selectedTenantId]);
 
   const renderChatContent = () => {
-    if (isConversationLoading) {
+    if (isConversationLoading || isLandlordLoading) {
       return <div className="flex-1 flex items-center justify-center bg-gray-50">
         <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
       </div>;
     }
+    
     if (!conversationId) {
       return <div className="relative flex-1 flex items-center p-8 text-center bg-gradient-to-br from-blue-500/5 to-blue-600/5">
         <ChatBackground />
@@ -188,58 +264,21 @@ const Chat = () => {
             {userRole === "tenant" && (
               <Button 
                 className="w-full mt-4 bg-blue-600 hover:bg-blue-700" 
-                onClick={async () => {
-                  try {
-                    const landlord = uniqueTenants.find(t => t.role === "landlord");
-                    if (landlord) {
-                      console.log("Found landlord:", landlord.id);
-                      handleTenantSelect(landlord.id);
-                    } else {
-                      console.log("No landlord found in tenants list");
-                      
-                      const { data: { user } } = await supabase.auth.getUser();
-                      if (!user) return;
-                      
-                      const { data: tenancy } = await supabase
-                        .from('tenancies')
-                        .select('property_id')
-                        .eq('tenant_id', user.id)
-                        .eq('status', 'active')
-                        .maybeSingle();
-                        
-                      if (tenancy?.property_id) {
-                        const { data: property } = await supabase
-                          .from('properties')
-                          .select('landlord_id')
-                          .eq('id', tenancy.property_id)
-                          .maybeSingle();
-                          
-                        if (property?.landlord_id) {
-                          console.log("Found landlord from property:", property.landlord_id);
-                          handleTenantSelect(property.landlord_id);
-                        } else {
-                          console.error("Could not find landlord for property");
-                          toast({
-                            title: "Error",
-                            description: "Could not find your landlord. Please contact support.",
-                            variant: "destructive",
-                          });
-                        }
-                      }
-                    }
-                  } catch (error) {
-                    console.error("Error finding landlord:", error);
-                  }
-                }}
+                onClick={findLandlordForTenant}
+                disabled={isLandlordLoading}
               >
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Start Conversation with Your Landlord
+                {isLandlordLoading ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Connecting...</>
+                ) : (
+                  <><MessageSquare className="h-4 w-4 mr-2" /> Start Conversation with Your Landlord</>
+                )}
               </Button>
             )}
           </div>
         </div>
       </div>;
     }
+    
     return <>
       <MessageList messages={messages} currentUserId={currentUserId} messagesEndRef={messagesEndRef} className="flex-1 h-full" />
       <MessageInput newMessage={newMessage} setNewMessage={setNewMessage} handleSendMessage={handleSendMessage} onStartVideoCall={handleStartVideoCall} />
