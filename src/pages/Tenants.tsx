@@ -93,7 +93,9 @@ const Tenants = () => {
                             <h3 className="font-semibold">
                               {tenant.first_name} {tenant.last_name}
                             </h3>
-                            <Badge variant={tenant.tenancy.status === 'active' ? 'success' : 'secondary'}>
+                            <Badge variant={tenant.tenancy.status === 'active' ? 'default' : 'secondary'} 
+                              className={tenant.tenancy.status === 'active' ? 'bg-green-500 hover:bg-green-600' : ''}
+                            >
                               {tenant.tenancy.status}
                             </Badge>
                           </div>
