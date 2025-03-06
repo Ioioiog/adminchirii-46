@@ -115,8 +115,8 @@ export function MaintenanceSection({
                   {getPriorityBadge(request.priority)}
                 </div>
 
-                <div>
-                  {request.assigned_to || '-'}
+                <div className="text-blue-600 font-medium">
+                  {request.assigned_to || 'Not assigned'}
                 </div>
 
                 <div>
