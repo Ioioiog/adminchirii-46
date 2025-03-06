@@ -1,10 +1,9 @@
-
 import { useEffect, useState } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { StripeAccountForm } from "../StripeAccountForm";
 import { useUserRole } from "@/hooks/use-user-role";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { Building, Receipt, CreditCard } from "lucide-react";
+import { Building, Receipt, CreditCard, DollarSign, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -24,13 +23,22 @@ interface TenantFinancialInfo {
   paymentReminders: boolean;
 }
 
+interface LandlordFinancialInfo {
+  businessName: string;
+  taxIdentificationNumber: string;
+  bankName: string;
+  bankAccountNumber: string;
+  invoicePrefix: string;
+  automaticInvoicing: boolean;
+}
+
 export function FinancialSettings() {
   const { userRole } = useUserRole();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isStripeLoading, setIsStripeLoading] = useState(false);
 
-  const form = useForm<TenantFinancialInfo>({
+  const tenantForm = useForm<TenantFinancialInfo>({
     defaultValues: {
       bankName: "",
       bankAccountNumber: "",
@@ -38,6 +46,17 @@ export function FinancialSettings() {
       preferredPaymentMethod: "",
       automaticPayments: false,
       paymentReminders: true,
+    },
+  });
+
+  const landlordForm = useForm<LandlordFinancialInfo>({
+    defaultValues: {
+      businessName: "",
+      taxIdentificationNumber: "",
+      bankName: "",
+      bankAccountNumber: "",
+      invoicePrefix: "",
+      automaticInvoicing: true,
     },
   });
 
@@ -57,14 +76,26 @@ export function FinancialSettings() {
 
         if (data?.invoice_info) {
           const financialInfo = data.invoice_info as Record<string, unknown>;
-          form.reset({
-            bankName: String(financialInfo.bankName || ""),
-            bankAccountNumber: String(financialInfo.bankAccountNumber || ""),
-            bankSwiftCode: String(financialInfo.bankSwiftCode || ""),
-            preferredPaymentMethod: String(financialInfo.preferredPaymentMethod || ""),
-            automaticPayments: Boolean(financialInfo.automaticPayments),
-            paymentReminders: Boolean(financialInfo.paymentReminders ?? true),
-          });
+          
+          if (userRole === 'tenant') {
+            tenantForm.reset({
+              bankName: String(financialInfo.bankName || ""),
+              bankAccountNumber: String(financialInfo.bankAccountNumber || ""),
+              bankSwiftCode: String(financialInfo.bankSwiftCode || ""),
+              preferredPaymentMethod: String(financialInfo.preferredPaymentMethod || ""),
+              automaticPayments: Boolean(financialInfo.automaticPayments),
+              paymentReminders: Boolean(financialInfo.paymentReminders ?? true),
+            });
+          } else if (userRole === 'landlord') {
+            landlordForm.reset({
+              businessName: String(financialInfo.businessName || ""),
+              taxIdentificationNumber: String(financialInfo.taxIdentificationNumber || ""),
+              bankName: String(financialInfo.bankName || ""),
+              bankAccountNumber: String(financialInfo.bankAccountNumber || ""),
+              invoicePrefix: String(financialInfo.invoicePrefix || ""),
+              automaticInvoicing: Boolean(financialInfo.automaticInvoicing ?? true),
+            });
+          }
         }
         setIsLoading(false);
       } catch (error) {
@@ -73,12 +104,10 @@ export function FinancialSettings() {
       }
     };
 
-    if (userRole === 'tenant') {
-      fetchFinancialInfo();
-    }
-  }, [form, userRole]);
+    fetchFinancialInfo();
+  }, [userRole, tenantForm, landlordForm]);
 
-  const onSubmit = async (formData: TenantFinancialInfo) => {
+  const onTenantSubmit = async (formData: TenantFinancialInfo) => {
     try {
       setIsLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -118,6 +147,46 @@ export function FinancialSettings() {
     }
   };
 
+  const onLandlordSubmit = async (formData: LandlordFinancialInfo) => {
+    try {
+      setIsLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No user found");
+
+      const invoiceInfo: Record<string, Json> = {
+        businessName: formData.businessName,
+        taxIdentificationNumber: formData.taxIdentificationNumber,
+        bankName: formData.bankName,
+        bankAccountNumber: formData.bankAccountNumber,
+        invoicePrefix: formData.invoicePrefix,
+        automaticInvoicing: formData.automaticInvoicing,
+      };
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          invoice_info: invoiceInfo
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Business financial information updated successfully",
+      });
+    } catch (error) {
+      console.error('Error updating financial info:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update financial information",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const setupStripePayment = async () => {
     try {
       setIsStripeLoading(true);
@@ -128,7 +197,6 @@ export function FinancialSettings() {
       if (error) throw error;
 
       if (data?.clientSecret) {
-        // Redirect to Stripe payment setup page
         const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
         if (!stripe) throw new Error('Stripe failed to load');
 
@@ -209,11 +277,11 @@ export function FinancialSettings() {
             </div>
           </CardHeader>
           <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <Form {...tenantForm}>
+              <form onSubmit={tenantForm.handleSubmit(onTenantSubmit)} className="space-y-6">
                 <div className="grid gap-4">
                   <FormField
-                    control={form.control}
+                    control={tenantForm.control}
                     name="bankName"
                     render={({ field }) => (
                       <FormItem>
@@ -227,7 +295,7 @@ export function FinancialSettings() {
                   />
 
                   <FormField
-                    control={form.control}
+                    control={tenantForm.control}
                     name="bankAccountNumber"
                     render={({ field }) => (
                       <FormItem>
@@ -241,7 +309,7 @@ export function FinancialSettings() {
                   />
 
                   <FormField
-                    control={form.control}
+                    control={tenantForm.control}
                     name="bankSwiftCode"
                     render={({ field }) => (
                       <FormItem>
@@ -255,7 +323,7 @@ export function FinancialSettings() {
                   />
 
                   <FormField
-                    control={form.control}
+                    control={tenantForm.control}
                     name="preferredPaymentMethod"
                     render={({ field }) => (
                       <FormItem>
@@ -278,7 +346,7 @@ export function FinancialSettings() {
                       </span>
                     </div>
                     <FormField
-                      control={form.control}
+                      control={tenantForm.control}
                       name="automaticPayments"
                       render={({ field }) => (
                         <FormItem>
@@ -302,7 +370,7 @@ export function FinancialSettings() {
                       </span>
                     </div>
                     <FormField
-                      control={form.control}
+                      control={tenantForm.control}
                       name="paymentReminders"
                       render={({ field }) => (
                         <FormItem>
@@ -321,6 +389,166 @@ export function FinancialSettings() {
 
                 <Button type="submit" disabled={isLoading}>
                   {isLoading ? "Saving..." : "Save Payment Settings"}
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (userRole === 'landlord') {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight mb-1">Business Payment Settings</h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            Manage your business payment and invoicing preferences
+          </p>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center space-x-4">
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <FileText className="h-6 w-6 text-blue-500" />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium">Stripe Integration</h3>
+                <p className="text-sm text-muted-foreground">
+                  Connect your Stripe account to process payments from tenants
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <StripeAccountForm />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center space-x-4">
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <Building className="h-6 w-6 text-blue-500" />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium">Business Information</h3>
+                <p className="text-sm text-muted-foreground">
+                  Update your business details and banking information
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Form {...landlordForm}>
+              <form onSubmit={landlordForm.handleSubmit(onLandlordSubmit)} className="space-y-6">
+                <div className="grid gap-4">
+                  <FormField
+                    control={landlordForm.control}
+                    name="businessName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Business Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Enter your business name" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={landlordForm.control}
+                    name="taxIdentificationNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tax Identification Number</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Enter your tax ID" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={landlordForm.control}
+                    name="bankName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bank Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Enter your bank name" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={landlordForm.control}
+                    name="bankAccountNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bank Account Number</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Enter your account number" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="pt-4 border-t">
+                  <h4 className="font-medium mb-4">Invoicing Settings</h4>
+                  <div className="grid gap-4">
+                    <FormField
+                      control={landlordForm.control}
+                      name="invoicePrefix"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Invoice Prefix</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g., INV-" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between space-x-2">
+                    <div className="flex flex-col space-y-1">
+                      <Label htmlFor="automatic-invoicing">Automatic Invoicing</Label>
+                      <span className="text-sm text-muted-foreground">
+                        Generate invoices automatically on the scheduled date
+                      </span>
+                    </div>
+                    <FormField
+                      control={landlordForm.control}
+                      name="automaticInvoicing"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              id="automatic-invoicing"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? "Saving..." : "Save Business Settings"}
                 </Button>
               </form>
             </Form>
