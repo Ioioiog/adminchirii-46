@@ -1,4 +1,3 @@
-
 import { DashboardHeader } from "./sections/DashboardHeader";
 import { DashboardMetrics } from "./DashboardMetrics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -246,7 +245,6 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-6">
-          {/* Properties Column */}
           <div className="space-y-6">
             <h3 className="text-lg font-medium">Your Properties</h3>
             <div className="space-y-4">
@@ -305,7 +303,6 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
             </div>
           </div>
 
-          {/* Maintenance and Documents Column */}
           <div className="space-y-6">
             <h3 className="text-lg font-medium">Quick Actions</h3>
             <div className="space-y-4">
@@ -340,33 +337,6 @@ export function TenantDashboard({ userId, userName }: TenantDashboardProps) {
                   </CardContent>
                 </Card>
               ))}
-            </div>
-          </div>
-        </div>
-
-        {/* How to Use Section in a separate row */}
-        <div className="mt-8 p-6 bg-gradient-to-br from-gray-50 to-blue-50/30 rounded-xl border border-gray-100 shadow-sm">
-          <div className="flex items-start space-x-4">
-            <div className="p-3 bg-blue-100/50 rounded-lg">
-              <Info className="h-6 w-6 text-blue-600" />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">How to use Quick Actions</h4>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                  "Click on any action card to access its detailed features",
-                  "Use maintenance requests for any property-related issues",
-                  "Access documents section for all your paperwork needs",
-                  "Track the status of your requests in real-time"
-                ].map((tip, index) => (
-                  <div key={index} className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                      <span className="text-blue-600 text-sm font-medium">{index + 1}</span>
-                    </div>
-                    <p className="text-gray-600">{tip}</p>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </div>
