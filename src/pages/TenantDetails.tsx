@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,8 +39,6 @@ const TenantDetails = () => {
       try {
         setIsLoading(true);
         
-        // Fetch tenant details from the tenant_details view
-        // Remove .single() to handle multiple rows properly
         const { data, error } = await supabase
           .from('tenant_details')
           .select('*')
@@ -52,10 +49,8 @@ const TenantDetails = () => {
         }
         
         if (data && data.length > 0) {
-          // Use the first matching record
           const tenantData = data[0];
           
-          // Transform the data to match the Tenant type
           const formattedTenant: Tenant = {
             id: tenantData.tenant_id,
             first_name: tenantData.first_name,
@@ -104,7 +99,6 @@ const TenantDetails = () => {
       try {
         setIsLoadingContracts(true);
         
-        // Fetch contracts associated with this tenant
         const { data, error } = await supabase
           .from('contracts')
           .select(`
@@ -122,12 +116,9 @@ const TenantDetails = () => {
         }
         
         if (data && data.length > 0) {
-          // Format contract data and ensure status is a valid ContractStatus
           const formattedContracts: TenantContract[] = data.map(contract => {
-            // Map any non-standard status to a valid ContractStatus
             let validStatus: ContractStatus = 'draft';
             
-            // Check if the status is already a valid ContractStatus
             if (
               contract.status === 'draft' || 
               contract.status === 'pending_signature' || 
@@ -137,7 +128,6 @@ const TenantDetails = () => {
             ) {
               validStatus = contract.status as ContractStatus;
             } else if (contract.status === 'pending') {
-              // Map 'pending' to 'pending_signature'
               validStatus = 'pending_signature';
             }
             
@@ -169,7 +159,6 @@ const TenantDetails = () => {
     fetchTenantContracts();
   }, [id, toast]);
 
-  // Use the ContractStatusBadge component for rendering status badges
   const renderContractStatusBadge = (status: ContractStatus) => {
     return <ContractStatusBadge status={status} />;
   };
@@ -277,7 +266,6 @@ const TenantDetails = () => {
                 </CardContent>
               </Card>
 
-              {/* Contracts Card */}
               <Card>
                 <CardHeader className="flex flex-row items-start justify-between">
                   <div>
@@ -362,12 +350,6 @@ const TenantDetails = () => {
                   onClick={() => navigate(`/chat?tenantId=${tenant.id}`)}
                 >
                   Message Tenant
-                </Button>
-                <Button 
-                  variant="default"
-                  onClick={() => navigate(`/generate-contract?tenantId=${tenant.id}`)}
-                >
-                  Generate Contract
                 </Button>
               </div>
             </div>
