@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { ArrowLeft, User, Home, Calendar, Mail, Phone, FileText, MessageCircle } from "lucide-react";
+import { ArrowLeft, User, Home, Calendar, Mail, Phone, FileText, MessageCircle, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Tenant } from "@/types/tenant";
@@ -13,6 +13,8 @@ import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import { ContractStatus } from "@/types/contract";
 import { ContractStatusBadge } from "@/components/contracts/ContractStatusBadge";
+import { InvoiceList } from "@/components/invoices/InvoiceList";
+import { Invoice } from "@/types/invoice";
 
 interface TenantContract {
   id: string;
@@ -29,8 +31,10 @@ const TenantDetails = () => {
   const { toast } = useToast();
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [contracts, setContracts] = useState<TenantContract[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingContracts, setIsLoadingContracts] = useState(true);
+  const [isLoadingInvoices, setIsLoadingInvoices] = useState(true);
 
   useEffect(() => {
     const fetchTenantDetails = async () => {
@@ -155,8 +159,52 @@ const TenantDetails = () => {
       }
     };
 
+    const fetchTenantInvoices = async () => {
+      if (!id) return;
+      
+      try {
+        setIsLoadingInvoices(true);
+        
+        const { data, error } = await supabase
+          .from('invoices')
+          .select(`
+            *,
+            property:properties (
+              name,
+              address,
+              monthly_rent,
+              currency
+            ),
+            tenant:profiles!invoices_tenant_id_fkey (
+              first_name,
+              last_name,
+              email
+            )
+          `)
+          .eq('tenant_id', id)
+          .order('due_date', { ascending: false });
+          
+        if (error) {
+          throw error;
+        }
+        
+        console.log("Fetched tenant invoices:", data);
+        setInvoices(data || []);
+      } catch (error: any) {
+        console.error("Error fetching tenant invoices:", error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to fetch tenant invoices.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingInvoices(false);
+      }
+    };
+
     fetchTenantDetails();
     fetchTenantContracts();
+    fetchTenantInvoices();
   }, [id, toast]);
 
   const renderContractStatusBadge = (status: ContractStatus) => {
@@ -348,6 +396,51 @@ const TenantDetails = () => {
                         onClick={() => navigate(`/generate-contract?tenantId=${tenant.id}`)}
                       >
                         Generate Contract
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-start justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Receipt className="h-5 w-5" />
+                      Invoices
+                    </CardTitle>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => navigate(`/invoices?tenantId=${tenant.id}`)}
+                  >
+                    View All Invoices
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingInvoices ? (
+                    <div className="flex justify-center p-4">
+                      <div className="w-6 h-6 border-4 border-t-blue-500 border-b-blue-700 rounded-full animate-spin"></div>
+                    </div>
+                  ) : invoices.length > 0 ? (
+                    <InvoiceList 
+                      invoices={invoices} 
+                      userRole="landlord" 
+                      onStatusUpdate={() => fetchTenantInvoices()}
+                    />
+                  ) : (
+                    <div className="text-center py-8 border border-dashed rounded-lg">
+                      <Receipt className="h-10 w-10 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium">No Invoices</h3>
+                      <p className="text-gray-500 mt-2 mb-4">
+                        This tenant doesn't have any invoices yet.
+                      </p>
+                      <Button 
+                        variant="outline"
+                        onClick={() => navigate(`/invoices?tenantId=${tenant.id}`)}
+                      >
+                        Generate Invoice
                       </Button>
                     </div>
                   )}
