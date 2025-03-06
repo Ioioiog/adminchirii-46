@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from "react";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { ChatHeader } from "@/components/chat/ChatHeader";
@@ -20,6 +19,7 @@ import { useSidebarNotifications } from "@/hooks/use-sidebar-notifications";
 import { supabase } from "@/integrations/supabase/client";
 import { MessageSquare, Video, PaperclipIcon, Smile } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 const Chat = () => {
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
@@ -33,6 +33,7 @@ const Chat = () => {
   const { userRole } = useUserRole();
   const { data: tenants, isLoading: isTenantsLoading } = useTenants();
   const { data: notifications } = useSidebarNotifications();
+  const { toast } = useToast();
 
   const messageNotification = notifications?.find(n => n.type === 'messages');
 
@@ -189,7 +190,6 @@ const Chat = () => {
                 className="w-full mt-4 bg-blue-600 hover:bg-blue-700" 
                 onClick={async () => {
                   try {
-                    // Find a landlord among the tenants list
                     const landlord = uniqueTenants.find(t => t.role === "landlord");
                     if (landlord) {
                       console.log("Found landlord:", landlord.id);
@@ -197,11 +197,9 @@ const Chat = () => {
                     } else {
                       console.log("No landlord found in tenants list");
                       
-                      // If no landlord in the tenant list, try to fetch the landlord from the database
                       const { data: { user } } = await supabase.auth.getUser();
                       if (!user) return;
                       
-                      // Get the tenant's property
                       const { data: tenancy } = await supabase
                         .from('tenancies')
                         .select('property_id')
@@ -210,7 +208,6 @@ const Chat = () => {
                         .maybeSingle();
                         
                       if (tenancy?.property_id) {
-                        // Get the landlord for this property
                         const { data: property } = await supabase
                           .from('properties')
                           .select('landlord_id')
