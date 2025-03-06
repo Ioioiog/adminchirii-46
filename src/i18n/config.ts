@@ -1,3 +1,4 @@
+
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
@@ -6,6 +7,7 @@ import enCommon from './locales/en/common.json';
 import enProperties from './locales/en/properties.json';
 import enDashboard from './locales/en/dashboard.json';
 import enAuth from './locales/en/auth.json';
+import enLearn from './locales/en/learn.json';
 
 // Spanish translations
 import esCommon from './locales/es/common.json';
@@ -24,6 +26,7 @@ import roCommon from './locales/ro/common.json';
 import roProperties from './locales/ro/properties.json';
 import roDashboard from './locales/ro/dashboard.json';
 import roAuth from './locales/ro/auth.json';
+import roLearn from './locales/ro/learn.json';
 
 const resources = {
   en: {
@@ -31,6 +34,7 @@ const resources = {
     properties: enProperties,
     dashboard: enDashboard,
     auth: enAuth,
+    learn: enLearn,
   },
   es: {
     common: esCommon,
@@ -49,6 +53,7 @@ const resources = {
     properties: roProperties,
     dashboard: roDashboard,
     auth: roAuth,
+    learn: roLearn,
   },
 };
 
@@ -62,7 +67,7 @@ i18n
       escapeValue: false,
     },
     defaultNS: 'common',
-    ns: ['common', 'properties', 'dashboard', 'auth'],
+    ns: ['common', 'properties', 'dashboard', 'auth', 'learn'],
     debug: process.env.NODE_ENV === 'development', // enable debug in development
     react: {
       useSuspense: false, // recommended for better performance

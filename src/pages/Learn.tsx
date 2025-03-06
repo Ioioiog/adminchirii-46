@@ -8,9 +8,12 @@ import { TenantGuide } from "@/components/learn/TenantGuide";
 import { LandlordGuide } from "@/components/learn/LandlordGuide";
 import { ServiceProviderGuide } from "@/components/learn/ServiceProviderGuide";
 import { useUserRole } from "@/hooks/use-user-role";
+import { useTranslation } from "react-i18next";
 
 export default function Learn() {
   const { userRole } = useUserRole();
+  const { t } = useTranslation('learn');
+  
   const [activeTab, setActiveTab] = useState(() => {
     // Set default tab based on user role
     if (userRole === "tenant") return "tenant";
@@ -21,17 +24,17 @@ export default function Learn() {
   const tabs = [
     {
       id: "tenant",
-      label: "Tenant Guide",
+      label: t('tabs.tenant'),
       icon: Users,
     },
     {
       id: "landlord",
-      label: "Landlord Guide",
+      label: t('tabs.landlord'),
       icon: Building2,
     },
     {
       id: "service-provider",
-      label: "Service Provider Guide",
+      label: t('tabs.serviceProvider'),
       icon: Wrench,
     }
   ];
@@ -40,8 +43,8 @@ export default function Learn() {
     <PageLayout>
       <PageHeader
         icon={Book}
-        title="Platform Guide"
-        description="Learn how to use the platform based on your role"
+        title={t('pageTitle')}
+        description={t('pageDescription')}
       />
 
       <div className="space-y-6">

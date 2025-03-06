@@ -1,0 +1,226 @@
+
+{
+  "pageTitle": "Ghid al platformei",
+  "pageDescription": "Învățați cum să utilizați platforma în funcție de rolul dumneavoastră",
+  
+  "tabs": {
+    "tenant": "Ghid pentru chiriași",
+    "landlord": "Ghid pentru proprietari",
+    "serviceProvider": "Ghid pentru furnizori de servicii"
+  },
+  
+  "tenantGuide": {
+    "title": "Ghid pentru chiriași",
+    "introduction": "Bun venit la ghidul pentru chiriași! Acest ghid cuprinzător vă va ajuta să navigați prin platformă și să profitați la maximum de experiența dumneavoastră de închiriere. Aflați cum să vă gestionați proprietățile, să trimiteți cereri de întreținere, să accesați documente importante și multe altele.",
+    "sections": {
+      "properties": {
+        "title": "Proprietăți",
+        "description": "Vizualizați detalii despre proprietățile închiriate, inclusiv adresa, termenii contractului și informațiile de contact ale proprietarului."
+      },
+      "maintenance": {
+        "title": "Cereri de întreținere",
+        "description": "Trimiteți și urmăriți cererile de întreținere pentru proprietatea închiriată."
+      },
+      "documents": {
+        "title": "Documente",
+        "description": "Accesați și gestionați documente importante legate de închirierea dumneavoastră."
+      },
+      "payments": {
+        "title": "Plăți",
+        "description": "Efectuați și urmăriți plățile chiriei și vizualizați istoricul plăților."
+      },
+      "importantDates": {
+        "title": "Date importante",
+        "description": "Țineți evidența datelor importante legate de închirierea dumneavoastră."
+      },
+      "utilities": {
+        "title": "Utilități",
+        "description": "Gestionați și urmăriți utilizarea și plățile utilităților."
+      },
+      "communication": {
+        "title": "Comunicare",
+        "description": "Comunicați cu proprietarul sau administratorul proprietății."
+      },
+      "propertyHandbook": {
+        "title": "Manualul proprietății",
+        "description": "Accesați informații detaliate despre proprietatea dumneavoastră."
+      }
+    },
+    "howTo": "Cum să:",
+    "examples": "Exemple:",
+    "tips": {
+      "title": "Sfaturi pentru început",
+      "items": [
+        "Completați-vă profilul din pagina Setări cu toate informațiile de contact",
+        "Configurați metodele de plată preferate înainte de prima dată scadentă a chiriei",
+        "Activați notificările pentru a fi la curent cu evenimente și termene importante",
+        "Familiarizați-vă imediat cu termenii contractului și regulile proprietății",
+        "Salvați informațiile de contact ale proprietarului pentru urgențe în telefonul dumneavoastră",
+        "Documentați starea proprietății cu fotografii când vă mutați",
+        "Testați toate detectoarele de fum și echipamentele de siguranță la mutare"
+      ]
+    },
+    "emergency": {
+      "title": "Proceduri de urgență",
+      "intro": "Pentru probleme de întreținere urgente care necesită atenție imediată:",
+      "steps": [
+        "Utilizați opțiunea de cerere de întreținere de urgență din secțiunea Întreținere",
+        "Sunați la numărul de contact de urgență al proprietarului din Manualul Proprietății",
+        "Pentru urgențe care pun viața în pericol (incendiu, scurgere de gaz), contactați mai întâi serviciile de urgență (112)",
+        "Documentați problema cu fotografii când este sigur să o faceți",
+        "Urmați cu documentația standard prin platformă odată ce urgența a fost rezolvată"
+      ]
+    }
+  },
+  
+  "landlordGuide": {
+    "title": "Ghid pentru proprietari",
+    "introduction": "Bun venit la ghidul pentru proprietari! Acest ghid cuprinzător vă va ajuta să gestionați eficient proprietățile, chiriașii și tranzacțiile financiare. Aflați cum să urmăriți plățile chiriei, să gestionați cererile de întreținere, să creați și să gestionați contracte de închiriere și să optimizați operațiunile afacerii dumneavoastră de închiriere.",
+    "sections": {
+      "dashboard": {
+        "title": "Tablou de bord",
+        "description": "Obțineți o privire de ansamblu asupra afacerii dumneavoastră de închiriere cu indicatori cheie și informații."
+      },
+      "propertyManagement": {
+        "title": "Gestionarea proprietăților",
+        "description": "Adăugați, editați și gestionați proprietățile dumneavoastră de închiriat."
+      },
+      "tenantManagement": {
+        "title": "Gestionarea chiriașilor",
+        "description": "Gestionați chiriașii actuali și procesați cererile noilor chiriași."
+      },
+      "maintenanceManagement": {
+        "title": "Gestionarea întreținerii",
+        "description": "Gestionați cererile de întreținere și programați reparații."
+      },
+      "documentManagement": {
+        "title": "Gestionarea documentelor",
+        "description": "Creați și gestionați contracte de închiriere, contracte și alte documente."
+      },
+      "financialManagement": {
+        "title": "Gestionare financiară",
+        "description": "Urmăriți plățile chiriei, cheltuielile și generați rapoarte financiare."
+      },
+      "calendarScheduling": {
+        "title": "Calendar și programare",
+        "description": "Gestionați date importante și programări."
+      },
+      "tenantTurnover": {
+        "title": "Rotația chiriașilor",
+        "description": "Gestionați eficient procesul de schimbare a chiriașilor."
+      }
+    },
+    "howTo": "Cum să:",
+    "examples": "Exemple:",
+    "bestPractices": {
+      "title": "Cele mai bune practici pentru proprietari",
+      "items": [
+        "Păstrați detaliile și fotografiile proprietăților actualizate pentru a minimiza perioadele de neocupare",
+        "Răspundeți la cererile de întreținere în 24-48 de ore pentru a îmbunătăți satisfacția chiriașilor",
+        "Documentați toate comunicările cu chiriașii în platformă pentru protecție legală",
+        "Revizuiți rapoartele financiare lunar pentru a identifica tendințe și oportunități",
+        "Rămâneți informat despre reglementările locale de închiriere și actualizați-vă politicile în consecință",
+        "Configurați memento-uri automate pentru plata chiriei pentru a reduce plățile întârziate",
+        "Efectuați inspecții regulate ale proprietății pentru a preveni probleme majore de întreținere",
+        "Construiți relații cu furnizori de servicii de încredere pentru o rezolvare mai rapidă a întreținerii",
+        "Utilizați șabloanele de documente pentru a asigura contracte și notificări legal conforme",
+        "Implementați procese de verificare consecvente pentru toate aplicațiile chiriașilor"
+      ]
+    },
+    "legalCompliance": {
+      "title": "Sfaturi de conformitate legală",
+      "intro": "Considerații importante pentru menținerea conformității legale:",
+      "items": [
+        "Utilizați întotdeauna șabloane de contract actualizate și verificate juridic pentru jurisdicția dumneavoastră",
+        "Respectați legile locale privind gestionarea garanției și plățile dobânzilor",
+        "Respectați legile privind locuințele echitabile în toată publicitatea și selecția chiriașilor",
+        "Păstrați evidențe corespunzătoare ale tuturor cererilor de întreținere și finalizărilor",
+        "Furnizați divulgările necesare (vopsea cu plumb, mucegai etc.) înainte de semnarea contractului",
+        "Urmați procedurile adecvate de notificare pentru inspecții și încetări de contract",
+        "Consultați un avocat local specializat în imobiliare pentru întrebări juridice specifice"
+      ]
+    }
+  },
+  
+  "serviceProviderGuide": {
+    "title": "Ghid pentru furnizori de servicii",
+    "introduction": "Bun venit la ghidul furnizorului de servicii! Acest ghid cuprinzător vă va ajuta să înțelegeți cum să utilizați platforma pentru a vă gestiona serviciile de întreținere, a vă dezvolta afacerea și a construi relații puternice cu proprietarii de imobile. Aflați cum să primiți și să finalizați cererile de lucru, să vă gestionați programul și să fiți plătit prompt.",
+    "sections": {
+      "profileManagement": {
+        "title": "Gestionarea profilului",
+        "description": "Configurați și gestionați profilul dumneavoastră de furnizor de servicii."
+      },
+      "serviceAreas": {
+        "title": "Zone de servicii",
+        "description": "Definiți zonele geografice în care furnizați servicii."
+      },
+      "jobManagement": {
+        "title": "Gestionarea lucrărilor",
+        "description": "Gestionați cererile de întreținere și lucrările în curs."
+      },
+      "earningsManagement": {
+        "title": "Gestionarea câștigurilor",
+        "description": "Urmăriți câștigurile și istoricul plăților."
+      },
+      "scheduling": {
+        "title": "Programare",
+        "description": "Gestionați disponibilitatea și programul lucrărilor."
+      },
+      "clientManagement": {
+        "title": "Gestionarea clienților",
+        "description": "Gestionați relațiile cu proprietarii și administratorii de proprietăți."
+      },
+      "ratingsReviews": {
+        "title": "Evaluări și recenzii",
+        "description": "Construiți-vă reputația cu feedback pozitiv de la clienți."
+      },
+      "businessAnalytics": {
+        "title": "Analiză de afaceri",
+        "description": "Urmăriți performanța și identificați oportunitățile de creștere."
+      }
+    },
+    "howTo": "Cum să:",
+    "examples": "Exemple:",
+    "tips": {
+      "title": "Sfaturi pentru furnizorii de servicii",
+      "items": [
+        "Răspundeți la cererile de lucru în 1-2 ore pentru a maximiza rata de rezervare",
+        "Mențineți calendarul de disponibilitate actualizat pentru a evita conflictele de programare",
+        "Documentați-vă munca cu fotografii detaliate înainte și după pentru fiecare lucrare",
+        "Oferiți estimări clare și detaliate și respectați prețurile citate ori de câte ori este posibil",
+        "Mențineți o comunicare profesională cu clienții prin mesageria platformei",
+        "Cereți clienților mulțumiți să lase recenzii imediat după finalizarea lucrării",
+        "Actualizați regulat abilitățile, certificările și ofertele de servicii",
+        "Oferiți pachete de întreținere preventivă pentru a crea venituri recurente",
+        "Luați în considerare oferirea de servicii de urgență la tarife premium dacă programul vă permite",
+        "Utilizați aplicația mobilă pentru actualizări în timp real când sunteți în intervenții"
+      ]
+    },
+    "bestPractices": {
+      "title": "Cele mai bune practici profesionale",
+      "intro": "Mențineți standarde profesionale înalte cu aceste bune practici:",
+      "items": [
+        "Confirmați întotdeauna programările cu 24 de ore înainte pentru a reduce neprezentările",
+        "Purtați ținută profesională și aveți identificare la toate intervențiile de service",
+        "Oferiți estimări scrise înainte de a începe lucrul pentru transparență",
+        "Curățați temeinic după finalizarea oricărei lucrări",
+        "Urmăriți după lucrările majore pentru a asigura satisfacția continuă a clientului",
+        "Mențineți licențierea, garantarea și asigurarea corespunzătoare în orice moment",
+        "Păstrați evidențe detaliate ale tuturor lucrărilor efectuate în scopuri de garanție"
+      ]
+    },
+    "emergency": {
+      "title": "Gestionarea cererilor de urgență",
+      "intro": "Linii directoare pentru răspunsul la cereri de întreținere de urgență:",
+      "steps": [
+        "Cererile de urgență sunt evidențiate cu roșu pe tabloul de bord",
+        "Încercați să răspundeți la cererile de urgență în 15-30 de minute",
+        "Dacă acceptați o lucrare de urgență, oferiți o estimare a timpului de sosire",
+        "Utilizați butonul \"Sunt pe drum\" din aplicație pentru a notifica clientul când sunteți în drum",
+        "Documentați situația de urgență cu fotografii înainte de a începe lucrul",
+        "Comunicați imediat orice complicații neașteptate",
+        "După rezolvarea urgenței imediate, programați lucrări de urmărire dacă este necesar"
+      ]
+    }
+  }
+}

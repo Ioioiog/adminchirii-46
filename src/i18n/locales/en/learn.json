@@ -1,0 +1,226 @@
+
+{
+  "pageTitle": "Platform Guide",
+  "pageDescription": "Learn how to use the platform based on your role",
+  
+  "tabs": {
+    "tenant": "Tenant Guide",
+    "landlord": "Landlord Guide",
+    "serviceProvider": "Service Provider Guide"
+  },
+  
+  "tenantGuide": {
+    "title": "Tenant Guide",
+    "introduction": "Welcome to the tenant guide! This comprehensive guide will help you navigate through the platform and make the most out of your rental experience. Learn how to manage your properties, submit maintenance requests, access important documents, and more.",
+    "sections": {
+      "properties": {
+        "title": "Properties",
+        "description": "View details about your rented properties, including address, lease terms, and landlord contact information."
+      },
+      "maintenance": {
+        "title": "Maintenance Requests",
+        "description": "Submit and track maintenance requests for your rental property."
+      },
+      "documents": {
+        "title": "Documents",
+        "description": "Access and manage important documents related to your tenancy."
+      },
+      "payments": {
+        "title": "Payments",
+        "description": "Make and track rent payments and view your payment history."
+      },
+      "importantDates": {
+        "title": "Important Dates",
+        "description": "Keep track of important dates related to your tenancy."
+      },
+      "utilities": {
+        "title": "Utilities",
+        "description": "Manage and track utility usage and payments."
+      },
+      "communication": {
+        "title": "Communication",
+        "description": "Communicate with your landlord or property manager."
+      },
+      "propertyHandbook": {
+        "title": "Property Handbook",
+        "description": "Access detailed information about your property."
+      }
+    },
+    "howTo": "How to:",
+    "examples": "Examples:",
+    "tips": {
+      "title": "Tips for Getting Started",
+      "items": [
+        "Complete your profile in the Settings page with all contact information",
+        "Set up your preferred payment methods before your first rent due date",
+        "Enable notifications to stay updated on important events and deadlines",
+        "Familiarize yourself with your lease terms and property rules immediately",
+        "Save your landlord's contact information for emergencies in your phone",
+        "Document the condition of your rental with photos when you first move in",
+        "Test all smoke detectors and safety equipment upon moving in"
+      ]
+    },
+    "emergency": {
+      "title": "Emergency Procedures",
+      "intro": "For urgent maintenance issues that require immediate attention:",
+      "steps": [
+        "Use the emergency maintenance request option in the Maintenance section",
+        "Call your landlord's emergency contact number listed in your Property Handbook",
+        "For life-threatening emergencies (fire, gas leak), contact emergency services (911) first",
+        "Document the issue with photos once it's safe to do so",
+        "Follow up with standard documentation through the platform once the emergency is addressed"
+      ]
+    }
+  },
+  
+  "landlordGuide": {
+    "title": "Landlord Guide",
+    "introduction": "Welcome to the landlord guide! This comprehensive guide will help you efficiently manage your properties, tenants, and financial transactions. Learn how to track rent payments, handle maintenance requests, create and manage leases, and optimize your rental business operations.",
+    "sections": {
+      "dashboard": {
+        "title": "Dashboard",
+        "description": "Get an overview of your rental business with key metrics and insights."
+      },
+      "propertyManagement": {
+        "title": "Property Management",
+        "description": "Add, edit, and manage your rental properties."
+      },
+      "tenantManagement": {
+        "title": "Tenant Management",
+        "description": "Manage current tenants and process new tenant applications."
+      },
+      "maintenanceManagement": {
+        "title": "Maintenance Management",
+        "description": "Handle maintenance requests and schedule repairs."
+      },
+      "documentManagement": {
+        "title": "Document Management",
+        "description": "Create and manage leases, contracts, and other documents."
+      },
+      "financialManagement": {
+        "title": "Financial Management",
+        "description": "Track rent payments, expenses, and generate financial reports."
+      },
+      "calendarScheduling": {
+        "title": "Calendar & Scheduling",
+        "description": "Manage important dates and appointments."
+      },
+      "tenantTurnover": {
+        "title": "Tenant Turnover",
+        "description": "Efficiently manage the tenant turnover process."
+      }
+    },
+    "howTo": "How to:",
+    "examples": "Examples:",
+    "bestPractices": {
+      "title": "Best Practices for Landlords",
+      "items": [
+        "Keep property details and photos up-to-date to minimize vacancy periods",
+        "Respond to maintenance requests within 24-48 hours to improve tenant satisfaction",
+        "Document all tenant communications within the platform for legal protection",
+        "Review financial reports monthly to identify trends and opportunities",
+        "Stay informed about local rental regulations and update your policies accordingly",
+        "Set up automatic rent payment reminders to reduce late payments",
+        "Conduct regular property inspections to prevent major maintenance issues",
+        "Build relationships with reliable service providers for faster maintenance resolution",
+        "Use the document templates to ensure legally compliant leases and notices",
+        "Implement consistent screening processes for all tenant applications"
+      ]
+    },
+    "legalCompliance": {
+      "title": "Legal Compliance Tips",
+      "intro": "Important considerations to maintain legal compliance:",
+      "items": [
+        "Always use up-to-date, legally reviewed lease templates for your jurisdiction",
+        "Follow local laws regarding security deposit handling and interest payments",
+        "Adhere to fair housing laws in all advertising and tenant selection",
+        "Maintain proper records of all maintenance requests and completions",
+        "Provide required disclosures (lead paint, mold, etc.) before lease signing",
+        "Follow proper notice procedures for inspections and lease terminations",
+        "Consult with a local real estate attorney for specific legal questions"
+      ]
+    }
+  },
+  
+  "serviceProviderGuide": {
+    "title": "Service Provider Guide",
+    "introduction": "Welcome to the service provider guide! This comprehensive guide will help you understand how to use the platform to manage your maintenance services, grow your business, and build strong relationships with property owners. Learn how to receive and complete job requests, manage your schedule, and get paid promptly.",
+    "sections": {
+      "profileManagement": {
+        "title": "Profile Management",
+        "description": "Set up and manage your service provider profile."
+      },
+      "serviceAreas": {
+        "title": "Service Areas",
+        "description": "Define the geographic areas where you provide services."
+      },
+      "jobManagement": {
+        "title": "Job Management",
+        "description": "Manage maintenance requests and ongoing jobs."
+      },
+      "earningsManagement": {
+        "title": "Earnings Management",
+        "description": "Track your earnings and payment history."
+      },
+      "scheduling": {
+        "title": "Scheduling",
+        "description": "Manage your availability and job schedule."
+      },
+      "clientManagement": {
+        "title": "Client Management",
+        "description": "Manage your relationships with landlords and property managers."
+      },
+      "ratingsReviews": {
+        "title": "Ratings & Reviews",
+        "description": "Build your reputation with positive client feedback."
+      },
+      "businessAnalytics": {
+        "title": "Business Analytics",
+        "description": "Track your performance and identify growth opportunities."
+      }
+    },
+    "howTo": "How to:",
+    "examples": "Examples:",
+    "tips": {
+      "title": "Tips for Service Providers",
+      "items": [
+        "Respond to job requests within 1-2 hours to maximize your booking rate",
+        "Keep your availability calendar up-to-date to avoid scheduling conflicts",
+        "Document your work with detailed before and after photos for each job",
+        "Provide clear, detailed estimates and stick to quoted prices whenever possible",
+        "Maintain professional communication with clients through the platform messaging",
+        "Ask satisfied clients to leave reviews immediately after job completion",
+        "Regularly update your skills, certifications, and service offerings",
+        "Offer preventative maintenance packages to create recurring revenue",
+        "Consider offering emergency services at premium rates if your schedule allows",
+        "Use the mobile app for real-time updates when on service calls"
+      ]
+    },
+    "bestPractices": {
+      "title": "Professional Best Practices",
+      "intro": "Maintain high professional standards with these best practices:",
+      "items": [
+        "Always confirm appointments 24 hours in advance to reduce no-shows",
+        "Wear professional attire and carry identification on all service calls",
+        "Provide written estimates before beginning work for transparency",
+        "Clean up thoroughly after completing any job",
+        "Follow up after major jobs to ensure ongoing client satisfaction",
+        "Maintain proper licensing, bonding, and insurance at all times",
+        "Keep detailed records of all work performed for warranty purposes"
+      ]
+    },
+    "emergency": {
+      "title": "Handling Emergency Requests",
+      "intro": "Guidelines for responding to emergency maintenance requests:",
+      "steps": [
+        "Emergency requests are highlighted in red on your dashboard",
+        "Aim to respond to emergency requests within 15-30 minutes",
+        "If you accept an emergency job, provide an estimated arrival time",
+        "Use the \"On My Way\" button in the app to notify the client when you're en route",
+        "Document the emergency situation with photos before beginning work",
+        "Communicate any unexpected complications immediately",
+        "After resolving the immediate emergency, schedule follow-up work if needed"
+      ]
+    }
+  }
+}
