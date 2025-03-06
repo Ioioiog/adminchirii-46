@@ -14,7 +14,8 @@ import { Separator } from "@/components/ui/separator";
 import { ContractStatus } from "@/types/contract";
 import { ContractStatusBadge } from "@/components/contracts/ContractStatusBadge";
 import { InvoiceList } from "@/components/invoices/InvoiceList";
-import { Invoice } from "@/types/invoice";
+import { Invoice, InvoiceMetadata } from "@/types/invoice";
+import { Json } from "@/integrations/supabase/types/json";
 
 interface TenantContract {
   id: string;
@@ -35,6 +36,62 @@ const TenantDetails = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingContracts, setIsLoadingContracts] = useState(true);
   const [isLoadingInvoices, setIsLoadingInvoices] = useState(true);
+
+  const fetchTenantInvoices = async () => {
+    if (!id) return;
+    
+    try {
+      setIsLoadingInvoices(true);
+      
+      const { data, error } = await supabase
+        .from('invoices')
+        .select(`
+          *,
+          property:properties (
+            name,
+            address,
+            monthly_rent,
+            currency
+          ),
+          tenant:profiles!invoices_tenant_id_fkey (
+            first_name,
+            last_name,
+            email
+          )
+        `)
+        .eq('tenant_id', id)
+        .order('due_date', { ascending: false });
+        
+      if (error) {
+        throw error;
+      }
+      
+      console.log("Fetched tenant invoices:", data);
+      
+      const formattedInvoices: Invoice[] = data?.map(invoice => {
+        let convertedMetadata: InvoiceMetadata | undefined;
+        if (invoice.metadata) {
+          convertedMetadata = invoice.metadata as unknown as InvoiceMetadata;
+        }
+        
+        return {
+          ...invoice,
+          metadata: convertedMetadata
+        };
+      }) || [];
+      
+      setInvoices(formattedInvoices);
+    } catch (error: any) {
+      console.error("Error fetching tenant invoices:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to fetch tenant invoices.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingInvoices(false);
+    }
+  };
 
   useEffect(() => {
     const fetchTenantDetails = async () => {
@@ -156,49 +213,6 @@ const TenantDetails = () => {
         });
       } finally {
         setIsLoadingContracts(false);
-      }
-    };
-
-    const fetchTenantInvoices = async () => {
-      if (!id) return;
-      
-      try {
-        setIsLoadingInvoices(true);
-        
-        const { data, error } = await supabase
-          .from('invoices')
-          .select(`
-            *,
-            property:properties (
-              name,
-              address,
-              monthly_rent,
-              currency
-            ),
-            tenant:profiles!invoices_tenant_id_fkey (
-              first_name,
-              last_name,
-              email
-            )
-          `)
-          .eq('tenant_id', id)
-          .order('due_date', { ascending: false });
-          
-        if (error) {
-          throw error;
-        }
-        
-        console.log("Fetched tenant invoices:", data);
-        setInvoices(data || []);
-      } catch (error: any) {
-        console.error("Error fetching tenant invoices:", error);
-        toast({
-          title: "Error",
-          description: error.message || "Failed to fetch tenant invoices.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoadingInvoices(false);
       }
     };
 
