@@ -89,30 +89,32 @@ const Chat = () => {
       
       console.log("No landlord found in tenants list, trying to find via property");
       
-      // Get the tenant's property
-      const { data: tenancy, error: tenancyError } = await supabase
+      // Get the tenant's properties (might have multiple active tenancies)
+      const { data: tenancies, error: tenancyError } = await supabase
         .from('tenancies')
         .select('property_id')
         .eq('tenant_id', currentUserId)
-        .eq('status', 'active')
-        .maybeSingle();
+        .eq('status', 'active');
       
       if (tenancyError) {
         console.error("Error finding tenancy:", tenancyError);
         throw tenancyError;
       }
       
-      if (!tenancy?.property_id) {
+      if (!tenancies || tenancies.length === 0) {
         console.error("No active tenancy found for tenant");
         throw new Error("No active tenancy found");
       }
+      
+      // Get the first property's landlord
+      const firstPropertyId = tenancies[0].property_id;
       
       // Get the landlord for this property
       const { data: property, error: propertyError } = await supabase
         .from('properties')
         .select('landlord_id')
-        .eq('id', tenancy.property_id)
-        .maybeSingle();
+        .eq('id', firstPropertyId)
+        .single();
       
       if (propertyError) {
         console.error("Error finding property:", propertyError);
