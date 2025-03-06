@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,15 +63,8 @@ const Tenants = () => {
 
   // Function to handle inviting a tenant
   const handleInviteTenant = () => {
-    // If there's only one property, navigate directly to its invite page
-    if (properties && properties.length === 1) {
-      navigate(`/properties/${properties[0].id}/invite-tenant`);
-      return;
-    }
-    
-    // If there are multiple properties, navigate to properties page
-    // The user will need to select which property to invite the tenant to
-    navigate("/properties");
+    // Navigate to the contract generation page instead
+    navigate("/generate-contract");
   };
 
   // Function to handle View Details button click
