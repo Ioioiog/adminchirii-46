@@ -12,6 +12,13 @@ interface Message {
   content: string;
 }
 
+// Add structure to organize topics and their related keywords
+interface TopicMapping {
+  topic: string;
+  keywords: string[];
+  responseKey: string;
+}
+
 export function AiGuide() {
   const { t } = useTranslation('learn');
   const [input, setInput] = useState("");
@@ -22,6 +29,122 @@ export function AiGuide() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  
+  // Define keyword mappings for more sophisticated matching
+  const topicMappings: TopicMapping[] = [
+    {
+      topic: "properties",
+      keywords: ["property", "properties", "apartment", "house", "rental", "real estate", "listing"],
+      responseKey: 'aiGuide.responses.properties'
+    },
+    {
+      topic: "maintenance",
+      keywords: ["maintenance", "repair", "fix", "broken", "issue", "problem", "service request"],
+      responseKey: 'aiGuide.responses.maintenance'
+    },
+    {
+      topic: "payments",
+      keywords: ["payment", "rent", "invoice", "bill", "pay", "money", "fee", "transaction", "deposit"],
+      responseKey: 'aiGuide.responses.payments'
+    },
+    {
+      topic: "tenants",
+      keywords: ["tenant", "renter", "occupant", "resident", "lease holder"],
+      responseKey: 'aiGuide.responses.tenants'
+    },
+    {
+      topic: "landlords",
+      keywords: ["landlord", "owner", "property manager", "lessor", "host"],
+      responseKey: 'aiGuide.responses.landlords'
+    },
+    {
+      topic: "documents",
+      keywords: ["document", "contract", "lease", "agreement", "form", "paper", "file", "pdf"],
+      responseKey: 'aiGuide.responses.documents'
+    },
+    {
+      topic: "service_providers",
+      keywords: ["service", "provider", "contractor", "vendor", "plumber", "electrician", "handyman"],
+      responseKey: 'aiGuide.responses.serviceProviders'
+    },
+    {
+      topic: "settings",
+      keywords: ["setting", "profile", "account", "preference", "configuration", "setup"],
+      responseKey: 'aiGuide.responses.settings'
+    },
+    {
+      topic: "platform",
+      keywords: ["app", "platform", "website", "system", "software", "interface", "dashboard"],
+      responseKey: 'aiGuide.responses.platform'
+    },
+    {
+      topic: "help",
+      keywords: ["help", "support", "assistance", "contact", "guide", "faq", "question"],
+      responseKey: 'aiGuide.responses.help'
+    }
+  ];
+
+  // Function to get response based on context analysis
+  const generateResponse = (query: string) => {
+    const lowerQuery = query.toLowerCase();
+    
+    // 1. Check for exact phrases that might override topic detection
+    if (lowerQuery.includes("how to use")) {
+      if (lowerQuery.includes("payment") || lowerQuery.includes("pay"))
+        return t('aiGuide.responses.paymentHowTo');
+      if (lowerQuery.includes("maintenance"))
+        return t('aiGuide.responses.maintenanceHowTo');
+    }
+    
+    // 2. Score-based topic matching
+    const topicScores = topicMappings.map(mapping => {
+      // Calculate how many keywords match
+      const matchCount = mapping.keywords.filter(keyword => 
+        lowerQuery.includes(keyword)
+      ).length;
+      
+      return {
+        topic: mapping.topic,
+        score: matchCount,
+        responseKey: mapping.responseKey
+      };
+    });
+    
+    // 3. Get the topic with the highest score
+    const bestMatch = topicScores.reduce((best, current) => 
+      current.score > best.score ? current : best, 
+      { topic: "", score: 0, responseKey: "" }
+    );
+    
+    // 4. If we have a match, return the appropriate response
+    if (bestMatch.score > 0) {
+      return t(bestMatch.responseKey);
+    }
+    
+    // 5. Context-aware default responses
+    if (lowerQuery.includes("hello") || lowerQuery.includes("hi") || lowerQuery.includes("hey")) {
+      return t('aiGuide.responses.greeting');
+    }
+    
+    if (lowerQuery.includes("thank")) {
+      return t('aiGuide.responses.thanks');
+    }
+    
+    if (
+      lowerQuery.includes("?") || 
+      lowerQuery.startsWith("what") || 
+      lowerQuery.startsWith("how") || 
+      lowerQuery.startsWith("where") || 
+      lowerQuery.startsWith("when") || 
+      lowerQuery.startsWith("why") || 
+      lowerQuery.startsWith("can")
+    ) {
+      return t('aiGuide.responses.question');
+    }
+    
+    // 6. Fallback to default response
+    return t('aiGuide.responses.default');
+  };
 
   const handleSend = async () => {
     if (input.trim() === "") return;
@@ -50,35 +173,6 @@ export function AiGuide() {
       }]);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const generateResponse = (query: string) => {
-    // Simple keyword-based response system
-    const lowerQuery = query.toLowerCase();
-    
-    if (lowerQuery.includes("property") || lowerQuery.includes("properties")) {
-      return t('aiGuide.responses.properties');
-    } else if (lowerQuery.includes("maintenance") || lowerQuery.includes("repair")) {
-      return t('aiGuide.responses.maintenance');
-    } else if (lowerQuery.includes("payment") || lowerQuery.includes("rent")) {
-      return t('aiGuide.responses.payments');
-    } else if (lowerQuery.includes("tenant")) {
-      return t('aiGuide.responses.tenants');
-    } else if (lowerQuery.includes("landlord")) {
-      return t('aiGuide.responses.landlords');
-    } else if (lowerQuery.includes("document") || lowerQuery.includes("contract")) {
-      return t('aiGuide.responses.documents');
-    } else if (lowerQuery.includes("service") || lowerQuery.includes("provider")) {
-      return t('aiGuide.responses.serviceProviders');
-    } else if (lowerQuery.includes("setting") || lowerQuery.includes("profile")) {
-      return t('aiGuide.responses.settings');
-    } else if (lowerQuery.includes("app") || lowerQuery.includes("platform") || lowerQuery.includes("website")) {
-      return t('aiGuide.responses.platform');
-    } else if (lowerQuery.includes("help") || lowerQuery.includes("support")) {
-      return t('aiGuide.responses.help');
-    } else {
-      return t('aiGuide.responses.default');
     }
   };
 
