@@ -31,7 +31,7 @@ export default function InfoPage() {
     scene.add(directionalLight);
 
     // Create platform base
-    const platformGeometry = new THREE.CylinderGeometry(5, 5, 0.2, 32, 1, false);
+    const platformGeometry = new THREE.CylinderGeometry(3, 3, 0.2, 24, 1, false);
     const platformMaterial = new THREE.MeshPhongMaterial({
       color: 0x3b82f6,
       transparent: true,
@@ -41,41 +41,19 @@ export default function InfoPage() {
     const platform = new THREE.Mesh(platformGeometry, platformMaterial);
     scene.add(platform);
 
-    // Create connection lines
-    const connectionMaterial = new THREE.LineBasicMaterial({ 
-      color: 0x60a5fa,
-      transparent: true,
-      opacity: 0.5 
-    });
-
-    // Create floating cubes representing different user types
-    const createFloatingCube = (color: number, position: THREE.Vector3) => {
-      const geometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
-      const material = new THREE.MeshPhongMaterial({
-        color,
-        transparent: true,
-        opacity: 0.9,
-        shininess: 100,
-      });
-      const cube = new THREE.Mesh(geometry, material);
-      cube.position.copy(position);
-      scene.add(cube);
-      return cube;
-    };
-
-    // Create data particles
-    const particleCount = 100;
+    // Create data particles - reduced count
+    const particleCount = 50;
     const particleGeometry = new THREE.BufferGeometry();
     const particlePositions = new Float32Array(particleCount * 3);
     const particleSizes = new Float32Array(particleCount);
 
     for (let i = 0; i < particleCount * 3; i += 3) {
-      const radius = Math.random() * 5;
+      const radius = Math.random() * 3;
       const angle = Math.random() * Math.PI * 2;
       particlePositions[i] = Math.cos(angle) * radius;
-      particlePositions[i + 1] = (Math.random() - 0.5) * 4;
+      particlePositions[i + 1] = (Math.random() - 0.5) * 2;
       particlePositions[i + 2] = Math.sin(angle) * radius;
-      particleSizes[i / 3] = Math.random() * 0.1;
+      particleSizes[i / 3] = Math.random() * 0.05;
     }
 
     particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
@@ -115,7 +93,7 @@ export default function InfoPage() {
     scene.add(particles);
 
     // Position camera
-    camera.position.set(0, 4, 8);
+    camera.position.set(0, 3, 6);
     camera.lookAt(0, 0, 0);
 
     // Animation loop
@@ -131,8 +109,8 @@ export default function InfoPage() {
       platform.rotation.y += 0.002;
 
       // Update camera position based on mouse
-      camera.position.x += (mousePosition.x * 8 - camera.position.x) * 0.05;
-      camera.position.y += (mousePosition.y * 4 + 4 - camera.position.y) * 0.05;
+      camera.position.x += (mousePosition.x * 6 - camera.position.x) * 0.05;
+      camera.position.y += (mousePosition.y * 3 + 3 - camera.position.y) * 0.05;
       camera.lookAt(0, 0, 0);
 
       renderer.render(scene, camera);
@@ -181,76 +159,76 @@ export default function InfoPage() {
 
       {/* Content Overlay */}
       <div className="relative z-10">
-        <div className="container mx-auto px-6 pt-32 pb-20">
-          <div className="flex flex-col items-center text-center space-y-8">
+        <div className="container mx-auto px-4 pt-16 pb-12">
+          <div className="flex flex-col items-center text-center space-y-6">
             <div className="relative group">
               <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-1000"></div>
-              <div className="relative p-6 bg-white/10 rounded-full backdrop-blur-xl border border-white/20 shadow-xl">
+              <div className="relative p-4 bg-white/10 rounded-full backdrop-blur-xl border border-white/20 shadow-xl">
                 <img 
                   src="/lovable-uploads/9c23bc1b-4e8c-433e-a961-df606dc6a2c6.png" 
                   alt="AdminChirii.ro Logo" 
-                  className="w-16 h-16 transform group-hover:scale-110 transition-transform duration-300"
+                  className="w-12 h-12 transform group-hover:scale-110 transition-transform duration-300"
                 />
               </div>
             </div>
-            <h1 className="text-6xl font-bold text-white tracking-tight">
-              Welcome to the Future of<br />Property Management
+            <h1 className="text-4xl font-bold text-white tracking-tight">
+              Future of Property Management
             </h1>
-            <p className="text-xl text-gray-300 max-w-2xl">
-              Experience a revolutionary platform that brings together landlords, tenants, and service providers 
-              in one seamless, intelligent ecosystem.
+            <p className="text-base text-gray-300 max-w-xl">
+              Experience a revolutionary platform connecting landlords, tenants, and service providers 
+              in one seamless ecosystem.
             </p>
             {!isAuthenticated && (
               <Button 
                 onClick={() => navigate('/auth')}
-                className="relative group px-8 py-6 text-lg bg-blue-600 hover:bg-blue-700 text-white transition-all duration-300"
+                className="relative group px-6 py-2 text-base bg-blue-600 hover:bg-blue-700 text-white transition-all duration-300"
               >
                 <span className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-500 opacity-0 group-hover:opacity-20 blur transition-opacity duration-300" />
                 <span className="relative flex items-center gap-2">
-                  Get Started Now
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  Get Started
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </span>
               </Button>
             )}
           </div>
         </div>
 
-        {/* Features Grid */}
-        <div className="container mx-auto px-6 py-20">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        {/* Features Grid - Compact Version */}
+        <div className="container mx-auto px-4 py-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               {
                 icon: Building2,
-                title: "Smart Property Management",
-                description: "AI-driven insights and automated property operations"
+                title: "Smart Management",
+                description: "AI-driven insights"
               },
               {
                 icon: Network,
                 title: "Unified Platform",
-                description: "Seamlessly connect all stakeholders in one ecosystem"
+                description: "Connected ecosystem"
               },
               {
                 icon: Key,
-                title: "Digital Access Control",
-                description: "Secure and smart access management system"
+                title: "Digital Access",
+                description: "Smart control"
               },
               {
                 icon: Shield,
                 title: "Enhanced Security",
-                description: "Enterprise-grade security for your property data"
+                description: "Enterprise-grade"
               }
             ].map((feature, index) => (
               <div 
                 key={index}
                 className="group relative"
               >
-                <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-500" />
-                <div className="relative p-8 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 transition-transform duration-300 group-hover:-translate-y-2">
-                  <div className="inline-flex p-4 rounded-xl bg-gradient-to-r from-blue-500/20 to-indigo-500/20 mb-6">
-                    <feature.icon className="w-8 h-8 text-blue-400" />
+                <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-lg blur opacity-50 group-hover:opacity-100 transition duration-500" />
+                <div className="relative p-4 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 transition-transform duration-300 group-hover:-translate-y-1">
+                  <div className="inline-flex p-2 rounded-lg bg-gradient-to-r from-blue-500/20 to-indigo-500/20 mb-2">
+                    <feature.icon className="w-5 h-5 text-blue-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white mb-4">{feature.title}</h3>
-                  <p className="text-gray-300">{feature.description}</p>
+                  <h3 className="text-sm font-semibold text-white mb-1">{feature.title}</h3>
+                  <p className="text-xs text-gray-300">{feature.description}</p>
                 </div>
               </div>
             ))}
