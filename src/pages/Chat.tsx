@@ -187,11 +187,51 @@ const Chat = () => {
             {userRole === "tenant" && (
               <Button 
                 className="w-full mt-4 bg-blue-600 hover:bg-blue-700" 
-                onClick={() => {
-                  // If there are any landlords in the tenants list, select the first one
-                  const landlord = uniqueTenants.find(t => t.role === "landlord");
-                  if (landlord) {
-                    handleTenantSelect(landlord.id);
+                onClick={async () => {
+                  try {
+                    // Find a landlord among the tenants list
+                    const landlord = uniqueTenants.find(t => t.role === "landlord");
+                    if (landlord) {
+                      console.log("Found landlord:", landlord.id);
+                      handleTenantSelect(landlord.id);
+                    } else {
+                      console.log("No landlord found in tenants list");
+                      
+                      // If no landlord in the tenant list, try to fetch the landlord from the database
+                      const { data: { user } } = await supabase.auth.getUser();
+                      if (!user) return;
+                      
+                      // Get the tenant's property
+                      const { data: tenancy } = await supabase
+                        .from('tenancies')
+                        .select('property_id')
+                        .eq('tenant_id', user.id)
+                        .eq('status', 'active')
+                        .maybeSingle();
+                        
+                      if (tenancy?.property_id) {
+                        // Get the landlord for this property
+                        const { data: property } = await supabase
+                          .from('properties')
+                          .select('landlord_id')
+                          .eq('id', tenancy.property_id)
+                          .maybeSingle();
+                          
+                        if (property?.landlord_id) {
+                          console.log("Found landlord from property:", property.landlord_id);
+                          handleTenantSelect(property.landlord_id);
+                        } else {
+                          console.error("Could not find landlord for property");
+                          toast({
+                            title: "Error",
+                            description: "Could not find your landlord. Please contact support.",
+                            variant: "destructive",
+                          });
+                        }
+                      }
+                    }
+                  } catch (error) {
+                    console.error("Error finding landlord:", error);
                   }
                 }}
               >
