@@ -2,11 +2,12 @@
 import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Book, Users, Building2, Wrench } from "lucide-react";
+import { Book, Users, Building2, Wrench, Bot } from "lucide-react";
 import { NavigationTabs } from "@/components/layout/NavigationTabs";
 import { TenantGuide } from "@/components/learn/TenantGuide";
 import { LandlordGuide } from "@/components/learn/LandlordGuide";
 import { ServiceProviderGuide } from "@/components/learn/ServiceProviderGuide";
+import { AiGuide } from "@/components/learn/AiGuide";
 import { useUserRole } from "@/hooks/use-user-role";
 import { useTranslation } from "react-i18next";
 
@@ -36,6 +37,11 @@ export default function Learn() {
       id: "service-provider",
       label: t('tabs.serviceProvider'),
       icon: Wrench,
+    },
+    {
+      id: "ai-assistant",
+      label: t('tabs.aiAssistant'),
+      icon: Bot,
     }
   ];
 
@@ -58,6 +64,7 @@ export default function Learn() {
           {activeTab === "tenant" && <TenantGuide />}
           {activeTab === "landlord" && <LandlordGuide />}
           {activeTab === "service-provider" && <ServiceProviderGuide />}
+          {activeTab === "ai-assistant" && <AiGuide />}
         </div>
       </div>
     </PageLayout>

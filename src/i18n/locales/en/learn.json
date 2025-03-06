@@ -1,4 +1,3 @@
-
 {
   "pageTitle": "Platform Guide",
   "pageDescription": "Learn how to use the platform based on your role",
@@ -6,7 +5,8 @@
   "tabs": {
     "tenant": "Tenant Guide",
     "landlord": "Landlord Guide",
-    "serviceProvider": "Service Provider Guide"
+    "serviceProvider": "Service Provider Guide",
+    "aiAssistant": "AI Assistant"
   },
   
   "tenantGuide": {
@@ -220,6 +220,42 @@
         "Document the emergency situation with photos before beginning work",
         "Communicate any unexpected complications immediately",
         "After resolving the immediate emergency, schedule follow-up work if needed"
+      ]
+    }
+  },
+  
+  "aiGuide": {
+    "title": "AI Assistant",
+    "introduction": "Have questions about the platform? Our AI assistant is here to help! Ask anything about features, functionality, or how to accomplish specific tasks across the platform.",
+    "chatTitle": "Platform Assistant",
+    "chatDescription": "Ask me anything about how to use the platform",
+    "welcomeMessage": "👋 Hello! I'm your AI platform assistant. How can I help you today? Feel free to ask about any feature or functionality of the platform.",
+    "inputPlaceholder": "Type your question here...",
+    "errorMessage": "I'm sorry, I encountered an error processing your request. Please try again later.",
+    "responses": {
+      "properties": "The Properties section allows you to manage your rental properties. You can view property details, upload photos, track maintenance issues, and manage lease information. Property owners can add new properties, while tenants can view details about their rented properties.",
+      "maintenance": "The Maintenance section helps manage repair requests. Tenants can submit new maintenance tickets with photos and descriptions. Landlords can review these requests, assign them to service providers, track status updates, and manage repair costs. The platform keeps a history of all maintenance activities for each property.",
+      "payments": "The Payments section handles all financial transactions. Tenants can pay rent, set up automatic payments, and view payment history. Landlords can track received payments, record expenses, generate income reports, and set up payment reminders. The system also provides receipts and financial summaries.",
+      "tenants": "The Tenants section helps landlords manage their tenants. You can view tenant profiles, contact information, lease details, and payment history. You can also invite new tenants to register, process lease renewals, and track tenant turnover. Tenants can view their own lease information and update their profiles.",
+      "landlords": "Landlords can manage properties, tenants, maintenance requests, and financial transactions through the platform. The dashboard provides an overview of rental activities, upcoming events, and financial summaries. Landlords have tools to track property performance, schedule inspections, and generate reports.",
+      "documents": "The Documents section stores all important files related to your rental business. This includes lease agreements, addendums, inspection reports, maintenance records, and other legal documents. Files can be uploaded, organized by property, and shared with relevant parties. Digital signing capabilities are also available for lease agreements.",
+      "serviceProviders": "Service Providers can manage their available services, rates, and business details. They receive maintenance requests from landlords, can communicate with property owners and tenants, track job status, and process payments for completed work. The platform helps service providers manage their schedule and build their reputation through ratings and reviews.",
+      "settings": "The Settings section allows you to customize your experience. You can update your profile information, change notification preferences, manage payment methods, and set your communication preferences. You can also configure financial settings such as currency and tax information.",
+      "platform": "This platform is a comprehensive property management solution designed for landlords, tenants, and service providers. It streamlines rental property management with features for lease management, maintenance requests, payment processing, document storage, and communication between all parties involved in the rental process.",
+      "help": "If you need assistance, you can use this AI assistant, check the role-based guides in the Platform Guide section, or contact support through the Help section. Each section of the platform also includes contextual help and tooltips to guide you through specific features.",
+      "default": "I'm your AI assistant for this property management platform. I can help you understand how to use any feature of the platform, navigate between different sections, and make the most of the available tools. Please ask about specific features or tasks you'd like to learn more about."
+    },
+    "suggestedQuestions": {
+      "title": "Try asking about...",
+      "questions": [
+        "How do I submit a maintenance request?",
+        "How do I pay my rent?",
+        "How do I add a new property?",
+        "How do I invite a tenant?",
+        "How do I view my lease agreement?",
+        "How do I update my profile information?",
+        "What features are available for service providers?",
+        "How do I generate financial reports?"
       ]
     }
   }

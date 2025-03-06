@@ -1,16 +1,16 @@
-
 {
-  "pageTitle": "Ghid al platformei",
-  "pageDescription": "Învățați cum să utilizați platforma în funcție de rolul dumneavoastră",
+  "pageTitle": "Ghidul Platformei",
+  "pageDescription": "Învață cum să folosești platforma în funcție de rolul tău",
   
   "tabs": {
-    "tenant": "Ghid pentru chiriași",
-    "landlord": "Ghid pentru proprietari",
-    "serviceProvider": "Ghid pentru furnizori de servicii"
+    "tenant": "Ghid pentru Chiriași",
+    "landlord": "Ghid pentru Proprietari",
+    "serviceProvider": "Ghid pentru Furnizori de Servicii",
+    "aiAssistant": "Asistent AI"
   },
   
   "tenantGuide": {
-    "title": "Ghid pentru chiriași",
+    "title": "Ghid pentru Chiriași",
     "introduction": "Bun venit la ghidul pentru chiriași! Acest ghid cuprinzător vă va ajuta să navigați prin platformă și să profitați la maximum de experiența dumneavoastră de închiriere. Aflați cum să vă gestionați proprietățile, să trimiteți cereri de întreținere, să accesați documente importante și multe altele.",
     "sections": {
       "properties": {
@@ -74,7 +74,7 @@
   },
   
   "landlordGuide": {
-    "title": "Ghid pentru proprietari",
+    "title": "Ghid pentru Proprietari",
     "introduction": "Bun venit la ghidul pentru proprietari! Acest ghid cuprinzător vă va ajuta să gestionați eficient proprietățile, chiriașii și tranzacțiile financiare. Aflați cum să urmăriți plățile chiriei, să gestionați cererile de întreținere, să creați și să gestionați contracte de închiriere și să optimizați operațiunile afacerii dumneavoastră de închiriere.",
     "sections": {
       "dashboard": {
@@ -143,7 +143,7 @@
   },
   
   "serviceProviderGuide": {
-    "title": "Ghid pentru furnizori de servicii",
+    "title": "Ghid pentru Furnizori de Servicii",
     "introduction": "Bun venit la ghidul furnizorului de servicii! Acest ghid cuprinzător vă va ajuta să înțelegeți cum să utilizați platforma pentru a vă gestiona serviciile de întreținere, a vă dezvolta afacerea și a construi relații puternice cu proprietarii de imobile. Aflați cum să primiți și să finalizați cererile de lucru, să vă gestionați programul și să fiți plătit prompt.",
     "sections": {
       "profileManagement": {
@@ -220,6 +220,42 @@
         "Documentați situația de urgență cu fotografii înainte de a începe lucrul",
         "Comunicați imediat orice complicații neașteptate",
         "După rezolvarea urgenței imediate, programați lucrări de urmărire dacă este necesar"
+      ]
+    }
+  },
+  
+  "aiGuide": {
+    "title": "Asistent AI",
+    "introduction": "Ai întrebări despre platformă? Asistentul nostru AI este aici pentru a te ajuta! Întreabă orice despre funcționalități, caracteristici sau cum să îndeplinești sarcini specifice pe platforma.",
+    "chatTitle": "Asistent Platformă",
+    "chatDescription": "Întreabă-mă orice despre cum să utilizezi platforma",
+    "welcomeMessage": "👋 Salut! Sunt asistentul tău AI pentru platformă. Cu ce te pot ajuta astăzi? Simte-te liber să întrebi despre orice funcționalitate a platformei.",
+    "inputPlaceholder": "Scrie întrebarea ta aici...",
+    "errorMessage": "Îmi pare rău, am întâmpinat o eroare în procesarea cererii tale. Te rog să încerci din nou mai târziu.",
+    "responses": {
+      "properties": "Secțiunea Proprietăți îți permite să gestionezi proprietățile închiriate. Poți vizualiza detaliile proprietăților, încărca fotografii, urmări problemele de întreținere și gestiona informațiile despre contracte. Proprietarii pot adăuga noi proprietăți, în timp ce chiriașii pot vizualiza detalii despre proprietățile închiriate.",
+      "maintenance": "Secțiunea Întreținere ajută la gestionarea cererilor de reparații. Chiriașii pot trimite noi tichete de întreținere cu fotografii și descrieri. Proprietarii pot revizui aceste cereri, le pot atribui furnizorilor de servicii, pot urmări actualizările de status și pot gestiona costurile de reparații. Platforma păstrează un istoric al tuturor activităților de întreținere pentru fiecare proprietate.",
+      "payments": "Secțiunea Plăți gestionează toate tranzacțiile financiare. Chiriașii pot plăti chiria, configura plăți automate și vizualiza istoricul plăților. Proprietarii pot urmări plățile primite, înregistra cheltuieli, genera rapoarte de venit și configura memento-uri de plată. Sistemul oferă, de asemenea, chitanțe și rezumate financiare.",
+      "tenants": "Secțiunea Chiriași ajută proprietarii să-și gestioneze chiriașii. Poți vizualiza profilurile chiriașilor, informațiile de contact, detaliile contractului și istoricul plăților. De asemenea, poți invita noi chiriași să se înregistreze, procesa reînnoiri de contracte și urmări schimbările de chiriași. Chiriașii își pot vizualiza informațiile proprii despre contract și își pot actualiza profilurile.",
+      "landlords": "Proprietarii pot gestiona proprietăți, chiriași, cereri de întreținere și tranzacții financiare prin intermediul platformei. Tabloul de bord oferă o imagine de ansamblu a activităților de închiriere, evenimentelor viitoare și rezumatelor financiare. Proprietarii au instrumente pentru a urmări performanța proprietăților, programa inspecții și genera rapoarte.",
+      "documents": "Secțiunea Documente stochează toate fișierele importante legate de afacerea ta de închiriere. Acestea includ contracte de închiriere, acte adiționale, rapoarte de inspecție, înregistrări de întreținere și alte documente legale. Fișierele pot fi încărcate, organizate după proprietate și partajate cu părțile relevante. Sunt disponibile și capacități de semnare digitală pentru contractele de închiriere.",
+      "serviceProviders": "Furnizorii de Servicii își pot gestiona serviciile disponibile, tarifele și detaliile afacerii. Ei primesc cereri de întreținere de la proprietari, pot comunica cu proprietarii și chiriașii, urmări statusul lucrărilor și procesa plăți pentru munca finalizată. Platforma ajută furnizorii de servicii să-și gestioneze programul și să-și construiască reputația prin evaluări și recenzii.",
+      "settings": "Secțiunea Setări îți permite să-ți personalizezi experiența. Poți actualiza informațiile de profil, schimba preferințele de notificare, gestiona metodele de plată și seta preferințele de comunicare. De asemenea, poți configura setări financiare precum moneda și informațiile fiscale.",
+      "platform": "Această platformă este o soluție comprehensivă de gestionare a proprietăților, concepută pentru proprietari, chiriași și furnizori de servicii. Eficientizează gestionarea proprietăților închiriate cu funcționalități pentru managementul contractelor, cereri de întreținere, procesarea plăților, stocarea documentelor și comunicarea între toate părțile implicate în procesul de închiriere.",
+      "help": "Dacă ai nevoie de asistență, poți folosi acest asistent AI, verifica ghidurile bazate pe roluri din secțiunea Ghidul Platformei sau contacta suportul prin secțiunea Ajutor. Fiecare secțiune a platformei include, de asemenea, ajutor contextual și tooltip-uri pentru a te ghida prin funcționalități specifice.",
+      "default": "Sunt asistentul tău AI pentru această platformă de gestionare a proprietăților. Te pot ajuta să înțelegi cum să folosești orice funcționalitate a platformei, să navighezi între diferite secțiuni și să profiți la maximum de instrumentele disponibile. Te rog să întrebi despre funcționalități sau sarcini specifice despre care ai dori să afli mai multe."
+    },
+    "suggestedQuestions": {
+      "title": "Încearcă să întrebi despre...",
+      "questions": [
+        "Cum pot trimite o cerere de întreținere?",
+        "Cum îmi plătesc chiria?",
+        "Cum adaug o proprietate nouă?",
+        "Cum invit un chiriaș?",
+        "Cum îmi vizualizez contractul de închiriere?",
+        "Cum îmi actualizez informațiile de profil?",
+        "Ce funcționalități sunt disponibile pentru furnizorii de servicii?",
+        "Cum generez rapoarte financiare?"
       ]
     }
   }
