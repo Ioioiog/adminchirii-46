@@ -17,11 +17,30 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
 
 const Tenants = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: tenants, isLoading, error } = useTenants();
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
+
+  // Fetch properties to enable selecting one for tenant invitation
+  const { data: properties } = useQuery({
+    queryKey: ["properties-for-tenant-invite"],
+    queryFn: async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return [];
+
+      const { data, error } = await supabase
+        .from("properties")
+        .select("*")
+        .eq("landlord_id", userData.user.id);
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   useEffect(() => {
     // Check if user is authenticated
@@ -42,6 +61,19 @@ const Tenants = () => {
       variant: "destructive",
     });
   }
+
+  // Function to handle inviting a tenant
+  const handleInviteTenant = () => {
+    // If there's only one property, navigate directly to its invite page
+    if (properties && properties.length === 1) {
+      navigate(`/properties/${properties[0].id}/invite-tenant`);
+      return;
+    }
+    
+    // If there are multiple properties, navigate to properties page
+    // The user will need to select which property to invite the tenant to
+    navigate("/properties");
+  };
 
   // Function to handle View Details button click
   const handleViewTenantDetails = (tenantId: string) => {
@@ -65,7 +97,7 @@ const Tenants = () => {
               <p className="text-gray-500 text-sm">View and manage all your tenants</p>
             </div>
             <Button 
-              onClick={() => navigate("/properties")} 
+              onClick={handleInviteTenant} 
               className="flex items-center gap-2"
             >
               <UserPlus className="h-4 w-4" />
