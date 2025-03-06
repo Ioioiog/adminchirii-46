@@ -1,154 +1,140 @@
-
-import { useState } from "react";
-import { Home, Wrench, Users, Wallet } from "lucide-react";
-import { MetricCard } from "./MetricCard";
-import { useMetrics } from "@/hooks/useMetrics";
+import React, { useState } from "react";
+import { Building2, Users, AlertTriangle, Clock, DollarSign, Wrench, CheckCircle, Wallet } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { RevenueDetailsModal } from "./RevenueDetailsModal";
+import { Button } from "@/components/ui/button";
+import { useMetrics } from "@/hooks/useMetrics";
+import MetricCard from "./MetricCard";
+import { RevenueDetailsModal } from "../dashboard/RevenueDetailsModal";
 import { useCurrency } from "@/hooks/useCurrency";
+import FinancialSummaryCard from "../financial/FinancialSummaryCard";
 
-export function DashboardMetrics({ userId, userRole }: { userId: string; userRole: "landlord" | "tenant" | "service_provider" }) {
-  const { t } = useTranslation('dashboard');
+interface DashboardMetricsProps {
+  userId: string;
+  userRole: "landlord" | "tenant" | "service_provider";
+}
+
+export function DashboardMetrics({ userId, userRole }: DashboardMetricsProps) {
+  const { t } = useTranslation("dashboard");
+  const { data: metrics, isLoading } = useMetrics(userId, userRole);
   const [showRevenueDetails, setShowRevenueDetails] = useState(false);
   const { formatAmount } = useCurrency();
-  
-  const { data: metrics, isLoading } = useMetrics(userId, userRole);
 
-  console.log("DashboardMetrics - userRole:", userRole);
-  console.log("DashboardMetrics - metrics:", metrics);
-
-  if (isLoading || !metrics) {
+  if (isLoading) {
     return (
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 animate-fade-in">
-        {[...Array(userRole === 'service_provider' ? 3 : 4)].map((_, i) => (
-          <MetricCard
-            key={i}
-            title="metrics.loading"
-            value="..."
-            icon={Home}
-            className="bg-white shadow-md hover:shadow-lg transition-all duration-300"
-          />
-        ))}
-      </div>
-    );
-  }
-
-  const handleRevenueClick = () => {
-    setShowRevenueDetails(true);
-  };
-
-  if (userRole === "service_provider") {
-    return (
-      <div className="grid gap-6 md:grid-cols-3 animate-fade-in">
-        <MetricCard
-          title="metrics.activeJobs"
-          value={metrics.activeJobs || 0}
-          icon={Wrench}
-          route="/maintenance"
-          className="bg-white shadow-md hover:shadow-lg transition-all duration-300"
-          description="metrics.activeJobsDesc"
-        />
-        <MetricCard
-          title="metrics.completedJobs"
-          value={metrics.completedJobs || 0}
-          icon={Home}
-          route="/maintenance"
-          className="bg-white shadow-md hover:shadow-lg transition-all duration-300"
-          description="metrics.completedJobsDesc"
-        />
-        <MetricCard
-          title="metrics.monthlyEarnings"
-          value={formatAmount(metrics.monthlyEarnings || 0)}
-          icon={Wallet}
-          onClick={handleRevenueClick}
-          className="bg-white shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer"
-          description="metrics.monthlyEarningsDesc"
-        />
-      </div>
-    );
-  }
-
-  if (userRole === "landlord") {
-    return (
-      <>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 animate-fade-in">
-          <MetricCard
-            title="metrics.totalProperties"
-            value={metrics.totalProperties || 0}
-            icon={Home}
-            route="/properties"
-            className="bg-white shadow-md hover:shadow-lg transition-all duration-300"
-            description="metrics.totalPropertiesDesc"
-          />
-          <MetricCard
-            title="metrics.monthlyRevenue"
-            value={formatAmount(metrics.monthlyRevenue || 0)}
-            icon={Wallet}
-            onClick={handleRevenueClick}
-            description="metrics.monthlyRevenueDesc"
-            className="bg-white shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer"
-          />
-          <MetricCard
-            title="metrics.activeTenants"
-            value={metrics.activeTenants || 0}
-            icon={Users}
-            route="/tenants"
-            className="bg-white shadow-md hover:shadow-lg transition-all duration-300"
-            description="metrics.activeTenantsDesc"
-          />
-          <MetricCard
-            title="metrics.pendingMaintenance"
-            value={metrics.pendingMaintenance || 0}
-            icon={Wrench}
-            route="/maintenance"
-            className="bg-white shadow-md hover:shadow-lg transition-all duration-300"
-            description="metrics.pendingMaintenanceDesc"
-          />
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold mb-3">
+          {t("metrics.loading")}
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-gray-100 animate-pulse h-24 rounded-lg"></div>
+          ))}
         </div>
-
-        <RevenueDetailsModal
-          open={showRevenueDetails}
-          onOpenChange={setShowRevenueDetails}
-          revenueDetails={metrics.revenueDetails}
-        />
-      </>
+      </div>
     );
   }
+
+  const renderLandlordMetrics = () => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <FinancialSummaryCard
+        title={t("metrics.totalProperties")}
+        amount={metrics?.totalProperties?.toString() || "0"}
+        description={t("metrics.totalPropertiesDesc")}
+        icon={Building2}
+      />
+      <FinancialSummaryCard
+        title={t("metrics.monthlyRevenue")}
+        amount={formatAmount(metrics?.monthlyRevenue || 0)}
+        description={t("metrics.monthlyRevenueDesc")}
+        icon={DollarSign}
+        color="green"
+      />
+      <Button
+        className="p-0 h-auto bg-transparent hover:bg-transparent"
+        onClick={() => setShowRevenueDetails(true)}
+      >
+        <FinancialSummaryCard
+          title={t("metrics.activeTenants")}
+          amount={metrics?.activeTenants?.toString() || "0"}
+          description={t("metrics.activeTenantsDesc")}
+          icon={Users}
+        />
+      </Button>
+      <FinancialSummaryCard
+        title={t("metrics.pendingMaintenance")}
+        amount={metrics?.pendingMaintenance?.toString() || "0"}
+        description={t("metrics.pendingMaintenanceDesc")}
+        icon={AlertTriangle}
+        color={metrics?.pendingMaintenance ? "yellow" : "default"}
+      />
+    </div>
+  );
+
+  const renderTenantMetrics = () => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <FinancialSummaryCard
+        title={t("metrics.rentedPropertiesDesc")}
+        amount={metrics?.totalProperties?.toString() || "0"}
+        description={t("metrics.rentedPropertiesDesc")}
+        icon={Building2}
+      />
+      <Button
+        className="p-0 h-auto bg-transparent hover:bg-transparent"
+        onClick={() => setShowRevenueDetails(true)}
+      >
+        <FinancialSummaryCard
+          title={t("metrics.paymentStatus")}
+          amount={metrics?.paymentStatus || t("metrics.noPayments")}
+          description={t("metrics.paymentStatusDesc")}
+          icon={Wallet}
+          color={metrics?.paymentStatus === "paid" ? "green" : "yellow"}
+        />
+      </Button>
+      <FinancialSummaryCard
+        title={t("metrics.openMaintenanceDesc")}
+        amount={metrics?.pendingMaintenance?.toString() || "0"}
+        description={t("metrics.openMaintenanceDesc")}
+        icon={Wrench}
+        color={metrics?.pendingMaintenance ? "yellow" : "default"}
+      />
+    </div>
+  );
+
+  const renderServiceProviderMetrics = () => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <FinancialSummaryCard
+        title={t("metrics.activeJobs")}
+        amount={metrics?.activeJobs?.toString() || "0"}
+        description={t("metrics.activeJobsDesc")}
+        icon={Clock}
+      />
+      <FinancialSummaryCard
+        title={t("metrics.completedJobs")}
+        amount={metrics?.completedJobs?.toString() || "0"}
+        description={t("metrics.completedJobsDesc")}
+        icon={CheckCircle}
+        color="green"
+      />
+      <FinancialSummaryCard
+        title={t("metrics.monthlyEarnings")}
+        amount={formatAmount(metrics?.monthlyEarnings || 0)}
+        description={t("metrics.monthlyEarningsDesc")}
+        icon={DollarSign}
+        color="green"
+      />
+    </div>
+  );
 
   return (
-    <>
-      <div className="grid gap-6 md:grid-cols-3 animate-fade-in">
-        <MetricCard
-          title="metrics.totalProperties"
-          value={metrics.totalProperties || 0}
-          icon={Home}
-          route="/properties"
-          className="bg-white shadow-md hover:shadow-lg transition-all duration-300"
-          description="metrics.rentedPropertiesDesc"
-        />
-        <MetricCard
-          title="metrics.pendingMaintenance"
-          value={metrics.pendingMaintenance || 0}
-          icon={Wrench}
-          route="/maintenance"
-          className="bg-white shadow-md hover:shadow-lg transition-all duration-300"
-          description="metrics.openMaintenanceDesc"
-        />
-        <MetricCard
-          title="metrics.paymentStatus"
-          value={metrics.paymentStatus || t('metrics.noPayments')}
-          icon={Wallet}
-          onClick={handleRevenueClick}
-          className="bg-white shadow-md hover:shadow-lg transition-all duration-300"
-          description="metrics.paymentStatusDesc"
-        />
-      </div>
-
+    <div className="mb-6 space-y-2">
+      {userRole === "landlord" && renderLandlordMetrics()}
+      {userRole === "tenant" && renderTenantMetrics()}
+      {userRole === "service_provider" && renderServiceProviderMetrics()}
       <RevenueDetailsModal
         open={showRevenueDetails}
         onOpenChange={setShowRevenueDetails}
-        revenueDetails={metrics.revenueDetails}
+        revenueDetails={metrics?.revenueDetails}
       />
-    </>
+    </div>
   );
 }

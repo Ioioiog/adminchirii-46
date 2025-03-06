@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useCurrency } from "@/hooks/useCurrency";
 
@@ -6,6 +7,7 @@ interface RevenueDetail {
   amount: number;
   due_date: string;
   status: string;
+  currency?: string; // Add support for currency
 }
 
 interface RevenueDetailsModalProps {
@@ -38,7 +40,7 @@ export function RevenueDetailsModal({ open, onOpenChange, revenueDetails }: Reve
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold">{formatAmount(detail.amount)}</p>
+                    <p className="font-semibold">{formatAmount(detail.amount, detail.currency)}</p>
                     <span className={`text-sm ${
                       detail.status === 'paid' 
                         ? 'text-green-600' 
