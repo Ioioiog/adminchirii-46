@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card } from "@/components/ui/card";
 import { NoDataCard } from "@/components/dashboard/charts/NoDataCard";
@@ -21,6 +20,11 @@ interface MaintenanceRequest {
   property: {
     name: string;
   };
+  service_provider?: {
+    business_name?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+  } | null;
 }
 
 interface MaintenanceSectionProps {
@@ -67,6 +71,24 @@ export function MaintenanceSection({
     if (title.toLowerCase().includes('ac')) return '❄️';
     if (title.toLowerCase().includes('window')) return '🪟';
     return '🔧';
+  };
+
+  const getServiceProviderName = (request: MaintenanceRequest) => {
+    if (!request.assigned_to) return 'Not assigned';
+    
+    if (request.service_provider) {
+      if (request.service_provider.business_name) {
+        return request.service_provider.business_name;
+      }
+      
+      const firstName = request.service_provider.first_name || '';
+      const lastName = request.service_provider.last_name || '';
+      if (firstName || lastName) {
+        return `${firstName} ${lastName}`.trim();
+      }
+    }
+    
+    return 'Assigned';
   };
 
   if (!Array.isArray(requests) || requests.length === 0) {
@@ -116,7 +138,7 @@ export function MaintenanceSection({
                 </div>
 
                 <div className="text-blue-600 font-medium">
-                  {request.assigned_to || 'Not assigned'}
+                  {getServiceProviderName(request)}
                 </div>
 
                 <div>

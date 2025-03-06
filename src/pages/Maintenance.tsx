@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +43,13 @@ export default function Maintenance() {
           tenant:profiles!maintenance_requests_tenant_id_fkey(
             first_name,
             last_name
+          ),
+          service_provider:service_provider_profiles(
+            business_name,
+            profiles(
+              first_name,
+              last_name
+            )
           )
         `);
       if (priority !== "all") {
@@ -63,7 +71,25 @@ export default function Maintenance() {
         throw error;
       }
       console.log("Fetched maintenance requests:", data);
-      return data;
+      
+      // Transform the data to make it more accessible for the component
+      return data.map(request => {
+        let serviceProvider = null;
+        
+        if (request.service_provider && request.service_provider.length > 0) {
+          const provider = request.service_provider[0];
+          serviceProvider = {
+            business_name: provider.business_name,
+            first_name: provider.profiles?.first_name || null,
+            last_name: provider.profiles?.last_name || null
+          };
+        }
+        
+        return {
+          ...request,
+          service_provider: serviceProvider
+        };
+      });
     }
   });
 
