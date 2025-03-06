@@ -1,4 +1,3 @@
-
 import { useAuthState } from "@/hooks/useAuthState";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -162,12 +161,12 @@ export default function InfoPage() {
         <div className="container mx-auto px-4 pt-16 pb-12">
           <div className="flex flex-col items-center text-center space-y-6">
             <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-1000"></div>
-              <div className="relative p-4 bg-white/10 rounded-full backdrop-blur-xl border border-white/20 shadow-xl">
+              <div className="absolute -inset-1.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-1000"></div>
+              <div className="relative p-6 bg-white/10 rounded-full backdrop-blur-xl border border-white/20 shadow-xl">
                 <img 
                   src="/lovable-uploads/9c23bc1b-4e8c-433e-a961-df606dc6a2c6.png" 
                   alt="AdminChirii.ro Logo" 
-                  className="w-12 h-12 transform group-hover:scale-110 transition-transform duration-300"
+                  className="w-20 h-20 transform group-hover:scale-110 transition-transform duration-300"
                 />
               </div>
             </div>
