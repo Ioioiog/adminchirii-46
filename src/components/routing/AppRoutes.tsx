@@ -1,10 +1,10 @@
-
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import AuthPage from "@/pages/Auth";
 import Properties from "@/pages/Properties";
 import PropertyDetails from "@/pages/PropertyDetails";
 import Tenants from "@/pages/Tenants";
+import TenantDetails from "@/pages/TenantDetails";
 import Documents from "@/pages/Documents";
 import Settings from "@/pages/Settings";
 import Financial from "@/pages/Financial";
@@ -42,12 +42,10 @@ export function AppRoutes({ isAuthenticated }: AppRoutesProps) {
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/update-password" element={<UpdatePassword />} />
-      {/* Support both URL patterns for tenant registration */}
       <Route path="/tenant-registration" element={<TenantRegistration />} />
       <Route path="/tenant-registration/:id" element={<TenantRegistration />} />
       <Route path="/info" element={<Info />} />
       
-      {/* Protected Routes */}
       <Route
         path="/dashboard"
         element={
@@ -89,7 +87,6 @@ export function AppRoutes({ isAuthenticated }: AppRoutesProps) {
         }
       />
       
-      {/* Standard Routes */}
       <Route
         path="/properties"
         element={
@@ -127,6 +124,14 @@ export function AppRoutes({ isAuthenticated }: AppRoutesProps) {
         element={
           <ProtectedRoute isAuthenticated={isAuthenticated}>
             <Tenants />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tenants/:id"
+        element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <TenantDetails />
           </ProtectedRoute>
         }
       />

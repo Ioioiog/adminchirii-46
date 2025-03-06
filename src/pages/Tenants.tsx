@@ -43,6 +43,11 @@ const Tenants = () => {
     });
   }
 
+  // Function to handle View Details button click
+  const handleViewTenantDetails = (tenantId: string) => {
+    navigate(`/tenants/${tenantId}`);
+  };
+
   return (
     <div className="flex bg-dashboard-background min-h-screen">
       <DashboardSidebar />
@@ -125,7 +130,7 @@ const Tenants = () => {
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            onClick={() => navigate(`/tenants/${tenant.id}`)}
+                            onClick={() => handleViewTenantDetails(tenant.id)}
                           >
                             View Details
                           </Button>
