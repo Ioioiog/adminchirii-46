@@ -41,17 +41,22 @@ export function InvoiceList({ invoices, userRole, onStatusUpdate }: InvoiceListP
     
     if (!metadata) return null;
     
-    if (metadata.utilities_included && metadata.utilities_included.length > 0) {
-      // Check if this is a utilities-only invoice by seeing if the utilities amounts sum up to the total invoice amount
-      // with a small margin for rounding errors
+    // Check if this invoice contains any utilities
+    const hasUtilities = metadata.utilities_included && metadata.utilities_included.length > 0;
+    
+    // Assume it's a rent invoice if there are no utilities or if utilities don't account for the total amount
+    const isRentOnly = !hasUtilities;
+    
+    if (hasUtilities) {
+      // Calculate the total amount from utilities
       const utilitiesTotalAmount = metadata.utilities_included.reduce((sum, util) => 
-        sum + (util.original_amount || 0), 0);
+        sum + (util.original_amount || util.amount || 0), 0);
       
-      // If the invoice amount minus utilities total is significant, it includes rent
+      // Determine if this is utilities-only by comparing the total amount
       // Allow for a small margin of error (e.g., 1 unit) for rounding differences
-      const hasRent = Math.abs(invoice.amount - utilitiesTotalAmount) > 1;
+      const isUtilitiesOnly = Math.abs(invoice.amount - utilitiesTotalAmount) <= 1;
       
-      if (!hasRent) {
+      if (isUtilitiesOnly) {
         return (
           <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-800 border-blue-200">
             Utilities Only
@@ -64,6 +69,12 @@ export function InvoiceList({ invoices, userRole, onStatusUpdate }: InvoiceListP
           </Badge>
         );
       }
+    } else if (isRentOnly) {
+      return (
+        <Badge variant="outline" className="ml-2 bg-green-50 text-green-800 border-green-200">
+          Rent Only
+        </Badge>
+      );
     }
     
     return null;
