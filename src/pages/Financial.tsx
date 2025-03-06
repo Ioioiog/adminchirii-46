@@ -143,7 +143,7 @@ const Financial = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {formatAmount(financialSummary.totalInvoiced)}
+                {formatAmount(financialSummary.totalInvoiced, userRole === 'tenant' ? 'RON' : undefined)}
               </div>
               <p className="text-xs text-muted-foreground">
                 Total invoiced this month
@@ -158,7 +158,7 @@ const Financial = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {formatAmount(financialSummary.totalPaid)}
+                {formatAmount(financialSummary.totalPaid, userRole === 'tenant' ? 'RON' : undefined)}
               </div>
               <p className="text-xs text-muted-foreground">
                 Total paid this month
@@ -173,7 +173,7 @@ const Financial = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-yellow-600">
-                {formatAmount(financialSummary.outstandingAmount)}
+                {formatAmount(financialSummary.outstandingAmount, userRole === 'tenant' ? 'RON' : undefined)}
               </div>
               <p className="text-xs text-muted-foreground">
                 Pending payments this month
@@ -188,7 +188,7 @@ const Financial = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-600">
-                {formatAmount(financialSummary.overduePendingAmount)}
+                {formatAmount(financialSummary.overduePendingAmount, userRole === 'tenant' ? 'RON' : undefined)}
               </div>
               <p className="text-xs text-muted-foreground">
                 Overdue payments this month
