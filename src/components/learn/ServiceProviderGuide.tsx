@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clipboard, Wallet, UserCog, Settings, MapPin, Star, Calendar, ArrowUpRight } from "lucide-react";
+import { Wrench, MapPin, ClipboardCheck, CreditCard, Settings, Users, MessageCircle } from "lucide-react";
 
 export function ServiceProviderGuide() {
   return (
@@ -8,103 +8,99 @@ export function ServiceProviderGuide() {
       <div className="prose max-w-none">
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">Service Provider Guide</h2>
         <p className="text-gray-600 mb-6">
-          Welcome to the service provider guide! This guide will help you manage your maintenance services, client relationships, and grow your business on our platform.
+          Welcome to the service provider guide! This guide will help you understand how to use the platform to manage your maintenance services and grow your business.
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <GuideCard 
-          icon={Clipboard}
-          title="Job Management"
-          description="View, accept, and manage maintenance requests from property owners."
-          steps={[
-            "Navigate to Job Requests to see new maintenance requests",
-            "Review job details and requirements",
-            "Accept jobs that match your skills and availability",
-            "Update job status as you progress through the work",
-            "Upload photos of completed work"
-          ]}
-        />
-
-        <GuideCard 
-          icon={UserCog}
+          icon={Wrench}
           title="Profile Management"
-          description="Manage your professional profile, skills, and experience."
+          description="Set up and manage your service provider profile."
           steps={[
-            "Go to your Profile page",
-            "Add your professional qualifications and certifications",
-            "List your service specialties and expertise",
-            "Upload portfolio images of past work",
-            "Set your availability calendar"
+            "Complete your profile with business details",
+            "Add your professional certifications",
+            "Upload a profile photo and business logo",
+            "Specify your areas of expertise and specializations"
           ]}
         />
 
         <GuideCard 
           icon={MapPin}
           title="Service Areas"
-          description="Define the geographic areas where you provide your services."
+          description="Define the geographic areas where you provide services."
           steps={[
-            "Visit the Service Areas page",
-            "Add zip codes or regions where you can work",
-            "Set travel distance preferences",
-            "Define different rates for different areas if applicable",
+            "Navigate to the Service Areas page",
+            "Select regions or draw custom service boundaries",
+            "Set different rates for different service areas if needed",
             "Update your coverage area as your business grows"
           ]}
         />
 
         <GuideCard 
-          icon={Wallet}
+          icon={ClipboardCheck}
+          title="Job Management"
+          description="Manage maintenance requests and ongoing jobs."
+          steps={[
+            "Review new maintenance requests in your service area",
+            "Accept or decline job requests",
+            "Update job status as work progresses",
+            "Upload photos of completed work",
+            "Track time spent on each job"
+          ]}
+        />
+
+        <GuideCard 
+          icon={CreditCard}
           title="Earnings Management"
-          description="Track your earnings, invoices, and payments."
+          description="Track your earnings and payment history."
           steps={[
-            "View your Earnings dashboard for financial overview",
-            "Submit invoices for completed jobs",
-            "Track payment status and history",
-            "Generate earnings reports for accounting",
-            "Set up your payment preferences"
+            "Go to the Earnings page",
+            "View pending and completed payments",
+            "Track earnings by time period or service type",
+            "Set up direct deposit for faster payments",
+            "Download earning statements for tax purposes"
           ]}
         />
 
         <GuideCard 
-          icon={Star}
-          title="Ratings & Reviews"
-          description="Manage your reputation and client feedback."
+          icon={Users}
+          title="Client Management"
+          description="Manage your relationships with landlords and property managers."
           steps={[
-            "View ratings and reviews from past clients",
-            "Respond professionally to client feedback",
-            "Request reviews after completing jobs",
-            "Use positive reviews to enhance your profile",
-            "Address any concerns raised in reviews"
+            "Maintain a list of your regular clients",
+            "View property details for jobs",
+            "Build your reputation through quality service",
+            "Receive ratings and reviews from satisfied clients"
           ]}
         />
 
         <GuideCard 
-          icon={Calendar}
-          title="Scheduling"
-          description="Manage your work schedule and appointments."
+          icon={MessageCircle}
+          title="Communication"
+          description="Stay in touch with landlords and tenants about maintenance jobs."
           steps={[
-            "View your upcoming job schedule",
-            "Set your working hours and availability",
-            "Receive notifications about new job requests",
-            "Coordinate visit times with property owners",
-            "Manage job priorities and deadlines"
+            "Use the Chat feature to communicate about job details",
+            "Send updates on job progress",
+            "Ask questions about maintenance issues",
+            "Coordinate access to properties"
           ]}
         />
       </div>
 
       <div className="bg-blue-50 p-6 rounded-lg border border-blue-100 mt-8">
         <h3 className="flex items-center text-lg font-medium text-blue-800 mb-3">
-          <ArrowUpRight className="mr-2 h-5 w-5" />
-          Tips for Growing Your Business
+          <Settings className="mr-2 h-5 w-5" />
+          Tips for Service Providers
         </h3>
         <ul className="list-disc pl-5 space-y-2 text-blue-700">
-          <li>Respond quickly to job requests to increase your acceptance rate</li>
-          <li>Complete jobs on time to improve your reliability score</li>
-          <li>Take before and after photos of your work</li>
-          <li>Maintain clear communication with property owners</li>
+          <li>Respond quickly to job requests to increase your booking rate</li>
+          <li>Keep your availability calendar up to date</li>
+          <li>Document your work with before and after photos</li>
+          <li>Provide clear estimates and stick to quoted prices</li>
+          <li>Maintain professional communication with clients</li>
+          <li>Ask satisfied clients to leave reviews</li>
           <li>Regularly update your skills and certifications</li>
-          <li>Expand your service areas gradually as you build capacity</li>
-          <li>Request reviews from satisfied clients</li>
         </ul>
       </div>
     </div>
