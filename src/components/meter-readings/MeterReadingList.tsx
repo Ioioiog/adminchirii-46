@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +14,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { UtilityType } from "@/integrations/supabase/types/utility";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { MeterReadingForm } from "./MeterReadingForm";
 
 interface MeterReading {
   id: string;
@@ -39,6 +41,8 @@ interface MeterReadingListProps {
 
 export function MeterReadingList({ readings, userRole, onUpdate }: MeterReadingListProps) {
   const { toast } = useToast();
+  const [editReading, setEditReading] = useState<MeterReading | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const handleDelete = async (readingId: string) => {
     try {
@@ -70,8 +74,15 @@ export function MeterReadingList({ readings, userRole, onUpdate }: MeterReadingL
   };
 
   const handleEdit = (reading: MeterReading) => {
+    setEditReading(reading);
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSuccess = () => {
+    setEditDialogOpen(false);
+    setEditReading(null);
     if (onUpdate) {
-      onUpdate(reading.id);
+      onUpdate("");
     }
   };
 
@@ -85,70 +96,100 @@ export function MeterReadingList({ readings, userRole, onUpdate }: MeterReadingL
   }
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Property</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Reading Date</TableHead>
-            <TableHead>Reading Value</TableHead>
-            <TableHead>Notes</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {readings.map((reading) => (
-            <TableRow key={reading.id}>
-              <TableCell>
-                <div>
-                  <div className="font-medium">{reading.property?.name || 'N/A'}</div>
-                  <div className="text-sm text-gray-500">{reading.property?.address || 'N/A'}</div>
-                </div>
-              </TableCell>
-              <TableCell className="capitalize">{reading.reading_type}</TableCell>
-              <TableCell>{new Date(reading.reading_date).toLocaleDateString()}</TableCell>
-              <TableCell className="font-medium text-blue-600">
-                {reading.reading_value}
-              </TableCell>
-              <TableCell>{reading.notes || 'N/A'}</TableCell>
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-2">
-                  {userRole === "landlord" && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(reading)}
-                        className="flex items-center gap-2"
-                      >
-                        <Edit className="h-4 w-4" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(reading.id)}
-                        className="flex items-center gap-2 text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Delete
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-          {readings.length === 0 && (
+    <>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                No meter readings found.
-              </TableCell>
+              <TableHead>Property</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Reading Date</TableHead>
+              <TableHead>Reading Value</TableHead>
+              <TableHead>Notes</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
+          </TableHeader>
+          <TableBody>
+            {readings.map((reading) => (
+              <TableRow key={reading.id}>
+                <TableCell>
+                  <div>
+                    <div className="font-medium">{reading.property?.name || 'N/A'}</div>
+                    <div className="text-sm text-gray-500">{reading.property?.address || 'N/A'}</div>
+                  </div>
+                </TableCell>
+                <TableCell className="capitalize">{reading.reading_type}</TableCell>
+                <TableCell>{new Date(reading.reading_date).toLocaleDateString()}</TableCell>
+                <TableCell className="font-medium text-blue-600">
+                  {reading.reading_value}
+                </TableCell>
+                <TableCell>{reading.notes || 'N/A'}</TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    {userRole === "landlord" && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(reading)}
+                          className="flex items-center gap-2"
+                        >
+                          <Edit className="h-4 w-4" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(reading.id)}
+                          className="flex items-center gap-2 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+            {readings.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                  No meter readings found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Meter Reading</DialogTitle>
+          </DialogHeader>
+          {editReading && (
+            <MeterReadingForm
+              properties={editReading.property ? [{ 
+                id: editReading.property_id, 
+                name: editReading.property.name,
+                address: editReading.property.address
+              }] as any}
+              onSuccess={handleEditSuccess}
+              userRole={userRole}
+              userId={null}
+              initialData={{
+                id: editReading.id,
+                property_id: editReading.property_id,
+                reading_type: editReading.reading_type as any,
+                reading_value: editReading.reading_value,
+                reading_date: editReading.reading_date,
+                notes: editReading.notes || ""
+              }}
+            />
           )}
-        </TableBody>
-      </Table>
-    </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
