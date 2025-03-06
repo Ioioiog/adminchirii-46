@@ -7,7 +7,7 @@ import { MessageInput } from "@/components/chat/MessageInput";
 import { useConversation } from "@/hooks/chat/useConversation";
 import { useMessages } from "@/hooks/chat/useMessages";
 import { useAuthState } from "@/hooks/useAuthState";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, X } from "lucide-react";
 import { useUserRole } from "@/hooks/use-user-role";
 import { VideoCall } from "@/components/chat/VideoCall";
 import { useTenants } from "@/hooks/useTenants";
@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { useSidebarNotifications } from "@/hooks/use-sidebar-notifications";
 import { supabase } from "@/integrations/supabase/client";
 import { MessageSquare, Video, PaperclipIcon, Smile } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const Chat = () => {
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
@@ -137,6 +138,11 @@ const Chat = () => {
       return <div className="relative flex-1 flex items-center p-8 text-center bg-gradient-to-br from-blue-500/5 to-blue-600/5">
         <ChatBackground />
         <div className="relative z-10 max-w-md glass-card p-8 rounded-xl backdrop-blur-sm bg-white/80 ml-8">
+          <div className="absolute top-2 right-2">
+            <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full">
+              <X className="h-4 w-4 text-gray-400" />
+            </Button>
+          </div>
           <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl" role="img" aria-label="chat">💬</span>
           </div>
@@ -177,6 +183,22 @@ const Chat = () => {
                 <li>• Files up to 5MB are supported</li>
               </ul>
             </div>
+            
+            {userRole === "tenant" && (
+              <Button 
+                className="w-full mt-4 bg-blue-600 hover:bg-blue-700" 
+                onClick={() => {
+                  // If there are any landlords in the tenants list, select the first one
+                  const landlord = uniqueTenants.find(t => t.role === "landlord");
+                  if (landlord) {
+                    handleTenantSelect(landlord.id);
+                  }
+                }}
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Start Conversation with Your Landlord
+              </Button>
+            )}
           </div>
         </div>
       </div>;
