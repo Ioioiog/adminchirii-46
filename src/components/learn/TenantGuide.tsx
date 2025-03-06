@@ -169,7 +169,7 @@ export function TenantGuide() {
           {t('tenantGuide.tips.title')}
         </h3>
         <ul className="list-disc pl-5 space-y-2 text-blue-700">
-          {t('tenantGuide.tips.items', { returnObjects: true }).map((item, index) => (
+          {(t('tenantGuide.tips.items', { returnObjects: true }) as string[]).map((item, index) => (
             <li key={index}>{item}</li>
           ))}
         </ul>
@@ -182,7 +182,7 @@ export function TenantGuide() {
         </h3>
         <p className="text-amber-700 mb-3">{t('tenantGuide.emergency.intro')}</p>
         <ol className="list-decimal pl-5 space-y-2 text-amber-700">
-          {t('tenantGuide.emergency.steps', { returnObjects: true }).map((step, index) => (
+          {(t('tenantGuide.emergency.steps', { returnObjects: true }) as string[]).map((step, index) => (
             <li key={index}>{step}</li>
           ))}
         </ol>
