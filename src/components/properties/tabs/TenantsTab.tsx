@@ -40,7 +40,6 @@ export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
         .eq('status', 'signed');
 
       if (error) throw error;
-      console.log('Fetched contracts:', data); // Debug log
       return data || [];
     }
   });
@@ -48,22 +47,59 @@ export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
   // Create a Set to track tenant IDs we've already rendered
   const renderedTenantIds = new Set();
 
-  const renderTenantCard = (tenancy: any) => {
-    const tenantId = tenancy.tenant?.id;
+  const renderTenantCard = (tenant: any, source: 'tenancy' | 'contract') => {
+    // Extract tenant ID based on source
+    const tenantId = source === 'tenancy' 
+      ? tenant.tenant?.id 
+      : tenant.tenant_id;
     
     // Skip if we've already rendered this tenant
-    if (renderedTenantIds.has(tenantId)) {
+    if (tenantId && renderedTenantIds.has(tenantId)) {
       return null;
     }
     
-    // Mark this tenant as rendered
-    renderedTenantIds.add(tenantId);
+    // For contracts without tenant_id, use email as unique identifier
+    if (source === 'contract' && !tenantId && tenant.invitation_email) {
+      if (renderedTenantIds.has(tenant.invitation_email)) {
+        return null;
+      }
+      renderedTenantIds.add(tenant.invitation_email);
+    } else if (tenantId) {
+      // Mark this tenant as rendered
+      renderedTenantIds.add(tenantId);
+    }
     
-    const startDate = tenancy.start_date ? format(new Date(tenancy.start_date), 'PPP') : 'Not specified';
-    const endDate = tenancy.end_date ? format(new Date(tenancy.end_date), 'PPP') : 'Ongoing';
+    // Determine tenant name and email based on source
+    let tenantName;
+    let tenantEmail;
+    let startDate;
+    let endDate;
+    let cardKey;
+    let detailsUrl;
+    let statusLabel;
+    
+    if (source === 'tenancy') {
+      tenantName = `${tenant.tenant.first_name} ${tenant.tenant.last_name}`;
+      tenantEmail = tenant.tenant.email;
+      startDate = tenant.start_date ? format(new Date(tenant.start_date), 'PPP') : 'Not specified';
+      endDate = tenant.end_date ? format(new Date(tenant.end_date), 'PPP') : 'Ongoing';
+      cardKey = tenant.id;
+      detailsUrl = `/tenants/${tenant.tenant.id}`;
+      statusLabel = tenant.status;
+    } else { // contract
+      tenantName = tenant.tenant 
+        ? `${tenant.tenant.first_name} ${tenant.tenant.last_name}`
+        : tenant.metadata?.tenantSignatureName || 'Not specified';
+      tenantEmail = tenant.tenant?.email || tenant.invitation_email || 'Not specified';
+      startDate = tenant.valid_from ? format(new Date(tenant.valid_from), 'PPP') : 'Not specified';
+      endDate = tenant.valid_until ? format(new Date(tenant.valid_until), 'PPP') : 'Ongoing';
+      cardKey = tenant.id;
+      detailsUrl = tenant.tenant_id ? `/tenants/${tenant.tenant_id}` : `/contracts/${tenant.id}`;
+      statusLabel = 'Contract Signed';
+    }
     
     return (
-      <div key={tenancy.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div key={cardKey} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="p-6">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
@@ -71,14 +107,12 @@ export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
                 <User className="h-6 w-6 text-gray-600" />
               </div>
               <div>
-                <h3 className="font-medium text-gray-900">
-                  {tenancy.tenant.first_name} {tenancy.tenant.last_name}
-                </h3>
-                <p className="text-sm text-gray-500">{tenancy.tenant.email}</p>
+                <h3 className="font-medium text-gray-900">{tenantName}</h3>
+                <p className="text-sm text-gray-500">{tenantEmail}</p>
               </div>
             </div>
             <Badge variant="secondary" className="rounded-full">
-              {tenancy.status}
+              {statusLabel}
             </Badge>
           </div>
           <div className="mt-6 grid grid-cols-2 gap-4">
@@ -96,90 +130,20 @@ export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
               variant="outline"
               size="sm"
               className="w-full"
-              onClick={() => navigate(`/tenants/${tenancy.tenant.id}`)}
+              onClick={() => navigate(detailsUrl)}
             >
               View Details
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-              onClick={() => navigate(`/chat?tenantId=${tenancy.tenant.id}`)}
-            >
-              Message
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderContractTenantCard = (contract: any) => {
-    const tenantId = contract.tenant_id;
-    
-    // Skip if we've already rendered this tenant
-    if (renderedTenantIds.has(tenantId)) {
-      return null;
-    }
-    
-    // Mark this tenant as rendered
-    if (tenantId) {
-      renderedTenantIds.add(tenantId);
-    } else if (contract.invitation_email) {
-      // For contracts without tenant_id, use email as unique identifier
-      if (renderedTenantIds.has(contract.invitation_email)) {
-        return null;
-      }
-      renderedTenantIds.add(contract.invitation_email);
-    }
-    
-    // Try to get tenant name from different sources in order of preference
-    const tenantName = contract.tenant 
-      ? `${contract.tenant.first_name} ${contract.tenant.last_name}`
-      : contract.metadata?.tenantSignatureName 
-      || 'Not specified';
-      
-    const tenantEmail = contract.tenant?.email || contract.invitation_email || 'Not specified';
-    
-    const startDate = contract.valid_from ? format(new Date(contract.valid_from), 'PPP') : 'Not specified';
-    const endDate = contract.valid_until ? format(new Date(contract.valid_until), 'PPP') : 'Ongoing';
-    
-    return (
-      <div key={contract.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <div className="p-6">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
-                <User className="h-6 w-6 text-gray-600" />
-              </div>
-              <div>
-                <h3 className="font-medium text-gray-900">{tenantName}</h3>
-                <p className="text-sm text-gray-500">{tenantEmail}</p>
-              </div>
-            </div>
-            <Badge variant="secondary" className="rounded-full">
-              Contract Signed
-            </Badge>
-          </div>
-          <div className="mt-6 grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Start Date</p>
-              <p className="mt-1 text-sm text-gray-900">{startDate}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">End Date</p>
-              <p className="mt-1 text-sm text-gray-900">{endDate}</p>
-            </div>
-          </div>
-          <div className="mt-6">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-              onClick={() => navigate(`/contracts/${contract.id}`)}
-            >
-              View Contract
-            </Button>
+            {tenant.tenant?.id && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => navigate(`/chat?tenantId=${tenant.tenant?.id || tenant.tenant_id}`)}
+              >
+                Message
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -209,8 +173,8 @@ export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
 
       {hasTenantsOrContracts ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {property.tenancies?.map((tenancy: any) => renderTenantCard(tenancy))}
-          {contracts?.map((contract: any) => renderContractTenantCard(contract))}
+          {property.tenancies?.map((tenancy: any) => renderTenantCard(tenancy, 'tenancy'))}
+          {contracts?.map((contract: any) => renderTenantCard(contract, 'contract'))}
         </div>
       ) : (
         <div className="text-center py-12">
