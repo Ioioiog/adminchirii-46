@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -17,10 +18,10 @@ import { UtilityType } from "@/integrations/supabase/types/utility";
 interface MeterReading {
   id: string;
   property_id: string;
-  type: string;
+  reading_type: string;
   reading_date: string;
   reading_value: number;
-  unit: string;
+  tenant_id?: string | null;
   notes?: string | null;
   created_at?: string;
   updated_at?: string;
@@ -68,6 +69,12 @@ export function MeterReadingList({ readings, userRole, onUpdate }: MeterReadingL
     }
   };
 
+  const handleEdit = (reading: MeterReading) => {
+    if (onUpdate) {
+      onUpdate(reading.id);
+    }
+  };
+
   if (!Array.isArray(readings)) {
     console.error("Readings prop is not an array:", readings);
     return (
@@ -86,7 +93,6 @@ export function MeterReadingList({ readings, userRole, onUpdate }: MeterReadingL
             <TableHead>Type</TableHead>
             <TableHead>Reading Date</TableHead>
             <TableHead>Reading Value</TableHead>
-            <TableHead>Unit</TableHead>
             <TableHead>Notes</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -100,12 +106,11 @@ export function MeterReadingList({ readings, userRole, onUpdate }: MeterReadingL
                   <div className="text-sm text-gray-500">{reading.property?.address || 'N/A'}</div>
                 </div>
               </TableCell>
-              <TableCell className="capitalize">{reading.type}</TableCell>
+              <TableCell className="capitalize">{reading.reading_type}</TableCell>
               <TableCell>{new Date(reading.reading_date).toLocaleDateString()}</TableCell>
               <TableCell className="font-medium text-blue-600">
                 {reading.reading_value}
               </TableCell>
-              <TableCell>{reading.unit}</TableCell>
               <TableCell>{reading.notes || 'N/A'}</TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-2">
@@ -114,7 +119,7 @@ export function MeterReadingList({ readings, userRole, onUpdate }: MeterReadingL
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {}}
+                        onClick={() => handleEdit(reading)}
                         className="flex items-center gap-2"
                       >
                         <Edit className="h-4 w-4" />
@@ -137,7 +142,7 @@ export function MeterReadingList({ readings, userRole, onUpdate }: MeterReadingL
           ))}
           {readings.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+              <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                 No meter readings found.
               </TableCell>
             </TableRow>

@@ -1172,7 +1172,7 @@ export type Database = {
           reading_date: string
           reading_type: Database["public"]["Enums"]["meter_type"]
           reading_value: number
-          tenant_id: string
+          tenant_id: string | null
           updated_at: string
           updated_by: string
         }
@@ -1185,7 +1185,7 @@ export type Database = {
           reading_date?: string
           reading_type: Database["public"]["Enums"]["meter_type"]
           reading_value: number
-          tenant_id: string
+          tenant_id?: string | null
           updated_at?: string
           updated_by: string
         }
@@ -1198,7 +1198,7 @@ export type Database = {
           reading_date?: string
           reading_type?: Database["public"]["Enums"]["meter_type"]
           reading_value?: number
-          tenant_id?: string
+          tenant_id?: string | null
           updated_at?: string
           updated_by?: string
         }
