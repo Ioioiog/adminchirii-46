@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -134,15 +133,26 @@ export function MeterReadingList({ readings, userRole, onUpdate }: MeterReadingL
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
                     {userRole === "tenant" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleView(reading)}
-                        className="flex items-center gap-2"
-                      >
-                        <Eye className="h-4 w-4" />
-                        View Details
-                      </Button>
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(reading)}
+                          className="flex items-center gap-2"
+                        >
+                          <Edit className="h-4 w-4" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleView(reading)}
+                          className="flex items-center gap-2"
+                        >
+                          <Eye className="h-4 w-4" />
+                          View Details
+                        </Button>
+                      </>
                     )}
                     {userRole === "landlord" && (
                       <>
