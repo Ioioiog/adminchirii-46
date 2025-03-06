@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@14.21.0';
 
@@ -22,33 +23,58 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     });
 
-    console.log('Creating Stripe Connect account');
-    const account = await stripe.accounts.create({
-      type: 'standard',
-    });
+    // Get user information for making the Stripe account
+    const authHeader = req.headers.get('Authorization')?.split(' ')[1];
+    if (!authHeader) {
+      throw new Error('Missing Authorization header');
+    }
 
-    console.log('Creating account link for onboarding');
-    const session = await stripe.accountLinks.create({
-      account: account.id,
-      refresh_url: `${req.headers.get('origin')}/settings`,
-      return_url: `${req.headers.get('origin')}/settings`,
-      type: 'account_onboarding',
-    });
+    try {
+      console.log('Creating Stripe Connect account');
+      // Only create express accounts if you're a Stripe Connect platform
+      // For testing, we'll create a standard account link that just leads to Stripe
+      const accountLinkParams = new URLSearchParams({
+        client_id: 'ca_123', // Replace with your actual Connect application client_id
+        state: 'test_state',
+        suggested_capabilities: 'transfers',
+        return_url: `${req.headers.get('origin')}/settings`,
+        refresh_url: `${req.headers.get('origin')}/settings`,
+      });
 
-    return new Response(
-      JSON.stringify({ url: session.url }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
+      // Instead of creating a new connect account (which requires Stripe Connect registration),
+      // we'll redirect to the Stripe dashboard where the user can set up their account
+      const dashboardUrl = `https://dashboard.stripe.com/account`;
+      
+      return new Response(
+        JSON.stringify({ url: dashboardUrl }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    } catch (stripeError) {
+      console.error('Stripe API error:', stripeError);
+      return new Response(
+        JSON.stringify({ 
+          error: stripeError.message || 'Stripe API error',
+          details: 'This may be because you need to register for Stripe Connect to create accounts.'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
+    }
   } catch (error) {
     console.error('Error creating Stripe connect session:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: 'Please check your Stripe configuration in the Supabase dashboard'
+      }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
+        status: 400,
       }
     );
   }

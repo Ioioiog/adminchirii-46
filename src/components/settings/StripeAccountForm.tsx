@@ -1,14 +1,18 @@
+
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export function StripeAccountForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLandlord, setIsLandlord] = useState(false);
   const { toast } = useToast();
   const [stripeConnected, setStripeConnected] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const checkUserRole = async () => {
@@ -54,6 +58,7 @@ export function StripeAccountForm() {
 
   const handleConnectStripe = async () => {
     setIsLoading(true);
+    setError("");
     try {
       const { data, error } = await supabase.functions.invoke('stripe-connect', {
         method: 'POST',
@@ -68,9 +73,10 @@ export function StripeAccountForm() {
       }
     } catch (error) {
       console.error('Error connecting Stripe:', error);
+      setError("There was an error connecting to Stripe. You may need to set up a Stripe Connect account first.");
       toast({
         title: "Error",
-        description: "Failed to connect Stripe account",
+        description: "Failed to connect Stripe account. Please make sure your Stripe Connect is properly configured.",
         variant: "destructive",
       });
     } finally {
@@ -111,9 +117,45 @@ export function StripeAccountForm() {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Stripe Dashboard</CardTitle>
+          <CardDescription>
+            Access your Stripe dashboard to manage payments and settings
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Stripe provides payment processing for your properties. Sign in to your Stripe account to view payments, manage settings and more.
+          </p>
+          <div className="space-y-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                window.open('https://dashboard.stripe.com/dashboard', '_blank');
+              }}
+              className="bg-blue-500 hover:bg-blue-400 text-white w-full"
+            >
+              Access Stripe Dashboard
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Stripe API Keys</CardTitle>
+          <CardDescription>
+            Configure your Stripe API keys to enable payment processing
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
@@ -136,6 +178,9 @@ export function StripeAccountForm() {
       <Card>
         <CardHeader>
           <CardTitle>Stripe Connect</CardTitle>
+          <CardDescription>
+            Connect your Stripe account to receive payments from tenants
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
@@ -156,13 +201,18 @@ export function StripeAccountForm() {
               </Button>
             </div>
           ) : (
-            <Button
-              onClick={handleConnectStripe}
-              disabled={isLoading}
-              className="bg-blue-500 hover:bg-blue-400 text-white"
-            >
-              {isLoading ? "Connecting..." : "Connect Stripe Account"}
-            </Button>
+            <div className="space-y-4">
+              <Button
+                onClick={handleConnectStripe}
+                disabled={isLoading}
+                className="bg-blue-500 hover:bg-blue-400 text-white w-full"
+              >
+                {isLoading ? "Connecting..." : "Connect Stripe Account"}
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Note: You need to have a Stripe account already. This will direct you to Stripe's dashboard.
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>
