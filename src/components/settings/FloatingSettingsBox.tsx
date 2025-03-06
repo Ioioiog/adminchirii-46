@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Settings, Globe, DollarSign, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,11 +19,19 @@ import { useNavigate } from "react-router-dom";
 export function FloatingSettingsBox() {
   const [isOpen, setIsOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [currentCurrency, setCurrentCurrency] = useState<string>("");
   const { i18n } = useTranslation();
-  const { availableCurrencies } = useCurrency();
+  const { availableCurrencies, currency } = useCurrency();
   const { toast } = useToast();
   const { data: notifications, markAsRead } = useSidebarNotifications();
   const navigate = useNavigate();
+
+  // Initialize current currency from the useCurrency hook
+  useEffect(() => {
+    if (currency) {
+      setCurrentCurrency(currency);
+    }
+  }, [currency]);
 
   // Calculate total notifications by summing up all notification counts
   const totalNotifications = notifications?.reduce((total, notification) => {
@@ -93,6 +101,9 @@ export function FloatingSettingsBox() {
 
       if (error) throw error;
 
+      // Update local state immediately for better UX
+      setCurrentCurrency(value);
+      
       toast({
         title: "Currency Updated",
         description: "Your currency preference has been saved.",
@@ -178,6 +189,7 @@ export function FloatingSettingsBox() {
               </label>
               <select
                 className="w-full rounded-md border border-gray-200 p-2 text-sm"
+                value={currentCurrency}
                 onChange={(e) => handleCurrencyChange(e.target.value)}
               >
                 {availableCurrencies.map((currency) => (
