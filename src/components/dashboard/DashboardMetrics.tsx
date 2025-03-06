@@ -1,9 +1,10 @@
+
 import React, { useState } from "react";
 import { Building2, Users, AlertTriangle, Clock, DollarSign, Wrench, CheckCircle, Wallet } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useMetrics } from "@/hooks/useMetrics";
-import MetricCard from "./MetricCard";
+import { MetricCard } from "./MetricCard";
 import { RevenueDetailsModal } from "../dashboard/RevenueDetailsModal";
 import { useCurrency } from "@/hooks/useCurrency";
 import FinancialSummaryCard from "../financial/FinancialSummaryCard";
