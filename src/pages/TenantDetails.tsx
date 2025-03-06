@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { ArrowLeft, User, Home, Calendar, Mail, Phone, FileText } from "lucide-react";
+import { ArrowLeft, User, Home, Calendar, Mail, Phone, FileText, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Tenant } from "@/types/tenant";
@@ -184,6 +184,16 @@ const TenantDetails = () => {
             icon={User}
             title={tenant ? `${tenant.first_name} ${tenant.last_name}` : "Tenant Details"}
             description="View and manage tenant information"
+            actions={tenant && (
+              <Button 
+                variant="outline"
+                onClick={() => navigate(`/chat?tenantId=${tenant.id}`)}
+                className="ml-auto"
+              >
+                <MessageCircle className="mr-2 h-4 w-4" />
+                Message Tenant
+              </Button>
+            )}
           />
 
           {isLoading ? (
@@ -343,15 +353,6 @@ const TenantDetails = () => {
                   )}
                 </CardContent>
               </Card>
-
-              <div className="flex gap-4 mt-6">
-                <Button 
-                  variant="outline"
-                  onClick={() => navigate(`/chat?tenantId=${tenant.id}`)}
-                >
-                  Message Tenant
-                </Button>
-              </div>
             </div>
           ) : (
             <Card>
