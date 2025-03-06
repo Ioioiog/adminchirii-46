@@ -28,43 +28,53 @@ const TenantDetails = () => {
         setIsLoading(true);
         
         // Fetch tenant details from the tenant_details view
+        // Remove .single() to handle multiple rows properly
         const { data, error } = await supabase
           .from('tenant_details')
           .select('*')
-          .eq('tenant_id', id)
-          .single();
+          .eq('tenant_id', id);
           
         if (error) {
           throw error;
         }
         
-        if (data) {
+        if (data && data.length > 0) {
+          // Use the first matching record
+          const tenantData = data[0];
+          
           // Transform the data to match the Tenant type
           const formattedTenant: Tenant = {
-            id: data.tenant_id,
-            first_name: data.first_name,
-            last_name: data.last_name,
-            email: data.email,
-            phone: data.phone,
-            role: data.role,
+            id: tenantData.tenant_id,
+            first_name: tenantData.first_name,
+            last_name: tenantData.last_name,
+            email: tenantData.email,
+            phone: tenantData.phone,
+            role: tenantData.role,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             property: {
-              id: data.property_id,
-              name: data.property_name,
-              address: data.property_address,
+              id: tenantData.property_id,
+              name: tenantData.property_name,
+              address: tenantData.property_address,
             },
             tenancy: {
-              id: data.tenancy_id,
-              start_date: data.start_date,
-              end_date: data.end_date,
-              status: data.tenancy_status,
+              id: tenantData.tenancy_id,
+              start_date: tenantData.start_date,
+              end_date: tenantData.end_date,
+              status: tenantData.tenancy_status,
             },
           };
           
           setTenant(formattedTenant);
+        } else {
+          toast({
+            title: "Not Found",
+            description: "Tenant details could not be found",
+            variant: "destructive",
+          });
         }
       } catch (error: any) {
+        console.error("Error fetching tenant details:", error);
         toast({
           title: "Error",
           description: error.message || "Failed to fetch tenant details.",
