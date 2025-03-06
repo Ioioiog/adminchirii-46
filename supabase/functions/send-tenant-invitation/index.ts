@@ -1,5 +1,5 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders } from "../_shared/cors.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,8 +26,8 @@ serve(async (req) => {
       throw new Error("Missing required field: email");
     }
     
-    // Get the site URL from environment or use a default
-    const siteUrl = Deno.env.get("PUBLIC_SITE_URL") || "http://localhost:5173";
+    // Get the site URL from environment or use the production URL
+    const siteUrl = Deno.env.get("PUBLIC_SITE_URL") || "https://adminchirii.ro";
     
     // Create the registration link with the token
     const registrationLink = `${siteUrl}/tenant-registration?token=${token}`;
