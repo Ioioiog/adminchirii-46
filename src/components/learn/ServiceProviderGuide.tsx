@@ -162,57 +162,59 @@ export function ServiceProviderGuide() {
         />
       </div>
 
-      <div className="bg-blue-50 p-6 rounded-lg border border-blue-100 mt-8">
-        <h3 className="flex items-center text-lg font-medium text-blue-800 mb-3">
-          <Settings className="mr-2 h-5 w-5" />
-          Tips for Service Providers
-        </h3>
-        <ul className="list-disc pl-5 space-y-2 text-blue-700">
-          <li>Respond to job requests within 1-2 hours to maximize your booking rate</li>
-          <li>Keep your availability calendar up-to-date to avoid scheduling conflicts</li>
-          <li>Document your work with detailed before and after photos for each job</li>
-          <li>Provide clear, detailed estimates and stick to quoted prices whenever possible</li>
-          <li>Maintain professional communication with clients through the platform messaging</li>
-          <li>Ask satisfied clients to leave reviews immediately after job completion</li>
-          <li>Regularly update your skills, certifications, and service offerings</li>
-          <li>Offer preventative maintenance packages to create recurring revenue</li>
-          <li>Consider offering emergency services at premium rates if your schedule allows</li>
-          <li>Use the mobile app for real-time updates when on service calls</li>
-        </ul>
-      </div>
+      <div className="mt-16 pt-8 border-t border-gray-200">
+        <div className="bg-blue-50 p-6 rounded-lg border border-blue-100 mb-8">
+          <h3 className="flex items-center text-lg font-medium text-blue-800 mb-3">
+            <Settings className="mr-2 h-5 w-5" />
+            Tips for Service Providers
+          </h3>
+          <ul className="list-disc pl-5 space-y-2 text-blue-700">
+            <li>Respond to job requests within 1-2 hours to maximize your booking rate</li>
+            <li>Keep your availability calendar up-to-date to avoid scheduling conflicts</li>
+            <li>Document your work with detailed before and after photos for each job</li>
+            <li>Provide clear, detailed estimates and stick to quoted prices whenever possible</li>
+            <li>Maintain professional communication with clients through the platform messaging</li>
+            <li>Ask satisfied clients to leave reviews immediately after job completion</li>
+            <li>Regularly update your skills, certifications, and service offerings</li>
+            <li>Offer preventative maintenance packages to create recurring revenue</li>
+            <li>Consider offering emergency services at premium rates if your schedule allows</li>
+            <li>Use the mobile app for real-time updates when on service calls</li>
+          </ul>
+        </div>
 
-      <div className="bg-amber-50 p-6 rounded-lg border border-amber-100 mt-4">
-        <h3 className="flex items-center text-lg font-medium text-amber-800 mb-3">
-          <ShieldCheck className="mr-2 h-5 w-5" />
-          Professional Best Practices
-        </h3>
-        <p className="text-amber-700 mb-3">Maintain high professional standards with these best practices:</p>
-        <ul className="list-disc pl-5 space-y-2 text-amber-700">
-          <li>Always confirm appointments 24 hours in advance to reduce no-shows</li>
-          <li>Wear professional attire and carry identification on all service calls</li>
-          <li>Provide written estimates before beginning work for transparency</li>
-          <li>Clean up thoroughly after completing any job</li>
-          <li>Follow up after major jobs to ensure ongoing client satisfaction</li>
-          <li>Maintain proper licensing, bonding, and insurance at all times</li>
-          <li>Keep detailed records of all work performed for warranty purposes</li>
-        </ul>
-      </div>
+        <div className="bg-amber-50 p-6 rounded-lg border border-amber-100 mb-8">
+          <h3 className="flex items-center text-lg font-medium text-amber-800 mb-3">
+            <ShieldCheck className="mr-2 h-5 w-5" />
+            Professional Best Practices
+          </h3>
+          <p className="text-amber-700 mb-3">Maintain high professional standards with these best practices:</p>
+          <ul className="list-disc pl-5 space-y-2 text-amber-700">
+            <li>Always confirm appointments 24 hours in advance to reduce no-shows</li>
+            <li>Wear professional attire and carry identification on all service calls</li>
+            <li>Provide written estimates before beginning work for transparency</li>
+            <li>Clean up thoroughly after completing any job</li>
+            <li>Follow up after major jobs to ensure ongoing client satisfaction</li>
+            <li>Maintain proper licensing, bonding, and insurance at all times</li>
+            <li>Keep detailed records of all work performed for warranty purposes</li>
+          </ul>
+        </div>
 
-      <div className="bg-green-50 p-6 rounded-lg border border-green-100 mt-4">
-        <h3 className="flex items-center text-lg font-medium text-green-800 mb-3">
-          <AlertCircle className="mr-2 h-5 w-5" />
-          Handling Emergency Requests
-        </h3>
-        <p className="text-green-700 mb-3">Guidelines for responding to emergency maintenance requests:</p>
-        <ol className="list-decimal pl-5 space-y-2 text-green-700">
-          <li>Emergency requests are highlighted in red on your dashboard</li>
-          <li>Aim to respond to emergency requests within 15-30 minutes</li>
-          <li>If you accept an emergency job, provide an estimated arrival time</li>
-          <li>Use the "On My Way" button in the app to notify the client when you're en route</li>
-          <li>Document the emergency situation with photos before beginning work</li>
-          <li>Communicate any unexpected complications immediately</li>
-          <li>After resolving the immediate emergency, schedule follow-up work if needed</li>
-        </ol>
+        <div className="bg-green-50 p-6 rounded-lg border border-green-100">
+          <h3 className="flex items-center text-lg font-medium text-green-800 mb-3">
+            <AlertCircle className="mr-2 h-5 w-5" />
+            Handling Emergency Requests
+          </h3>
+          <p className="text-green-700 mb-3">Guidelines for responding to emergency maintenance requests:</p>
+          <ol className="list-decimal pl-5 space-y-2 text-green-700">
+            <li>Emergency requests are highlighted in red on your dashboard</li>
+            <li>Aim to respond to emergency requests within 15-30 minutes</li>
+            <li>If you accept an emergency job, provide an estimated arrival time</li>
+            <li>Use the "On My Way" button in the app to notify the client when you're en route</li>
+            <li>Document the emergency situation with photos before beginning work</li>
+            <li>Communicate any unexpected complications immediately</li>
+            <li>After resolving the immediate emergency, schedule follow-up work if needed</li>
+          </ol>
+        </div>
       </div>
     </div>
   );

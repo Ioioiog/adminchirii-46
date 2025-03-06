@@ -156,35 +156,37 @@ export function TenantGuide() {
         />
       </div>
 
-      <div className="bg-blue-50 p-6 rounded-lg border border-blue-100 mt-8">
-        <h3 className="flex items-center text-lg font-medium text-blue-800 mb-3">
-          <Settings className="mr-2 h-5 w-5" />
-          Tips for Getting Started
-        </h3>
-        <ul className="list-disc pl-5 space-y-2 text-blue-700">
-          <li>Complete your profile in the Settings page with all contact information</li>
-          <li>Set up your preferred payment methods before your first rent due date</li>
-          <li>Enable notifications to stay updated on important events and deadlines</li>
-          <li>Familiarize yourself with your lease terms and property rules immediately</li>
-          <li>Save your landlord's contact information for emergencies in your phone</li>
-          <li>Document the condition of your rental with photos when you first move in</li>
-          <li>Test all smoke detectors and safety equipment upon moving in</li>
-        </ul>
-      </div>
+      <div className="mt-16 pt-8 border-t border-gray-200">
+        <div className="bg-blue-50 p-6 rounded-lg border border-blue-100 mb-8">
+          <h3 className="flex items-center text-lg font-medium text-blue-800 mb-3">
+            <Settings className="mr-2 h-5 w-5" />
+            Tips for Getting Started
+          </h3>
+          <ul className="list-disc pl-5 space-y-2 text-blue-700">
+            <li>Complete your profile in the Settings page with all contact information</li>
+            <li>Set up your preferred payment methods before your first rent due date</li>
+            <li>Enable notifications to stay updated on important events and deadlines</li>
+            <li>Familiarize yourself with your lease terms and property rules immediately</li>
+            <li>Save your landlord's contact information for emergencies in your phone</li>
+            <li>Document the condition of your rental with photos when you first move in</li>
+            <li>Test all smoke detectors and safety equipment upon moving in</li>
+          </ul>
+        </div>
 
-      <div className="bg-amber-50 p-6 rounded-lg border border-amber-100 mt-4">
-        <h3 className="flex items-center text-lg font-medium text-amber-800 mb-3">
-          <AlertCircle className="mr-2 h-5 w-5" />
-          Emergency Procedures
-        </h3>
-        <p className="text-amber-700 mb-3">For urgent maintenance issues that require immediate attention:</p>
-        <ol className="list-decimal pl-5 space-y-2 text-amber-700">
-          <li>Use the emergency maintenance request option in the Maintenance section</li>
-          <li>Call your landlord's emergency contact number listed in your Property Handbook</li>
-          <li>For life-threatening emergencies (fire, gas leak), contact emergency services (911) first</li>
-          <li>Document the issue with photos once it's safe to do so</li>
-          <li>Follow up with standard documentation through the platform once the emergency is addressed</li>
-        </ol>
+        <div className="bg-amber-50 p-6 rounded-lg border border-amber-100">
+          <h3 className="flex items-center text-lg font-medium text-amber-800 mb-3">
+            <AlertCircle className="mr-2 h-5 w-5" />
+            Emergency Procedures
+          </h3>
+          <p className="text-amber-700 mb-3">For urgent maintenance issues that require immediate attention:</p>
+          <ol className="list-decimal pl-5 space-y-2 text-amber-700">
+            <li>Use the emergency maintenance request option in the Maintenance section</li>
+            <li>Call your landlord's emergency contact number listed in your Property Handbook</li>
+            <li>For life-threatening emergencies (fire, gas leak), contact emergency services (911) first</li>
+            <li>Document the issue with photos once it's safe to do so</li>
+            <li>Follow up with standard documentation through the platform once the emergency is addressed</li>
+          </ol>
+        </div>
       </div>
     </div>
   );
