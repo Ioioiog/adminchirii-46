@@ -227,6 +227,11 @@ const Properties = () => {
                   {filteredProperties?.map(property => {
                 const hasContract = propertyContracts.some(contract => contract.property_id === property.id);
                 const displayStatus = hasContract ? 'occupied' as PropertyStatus : property.status;
+                const currencySymbol = property.currency === 'EUR' ? '€' : 
+                                      property.currency === 'USD' ? '$' : 
+                                      property.currency === 'GBP' ? '£' : 
+                                      property.currency;
+                
                 return <Card key={property.id} className="group overflow-hidden rounded-xl transition-all duration-300 hover:translate-y-[-4px] border border-gray-100 shadow-soft-md hover:shadow-soft-lg bg-white">
                         <CardHeader className="p-5 border-b border-gray-50 bg-gradient-to-r from-blue-50/40 to-indigo-50/40">
                           <div className="flex items-center justify-between">
@@ -252,7 +257,7 @@ const Properties = () => {
                                 <p className="text-xs font-medium text-gray-500">Monthly Rent</p>
                               </div>
                               <p className="text-sm text-gray-900 font-medium pl-6">
-                                €{property.monthly_rent?.toLocaleString() || 0}
+                                {currencySymbol}{property.monthly_rent?.toLocaleString() || 0}
                               </p>
                             </div>
                             <div className="space-y-1.5 group-hover:translate-y-[-2px] transition-all duration-300">
@@ -338,10 +343,15 @@ const Properties = () => {
                       {filteredProperties?.map(property => {
                     const hasContract = propertyContracts.some(contract => contract.property_id === property.id);
                     const displayStatus = hasContract ? 'occupied' as PropertyStatus : property.status;
+                    const currencySymbol = property.currency === 'EUR' ? '€' : 
+                                          property.currency === 'USD' ? '$' : 
+                                          property.currency === 'GBP' ? '£' : 
+                                          property.currency;
+                    
                     return <TableRow key={property.id} className="group hover:bg-blue-50/50">
                             <TableCell className="font-medium">{property.name}</TableCell>
                             <TableCell>{property.address}</TableCell>
-                            <TableCell>${property.monthly_rent?.toLocaleString() || 0}</TableCell>
+                            <TableCell>{currencySymbol}{property.monthly_rent?.toLocaleString() || 0}</TableCell>
                             <TableCell>{property.tenant_count || 0} Active</TableCell>
                             <TableCell>
                               <Badge className={`${getStatusColor(displayStatus)}`}>
