@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Home, User, Receipt, UserCircle, BarChart2, BookOpen } from "lucide-react";
@@ -249,10 +250,10 @@ const PropertyDetails = () => {
 
   const tabs = [
     { id: "property", label: "Property Details", icon: Home, showForTenant: true },
+    { id: "landlord", label: "Landlord", icon: UserCircle, showForTenant: true },
     { id: "tenants", label: "Tenants", icon: User, showForTenant: false },
     { id: "invoice", label: "Invoice Settings", icon: Receipt, showForTenant: false },
     { id: "utilities", label: "Utility Costs", icon: BarChart2, showForTenant: true },
-    { id: "landlord", label: "Landlord", icon: UserCircle, showForTenant: true },
     { id: "handbook", label: "Tenant Handbook", icon: BookOpen, showForTenant: true },
   ];
 
