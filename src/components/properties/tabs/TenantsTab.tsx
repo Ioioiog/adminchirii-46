@@ -45,7 +45,20 @@ export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
     }
   });
 
+  // Create a Set to track tenant IDs we've already rendered
+  const renderedTenantIds = new Set();
+
   const renderTenantCard = (tenancy: any) => {
+    const tenantId = tenancy.tenant?.id;
+    
+    // Skip if we've already rendered this tenant
+    if (renderedTenantIds.has(tenantId)) {
+      return null;
+    }
+    
+    // Mark this tenant as rendered
+    renderedTenantIds.add(tenantId);
+    
     const startDate = tenancy.start_date ? format(new Date(tenancy.start_date), 'PPP') : 'Not specified';
     const endDate = tenancy.end_date ? format(new Date(tenancy.end_date), 'PPP') : 'Ongoing';
     
@@ -102,11 +115,23 @@ export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
   };
 
   const renderContractTenantCard = (contract: any) => {
-    console.log('Contract data:', contract); // Debug log
-    console.log('Contract metadata:', contract.metadata); // Debug metadata
-
-    const startDate = contract.valid_from ? format(new Date(contract.valid_from), 'PPP') : 'Not specified';
-    const endDate = contract.valid_until ? format(new Date(contract.valid_until), 'PPP') : 'Ongoing';
+    const tenantId = contract.tenant_id;
+    
+    // Skip if we've already rendered this tenant
+    if (renderedTenantIds.has(tenantId)) {
+      return null;
+    }
+    
+    // Mark this tenant as rendered
+    if (tenantId) {
+      renderedTenantIds.add(tenantId);
+    } else if (contract.invitation_email) {
+      // For contracts without tenant_id, use email as unique identifier
+      if (renderedTenantIds.has(contract.invitation_email)) {
+        return null;
+      }
+      renderedTenantIds.add(contract.invitation_email);
+    }
     
     // Try to get tenant name from different sources in order of preference
     const tenantName = contract.tenant 
@@ -115,6 +140,9 @@ export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
       || 'Not specified';
       
     const tenantEmail = contract.tenant?.email || contract.invitation_email || 'Not specified';
+    
+    const startDate = contract.valid_from ? format(new Date(contract.valid_from), 'PPP') : 'Not specified';
+    const endDate = contract.valid_until ? format(new Date(contract.valid_until), 'PPP') : 'Ongoing';
     
     return (
       <div key={contract.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
