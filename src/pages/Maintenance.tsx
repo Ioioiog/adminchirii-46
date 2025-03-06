@@ -17,15 +17,6 @@ import { cn } from "@/lib/utils";
 
 type MaintenanceView = 'dashboard' | 'providers';
 
-// Define the service provider data structure
-interface ServiceProviderData {
-  business_name: string | null;
-  profiles?: {
-    first_name: string | null;
-    last_name: string | null;
-  } | null;
-}
-
 export default function Maintenance() {
   const [activeSection, setActiveSection] = useState<MaintenanceView>('dashboard');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -86,23 +77,12 @@ export default function Maintenance() {
         let serviceProvider = null;
         
         if (request.service_provider && request.service_provider.length > 0) {
-          // Check if service_provider is actually an array of objects or just a string ID
-          if (typeof request.service_provider[0] === 'object') {
-            const provider = request.service_provider[0] as ServiceProviderData;
-            serviceProvider = {
-              business_name: provider.business_name,
-              first_name: provider.profiles?.first_name || null,
-              last_name: provider.profiles?.last_name || null
-            };
-          } else {
-            // If it's just a string ID, create a minimal service provider object
-            serviceProvider = {
-              business_name: null,
-              first_name: null,
-              last_name: null
-            };
-            console.log("Service provider is just an ID:", request.service_provider[0]);
-          }
+          const provider = request.service_provider[0];
+          serviceProvider = {
+            business_name: provider.business_name,
+            first_name: provider.profiles?.first_name || null,
+            last_name: provider.profiles?.last_name || null
+          };
         }
         
         return {
