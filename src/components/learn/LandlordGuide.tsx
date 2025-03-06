@@ -166,42 +166,40 @@ export function LandlordGuide() {
         />
       </div>
 
-      <div className="mt-16 pt-8 border-t border-gray-200">
-        <div className="bg-blue-50 p-6 rounded-lg border border-blue-100 mb-8">
-          <h3 className="flex items-center text-lg font-medium text-blue-800 mb-3">
-            <Settings className="mr-2 h-5 w-5" />
-            Best Practices for Landlords
-          </h3>
-          <ul className="list-disc pl-5 space-y-2 text-blue-700">
-            <li>Keep property details and photos up-to-date to minimize vacancy periods</li>
-            <li>Respond to maintenance requests within 24-48 hours to improve tenant satisfaction</li>
-            <li>Document all tenant communications within the platform for legal protection</li>
-            <li>Review financial reports monthly to identify trends and opportunities</li>
-            <li>Stay informed about local rental regulations and update your policies accordingly</li>
-            <li>Set up automatic rent payment reminders to reduce late payments</li>
-            <li>Conduct regular property inspections to prevent major maintenance issues</li>
-            <li>Build relationships with reliable service providers for faster maintenance resolution</li>
-            <li>Use the document templates to ensure legally compliant leases and notices</li>
-            <li>Implement consistent screening processes for all tenant applications</li>
-          </ul>
-        </div>
+      <div className="bg-blue-50 p-6 rounded-lg border border-blue-100 mt-8">
+        <h3 className="flex items-center text-lg font-medium text-blue-800 mb-3">
+          <Settings className="mr-2 h-5 w-5" />
+          Best Practices for Landlords
+        </h3>
+        <ul className="list-disc pl-5 space-y-2 text-blue-700">
+          <li>Keep property details and photos up-to-date to minimize vacancy periods</li>
+          <li>Respond to maintenance requests within 24-48 hours to improve tenant satisfaction</li>
+          <li>Document all tenant communications within the platform for legal protection</li>
+          <li>Review financial reports monthly to identify trends and opportunities</li>
+          <li>Stay informed about local rental regulations and update your policies accordingly</li>
+          <li>Set up automatic rent payment reminders to reduce late payments</li>
+          <li>Conduct regular property inspections to prevent major maintenance issues</li>
+          <li>Build relationships with reliable service providers for faster maintenance resolution</li>
+          <li>Use the document templates to ensure legally compliant leases and notices</li>
+          <li>Implement consistent screening processes for all tenant applications</li>
+        </ul>
+      </div>
 
-        <div className="bg-amber-50 p-6 rounded-lg border border-amber-100">
-          <h3 className="flex items-center text-lg font-medium text-amber-800 mb-3">
-            <AlertCircle className="mr-2 h-5 w-5" />
-            Legal Compliance Tips
-          </h3>
-          <p className="text-amber-700 mb-3">Important considerations to maintain legal compliance:</p>
-          <ul className="list-disc pl-5 space-y-2 text-amber-700">
-            <li>Always use up-to-date, legally reviewed lease templates for your jurisdiction</li>
-            <li>Follow local laws regarding security deposit handling and interest payments</li>
-            <li>Adhere to fair housing laws in all advertising and tenant selection</li>
-            <li>Maintain proper records of all maintenance requests and completions</li>
-            <li>Provide required disclosures (lead paint, mold, etc.) before lease signing</li>
-            <li>Follow proper notice procedures for inspections and lease terminations</li>
-            <li>Consult with a local real estate attorney for specific legal questions</li>
-          </ul>
-        </div>
+      <div className="bg-amber-50 p-6 rounded-lg border border-amber-100 mt-4">
+        <h3 className="flex items-center text-lg font-medium text-amber-800 mb-3">
+          <AlertCircle className="mr-2 h-5 w-5" />
+          Legal Compliance Tips
+        </h3>
+        <p className="text-amber-700 mb-3">Important considerations to maintain legal compliance:</p>
+        <ul className="list-disc pl-5 space-y-2 text-amber-700">
+          <li>Always use up-to-date, legally reviewed lease templates for your jurisdiction</li>
+          <li>Follow local laws regarding security deposit handling and interest payments</li>
+          <li>Adhere to fair housing laws in all advertising and tenant selection</li>
+          <li>Maintain proper records of all maintenance requests and completions</li>
+          <li>Provide required disclosures (lead paint, mold, etc.) before lease signing</li>
+          <li>Follow proper notice procedures for inspections and lease terminations</li>
+          <li>Consult with a local real estate attorney for specific legal questions</li>
+        </ul>
       </div>
     </div>
   );
