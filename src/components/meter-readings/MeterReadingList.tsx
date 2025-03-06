@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, Eye } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MeterReadingForm } from "./MeterReadingForm";
+import { MeterReadingDetails } from "./MeterReadingDetails";
 
 interface MeterReading {
   id: string;
@@ -41,7 +42,9 @@ interface MeterReadingListProps {
 export function MeterReadingList({ readings, userRole, onUpdate }: MeterReadingListProps) {
   const { toast } = useToast();
   const [editReading, setEditReading] = useState<MeterReading | null>(null);
+  const [viewReading, setViewReading] = useState<MeterReading | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
 
   const handleDelete = async (readingId: string) => {
     try {
@@ -75,6 +78,11 @@ export function MeterReadingList({ readings, userRole, onUpdate }: MeterReadingL
   const handleEdit = (reading: MeterReading) => {
     setEditReading(reading);
     setEditDialogOpen(true);
+  };
+
+  const handleView = (reading: MeterReading) => {
+    setViewReading(reading);
+    setViewDialogOpen(true);
   };
 
   const handleEditSuccess = () => {
@@ -125,6 +133,17 @@ export function MeterReadingList({ readings, userRole, onUpdate }: MeterReadingL
                 <TableCell>{reading.notes || 'N/A'}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
+                    {userRole === "tenant" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleView(reading)}
+                        className="flex items-center gap-2"
+                      >
+                        <Eye className="h-4 w-4" />
+                        View Details
+                      </Button>
+                    )}
                     {userRole === "landlord" && (
                       <>
                         <Button
@@ -200,6 +219,15 @@ export function MeterReadingList({ readings, userRole, onUpdate }: MeterReadingL
               }}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Meter Reading Details</DialogTitle>
+          </DialogHeader>
+          {viewReading && <MeterReadingDetails reading={viewReading} />}
         </DialogContent>
       </Dialog>
     </>
