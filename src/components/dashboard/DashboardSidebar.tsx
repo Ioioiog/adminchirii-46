@@ -31,6 +31,10 @@ export const DashboardSidebar = () => {
     navigate("/dashboard");
   };
 
+  // Separate the "Learn" menu item for special rendering
+  const mainMenuItems = filteredMenuItems.filter(item => item.title !== "Learn");
+  const learnMenuItem = filteredMenuItems.find(item => item.title === "Learn");
+
   return (
     <Collapsible
       defaultOpen={true}
@@ -62,10 +66,10 @@ export const DashboardSidebar = () => {
 
       <CollapsibleContent
         forceMount
-        className="flex-1 overflow-y-auto py-4 px-3"
+        className="flex-1 overflow-y-auto py-4 px-3 flex flex-col"
       >
-        <nav className="space-y-1.5">
-          {filteredMenuItems.map((item) => {
+        <nav className="space-y-1.5 flex-1">
+          {mainMenuItems.map((item) => {
             // Get notification count for this menu item if it has a notification type
             const notificationCount = item.notificationType
               ? notifications?.find(n => n.type === item.notificationType)?.count || 0
@@ -84,6 +88,24 @@ export const DashboardSidebar = () => {
             );
           })}
         </nav>
+
+        {/* Render Learn item with separator */}
+        {learnMenuItem && (
+          <div className="mt-auto pt-4">
+            <div className={cn("mb-4", isExpanded ? "px-2" : "")}>
+              <div className="h-px bg-gray-200 dark:bg-gray-800" />
+            </div>
+            <SidebarMenuItem
+              key={learnMenuItem.href}
+              item={learnMenuItem}
+              isActive={isActive(learnMenuItem.href)}
+              isExpanded={isExpanded}
+              notifications={notifications}
+              onNotificationClick={handleNotificationClick}
+              notificationCount={0}
+            />
+          </div>
+        )}
       </CollapsibleContent>
 
       <div className="p-4 border-t border-gray-200 dark:border-gray-800">

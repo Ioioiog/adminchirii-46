@@ -46,15 +46,16 @@ export const serviceProviderMenuItems = [
     notificationType: "payments" as NotificationType
   },
   {
-    title: "Learn",
-    icon: Book,
-    href: "/learn",
-    roles: ["service_provider"],
-  },
-  {
     title: "Settings",
     icon: Settings,
     href: "/settings",
+    roles: ["service_provider"],
+  },
+  // Learn menu item moved to the bottom before Settings
+  {
+    title: "Learn",
+    icon: Book,
+    href: "/learn",
     roles: ["service_provider"],
   },
 ];
@@ -112,15 +113,16 @@ export const standardMenuItems = [
     notificationType: "messages" as NotificationType
   },
   {
-    title: "Learn",
-    icon: Book,
-    href: "/learn",
-    roles: ["landlord", "tenant"],
-  },
-  {
     title: "Settings",
     icon: Settings,
     href: "/settings",
+    roles: ["landlord", "tenant"],
+  },
+  // Learn menu item moved to the bottom after Settings
+  {
+    title: "Learn",
+    icon: Book,
+    href: "/learn",
     roles: ["landlord", "tenant"],
   },
 ];
