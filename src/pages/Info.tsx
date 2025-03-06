@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState, useRef } from "react";
 import * as THREE from "three";
-import { Building2, Network, Key, Shield, ArrowRight } from "lucide-react";
+import { Building2, Network, Key, Shield, ArrowRight, Home, FileText, DollarSign, Calendar } from "lucide-react";
 
 export default function InfoPage() {
   const { isLoading, isAuthenticated } = useAuthState();
@@ -193,29 +193,49 @@ export default function InfoPage() {
           </div>
         </div>
 
-        {/* Features Grid - Compact Version */}
+        {/* Features Grid - Updated with Actual Platform Features */}
         <div className="container mx-auto px-4 py-10">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
               {
-                icon: Building2,
-                title: "Smart Management",
-                description: "AI-driven insights"
+                icon: Home,
+                title: "Property Management",
+                description: "Effortlessly manage all your properties in one place"
+              },
+              {
+                icon: FileText,
+                title: "Digital Contracts",
+                description: "Create, sign and store contracts digitally"
+              },
+              {
+                icon: DollarSign,
+                title: "Payment Tracking",
+                description: "Manage rent payments and expenses"
+              },
+              {
+                icon: Calendar,
+                title: "Maintenance Scheduler",
+                description: "Schedule and track property maintenance"
               },
               {
                 icon: Network,
-                title: "Unified Platform",
-                description: "Connected ecosystem"
+                title: "Tenant Portal",
+                description: "Dedicated access for your tenants"
               },
               {
                 icon: Key,
-                title: "Digital Access",
-                description: "Smart control"
+                title: "Smart Access",
+                description: "Manage digital keys and property access"
               },
               {
                 icon: Shield,
-                title: "Enhanced Security",
-                description: "Enterprise-grade"
+                title: "Secure Data",
+                description: "Enterprise-grade security for your information"
+              },
+              {
+                icon: Building2,
+                title: "Utility Management",
+                description: "Track and manage property utilities"
               }
             ].map((feature, index) => (
               <div 
