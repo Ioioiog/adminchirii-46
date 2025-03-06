@@ -169,18 +169,18 @@ export function MeterReadingList({ readings, userRole, onUpdate }: MeterReadingL
           </DialogHeader>
           {editReading && (
             <MeterReadingForm
-              properties={editReading.property ? [{ 
-                id: editReading.property_id, 
-                name: editReading.property.name,
-                address: editReading.property.address
-              }] as any}
+              properties={[{ 
+                id: editReading.property_id,
+                name: editReading.property?.name || '',
+                address: editReading.property?.address || ''
+              }]}
               onSuccess={handleEditSuccess}
               userRole={userRole}
               userId={null}
               initialData={{
                 id: editReading.id,
                 property_id: editReading.property_id,
-                reading_type: editReading.reading_type as any,
+                reading_type: editReading.reading_type,
                 reading_value: editReading.reading_value,
                 reading_date: editReading.reading_date,
                 notes: editReading.notes || ""
