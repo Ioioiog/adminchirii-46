@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -16,7 +15,6 @@ interface Metrics {
     amount: number;
     due_date: string;
     status: string;
-    currency?: string;
   }>;
 }
 
@@ -72,7 +70,6 @@ async function fetchLandlordMetrics(userId: string): Promise<Metrics> {
       id,
       name,
       monthly_rent,
-      currency,
       tenancies (
         id,
         status,
@@ -99,7 +96,7 @@ async function fetchLandlordMetrics(userId: string): Promise<Metrics> {
     };
   }
 
-  const revenueDetails: Array<{ property_name: string; amount: number; due_date: string; status: string; currency?: string }> = [];
+  const revenueDetails: Array<{ property_name: string; amount: number; due_date: string; status: string }> = [];
   let totalMonthlyRevenue = 0;
   let activeTenanciesCount = 0;
 
@@ -126,8 +123,7 @@ async function fetchLandlordMetrics(userId: string): Promise<Metrics> {
         property_name: property.name,
         amount: Number(property.monthly_rent),
         due_date: firstDayOfMonth.toISOString(),
-        status: payments?.status || "pending",
-        currency: property.currency || "USD" // Include the property currency
+        status: payments?.status || "pending"
       });
     }
   }
