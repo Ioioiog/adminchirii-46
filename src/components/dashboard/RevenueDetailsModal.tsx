@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useCurrency } from "@/hooks/useCurrency";
 
@@ -38,7 +39,7 @@ export function RevenueDetailsModal({ open, onOpenChange, revenueDetails }: Reve
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold">{formatAmount(detail.amount)}</p>
+                    <p className="font-semibold">{formatAmount(detail.amount, 'EUR')}</p>
                     <span className={`text-sm ${
                       detail.status === 'paid' 
                         ? 'text-green-600' 

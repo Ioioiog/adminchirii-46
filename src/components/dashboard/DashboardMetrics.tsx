@@ -58,7 +58,7 @@ export function DashboardMetrics({ userId, userRole }: { userId: string; userRol
         />
         <MetricCard
           title="metrics.monthlyEarnings"
-          value={formatAmount(metrics.monthlyEarnings || 0)}
+          value={formatAmount(metrics.monthlyEarnings || 0, 'EUR')}
           icon={Wallet}
           onClick={handleRevenueClick}
           className="bg-white shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer"
@@ -82,7 +82,7 @@ export function DashboardMetrics({ userId, userRole }: { userId: string; userRol
           />
           <MetricCard
             title="metrics.monthlyRevenue"
-            value={formatAmount(metrics.monthlyRevenue || 0)}
+            value={formatAmount(metrics.monthlyRevenue || 0, 'EUR')}
             icon={Wallet}
             onClick={handleRevenueClick}
             description="metrics.monthlyRevenueDesc"
