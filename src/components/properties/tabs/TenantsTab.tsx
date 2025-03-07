@@ -2,11 +2,12 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { User, Mail, Phone, Calendar, Key } from "lucide-react";
+import { User, Mail, Phone, Calendar, Key, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Separator } from "@/components/ui/separator";
 
 interface TenantsTabProps {
   property: any;
@@ -15,6 +16,35 @@ interface TenantsTabProps {
 
 export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
   const navigate = useNavigate();
+
+  // Fetch all tenancy history for this property, including inactive ones
+  const { data: tenancyHistory } = useQuery({
+    queryKey: ["property-tenancy-history", property.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tenancies')
+        .select(`
+          id,
+          tenant_id,
+          status,
+          start_date,
+          end_date,
+          tenant:profiles(
+            id,
+            first_name,
+            last_name,
+            email,
+            phone
+          )
+        `)
+        .eq('property_id', property.id)
+        .not('status', 'eq', 'active')
+        .order('end_date', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    }
+  });
 
   // Fetch signed contracts for this property
   const { data: contracts } = useQuery({
@@ -176,6 +206,8 @@ export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
 
   const hasTenantsOrContracts = (property.tenancies && property.tenancies.length > 0) || 
                                (contracts && contracts.length > 0);
+  
+  const hasPastTenants = tenancyHistory && tenancyHistory.length > 0;
 
   return (
     <div className="space-y-6">
@@ -219,6 +251,79 @@ export function TenantsTab({ property, activeTenants }: TenantsTabProps) {
           </Button>
         </div>
       )}
+
+      {/* Tenant History Section */}
+      <div className="mt-10">
+        <div className="flex items-center gap-2 mb-4">
+          <History className="h-5 w-5 text-gray-500" />
+          <h2 className="text-xl font-semibold text-gray-900">Tenant History</h2>
+        </div>
+        <Separator className="mb-6" />
+        
+        {hasPastTenants ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {tenancyHistory?.map((tenancy: any) => (
+              <div key={tenancy.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                <div className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-full bg-gray-50 flex items-center justify-center">
+                        <User className="h-6 w-6 text-gray-400" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-gray-900">
+                          {tenancy.tenant?.first_name} {tenancy.tenant?.last_name}
+                        </h3>
+                        <div className="flex items-center text-sm text-gray-500 mt-1">
+                          <Mail className="h-3.5 w-3.5 mr-1" />
+                          <span>{tenancy.tenant?.email || 'No email'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="bg-gray-50 text-gray-600">
+                      Former Tenant
+                    </Badge>
+                  </div>
+                  
+                  <div className="mt-4 space-y-3 border-t border-gray-100 pt-4">
+                    <div className="flex items-center text-sm">
+                      <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+                      <div>
+                        <span className="font-medium text-gray-600">Lease Period: </span>
+                        <span className="text-gray-800">
+                          {tenancy.start_date ? format(new Date(tenancy.start_date), 'PPP') : 'Unknown'} - {' '}
+                          {tenancy.end_date ? format(new Date(tenancy.end_date), 'PPP') : 'Unknown'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {tenancy.tenant?.id && (
+                    <div className="mt-6">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => navigate(`/tenants/${tenancy.tenant.id}`)}
+                      >
+                        View Tenant Profile
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 bg-gray-50 rounded-xl">
+            <History className="h-8 w-8 text-gray-400 mx-auto" />
+            <h3 className="mt-4 text-sm font-medium text-gray-700">No Tenant History</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              This property has no previous tenants on record
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
